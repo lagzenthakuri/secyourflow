@@ -1,0 +1,554 @@
+// SecYourFlow - Cyber Risk Operations Platform Schema
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== USER & AUTH ====================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String
+  role          Role      @default(ANALYST)
+  avatar        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLogin     DateTime?
+  
+  // Relations
+  organization  Organization? @relation(fields: [organizationId], references: [id])
+  organizationId String?
+  auditLogs     AuditLog[]
+  comments      Comment[]
+  
+  @@index([email])
+  @@index([organizationId])
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  ANALYST
+  VIEWER
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  domain      String?
+  logo        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  users       User[]
+  assets      Asset[]
+  vulnerabilities Vulnerability[]
+  complianceFrameworks ComplianceFramework[]
+  
+  @@index([name])
+}
+
+// ==================== ASSETS ====================
+
+model Asset {
+  id              String      @id @default(cuid())
+  name            String
+  type            AssetType
+  hostname        String?
+  ipAddress       String?
+  macAddress      String?
+  operatingSystem String?
+  version         String?
+  environment     Environment @default(PRODUCTION)
+  criticality     Criticality @default(MEDIUM)
+  status          AssetStatus @default(ACTIVE)
+  owner           String?
+  department      String?
+  location        String?
+  cloudProvider   CloudProvider?
+  cloudRegion     String?
+  cloudAccountId  String?
+  tags            String[]
+  metadata        Json?
+  lastSeen        DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Relations
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  organizationId  String
+  vulnerabilities AssetVulnerability[]
+  complianceControls AssetComplianceControl[]
+  
+  @@index([name])
+  @@index([type])
+  @@index([ipAddress])
+  @@index([organizationId])
+  @@index([criticality])
+}
+
+enum AssetType {
+  SERVER
+  WORKSTATION
+  NETWORK_DEVICE
+  CLOUD_INSTANCE
+  CONTAINER
+  DATABASE
+  APPLICATION
+  API
+  DOMAIN
+  CERTIFICATE
+  IOT_DEVICE
+  MOBILE_DEVICE
+  OTHER
+}
+
+enum Environment {
+  PRODUCTION
+  STAGING
+  DEVELOPMENT
+  TESTING
+  DR
+}
+
+enum Criticality {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFORMATIONAL
+}
+
+enum AssetStatus {
+  ACTIVE
+  INACTIVE
+  DECOMMISSIONED
+  MAINTENANCE
+}
+
+enum CloudProvider {
+  AWS
+  AZURE
+  GCP
+  ORACLE
+  IBM
+  ALIBABA
+  OTHER
+}
+
+// ==================== VULNERABILITIES ====================
+
+model Vulnerability {
+  id              String    @id @default(cuid())
+  cveId           String?
+  title           String
+  description     String?
+  severity        Severity
+  cvssScore       Float?
+  cvssVector      String?
+  epssScore       Float?    // Exploit Prediction Scoring System
+  epssPercentile  Float?
+  cweId           String?
+  cweDescription  String?
+  
+  // Exploitation Status
+  isExploited     Boolean   @default(false)
+  exploitMaturity ExploitMaturity?
+  cisaKev         Boolean   @default(false) // CISA Known Exploited Vulnerabilities
+  
+  // Scanner Info
+  source          VulnSource
+  scannerId       String?
+  scannerName     String?
+  firstDetected   DateTime  @default(now())
+  lastSeen        DateTime  @default(now())
+  
+  // Remediation
+  status          VulnStatus @default(OPEN)
+  solution        String?
+  references      String[]
+  patchAvailable  Boolean   @default(false)
+  dueDate         DateTime?
+  fixedAt         DateTime?
+  
+  // Risk
+  riskScore       Float?
+  businessImpact  String?
+  
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  organizationId  String
+  assets          AssetVulnerability[]
+  complianceControls VulnerabilityComplianceControl[]
+  comments        Comment[]
+  
+  @@index([cveId])
+  @@index([severity])
+  @@index([status])
+  @@index([organizationId])
+  @@index([isExploited])
+  @@index([riskScore])
+}
+
+model AssetVulnerability {
+  id              String        @id @default(cuid())
+  asset           Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  assetId         String
+  vulnerability   Vulnerability @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+  vulnerabilityId String
+  
+  port            Int?
+  protocol        String?
+  service         String?
+  path            String?       // For web app vulns
+  evidence        String?
+  
+  status          VulnStatus    @default(OPEN)
+  firstDetected   DateTime      @default(now())
+  lastSeen        DateTime      @default(now())
+  
+  @@unique([assetId, vulnerabilityId])
+  @@index([assetId])
+  @@index([vulnerabilityId])
+  @@index([status])
+}
+
+enum Severity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFORMATIONAL
+}
+
+enum VulnStatus {
+  OPEN
+  IN_PROGRESS
+  MITIGATED
+  FIXED
+  ACCEPTED
+  FALSE_POSITIVE
+}
+
+enum VulnSource {
+  NESSUS
+  OPENVAS
+  NMAP
+  TRIVY
+  QUALYS
+  RAPID7
+  CROWDSTRIKE
+  MANUAL
+  API
+  OTHER
+}
+
+enum ExploitMaturity {
+  NOT_DEFINED
+  UNPROVEN
+  POC
+  FUNCTIONAL
+  HIGH
+}
+
+// ==================== COMPLIANCE ====================
+
+model ComplianceFramework {
+  id          String   @id @default(cuid())
+  name        String   // e.g., "ISO 27001", "NIST CSF", "PCI DSS"
+  version     String?
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  organizationId  String
+  controls        ComplianceControl[]
+  
+  @@index([name])
+  @@index([organizationId])
+}
+
+model ComplianceControl {
+  id              String   @id @default(cuid())
+  controlId       String   // e.g., "A.12.6.1" for ISO 27001
+  title           String
+  description     String?
+  category        String?
+  objective       String?
+  
+  status          ComplianceStatus @default(NOT_ASSESSED)
+  implementationStatus ImplementationStatus @default(NOT_IMPLEMENTED)
+  evidence        String?
+  notes           String?
+  
+  lastAssessed    DateTime?
+  nextAssessment  DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  framework       ComplianceFramework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  frameworkId     String
+  assets          AssetComplianceControl[]
+  vulnerabilities VulnerabilityComplianceControl[]
+  
+  @@unique([frameworkId, controlId])
+  @@index([frameworkId])
+  @@index([status])
+  @@index([controlId])
+}
+
+model AssetComplianceControl {
+  id              String            @id @default(cuid())
+  asset           Asset             @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  assetId         String
+  control         ComplianceControl @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  controlId       String
+  
+  status          ComplianceStatus  @default(NOT_ASSESSED)
+  evidence        String?
+  assessedAt      DateTime?
+  
+  @@unique([assetId, controlId])
+  @@index([assetId])
+  @@index([controlId])
+}
+
+model VulnerabilityComplianceControl {
+  id              String            @id @default(cuid())
+  vulnerability   Vulnerability     @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+  vulnerabilityId String
+  control         ComplianceControl @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  controlId       String
+  
+  impact          String?
+  
+  @@unique([vulnerabilityId, controlId])
+  @@index([vulnerabilityId])
+  @@index([controlId])
+}
+
+enum ComplianceStatus {
+  COMPLIANT
+  NON_COMPLIANT
+  PARTIALLY_COMPLIANT
+  NOT_ASSESSED
+  NOT_APPLICABLE
+}
+
+enum ImplementationStatus {
+  IMPLEMENTED
+  PARTIALLY_IMPLEMENTED
+  PLANNED
+  NOT_IMPLEMENTED
+  NOT_APPLICABLE
+}
+
+// ==================== THREAT INTELLIGENCE ====================
+
+model ThreatFeed {
+  id          String   @id @default(cuid())
+  name        String
+  source      String
+  type        ThreatFeedType
+  url         String?
+  apiKey      String?
+  isActive    Boolean  @default(true)
+  lastSync    DateTime?
+  syncInterval Int     @default(3600) // seconds
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  indicators  ThreatIndicator[]
+  
+  @@index([name])
+  @@index([isActive])
+}
+
+model ThreatIndicator {
+  id          String   @id @default(cuid())
+  type        IndicatorType
+  value       String
+  confidence  Int?     // 0-100
+  severity    Severity?
+  
+  firstSeen   DateTime @default(now())
+  lastSeen    DateTime @default(now())
+  expiresAt   DateTime?
+  
+  source      String?
+  description String?
+  tags        String[]
+  
+  // MITRE ATT&CK
+  tacticId    String?
+  techniqueId String?
+  
+  feed        ThreatFeed @relation(fields: [feedId], references: [id], onDelete: Cascade)
+  feedId      String
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([type])
+  @@index([value])
+  @@index([feedId])
+}
+
+enum ThreatFeedType {
+  CVE
+  MALWARE
+  IOC
+  THREAT_ACTOR
+  CAMPAIGN
+}
+
+enum IndicatorType {
+  IP_ADDRESS
+  DOMAIN
+  URL
+  FILE_HASH_MD5
+  FILE_HASH_SHA1
+  FILE_HASH_SHA256
+  EMAIL
+  CVE
+  REGISTRY_KEY
+  USER_AGENT
+}
+
+// ==================== AUDIT & COMMENTS ====================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String
+  entityType  String
+  entityId    String
+  oldValue    Json?
+  newValue    Json?
+  ipAddress   String?
+  userAgent   String?
+  
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Comment {
+  id          String   @id @default(cuid())
+  content     String
+  entityType  String   // 'vulnerability', 'asset', etc.
+  entityId    String
+  
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  
+  vulnerability Vulnerability? @relation(fields: [vulnerabilityId], references: [id])
+  vulnerabilityId String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([entityType, entityId])
+  @@index([userId])
+}
+
+// ==================== SCANNER INTEGRATION ====================
+
+model ScannerConfig {
+  id          String   @id @default(cuid())
+  name        String
+  type        VulnSource
+  endpoint    String?
+  apiKey      String?
+  username    String?
+  password    String?
+  isActive    Boolean  @default(true)
+  lastSync    DateTime?
+  syncInterval Int     @default(86400) // seconds (daily)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  scanResults ScanResult[]
+  
+  @@index([type])
+  @@index([isActive])
+}
+
+model ScanResult {
+  id          String   @id @default(cuid())
+  scanId      String
+  startTime   DateTime
+  endTime     DateTime?
+  status      ScanStatus @default(RUNNING)
+  totalHosts  Int       @default(0)
+  totalVulns  Int       @default(0)
+  rawData     Json?
+  
+  scanner     ScannerConfig @relation(fields: [scannerId], references: [id])
+  scannerId   String
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([scanId])
+  @@index([scannerId])
+  @@index([status])
+}
+
+enum ScanStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// ==================== RISK CALCULATIONS ====================
+
+model RiskSnapshot {
+  id              String   @id @default(cuid())
+  date            DateTime @default(now())
+  
+  totalAssets     Int
+  criticalAssets  Int
+  
+  totalVulns      Int
+  criticalVulns   Int
+  highVulns       Int
+  mediumVulns     Int
+  lowVulns        Int
+  
+  exploitedVulns  Int
+  cisaKevVulns    Int
+  
+  overallRiskScore Float
+  
+  complianceScore Float?   // 0-100
+  
+  metadata        Json?
+  
+  @@index([date])
+}
