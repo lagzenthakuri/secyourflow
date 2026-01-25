@@ -13,13 +13,16 @@ import {
     ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 const users = [
     {
         id: "1",
         name: "Sarah Chen",
         email: "sarah.chen@company.com",
-        role: "ADMIN",
+        role: "MAIN_OFFICER",
         department: "Security",
         lastActive: "2 minutes ago",
         status: "online",
@@ -37,7 +40,7 @@ const users = [
         id: "3",
         name: "Lisa Park",
         email: "lisa.park@company.com",
-        role: "MANAGER",
+        role: "IT_OFFICER",
         department: "Compliance",
         lastActive: "1 hour ago",
         status: "away",
@@ -46,7 +49,7 @@ const users = [
         id: "4",
         name: "James Wilson",
         email: "j.wilson@company.com",
-        role: "ANALYST",
+        role: "PENTESTER",
         department: "Security",
         lastActive: "3 hours ago",
         status: "offline",
@@ -55,7 +58,7 @@ const users = [
         id: "5",
         name: "Emma Davis",
         email: "emma.d@company.com",
-        role: "VIEWER",
+        role: "ANALYST",
         department: "Executive",
         lastActive: "1 day ago",
         status: "offline",
@@ -63,13 +66,33 @@ const users = [
 ];
 
 const roleColors = {
-    ADMIN: "#ef4444",
-    MANAGER: "#8b5cf6",
+    MAIN_OFFICER: "#ef4444",
+    IT_OFFICER: "#8b5cf6",
     ANALYST: "#3b82f6",
-    VIEWER: "#6b7280",
+    PENTESTER: "#f97316",
 };
 
 export default function UsersPage() {
+    const { data: session, status } = useSession();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (status === "unauthenticated") {
+            router.push("/login");
+        } else if (status === "authenticated" && session?.user?.role !== "MAIN_OFFICER") {
+            router.push("/dashboard");
+        }
+    }, [session, status, router]);
+
+    if (status === "loading" || (status === "authenticated" && session?.user?.role !== "MAIN_OFFICER")) {
+        return (
+            <DashboardLayout>
+                <div className="flex items-center justify-center min-h-[60vh]">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                </div>
+            </DashboardLayout>
+        );
+    }
     return (
         <DashboardLayout>
             <div className="space-y-6">
@@ -198,10 +221,10 @@ export default function UsersPage() {
                         <Card title="Role Permissions">
                             <div className="space-y-3">
                                 {[
-                                    { role: "Admin", permissions: "Full access to all features" },
-                                    { role: "Manager", permissions: "View, edit, and manage team" },
-                                    { role: "Analyst", permissions: "View and edit findings" },
-                                    { role: "Viewer", permissions: "Read-only access" },
+                                    { role: "Main Officer", permissions: "Full platform oversight and administration" },
+                                    { role: "IT Officer", permissions: "Asset and infrastructure management" },
+                                    { role: "Pentester", permissions: "Vulnerability assessment and security testing" },
+                                    { role: "Analyst", permissions: "Risk analysis and threat monitoring" },
                                 ].map((item) => (
                                     <div
                                         key={item.role}

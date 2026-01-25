@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import {
     StatCard,
@@ -16,17 +17,6 @@ import {
     AssetTypeChart,
     EPSSChart,
 } from "@/components/charts/DashboardCharts";
-import {
-    mockDashboardStats,
-    mockRiskTrends,
-    mockSeverityDistribution,
-    mockTopRiskyAssets,
-    mockComplianceOverview,
-    mockRecentActivities,
-    mockExploitedVulnerabilities,
-    mockAssetTypeDistribution,
-    mockRemediationTrends,
-} from "@/lib/mock-data";
 import { getTimeAgo } from "@/lib/utils";
 import {
     Shield,
@@ -41,11 +31,76 @@ import {
     Target,
     FileCheck,
     Activity,
+    Loader2,
 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 export default function DashboardPage() {
-    const stats = mockDashboardStats;
+    const searchParams = useSearchParams();
+    const isDemo = searchParams.get("demo") === "true";
+    const [data, setData] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                setIsLoading(true);
+                const response = await fetch(`/api/dashboard${isDemo ? "?demo=true" : ""}`);
+                if (!response.ok) throw new Error("Failed to fetch dashboard data");
+                const jsonData = await response.json();
+                setData(jsonData);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "An error occurred");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchDashboardData();
+    }, [isDemo]);
+
+    if (isLoading) {
+        return (
+            <DashboardLayout>
+                <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                    <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+                    <p className="text-[var(--text-secondary)] animate-pulse">
+                        Calculating risk scores and gathering intelligence...
+                    </p>
+                </div>
+            </DashboardLayout>
+        );
+    }
+
+    if (error || !data) {
+        return (
+            <DashboardLayout>
+                <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                    <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center">
+                        <AlertTriangle className="w-8 h-8 text-red-500" />
+                    </div>
+                    <div className="text-center">
+                        <h2 className="text-xl font-bold text-white mb-2">Error Loading Dashboard</h2>
+                        <p className="text-[var(--text-secondary)] max-w-md mx-auto">
+                            {error || "We couldn't load your security data. Please try refreshing the page."}
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="btn btn-primary mt-4"
+                    >
+                        Try Again
+                    </button>
+                </div>
+            </DashboardLayout>
+        );
+    }
+
+    const { stats, riskTrends, severityDistribution, topRiskyAssets, complianceOverview, recentActivities, exploitedVulnerabilities, remediationTrends, assetTypeDistribution } = data as any;
+
+    const lastUpdated = "2 minutes ago"; // Could be dynamic
 
     return (
         <DashboardLayout>
@@ -62,7 +117,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-3">
                         <span className="text-sm text-[var(--text-muted)]">
-                            Last updated: 2 minutes ago
+                            Last updated: {lastUpdated}
                         </span>
                         <button className="btn btn-primary">
                             <Activity size={16} />
@@ -127,16 +182,16 @@ export default function DashboardPage() {
                                 </Link>
                             }
                         >
-                            <RiskTrendChart data={mockRiskTrends} />
+                            <RiskTrendChart data={riskTrends} />
                         </Card>
                     </div>
 
                     {/* Severity Distribution */}
                     <div className="lg:col-span-3">
                         <Card title="Severity Distribution">
-                            <SeverityDistributionChart data={mockSeverityDistribution} />
+                            <SeverityDistributionChart data={severityDistribution} />
                             <div className="grid grid-cols-2 gap-2 mt-2">
-                                {mockSeverityDistribution.map((item) => (
+                                {(severityDistribution as any[]).map((item: any) => (
                                     <div key={item.severity} className="flex items-center gap-2">
                                         <div
                                             className="w-2 h-2 rounded-full"
@@ -208,7 +263,7 @@ export default function DashboardPage() {
                             }
                         >
                             <div className="space-y-3">
-                                {mockExploitedVulnerabilities.slice(0, 5).map((vuln, idx) => (
+                                {(exploitedVulnerabilities as any[]).slice(0, 5).map((vuln: any, idx: number) => (
                                     <div
                                         key={vuln.id}
                                         className="flex items-center gap-4 p-3 rounded-lg bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer group"
@@ -270,7 +325,7 @@ export default function DashboardPage() {
                             subtitle="Probability of exploitation in next 30 days"
                         >
                             <EPSSChart
-                                data={mockExploitedVulnerabilities.map((v) => ({
+                                data={exploitedVulnerabilities.map((v: any) => ({
                                     cveId: v.cveId,
                                     epssScore: v.epssScore,
                                     title: v.title,
@@ -297,7 +352,7 @@ export default function DashboardPage() {
                             }
                         >
                             <div className="space-y-3">
-                                {mockTopRiskyAssets.map((asset) => (
+                                {(topRiskyAssets as any[]).map((asset: any) => (
                                     <div
                                         key={asset.id}
                                         className="p-3 rounded-lg bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer"
@@ -362,7 +417,7 @@ export default function DashboardPage() {
                             }
                         >
                             <div className="space-y-4">
-                                {mockComplianceOverview.map((framework) => (
+                                {(complianceOverview as any[]).map((framework: any) => (
                                     <div key={framework.frameworkId}>
                                         <div className="flex items-center justify-between mb-2">
                                             <div className="flex items-center gap-2">
@@ -426,7 +481,7 @@ export default function DashboardPage() {
                             }
                         >
                             <div className="space-y-3">
-                                {mockRecentActivities.map((activity) => (
+                                {(recentActivities as any[]).map((activity: any) => (
                                     <div
                                         key={activity.id}
                                         className="flex items-start gap-3 p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"
@@ -486,7 +541,7 @@ export default function DashboardPage() {
                         title="Vulnerability Remediation"
                         subtitle="Monthly opened vs closed vulnerabilities"
                     >
-                        <VulnStatusChart data={mockRemediationTrends} />
+                        <VulnStatusChart data={remediationTrends} />
                     </Card>
 
                     {/* Asset Type Distribution */}
@@ -494,7 +549,7 @@ export default function DashboardPage() {
                         title="Asset Distribution"
                         subtitle="By asset type"
                     >
-                        <AssetTypeChart data={mockAssetTypeDistribution} />
+                        <AssetTypeChart data={assetTypeDistribution} />
                     </Card>
                 </div>
             </div>

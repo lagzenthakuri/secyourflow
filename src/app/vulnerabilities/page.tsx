@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, SeverityBadge, ProgressBar } from "@/components/ui/Cards";
-import { mockVulnerabilities, mockSeverityDistribution, mockVulnSourceDistribution } from "@/lib/mock-data";
 import { SeverityDistributionChart } from "@/components/charts/DashboardCharts";
 import { formatDate } from "@/lib/utils";
 import {
@@ -21,10 +20,13 @@ import {
     ExternalLink,
     MoreVertical,
     TrendingUp,
+    Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Vulnerability } from "@/types";
+import { mockSeverityDistribution, mockVulnSourceDistribution } from "@/lib/mock-data";
 
-const statusConfig: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
+const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
     OPEN: { label: "Open", color: "#ef4444", icon: AlertTriangle },
     IN_PROGRESS: { label: "In Progress", color: "#3b82f6", icon: Clock },
     MITIGATED: { label: "Mitigated", color: "#8b5cf6", icon: Shield },
@@ -34,26 +36,46 @@ const statusConfig: Record<string, { label: string; color: string; icon: typeof 
 };
 
 export default function VulnerabilitiesPage() {
+    const [vulns, setVulns] = useState<Vulnerability[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedSeverity, setSelectedSeverity] = useState<string | null>(null);
-    const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
     const [showExploited, setShowExploited] = useState(false);
+    const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
 
-    const filteredVulns = mockVulnerabilities.filter((vuln) => {
-        const matchesSearch =
-            vuln.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            vuln.cveId?.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesSeverity = !selectedSeverity || vuln.severity === selectedSeverity;
-        const matchesStatus = !selectedStatus || vuln.status === selectedStatus;
-        const matchesExploited = !showExploited || vuln.isExploited;
-        return matchesSearch && matchesSeverity && matchesStatus && matchesExploited;
-    });
+    const fetchVulnerabilities = async () => {
+        try {
+            setIsLoading(true);
+            const params = new URLSearchParams({
+                page: pagination.page.toString(),
+                search: searchQuery,
+            });
+            if (selectedSeverity) params.append("severity", selectedSeverity);
+            if (showExploited) params.append("exploited", "true");
+
+            const response = await fetch(`/api/vulnerabilities?${params.toString()}`);
+            const result = await response.json();
+            setVulns(result.data);
+            setPagination(prev => ({ ...prev, ...result.pagination }));
+        } catch (error) {
+            console.error("Failed to fetch vulnerabilities:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchVulnerabilities();
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery, selectedSeverity, showExploited, pagination.page]);
 
     const stats = {
-        total: mockVulnerabilities.length,
-        critical: mockVulnerabilities.filter((v) => v.severity === "CRITICAL").length,
-        exploited: mockVulnerabilities.filter((v) => v.isExploited).length,
-        open: mockVulnerabilities.filter((v) => v.status === "OPEN").length,
+        total: pagination.total,
+        critical: vulns.filter(v => v.severity === "CRITICAL").length, // Simple local filter for demo
+        exploited: vulns.filter(v => v.isExploited).length,
+        open: vulns.filter(v => v.status === "OPEN").length,
     };
 
     return (
@@ -199,119 +221,139 @@ export default function VulnerabilitiesPage() {
 
                             {/* Vulnerability List */}
                             <div className="divide-y divide-[var(--border-color)]">
-                                {filteredVulns.map((vuln) => {
-                                    const status = statusConfig[vuln.status];
+                                {isLoading ? (
+                                    <div className="p-20 flex flex-col items-center justify-center gap-4">
+                                        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                                        <p className="text-sm text-[var(--text-muted)]">Fetching vulnerabilities...</p>
+                                    </div>
+                                ) : vulns.length === 0 ? (
+                                    <div className="p-20 text-center">
+                                        <Shield className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4 opacity-20" />
+                                        <p className="text-[var(--text-secondary)]">No vulnerabilities found matching your criteria.</p>
+                                    </div>
+                                ) : (
+                                    vulns.map((vuln) => {
+                                        const status = statusConfig[vuln.status];
 
-                                    return (
-                                        <div
-                                            key={vuln.id}
-                                            className="p-4 hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"
-                                        >
-                                            <div className="flex items-start gap-4">
-                                                <div
-                                                    className="p-2.5 rounded-lg"
-                                                    style={{
-                                                        background:
-                                                            vuln.severity === "CRITICAL"
-                                                                ? "rgba(239, 68, 68, 0.1)"
-                                                                : vuln.severity === "HIGH"
-                                                                    ? "rgba(249, 115, 22, 0.1)"
-                                                                    : "rgba(59, 130, 246, 0.1)",
-                                                    }}
-                                                >
-                                                    <Shield
-                                                        size={20}
+                                        return (
+                                            <div
+                                                key={vuln.id}
+                                                className="p-4 hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"
+                                            >
+                                                <div className="flex items-start gap-4">
+                                                    <div
+                                                        className="p-2.5 rounded-lg"
                                                         style={{
-                                                            color:
+                                                            background:
                                                                 vuln.severity === "CRITICAL"
-                                                                    ? "#ef4444"
+                                                                    ? "rgba(239, 68, 68, 0.1)"
                                                                     : vuln.severity === "HIGH"
-                                                                        ? "#f97316"
-                                                                        : "#3b82f6",
+                                                                        ? "rgba(249, 115, 22, 0.1)"
+                                                                        : "rgba(59, 130, 246, 0.1)",
                                                         }}
-                                                    />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                                                        {vuln.cveId && (
-                                                            <a
-                                                                href={`https://nvd.nist.gov/vuln/detail/${vuln.cveId}`}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="font-mono text-sm text-blue-400 hover:underline flex items-center gap-1"
-                                                            >
-                                                                {vuln.cveId}
-                                                                <ExternalLink size={10} />
-                                                            </a>
-                                                        )}
-                                                        <SeverityBadge severity={vuln.severity} size="sm" />
-                                                        {vuln.isExploited && (
-                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-[10px] font-semibold text-red-400">
-                                                                <Zap size={10} />
-                                                                EXPLOITED
-                                                            </span>
-                                                        )}
-                                                        {vuln.cisaKev && (
-                                                            <span className="kev-badge">CISA KEV</span>
-                                                        )}
+                                                    >
+                                                        <Shield
+                                                            size={20}
+                                                            style={{
+                                                                color:
+                                                                    vuln.severity === "CRITICAL"
+                                                                        ? "#ef4444"
+                                                                        : vuln.severity === "HIGH"
+                                                                            ? "#f97316"
+                                                                            : "#3b82f6",
+                                                            }}
+                                                        />
                                                     </div>
-                                                    <h3 className="font-medium text-white mb-1 line-clamp-1">
-                                                        {vuln.title}
-                                                    </h3>
-                                                    <p className="text-sm text-[var(--text-muted)] line-clamp-2">
-                                                        {vuln.description}
-                                                    </p>
-                                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-[var(--text-muted)]">
-                                                        {vuln.cvssScore && (
-                                                            <span>
-                                                                CVSS:{" "}
-                                                                <span className="text-white font-medium">
-                                                                    {vuln.cvssScore.toFixed(1)}
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                                                            {vuln.cveId && (
+                                                                <a
+                                                                    href={`https://nvd.nist.gov/vuln/detail/${vuln.cveId}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="font-mono text-sm text-blue-400 hover:underline flex items-center gap-1"
+                                                                >
+                                                                    {vuln.cveId}
+                                                                    <ExternalLink size={10} />
+                                                                </a>
+                                                            )}
+                                                            <SeverityBadge severity={vuln.severity} size="sm" />
+                                                            {vuln.isExploited && (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-[10px] font-semibold text-red-400">
+                                                                    <Zap size={10} />
+                                                                    EXPLOITED
                                                                 </span>
-                                                            </span>
-                                                        )}
-                                                        {vuln.epssScore && (
-                                                            <span>
-                                                                EPSS:{" "}
-                                                                <span className="text-white font-medium">
-                                                                    {(vuln.epssScore * 100).toFixed(1)}%
+                                                            )}
+                                                            {vuln.cisaKev && (
+                                                                <span className="kev-badge">CISA KEV</span>
+                                                            )}
+                                                        </div>
+                                                        <h3 className="font-medium text-white mb-1 line-clamp-1">
+                                                            {vuln.title}
+                                                        </h3>
+                                                        <p className="text-sm text-[var(--text-muted)] line-clamp-2">
+                                                            {vuln.description}
+                                                        </p>
+                                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-[var(--text-muted)]">
+                                                            {vuln.cvssScore && (
+                                                                <span>
+                                                                    CVSS:{" "}
+                                                                    <span className="text-white font-medium">
+                                                                        {vuln.cvssScore.toFixed(1)}
+                                                                    </span>
                                                                 </span>
+                                                            )}
+                                                            {vuln.epssScore && (
+                                                                <span>
+                                                                    EPSS:{" "}
+                                                                    <span className="text-white font-medium">
+                                                                        {(vuln.epssScore * 100).toFixed(1)}%
+                                                                    </span>
+                                                                </span>
+                                                            )}
+                                                            <span>
+                                                                Status:{" "}
+                                                                <span style={{ color: status.color }}>{status.label}</span>
                                                             </span>
-                                                        )}
-                                                        <span>
-                                                            Status:{" "}
-                                                            <span style={{ color: status.color }}>{status.label}</span>
-                                                        </span>
-                                                        <span>Source: {vuln.source}</span>
+                                                            <span>Source: {vuln.source}</span>
+                                                        </div>
                                                     </div>
+                                                    <div className="text-right hidden md:block">
+                                                        <div className="text-sm font-medium text-orange-400">
+                                                            {vuln.affectedAssets}
+                                                        </div>
+                                                        <div className="text-xs text-[var(--text-muted)]">
+                                                            Affected Assets
+                                                        </div>
+                                                    </div>
+                                                    <button className="p-1.5 rounded-lg hover:bg-[var(--bg-elevated)] text-[var(--text-muted)]">
+                                                        <MoreVertical size={16} />
+                                                    </button>
                                                 </div>
-                                                <div className="text-right hidden md:block">
-                                                    <div className="text-sm font-medium text-orange-400">
-                                                        {vuln.affectedAssets}
-                                                    </div>
-                                                    <div className="text-xs text-[var(--text-muted)]">
-                                                        Affected Assets
-                                                    </div>
-                                                </div>
-                                                <button className="p-1.5 rounded-lg hover:bg-[var(--bg-elevated)] text-[var(--text-muted)]">
-                                                    <MoreVertical size={16} />
-                                                </button>
                                             </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })
+                                )}
                             </div>
 
                             {/* Pagination */}
                             <div className="p-4 border-t border-[var(--border-color)] flex items-center justify-between">
                                 <span className="text-sm text-[var(--text-muted)]">
-                                    Showing {filteredVulns.length} vulnerabilities
+                                    Showing {vulns.length} of {pagination.total} vulnerabilities
                                 </span>
                                 <div className="flex gap-2">
-                                    <button className="btn btn-secondary text-sm py-1.5 px-3" disabled>
+                                    <button
+                                        className="btn btn-secondary text-sm py-1.5 px-3"
+                                        disabled={pagination.page <= 1 || isLoading}
+                                        onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+                                    >
                                         Previous
                                     </button>
-                                    <button className="btn btn-secondary text-sm py-1.5 px-3">
+                                    <button
+                                        className="btn btn-secondary text-sm py-1.5 px-3"
+                                        disabled={pagination.page >= pagination.totalPages || isLoading}
+                                        onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+                                    >
                                         Next
                                     </button>
                                 </div>

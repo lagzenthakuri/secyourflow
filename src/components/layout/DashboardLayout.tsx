@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import {
     LayoutDashboard,
@@ -20,34 +21,42 @@ import {
     LogOut,
     User,
 } from "lucide-react";
-import { useState } from "react";
+import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
 const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Assets", href: "/assets", icon: Server },
-    { name: "Vulnerabilities", href: "/vulnerabilities", icon: Shield },
-    { name: "Threats", href: "/threats", icon: AlertTriangle },
-    { name: "Compliance", href: "/compliance", icon: FileCheck },
-    { name: "Reports", href: "/reports", icon: BarChart3 },
-    { name: "Scanners", href: "/scanners", icon: Scan },
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"] },
+    { name: "Assets", href: "/assets", icon: Server, roles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER"] },
+    { name: "Vulnerabilities", href: "/vulnerabilities", icon: Shield, roles: ["MAIN_OFFICER", "PENTESTER", "ANALYST"] },
+    { name: "Threats", href: "/threats", icon: AlertTriangle, roles: ["MAIN_OFFICER", "PENTESTER"] },
+    { name: "Compliance", href: "/compliance", icon: FileCheck, roles: ["MAIN_OFFICER", "IT_OFFICER", "ANALYST"] },
+    { name: "Reports", href: "/reports", icon: BarChart3, roles: ["MAIN_OFFICER", "ANALYST"] },
+    { name: "Scanners", href: "/scanners", icon: Scan, roles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER"] },
 ];
 
 const secondaryNav = [
-    { name: "Users", href: "/users", icon: Users },
-    { name: "Settings", href: "/settings", icon: Settings },
+    { name: "Users", href: "/users", icon: Users, roles: ["MAIN_OFFICER"] },
+    { name: "Settings", href: "/settings", icon: Settings, roles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"] },
 ];
 
 export function Sidebar() {
     const pathname = usePathname();
+    const { data: session } = useSession();
     const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+    const userRole = session?.user?.role || "ANALYST";
+    const userName = session?.user?.name || "User";
+    const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+
+    const filteredNav = navigation.filter(item => item.roles.includes(userRole));
+    const filteredSecondaryNav = secondaryNav.filter(item => item.roles.includes(userRole));
 
     return (
         <>
             {/* Mobile Menu Button */}
             <button
                 onClick={() => setIsMobileOpen(!isMobileOpen)}
-                className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-color)]"
+                className="lg:fixed fixed top-4 left-4 z-50 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-color)]"
             >
                 {isMobileOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
@@ -89,7 +98,7 @@ export function Sidebar() {
                             Main Menu
                         </span>
                     </div>
-                    {navigation.map((item) => {
+                    {filteredNav.map((item) => {
                         const isActive = pathname === item.href;
                         return (
                             <Link
@@ -109,7 +118,7 @@ export function Sidebar() {
                             Administration
                         </span>
                     </div>
-                    {secondaryNav.map((item) => {
+                    {filteredSecondaryNav.map((item) => {
                         const isActive = pathname === item.href;
                         return (
                             <Link
@@ -127,19 +136,36 @@ export function Sidebar() {
 
                 {/* User Section */}
                 <div className="p-4 border-t border-[var(--border-color)]">
-                    <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--bg-tertiary)]">
-                        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-medium">
-                            SC
+                    <div className="group relative">
+                        <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer">
+                            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-medium">
+                                {userInitials}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-white truncate">
+                                    {userName}
+                                </p>
+                                <p className="text-[10px] text-[var(--text-muted)] uppercase">
+                                    {userRole.replace('_', ' ')}
+                                </p>
+                            </div>
+                            <button className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-white transition-colors">
+                                <ChevronDown size={14} />
+                            </button>
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white truncate">
-                                Sarah Chen
-                            </p>
-                            <p className="text-xs text-[var(--text-muted)]">Security Analyst</p>
+
+                        {/* Simple Tooltip-style Logout Menu */}
+                        <div className="absolute bottom-full left-0 w-full mb-2 hidden group-hover:block z-50">
+                            <div className="bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-xl shadow-2xl p-1 overflow-hidden">
+                                <button
+                                    onClick={() => signOut({ callbackUrl: "/login" })}
+                                    className="w-full flex items-center gap-2 p-2.5 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                >
+                                    <LogOut size={16} />
+                                    Sign Out
+                                </button>
+                            </div>
                         </div>
-                        <button className="p-1.5 rounded-lg hover:bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:text-white transition-colors">
-                            <ChevronDown size={16} />
-                        </button>
                     </div>
                 </div>
             </aside>

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, SeverityBadge, ProgressBar } from "@/components/ui/Cards";
-import { mockAssets, mockAssetTypeDistribution } from "@/lib/mock-data";
+import { mockAssetTypeDistribution } from "@/lib/mock-data";
 import { AssetTypeChart } from "@/components/charts/DashboardCharts";
 import {
     Server,
@@ -23,10 +23,12 @@ import {
     CheckCircle,
     XCircle,
     Clock,
+    Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Asset } from "@/types";
 
-const assetTypeIcons: Record<string, typeof Server> = {
+const assetTypeIcons: Record<string, any> = {
     SERVER: Server,
     CLOUD_INSTANCE: Cloud,
     DATABASE: Database,
@@ -36,7 +38,7 @@ const assetTypeIcons: Record<string, typeof Server> = {
     NETWORK_DEVICE: Router,
 };
 
-const statusColors: Record<string, { bg: string; text: string; icon: typeof CheckCircle }> = {
+const statusColors: Record<string, { bg: string; text: string; icon: any }> = {
     ACTIVE: { bg: "bg-green-500/10", text: "text-green-400", icon: CheckCircle },
     INACTIVE: { bg: "bg-gray-500/10", text: "text-gray-400", icon: XCircle },
     MAINTENANCE: { bg: "bg-yellow-500/10", text: "text-yellow-400", icon: Clock },
@@ -44,22 +46,44 @@ const statusColors: Record<string, { bg: string; text: string; icon: typeof Chec
 };
 
 export default function AssetsPage() {
+    const [assets, setAssets] = useState<Asset[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedType, setSelectedType] = useState<string | null>(null);
+    const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
 
-    const filteredAssets = mockAssets.filter((asset) => {
-        const matchesSearch =
-            asset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            asset.ipAddress?.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesType = !selectedType || asset.type === selectedType;
-        return matchesSearch && matchesType;
-    });
+    const fetchAssets = async () => {
+        try {
+            setIsLoading(true);
+            const params = new URLSearchParams({
+                page: pagination.page.toString(),
+                search: searchQuery,
+            });
+            if (selectedType) params.append("type", selectedType);
+
+            const response = await fetch(`/api/assets?${params.toString()}`);
+            const result = await response.json();
+            setAssets(result.data);
+            setPagination(prev => ({ ...prev, ...result.pagination }));
+        } catch (error) {
+            console.error("Failed to fetch assets:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchAssets();
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery, selectedType, pagination.page]);
 
     const stats = {
-        total: mockAssets.length,
-        active: mockAssets.filter((a) => a.status === "ACTIVE").length,
-        critical: mockAssets.filter((a) => a.criticality === "CRITICAL").length,
-        withVulns: mockAssets.filter((a) => (a.vulnerabilityCount || 0) > 0).length,
+        total: pagination.total,
+        active: assets.filter((a) => a.status === "ACTIVE").length,
+        critical: assets.filter((a) => a.criticality === "CRITICAL").length,
+        withVulns: assets.filter((a) => (a.vulnerabilityCount || 0) > 0).length,
     };
 
     return (
@@ -199,88 +223,108 @@ export default function AssetsPage() {
 
                             {/* Asset List */}
                             <div className="divide-y divide-[var(--border-color)]">
-                                {filteredAssets.map((asset) => {
-                                    const Icon = assetTypeIcons[asset.type] || Server;
-                                    const status = statusColors[asset.status] || statusColors.ACTIVE;
-                                    const StatusIcon = status.icon;
+                                {isLoading ? (
+                                    <div className="p-20 flex flex-col items-center justify-center gap-4">
+                                        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                                        <p className="text-sm text-[var(--text-muted)]">Fetching assets...</p>
+                                    </div>
+                                ) : assets.length === 0 ? (
+                                    <div className="p-20 text-center">
+                                        <Server className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4 opacity-20" />
+                                        <p className="text-[var(--text-secondary)]">No assets found matching your criteria.</p>
+                                    </div>
+                                ) : (
+                                    assets.map((asset) => {
+                                        const Icon = assetTypeIcons[asset.type] || Server;
+                                        const status = statusColors[asset.status] || statusColors.ACTIVE;
+                                        const StatusIcon = status.icon;
 
-                                    return (
-                                        <div
-                                            key={asset.id}
-                                            className="p-4 hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"
-                                        >
-                                            <div className="flex items-start gap-4">
-                                                <div className="p-2.5 rounded-lg bg-[var(--bg-tertiary)]">
-                                                    <Icon size={20} className="text-blue-400" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <h3 className="font-medium text-white truncate">
-                                                            {asset.name}
-                                                        </h3>
-                                                        <SeverityBadge severity={asset.criticality} size="sm" />
-                                                        <span
-                                                            className={cn(
-                                                                "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium",
-                                                                status.bg,
-                                                                status.text
-                                                            )}
-                                                        >
-                                                            <StatusIcon size={10} />
-                                                            {asset.status}
-                                                        </span>
+                                        return (
+                                            <div
+                                                key={asset.id}
+                                                className="p-4 hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"
+                                            >
+                                                <div className="flex items-start gap-4">
+                                                    <div className="p-2.5 rounded-lg bg-[var(--bg-tertiary)]">
+                                                        <Icon size={20} className="text-blue-400" />
                                                     </div>
-                                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
-                                                        {asset.ipAddress && <span>IP: {asset.ipAddress}</span>}
-                                                        {asset.hostname && <span>Host: {asset.hostname}</span>}
-                                                        <span>{asset.environment}</span>
-                                                        {asset.department && <span>{asset.department}</span>}
-                                                    </div>
-                                                    {asset.tags.length > 0 && (
-                                                        <div className="flex flex-wrap gap-1 mt-2">
-                                                            {asset.tags.map((tag) => (
-                                                                <span
-                                                                    key={tag}
-                                                                    className="px-2 py-0.5 rounded bg-[var(--bg-elevated)] text-[10px] text-[var(--text-muted)]"
-                                                                >
-                                                                    {tag}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="text-right hidden md:block">
-                                                    {asset.vulnerabilityCount && asset.vulnerabilityCount > 0 ? (
-                                                        <div className="flex items-center gap-1 text-orange-400">
-                                                            <AlertTriangle size={14} />
-                                                            <span className="text-sm font-medium">
-                                                                {asset.vulnerabilityCount}
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <h3 className="font-medium text-white truncate">
+                                                                {asset.name}
+                                                            </h3>
+                                                            <SeverityBadge severity={asset.criticality} size="sm" />
+                                                            <span
+                                                                className={cn(
+                                                                    "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium",
+                                                                    status.bg,
+                                                                    status.text
+                                                                )}
+                                                            >
+                                                                <StatusIcon size={10} />
+                                                                {asset.status}
                                                             </span>
-                                                            <span className="text-xs text-[var(--text-muted)]">vulns</span>
                                                         </div>
-                                                    ) : (
-                                                        <span className="text-xs text-green-400">No vulnerabilities</span>
-                                                    )}
+                                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
+                                                            {asset.ipAddress && <span>IP: {asset.ipAddress}</span>}
+                                                            {asset.hostname && <span>Host: {asset.hostname}</span>}
+                                                            <span>{asset.environment}</span>
+                                                            {asset.department && <span>{asset.department}</span>}
+                                                        </div>
+                                                        {asset.tags.length > 0 && (
+                                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                                {asset.tags.map((tag) => (
+                                                                    <span
+                                                                        key={tag}
+                                                                        className="px-2 py-0.5 rounded bg-[var(--bg-elevated)] text-[10px] text-[var(--text-muted)]"
+                                                                    >
+                                                                        {tag}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-right hidden md:block">
+                                                        {asset.vulnerabilityCount && asset.vulnerabilityCount > 0 ? (
+                                                            <div className="flex items-center gap-1 text-orange-400">
+                                                                <AlertTriangle size={14} />
+                                                                <span className="text-sm font-medium">
+                                                                    {asset.vulnerabilityCount}
+                                                                </span>
+                                                                <span className="text-xs text-[var(--text-muted)]">vulns</span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-xs text-green-400">No vulnerabilities</span>
+                                                        )}
+                                                    </div>
+                                                    <button className="p-1.5 rounded-lg hover:bg-[var(--bg-elevated)] text-[var(--text-muted)]">
+                                                        <MoreVertical size={16} />
+                                                    </button>
                                                 </div>
-                                                <button className="p-1.5 rounded-lg hover:bg-[var(--bg-elevated)] text-[var(--text-muted)]">
-                                                    <MoreVertical size={16} />
-                                                </button>
                                             </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })
+                                )}
                             </div>
 
                             {/* Pagination */}
                             <div className="p-4 border-t border-[var(--border-color)] flex items-center justify-between">
                                 <span className="text-sm text-[var(--text-muted)]">
-                                    Showing {filteredAssets.length} of {mockAssets.length} assets
+                                    Showing {assets.length} of {pagination.total} assets
                                 </span>
                                 <div className="flex gap-2">
-                                    <button className="btn btn-secondary text-sm py-1.5 px-3" disabled>
+                                    <button
+                                        className="btn btn-secondary text-sm py-1.5 px-3"
+                                        disabled={pagination.page <= 1 || isLoading}
+                                        onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+                                    >
                                         Previous
                                     </button>
-                                    <button className="btn btn-secondary text-sm py-1.5 px-3">
+                                    <button
+                                        className="btn btn-secondary text-sm py-1.5 px-3"
+                                        disabled={pagination.page >= pagination.totalPages || isLoading}
+                                        onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+                                    >
                                         Next
                                     </button>
                                 </div>

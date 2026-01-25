@@ -1,6 +1,6 @@
 // ==================== ENUMS ====================
 
-export type Role = "ADMIN" | "MANAGER" | "ANALYST" | "VIEWER";
+export type Role = "IT_OFFICER" | "PENTESTER" | "ANALYST" | "MAIN_OFFICER";
 
 export type AssetType =
     | "SERVER"
