@@ -1,81 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
-
-// Mock threat feed data
-const threatFeeds = [
-    {
-        id: "1",
-        name: "NVD CVE Feed",
-        source: "NIST",
-        type: "CVE",
-        isActive: true,
-        lastSync: new Date(Date.now() - 1000 * 60 * 2).toISOString(),
-    },
-    {
-        id: "2",
-        name: "CISA KEV Catalog",
-        source: "CISA",
-        type: "CVE",
-        isActive: true,
-        lastSync: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-    },
-    {
-        id: "3",
-        name: "EPSS Scores",
-        source: "FIRST",
-        type: "CVE",
-        isActive: true,
-        lastSync: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-    },
-    {
-        id: "4",
-        name: "MITRE ATT&CK",
-        source: "MITRE",
-        type: "THREAT_ACTOR",
-        isActive: true,
-        lastSync: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
-    },
-];
-
-const threatIndicators = [
-    {
-        id: "1",
-        type: "CVE",
-        value: "CVE-2024-3400",
-        confidence: 100,
-        severity: "CRITICAL",
-        description: "Active exploitation in the wild",
-        tags: ["palo-alto", "vpn", "rce"],
-    },
-    {
-        id: "2",
-        type: "CVE",
-        value: "CVE-2024-21762",
-        confidence: 100,
-        severity: "CRITICAL",
-        description: "Fortinet FortiOS exploitation",
-        tags: ["fortinet", "vpn", "rce"],
-    },
-];
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const type = searchParams.get("type");
 
-    if (type === "feeds") {
-        return NextResponse.json({ data: threatFeeds });
-    }
+    try {
+        const [feeds, indicators] = await Promise.all([
+            prisma.threatFeed.findMany({
+                orderBy: { name: 'asc' }
+            }),
+            prisma.threatIndicator.findMany({
+                orderBy: { createdAt: 'desc' },
+                take: 50
+            })
+        ]);
 
-    if (type === "indicators") {
-        return NextResponse.json({ data: threatIndicators });
-    }
+        const activeFeeds = feeds.filter((f) => f.isActive).length;
+        const criticalThreats = indicators.filter((i) => i.severity === "CRITICAL").length;
 
-    return NextResponse.json({
-        feeds: threatFeeds,
-        indicators: threatIndicators,
-        stats: {
-            activeFeeds: threatFeeds.filter((f) => f.isActive).length,
-            totalIndicators: threatIndicators.length,
-            criticalThreats: threatIndicators.filter((i) => i.severity === "CRITICAL").length,
-        },
-    });
+        if (type === "feeds") {
+            return NextResponse.json({ data: feeds });
+        }
+
+        if (type === "indicators") {
+            return NextResponse.json({ data: indicators });
+        }
+
+        return NextResponse.json({
+            feeds,
+            indicators,
+            stats: {
+                activeFeeds,
+                totalIndicators: indicators.length,
+                criticalThreats,
+            },
+        });
+    } catch (error) {
+        console.error("Threats API Error:", error);
+        return NextResponse.json(
+            { error: "Failed to fetch threats" },
+            { status: 500 }
+        );
+    }
 }

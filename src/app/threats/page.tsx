@@ -1,8 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, SeverityBadge, ProgressBar } from "@/components/ui/Cards";
-import { mockExploitedVulnerabilities, mockVulnerabilities } from "@/lib/mock-data";
 import {
     AlertTriangle,
     Zap,
@@ -16,11 +16,56 @@ import {
     TrendingUp,
     RefreshCw,
     Filter,
+    Loader2,
 } from "lucide-react";
 
 export default function ThreatsPage() {
-    const exploitedVulns = mockVulnerabilities.filter((v) => v.isExploited);
-    const kevVulns = mockVulnerabilities.filter((v) => v.cisaKev);
+    const [exploitedVulns, setExploitedVulns] = useState<any[]>([]);
+    const [kevVulns, setKevVulns] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [summary, setSummary] = useState<any>(null);
+
+    const fetchThreats = async () => {
+        try {
+            setIsLoading(true);
+            // Fetch exploited vulnerabilities
+            const [exploitedRes, kevRes] = await Promise.all([
+                fetch("/api/vulnerabilities?exploited=true&limit=10"),
+                fetch("/api/vulnerabilities?kev=true&limit=10")
+            ]);
+
+            const exploited = await exploitedRes.json();
+            const kev = await kevRes.json();
+
+            setExploitedVulns(exploited.data);
+            setKevVulns(kev.data);
+            setSummary({
+                exploitedTotal: exploited.pagination.total,
+                kevTotal: kev.pagination.total,
+                highEpss: exploited.data.filter((v: any) => (v.epssScore || 0) > 0.7).length,
+                assetsAtRisk: exploited.data.reduce((acc: number, v: any) => acc + (v.affectedAssets || 0), 0)
+            });
+        } catch (error) {
+            console.error("Failed to fetch threats:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchThreats();
+    }, []);
+
+    if (isLoading && exploitedVulns.length === 0) {
+        return (
+            <DashboardLayout>
+                <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                    <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+                    <p className="text-[var(--text-secondary)]">Analyzing live threat intelligence...</p>
+                </div>
+            </DashboardLayout>
+        );
+    }
 
     return (
         <DashboardLayout>
@@ -39,8 +84,8 @@ export default function ThreatsPage() {
                                 Real-time Updates
                             </span>
                         </div>
-                        <button className="btn btn-secondary">
-                            <RefreshCw size={16} />
+                        <button className="btn btn-secondary" onClick={fetchThreats} disabled={isLoading}>
+                            <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
                             Refresh
                         </button>
                     </div>
@@ -57,23 +102,23 @@ export default function ThreatsPage() {
                                 Active Exploitation Detected
                             </h2>
                             <p className="text-[var(--text-secondary)] mb-3">
-                                {exploitedVulns.length} vulnerabilities in your environment are being actively
-                                exploited in the wild. {kevVulns.length} are listed in the CISA Known
+                                {summary?.exploitedTotal || 0} vulnerabilities in your environment are being actively
+                                exploited in the wild. {summary?.kevTotal || 0} are listed in the CISA Known
                                 Exploited Vulnerabilities catalog requiring urgent remediation.
                             </p>
                             <div className="flex flex-wrap gap-3">
                                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--bg-tertiary)]">
                                     <AlertTriangle size={14} className="text-red-400" />
-                                    <span className="text-sm text-white">{exploitedVulns.length} Exploited</span>
+                                    <span className="text-sm text-white">{summary?.exploitedTotal || 0} Exploited</span>
                                 </div>
                                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--bg-tertiary)]">
                                     <Shield size={14} className="text-orange-400" />
-                                    <span className="text-sm text-white">{kevVulns.length} CISA KEV</span>
+                                    <span className="text-sm text-white">{summary?.kevTotal || 0} CISA KEV</span>
                                 </div>
                                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--bg-tertiary)]">
                                     <Target size={14} className="text-blue-400" />
                                     <span className="text-sm text-white">
-                                        {exploitedVulns.reduce((acc, v) => acc + (v.affectedAssets || 0), 0)} Assets at Risk
+                                        {summary?.assetsAtRisk || 0} Assets at Risk
                                     </span>
                                 </div>
                             </div>
@@ -86,27 +131,27 @@ export default function ThreatsPage() {
                     <div className="card p-4 border-l-2 border-red-500">
                         <p className="text-xs text-[var(--text-muted)] mb-1">High Risk EPSS</p>
                         <p className="text-2xl font-bold text-red-400">
-                            {mockVulnerabilities.filter((v) => v.epssScore && v.epssScore > 0.7).length}
+                            {summary?.highEpss || 0}
                         </p>
                         <p className="text-xs text-[var(--text-muted)] mt-1">&gt;70% exploitation probability</p>
                     </div>
                     <div className="card p-4 border-l-2 border-orange-500">
                         <p className="text-xs text-[var(--text-muted)] mb-1">Weaponized</p>
                         <p className="text-2xl font-bold text-orange-400">
-                            {mockVulnerabilities.filter((v) => v.exploitMaturity === "HIGH" || v.exploitMaturity === "FUNCTIONAL").length}
+                            {exploitedVulns.length}
                         </p>
                         <p className="text-xs text-[var(--text-muted)] mt-1">Exploit code available</p>
                     </div>
                     <div className="card p-4 border-l-2 border-yellow-500">
-                        <p className="text-xs text-[var(--text-muted)] mb-1">POC Available</p>
+                        <p className="text-xs text-[var(--text-muted)] mb-1">CISA KEV</p>
                         <p className="text-2xl font-bold text-yellow-400">
-                            {mockVulnerabilities.filter((v) => v.exploitMaturity === "POC").length}
+                            {summary?.kevTotal || 0}
                         </p>
-                        <p className="text-xs text-[var(--text-muted)] mt-1">Proof of concept exists</p>
+                        <p className="text-xs text-[var(--text-muted)] mt-1">Mandatory remediation</p>
                     </div>
                     <div className="card p-4 border-l-2 border-blue-500">
                         <p className="text-xs text-[var(--text-muted)] mb-1">Threat Feeds Active</p>
-                        <p className="text-2xl font-bold text-blue-400">6</p>
+                        <p className="text-2xl font-bold text-blue-400">4</p>
                         <p className="text-xs text-[var(--text-muted)] mt-1">Connected sources</p>
                     </div>
                 </div>
@@ -118,87 +163,88 @@ export default function ThreatsPage() {
                         <Card
                             title="Actively Exploited Vulnerabilities"
                             subtitle="Prioritized by risk and exploitation status"
-                            action={
-                                <button className="btn btn-ghost text-sm py-1">
-                                    <Filter size={14} />
-                                    Filter
-                                </button>
-                            }
                         >
                             <div className="space-y-4">
-                                {mockExploitedVulnerabilities.map((vuln, idx) => (
-                                    <div
-                                        key={vuln.id}
-                                        className="p-4 rounded-xl bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer border border-transparent hover:border-red-500/20"
-                                    >
-                                        <div className="flex items-start gap-4">
-                                            <div
-                                                className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0"
-                                                style={{
-                                                    background: idx < 3 ? "rgba(239, 68, 68, 0.15)" : "rgba(255, 255, 255, 0.05)",
-                                                    color: idx < 3 ? "#ef4444" : "#94a3b8",
-                                                }}
-                                            >
-                                                {idx + 1}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex flex-wrap items-center gap-2 mb-2">
-                                                    <a
-                                                        href={`https://nvd.nist.gov/vuln/detail/${vuln.cveId}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="font-mono text-sm text-blue-400 hover:underline flex items-center gap-1"
-                                                    >
-                                                        {vuln.cveId}
-                                                        <ExternalLink size={10} />
-                                                    </a>
-                                                    <SeverityBadge severity={vuln.severity} size="sm" />
-                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-[10px] font-semibold text-red-400">
-                                                        <Zap size={10} />
-                                                        ACTIVELY EXPLOITED
-                                                    </span>
-                                                    {vuln.cisaKev && <span className="kev-badge">CISA KEV</span>}
+                                {exploitedVulns.length > 0 ? (
+                                    exploitedVulns.map((vuln, idx) => (
+                                        <div
+                                            key={vuln.id}
+                                            className="p-4 rounded-xl bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer border border-transparent hover:border-red-500/20"
+                                        >
+                                            <div className="flex items-start gap-4">
+                                                <div
+                                                    className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0"
+                                                    style={{
+                                                        background: idx < 3 ? "rgba(239, 68, 68, 0.15)" : "rgba(255, 255, 255, 0.05)",
+                                                        color: idx < 3 ? "#ef4444" : "#94a3b8",
+                                                    }}
+                                                >
+                                                    {idx + 1}
                                                 </div>
-                                                <h3 className="font-medium text-white mb-2">{vuln.title}</h3>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                                                        <a
+                                                            href={`https://nvd.nist.gov/vuln/detail/${vuln.cveId}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="font-mono text-sm text-blue-400 hover:underline flex items-center gap-1"
+                                                        >
+                                                            {vuln.cveId}
+                                                            <ExternalLink size={10} />
+                                                        </a>
+                                                        <SeverityBadge severity={vuln.severity} size="sm" />
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-[10px] font-semibold text-red-400">
+                                                            <Zap size={10} />
+                                                            ACTIVELY EXPLOITED
+                                                        </span>
+                                                        {vuln.cisaKev && <span className="kev-badge">CISA KEV</span>}
+                                                    </div>
+                                                    <h3 className="font-medium text-white mb-2">{vuln.title}</h3>
 
-                                                {/* EPSS Score Bar */}
-                                                <div className="mb-3">
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <span className="text-xs text-[var(--text-muted)]">
-                                                            Exploitation Probability (EPSS)
-                                                        </span>
-                                                        <span className="text-xs font-medium text-white">
-                                                            {(vuln.epssScore * 100).toFixed(1)}%
-                                                        </span>
+                                                    {/* EPSS Score Bar */}
+                                                    <div className="mb-3">
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <span className="text-xs text-[var(--text-muted)]">
+                                                                Exploitation Probability (EPSS)
+                                                            </span>
+                                                            <span className="text-xs font-medium text-white">
+                                                                {((vuln.epssScore || 0) * 100).toFixed(1)}%
+                                                            </span>
+                                                        </div>
+                                                        <div className="epss-bar">
+                                                            <div
+                                                                className="epss-bar-fill"
+                                                                style={{ width: `${(vuln.epssScore || 0) * 100}%` }}
+                                                            />
+                                                        </div>
                                                     </div>
-                                                    <div className="epss-bar">
-                                                        <div
-                                                            className="epss-bar-fill"
-                                                            style={{ width: `${vuln.epssScore * 100}%` }}
-                                                        />
-                                                    </div>
-                                                </div>
 
-                                                <div className="flex flex-wrap items-center gap-4 text-xs text-[var(--text-muted)]">
-                                                    <div className="flex items-center gap-1">
-                                                        <Target size={12} />
-                                                        <span>
-                                                            <span className="text-white font-medium">{vuln.affectedAssets}</span> assets affected
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <Activity size={12} />
-                                                        <span>
-                                                            Exploit Maturity:{" "}
-                                                            <span className="text-orange-400">{vuln.exploitMaturity}</span>
-                                                        </span>
+                                                    <div className="flex flex-wrap items-center gap-4 text-xs text-[var(--text-muted)]">
+                                                        <div className="flex items-center gap-1">
+                                                            <Target size={12} />
+                                                            <span>
+                                                                <span className="text-white font-medium">{vuln.affectedAssets}</span> assets affected
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            <Activity size={12} />
+                                                            <span>
+                                                                Source:{" "}
+                                                                <span className="text-orange-400">{vuln.source}</span>
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </div>
+                                                <ChevronRight size={18} className="text-[var(--text-muted)] flex-shrink-0" />
                                             </div>
-                                            <ChevronRight size={18} className="text-[var(--text-muted)] flex-shrink-0" />
                                         </div>
+                                    ))
+                                ) : (
+                                    <div className="py-20 text-center">
+                                        <Shield className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4 opacity-20" />
+                                        <p className="text-[var(--text-secondary)]">No actively exploited vulnerabilities detected.</p>
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </Card>
                     </div>
@@ -213,8 +259,6 @@ export default function ThreatsPage() {
                                     { name: "CISA KEV Catalog", status: "active", lastSync: "5 min ago" },
                                     { name: "EPSS Scores", status: "active", lastSync: "1 hour ago" },
                                     { name: "MITRE ATT&CK", status: "active", lastSync: "6 hours ago" },
-                                    { name: "Exploit-DB", status: "syncing", lastSync: "Syncing..." },
-                                    { name: "AlienVault OTX", status: "active", lastSync: "12 hours ago" },
                                 ].map((feed) => (
                                     <div
                                         key={feed.name}
@@ -223,10 +267,8 @@ export default function ThreatsPage() {
                                         <div className="flex items-center gap-3">
                                             <div
                                                 className={`w-2 h-2 rounded-full ${feed.status === "active"
-                                                        ? "bg-green-400"
-                                                        : feed.status === "syncing"
-                                                            ? "bg-yellow-400 animate-pulse"
-                                                            : "bg-gray-500"
+                                                    ? "bg-green-400"
+                                                    : "bg-gray-500"
                                                     }`}
                                             />
                                             <span className="text-sm text-white">{feed.name}</span>
@@ -237,81 +279,28 @@ export default function ThreatsPage() {
                             </div>
                         </Card>
 
-                        {/* MITRE ATT&CK Techniques */}
-                        <Card title="Top ATT&CK Techniques" subtitle="Observed in your environment">
-                            <div className="space-y-3">
-                                {[
-                                    { id: "T1190", name: "Exploit Public-Facing Application", count: 18 },
-                                    { id: "T1133", name: "External Remote Services", count: 12 },
-                                    { id: "T1078", name: "Valid Accounts", count: 8 },
-                                    { id: "T1059", name: "Command & Scripting Interpreter", count: 6 },
-                                    { id: "T1021", name: "Remote Services", count: 5 },
-                                ].map((technique) => (
-                                    <div key={technique.id} className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-mono text-xs text-blue-400">{technique.id}</span>
-                                            <span className="text-sm text-[var(--text-secondary)] truncate max-w-[160px]">
-                                                {technique.name}
-                                            </span>
-                                        </div>
-                                        <span className="text-sm font-medium text-white">{technique.count}</span>
-                                    </div>
-                                ))}
-                            </div>
-                            <a
-                                href="https://attack.mitre.org"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1 text-xs text-blue-400 hover:underline mt-4"
-                            >
-                                View full ATT&CK mapping
-                                <ExternalLink size={10} />
-                            </a>
-                        </Card>
-
                         {/* Recent Threat Updates */}
                         <Card title="Recent Threat Updates">
                             <div className="space-y-3">
-                                {[
-                                    {
-                                        title: "New critical vulnerability added to KEV",
-                                        time: "15 min ago",
-                                        type: "critical",
-                                    },
-                                    {
-                                        title: "EPSS scores updated for 127 CVEs",
-                                        time: "1 hour ago",
-                                        type: "info",
-                                    },
-                                    {
-                                        title: "Exploit code published for CVE-2024-3400",
-                                        time: "3 hours ago",
-                                        type: "warning",
-                                    },
-                                    {
-                                        title: "Threat actor campaign targeting your sector",
-                                        time: "6 hours ago",
-                                        type: "warning",
-                                    },
-                                ].map((update, idx) => (
+                                {kevVulns.slice(0, 4).map((vuln, idx) => (
                                     <div
                                         key={idx}
                                         className="flex items-start gap-3 p-2 rounded-lg hover:bg-[var(--bg-tertiary)] cursor-pointer"
                                     >
-                                        <div
-                                            className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${update.type === "critical"
-                                                    ? "bg-red-400"
-                                                    : update.type === "warning"
-                                                        ? "bg-orange-400"
-                                                        : "bg-blue-400"
-                                                }`}
-                                        />
+                                        <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 bg-red-400" />
                                         <div>
-                                            <p className="text-sm text-[var(--text-secondary)]">{update.title}</p>
-                                            <p className="text-xs text-[var(--text-muted)]">{update.time}</p>
+                                            <p className="text-sm text-[var(--text-secondary)] line-clamp-2">
+                                                New KEV entry: {vuln.cveId} - {vuln.title}
+                                            </p>
+                                            <p className="text-xs text-[var(--text-muted)]">Recently detected</p>
                                         </div>
                                     </div>
                                 ))}
+                                {kevVulns.length === 0 && (
+                                    <p className="text-xs text-[var(--text-muted)] text-center py-4">
+                                        No recent threat updates.
+                                    </p>
+                                )}
                             </div>
                         </Card>
                     </div>

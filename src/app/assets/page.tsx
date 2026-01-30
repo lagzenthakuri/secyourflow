@@ -51,6 +51,7 @@ export default function AssetsPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedType, setSelectedType] = useState<string | null>(null);
     const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
+    const [summary, setSummary] = useState<any>(null);
 
     const fetchAssets = async () => {
         try {
@@ -65,6 +66,7 @@ export default function AssetsPage() {
             const result = await response.json();
             setAssets(result.data);
             setPagination(prev => ({ ...prev, ...result.pagination }));
+            setSummary(result.summary);
         } catch (error) {
             console.error("Failed to fetch assets:", error);
         } finally {
@@ -98,7 +100,18 @@ export default function AssetsPage() {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button className="btn btn-secondary">
+                        <button className="btn btn-secondary" onClick={() => {
+                            const csv = [
+                                ["Name", "Type", "Status", "Criticality", "IP Address", "Hostname"].join(","),
+                                ...assets.map(a => [a.name, a.type, a.status, a.criticality, a.ipAddress, a.hostname].join(","))
+                            ].join("\n");
+                            const blob = new Blob([csv], { type: 'text/csv' });
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'assets.csv';
+                            a.click();
+                        }}>
                             <Download size={16} />
                             Export
                         </button>
@@ -271,7 +284,7 @@ export default function AssetsPage() {
                                                             <span>{asset.environment}</span>
                                                             {asset.department && <span>{asset.department}</span>}
                                                         </div>
-                                                        {asset.tags.length > 0 && (
+                                                        {asset.tags && asset.tags.length > 0 && (
                                                             <div className="flex flex-wrap gap-1 mt-2">
                                                                 {asset.tags.map((tag) => (
                                                                     <span
@@ -335,17 +348,18 @@ export default function AssetsPage() {
                     {/* Sidebar */}
                     <div className="lg:col-span-4 space-y-4">
                         <Card title="Asset Distribution" subtitle="By type">
-                            <AssetTypeChart data={mockAssetTypeDistribution} />
+                            {summary?.typeDistribution ? (
+                                <AssetTypeChart data={summary.typeDistribution} />
+                            ) : (
+                                <div className="h-[200px] flex items-center justify-center">
+                                    <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                                </div>
+                            )}
                         </Card>
 
                         <Card title="Environment Breakdown">
                             <div className="space-y-3">
-                                {[
-                                    { name: "Production", count: 847, percentage: 68 },
-                                    { name: "Staging", count: 198, percentage: 16 },
-                                    { name: "Development", count: 156, percentage: 12 },
-                                    { name: "Testing", count: 46, percentage: 4 },
-                                ].map((env) => (
+                                {summary?.environmentBreakdown?.map((env: any) => (
                                     <div key={env.name}>
                                         <div className="flex items-center justify-between mb-1">
                                             <span className="text-sm text-[var(--text-secondary)]">
@@ -355,13 +369,17 @@ export default function AssetsPage() {
                                         </div>
                                         <ProgressBar value={env.percentage} showLabel={false} color="#3b82f6" />
                                     </div>
-                                ))}
+                                )) || (
+                                        <div className="py-10 text-center text-xs text-[var(--text-muted)]">
+                                            Loading breakdown...
+                                        </div>
+                                    )}
                             </div>
                         </Card>
 
                         <Card title="Recently Added">
                             <div className="space-y-3">
-                                {mockAssets.slice(0, 3).map((asset) => {
+                                {assets.slice(0, 3).map((asset) => {
                                     const Icon = assetTypeIcons[asset.type] || Server;
                                     return (
                                         <div
@@ -374,7 +392,7 @@ export default function AssetsPage() {
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-sm text-white truncate">{asset.name}</p>
                                                 <p className="text-xs text-[var(--text-muted)]">
-                                                    Added 2 days ago
+                                                    New asset detected
                                                 </p>
                                             </div>
                                         </div>

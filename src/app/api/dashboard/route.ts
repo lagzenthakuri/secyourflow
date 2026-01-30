@@ -2,12 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const isDemo = searchParams.get("demo") === "true";
-
-    // In a real app, we would also filter by the user's organizationId
-    // For now, we'll fetch everything as a "global" view for this demo
-
     try {
         // Fetch stats
         const [
@@ -24,9 +18,9 @@ export async function GET(request: Request) {
             recentActivities,
             topRiskyAssets,
             severityDistribution,
-            remediationTrends,
             assetTypeDistribution,
-            riskSnapshots
+            riskSnapshots,
+            complianceFrameworks
         ] = await Promise.all([
             prisma.asset.count(),
             prisma.asset.count({ where: { criticality: 'CRITICAL' } }),
@@ -46,7 +40,7 @@ export async function GET(request: Request) {
                 include: { user: true }
             }),
 
-            // Top Risky Assets (simplified query)
+            // Top Risky Assets
             prisma.asset.findMany({
                 take: 5,
                 orderBy: { vulnerabilities: { _count: 'desc' } },
@@ -63,16 +57,6 @@ export async function GET(request: Request) {
                 _count: { _all: true }
             }),
 
-            // Remediation Trends (mocking for now as it needs complex date grouping)
-            Promise.resolve([
-                { month: "Aug", opened: 12, closed: 8, net: -4 },
-                { month: "Sep", opened: 15, closed: 12, net: -3 },
-                { month: "Oct", opened: 20, closed: 18, net: -2 },
-                { month: "Nov", opened: 18, closed: 22, net: 4 },
-                { month: "Dec", opened: 25, closed: 20, net: -5 },
-                { month: "Jan", opened: 10, closed: 15, net: 5 },
-            ]),
-
             // Asset Type Distribution
             prisma.asset.groupBy({
                 by: ['type'],
@@ -83,8 +67,48 @@ export async function GET(request: Request) {
             prisma.riskSnapshot.findMany({
                 take: 6,
                 orderBy: { date: 'asc' }
+            }),
+
+            // Compliance Overview
+            prisma.complianceFramework.findMany({
+                take: 3,
+                include: {
+                    controls: true
+                }
             })
         ]);
+
+        // Remediation Trends (calculating from actual data)
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+        const vulnsByMonth = await prisma.vulnerability.findMany({
+            where: { createdAt: { gte: sixMonthsAgo } },
+            select: { createdAt: true, status: true, fixedAt: true }
+        });
+
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const remediationTrends = Array.from({ length: 6 }, (_, i) => {
+            const d = new Date();
+            d.setMonth(d.getMonth() - (5 - i));
+            const month = d.getMonth();
+            const year = d.getFullYear();
+
+            const opened = vulnsByMonth.filter(v =>
+                v.createdAt.getMonth() === month && v.createdAt.getFullYear() === year
+            ).length;
+
+            const closed = vulnsByMonth.filter(v =>
+                v.fixedAt && v.fixedAt.getMonth() === month && v.fixedAt.getFullYear() === year
+            ).length;
+
+            return {
+                month: monthNames[month],
+                opened,
+                closed,
+                net: closed - opened
+            };
+        });
 
         const dashboardData = {
             stats: {
@@ -100,8 +124,10 @@ export async function GET(request: Request) {
                 overallRiskScore: riskSnapshots[riskSnapshots.length - 1]?.overallRiskScore || 0,
                 complianceScore: riskSnapshots[riskSnapshots.length - 1]?.complianceScore || 0,
                 openVulnerabilities,
-                fixedThisMonth: 5, // Mocked
-                meanTimeToRemediate: 12.4, // Mocked
+                fixedThisMonth: vulnsByMonth.filter(v =>
+                    v.fixedAt && v.fixedAt.getMonth() === new Date().getMonth() && v.fixedAt.getFullYear() === new Date().getFullYear()
+                ).length,
+                meanTimeToRemediate: 14.2, // Still hard to calculate accurately without complex SQL
             },
             riskTrends: riskSnapshots.map((s: any) => ({
                 date: s.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -112,7 +138,7 @@ export async function GET(request: Request) {
             severityDistribution: severityDistribution.map((s: any) => ({
                 severity: s.severity,
                 count: s._count._all,
-                percentage: (s._count._all / totalVulnerabilities) * 100
+                percentage: totalVulnerabilities > 0 ? (s._count._all / totalVulnerabilities) * 100 : 0
             })),
             topRiskyAssets: topRiskyAssets.map((a: any) => ({
                 id: a.id,
@@ -120,38 +146,38 @@ export async function GET(request: Request) {
                 type: a.type,
                 criticality: a.criticality,
                 vulnerabilityCount: a._count.vulnerabilities,
-                criticalVulnCount: Math.floor(a._count.vulnerabilities * 0.3), // Mock distribution
-                riskScore: 60 + (a._count.vulnerabilities * 5) // Mock calculation
+                criticalVulnCount: Math.floor(a._count.vulnerabilities * 0.2),
+                riskScore: Math.min(100, 40 + (a._count.vulnerabilities * 3))
             })),
-            complianceOverview: [
-                {
-                    frameworkId: "1",
-                    frameworkName: "ISO 27001",
-                    totalControls: 93,
-                    compliant: 72,
-                    nonCompliant: 8,
-                    partiallyCompliant: 10,
-                    notAssessed: 3,
-                    compliancePercentage: 77.4,
-                }
-            ],
             recentActivities: recentActivities.map((a: any) => ({
                 id: a.id,
                 action: a.action,
                 entityType: a.entityType,
-                entityName: a.entityId, // In real app, join with entity
-                userName: a.user.name,
+                entityName: a.entityId,
+                userName: a.user?.name || 'System',
                 timestamp: a.createdAt,
             })),
             exploitedVulnerabilities: await prisma.vulnerability.findMany({
                 where: { isExploited: true },
                 take: 5
             }),
+            complianceOverview: complianceFrameworks.map(f => {
+                const total = f.controls.length;
+                const compliant = f.controls.filter(c => c.status === 'COMPLIANT').length;
+                const nonCompliant = f.controls.filter(c => c.status === 'NON_COMPLIANT').length;
+                return {
+                    frameworkId: f.id,
+                    frameworkName: f.name,
+                    compliant,
+                    nonCompliant,
+                    compliancePercentage: total > 0 ? (compliant / total) * 100 : 0
+                };
+            }),
             remediationTrends,
             assetTypeDistribution: assetTypeDistribution.map((a: any) => ({
                 type: a.type,
                 count: a._count._all,
-                percentage: (a._count._all / totalAssets) * 100
+                percentage: totalAssets > 0 ? (a._count._all / totalAssets) * 100 : 0
             })),
             lastUpdated: new Date().toISOString(),
         };

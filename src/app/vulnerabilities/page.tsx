@@ -42,6 +42,7 @@ export default function VulnerabilitiesPage() {
     const [selectedSeverity, setSelectedSeverity] = useState<string | null>(null);
     const [showExploited, setShowExploited] = useState(false);
     const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
+    const [summary, setSummary] = useState<any>(null);
 
     const fetchVulnerabilities = async () => {
         try {
@@ -57,6 +58,7 @@ export default function VulnerabilitiesPage() {
             const result = await response.json();
             setVulns(result.data);
             setPagination(prev => ({ ...prev, ...result.pagination }));
+            setSummary(result.summary);
         } catch (error) {
             console.error("Failed to fetch vulnerabilities:", error);
         } finally {
@@ -73,9 +75,9 @@ export default function VulnerabilitiesPage() {
 
     const stats = {
         total: pagination.total,
-        critical: vulns.filter(v => v.severity === "CRITICAL").length, // Simple local filter for demo
-        exploited: vulns.filter(v => v.isExploited).length,
-        open: vulns.filter(v => v.status === "OPEN").length,
+        critical: summary?.severityDistribution?.find((s: any) => s.severity === "CRITICAL")?.count || 0,
+        exploited: summary?.exploitedCount || vulns.filter(v => v.isExploited).length,
+        open: vulns.filter(v => v.status === "OPEN" || v.status === "IN_PROGRESS").length,
     };
 
     return (
@@ -90,7 +92,18 @@ export default function VulnerabilitiesPage() {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button className="btn btn-secondary">
+                        <button className="btn btn-secondary" onClick={() => {
+                            const csv = [
+                                ["CVE ID", "Title", "Severity", "CVSS", "Status", "Exploited"].join(","),
+                                ...vulns.map(v => [v.cveId || 'N/A', v.title, v.severity, v.cvssScore, v.status, v.isExploited].join(","))
+                            ].join("\n");
+                            const blob = new Blob([csv], { type: 'text/csv' });
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'vulnerabilities.csv';
+                            a.click();
+                        }}>
                             <Download size={16} />
                             Export
                         </button>
@@ -233,7 +246,7 @@ export default function VulnerabilitiesPage() {
                                     </div>
                                 ) : (
                                     vulns.map((vuln) => {
-                                        const status = statusConfig[vuln.status];
+                                        const status = statusConfig[vuln.status] || statusConfig.OPEN;
 
                                         return (
                                             <div
@@ -364,40 +377,48 @@ export default function VulnerabilitiesPage() {
                     {/* Sidebar */}
                     <div className="lg:col-span-4 space-y-4">
                         <Card title="Severity Distribution">
-                            <SeverityDistributionChart data={mockSeverityDistribution} />
-                            <div className="space-y-2 mt-4">
-                                {mockSeverityDistribution.map((item) => (
-                                    <div key={item.severity} className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <div
-                                                className="w-3 h-3 rounded"
-                                                style={{
-                                                    background:
-                                                        item.severity === "CRITICAL"
-                                                            ? "#ef4444"
-                                                            : item.severity === "HIGH"
-                                                                ? "#f97316"
-                                                                : item.severity === "MEDIUM"
-                                                                    ? "#eab308"
-                                                                    : "#22c55e",
-                                                }}
-                                            />
-                                            <span className="text-sm text-[var(--text-secondary)]">
-                                                {item.severity}
-                                            </span>
-                                        </div>
-                                        <span className="text-sm font-medium text-white">{item.count}</span>
+                            {summary?.severityDistribution ? (
+                                <>
+                                    <SeverityDistributionChart data={summary.severityDistribution} />
+                                    <div className="space-y-2 mt-4">
+                                        {summary.severityDistribution.map((item: any) => (
+                                            <div key={item.severity} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div
+                                                        className="w-3 h-3 rounded"
+                                                        style={{
+                                                            background:
+                                                                item.severity === "CRITICAL"
+                                                                    ? "#ef4444"
+                                                                    : item.severity === "HIGH"
+                                                                        ? "#f97316"
+                                                                        : item.severity === "MEDIUM"
+                                                                            ? "#eab308"
+                                                                            : "#22c55e",
+                                                        }}
+                                                    />
+                                                    <span className="text-sm text-[var(--text-secondary)]">
+                                                        {item.severity}
+                                                    </span>
+                                                </div>
+                                                <span className="text-sm font-medium text-white">{item.count}</span>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
+                                </>
+                            ) : (
+                                <div className="h-[200px] flex items-center justify-center">
+                                    <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                                </div>
+                            )}
                         </Card>
 
                         <Card title="By Scanner Source">
                             <div className="space-y-3">
-                                {mockVulnSourceDistribution.map((source) => (
+                                {summary?.sourceDistribution?.map((source: any) => (
                                     <div key={source.source}>
                                         <div className="flex items-center justify-between mb-1">
-                                            <span className="text-sm text-[var(--text-secondary)]">
+                                            <span className="text-sm text-[var(--text-secondary)] font-mono">
                                                 {source.source}
                                             </span>
                                             <span className="text-sm font-medium text-white">
@@ -406,22 +427,26 @@ export default function VulnerabilitiesPage() {
                                         </div>
                                         <ProgressBar
                                             value={source.count}
-                                            max={1600}
+                                            max={Math.max(...summary.sourceDistribution.map((s: any) => s.count))}
                                             showLabel={false}
                                             color="#06b6d4"
                                         />
                                     </div>
-                                ))}
+                                )) || (
+                                        <div className="py-10 text-center text-xs text-[var(--text-muted)]">
+                                            Loading source distribution...
+                                        </div>
+                                    )}
                             </div>
                         </Card>
 
                         <Card title="EPSS Score Ranges">
                             <div className="space-y-3">
                                 {[
-                                    { range: "High (>70%)", count: 23, color: "#ef4444" },
-                                    { range: "Medium (30-70%)", count: 89, color: "#f97316" },
-                                    { range: "Low (10-30%)", count: 256, color: "#eab308" },
-                                    { range: "Minimal (<10%)", count: 892, color: "#22c55e" },
+                                    { range: "High (>70%)", count: vulns.filter(v => (v.epssScore || 0) > 0.7).length, color: "#ef4444" },
+                                    { range: "Medium (30-70%)", count: vulns.filter(v => (v.epssScore || 0) <= 0.7 && (v.epssScore || 0) > 0.3).length, color: "#f97316" },
+                                    { range: "Low (10-30%)", count: vulns.filter(v => (v.epssScore || 0) <= 0.3 && (v.epssScore || 0) > 0.1).length, color: "#eab308" },
+                                    { range: "Minimal (<10%)", count: vulns.filter(v => (v.epssScore || 0) <= 0.1).length, color: "#22c55e" },
                                 ].map((item) => (
                                     <div
                                         key={item.range}

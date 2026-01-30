@@ -34,11 +34,8 @@ import {
     Loader2,
 } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 
 export default function DashboardPage() {
-    const searchParams = useSearchParams();
-    const isDemo = searchParams.get("demo") === "true";
     const [data, setData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -47,7 +44,7 @@ export default function DashboardPage() {
         const fetchDashboardData = async () => {
             try {
                 setIsLoading(true);
-                const response = await fetch(`/api/dashboard${isDemo ? "?demo=true" : ""}`);
+                const response = await fetch("/api/dashboard");
                 if (!response.ok) throw new Error("Failed to fetch dashboard data");
                 const jsonData = await response.json();
                 setData(jsonData);
@@ -59,7 +56,7 @@ export default function DashboardPage() {
         };
 
         fetchDashboardData();
-    }, [isDemo]);
+    }, []);
 
     if (isLoading) {
         return (
@@ -130,29 +127,29 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <StatCard
                         title="Total Assets"
-                        value={stats.totalAssets.toLocaleString()}
-                        subtitle={`${stats.criticalAssets} critical`}
+                        value={(stats?.totalAssets || 0).toLocaleString()}
+                        subtitle={`${stats?.criticalAssets || 0} critical`}
                         icon={<Server size={18} className="text-blue-400" />}
                         trend={{ value: 12, label: "this month" }}
                     />
                     <StatCard
                         title="Open Vulnerabilities"
-                        value={stats.openVulnerabilities.toLocaleString()}
-                        subtitle={`${stats.criticalVulnerabilities} critical, ${stats.highVulnerabilities} high`}
+                        value={(stats?.openVulnerabilities || 0).toLocaleString()}
+                        subtitle={`${stats?.criticalVulnerabilities || 0} critical, ${stats?.highVulnerabilities || 0} high`}
                         icon={<Bug size={18} className="text-orange-400" />}
                         trend={{ value: -8, label: "this week" }}
                     />
                     <StatCard
                         title="Actively Exploited"
-                        value={stats.exploitedVulnerabilities}
-                        subtitle={`${stats.cisaKevCount} in CISA KEV`}
+                        value={stats?.exploitedVulnerabilities || 0}
+                        subtitle={`${stats?.cisaKevCount || 0} in CISA KEV`}
                         icon={<AlertTriangle size={18} className="text-red-400" />}
                         severity="CRITICAL"
                     />
                     <StatCard
                         title="Fixed This Month"
-                        value={stats.fixedThisMonth}
-                        subtitle={`MTTR: ${stats.meanTimeToRemediate} days`}
+                        value={stats?.fixedThisMonth || 0}
+                        subtitle={`MTTR: ${stats?.meanTimeToRemediate || 0} days`}
                         icon={<TrendingDown size={18} className="text-green-400" />}
                         trend={{ value: -15, label: "faster" }}
                     />
@@ -163,7 +160,7 @@ export default function DashboardPage() {
                     {/* Risk Score */}
                     <div className="lg:col-span-3">
                         <RiskScoreCard
-                            score={stats.overallRiskScore}
+                            score={stats?.overallRiskScore || 0}
                             label="Overall Risk Score"
                         />
                     </div>
@@ -191,7 +188,7 @@ export default function DashboardPage() {
                         <Card title="Severity Distribution">
                             <SeverityDistributionChart data={severityDistribution} />
                             <div className="grid grid-cols-2 gap-2 mt-2">
-                                {(severityDistribution as any[]).map((item: any) => (
+                                {(severityDistribution || []).map((item: any) => (
                                     <div key={item.severity} className="flex items-center gap-2">
                                         <div
                                             className="w-2 h-2 rounded-full"
@@ -232,8 +229,8 @@ export default function DashboardPage() {
                                 </span>
                             </div>
                             <p className="text-sm text-[var(--text-secondary)]">
-                                {stats.exploitedVulnerabilities} vulnerabilities are being
-                                actively exploited in the wild. {stats.cisaKevCount} are listed
+                                {stats?.exploitedVulnerabilities || 0} vulnerabilities are being
+                                actively exploited in the wild. {stats?.cisaKevCount || 0} are listed
                                 in the CISA Known Exploited Vulnerabilities catalog.
                             </p>
                         </div>
@@ -263,7 +260,7 @@ export default function DashboardPage() {
                             }
                         >
                             <div className="space-y-3">
-                                {(exploitedVulnerabilities as any[]).slice(0, 5).map((vuln: any, idx: number) => (
+                                {(exploitedVulnerabilities || []).slice(0, 5).map((vuln: any, idx: number) => (
                                     <div
                                         key={vuln.id}
                                         className="flex items-center gap-4 p-3 rounded-lg bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer group"
@@ -294,7 +291,7 @@ export default function DashboardPage() {
                                         </div>
                                         <div className="text-right hidden md:block">
                                             <div className="text-sm font-medium text-white">
-                                                {(vuln.epssScore * 100).toFixed(1)}%
+                                                {((vuln.epssScore || 0) * 100).toFixed(1)}%
                                             </div>
                                             <div className="text-xs text-[var(--text-muted)]">
                                                 EPSS Score
@@ -325,7 +322,7 @@ export default function DashboardPage() {
                             subtitle="Probability of exploitation in next 30 days"
                         >
                             <EPSSChart
-                                data={exploitedVulnerabilities.map((v: any) => ({
+                                data={(exploitedVulnerabilities || []).map((v: any) => ({
                                     cveId: v.cveId,
                                     epssScore: v.epssScore,
                                     title: v.title,
@@ -352,7 +349,7 @@ export default function DashboardPage() {
                             }
                         >
                             <div className="space-y-3">
-                                {(topRiskyAssets as any[]).map((asset: any) => (
+                                {(topRiskyAssets || []).map((asset: any) => (
                                     <div
                                         key={asset.id}
                                         className="p-3 rounded-lg bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer"
@@ -375,7 +372,7 @@ export default function DashboardPage() {
                                                                 : "#eab308",
                                                 }}
                                             >
-                                                {asset.riskScore.toFixed(1)}
+                                                {(asset.riskScore || 0).toFixed(1)}
                                             </span>
                                         </div>
                                         <ProgressBar
@@ -417,7 +414,7 @@ export default function DashboardPage() {
                             }
                         >
                             <div className="space-y-4">
-                                {(complianceOverview as any[]).map((framework: any) => (
+                                {(complianceOverview || []).map((framework: any) => (
                                     <div key={framework.frameworkId}>
                                         <div className="flex items-center justify-between mb-2">
                                             <div className="flex items-center gap-2">
@@ -430,22 +427,22 @@ export default function DashboardPage() {
                                                 className="text-sm font-bold"
                                                 style={{
                                                     color:
-                                                        framework.compliancePercentage >= 80
+                                                        (framework.compliancePercentage || 0) >= 80
                                                             ? "#22c55e"
-                                                            : framework.compliancePercentage >= 60
+                                                            : (framework.compliancePercentage || 0) >= 60
                                                                 ? "#eab308"
                                                                 : "#ef4444",
                                                 }}
                                             >
-                                                {framework.compliancePercentage.toFixed(0)}%
+                                                {(framework.compliancePercentage || 0).toFixed(0)}%
                                             </span>
                                         </div>
                                         <ProgressBar
-                                            value={framework.compliancePercentage}
+                                            value={framework.compliancePercentage || 0}
                                             color={
-                                                framework.compliancePercentage >= 80
+                                                (framework.compliancePercentage || 0) >= 80
                                                     ? "#22c55e"
-                                                    : framework.compliancePercentage >= 60
+                                                    : (framework.compliancePercentage || 0) >= 60
                                                         ? "#eab308"
                                                         : "#ef4444"
                                             }
@@ -453,11 +450,11 @@ export default function DashboardPage() {
                                         />
                                         <div className="flex items-center gap-3 mt-1 text-xs text-[var(--text-muted)]">
                                             <span className="text-green-400">
-                                                {framework.compliant} compliant
+                                                {framework.compliant || 0} compliant
                                             </span>
                                             <span>•</span>
                                             <span className="text-red-400">
-                                                {framework.nonCompliant} non-compliant
+                                                {framework.nonCompliant || 0} non-compliant
                                             </span>
                                         </div>
                                     </div>
@@ -481,7 +478,7 @@ export default function DashboardPage() {
                             }
                         >
                             <div className="space-y-3">
-                                {(recentActivities as any[]).map((activity: any) => (
+                                {(recentActivities || []).map((activity: any) => (
                                     <div
                                         key={activity.id}
                                         className="flex items-start gap-3 p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"

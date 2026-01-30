@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, ProgressBar } from "@/components/ui/Cards";
-import { mockComplianceOverview } from "@/lib/mock-data";
 import { ComplianceBarChart } from "@/components/charts/DashboardCharts";
 import {
     FileCheck,
@@ -20,84 +19,9 @@ import {
     Calendar,
     Shield,
     TrendingUp,
+    Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// Mock compliance controls for detailed view
-const mockControls = [
-    {
-        id: "A.5.1",
-        title: "Policies for information security",
-        category: "Organizational Controls",
-        status: "COMPLIANT",
-        implementationStatus: "IMPLEMENTED",
-        lastAssessed: "2024-01-15",
-        linkedVulns: 0,
-    },
-    {
-        id: "A.5.2",
-        title: "Information security roles and responsibilities",
-        category: "Organizational Controls",
-        status: "COMPLIANT",
-        implementationStatus: "IMPLEMENTED",
-        lastAssessed: "2024-01-15",
-        linkedVulns: 0,
-    },
-    {
-        id: "A.8.8",
-        title: "Management of technical vulnerabilities",
-        category: "Technological Controls",
-        status: "NON_COMPLIANT",
-        implementationStatus: "PARTIALLY_IMPLEMENTED",
-        lastAssessed: "2024-01-10",
-        linkedVulns: 127,
-    },
-    {
-        id: "A.8.9",
-        title: "Configuration management",
-        category: "Technological Controls",
-        status: "PARTIALLY_COMPLIANT",
-        implementationStatus: "PARTIALLY_IMPLEMENTED",
-        lastAssessed: "2024-01-12",
-        linkedVulns: 45,
-    },
-    {
-        id: "A.8.12",
-        title: "Data leakage prevention",
-        category: "Technological Controls",
-        status: "COMPLIANT",
-        implementationStatus: "IMPLEMENTED",
-        lastAssessed: "2024-01-08",
-        linkedVulns: 3,
-    },
-    {
-        id: "A.8.15",
-        title: "Logging",
-        category: "Technological Controls",
-        status: "COMPLIANT",
-        implementationStatus: "IMPLEMENTED",
-        lastAssessed: "2024-01-14",
-        linkedVulns: 0,
-    },
-    {
-        id: "A.8.16",
-        title: "Monitoring activities",
-        category: "Technological Controls",
-        status: "PARTIALLY_COMPLIANT",
-        implementationStatus: "PARTIALLY_IMPLEMENTED",
-        lastAssessed: "2024-01-14",
-        linkedVulns: 12,
-    },
-    {
-        id: "A.8.20",
-        title: "Networks security",
-        category: "Technological Controls",
-        status: "NON_COMPLIANT",
-        implementationStatus: "PLANNED",
-        lastAssessed: "2024-01-05",
-        linkedVulns: 28,
-    },
-];
 
 const statusConfig = {
     COMPLIANT: { label: "Compliant", color: "#22c55e", icon: CheckCircle },
@@ -108,24 +32,57 @@ const statusConfig = {
 };
 
 export default function CompliancePage() {
-    const [selectedFramework, setSelectedFramework] = useState(mockComplianceOverview[0]);
+    const [frameworks, setFrameworks] = useState<any[]>([]);
+    const [selectedFramework, setSelectedFramework] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
 
-    const filteredControls = mockControls.filter((control) => {
+    const fetchCompliance = async () => {
+        try {
+            setIsLoading(true);
+            const response = await fetch("/api/compliance");
+            const result = await response.json();
+            setFrameworks(result.data);
+            if (result.data.length > 0 && !selectedFramework) {
+                setSelectedFramework(result.data[0]);
+            }
+        } catch (error) {
+            console.error("Failed to fetch compliance:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchCompliance();
+    }, []);
+
+    const filteredControls = selectedFramework?.controls?.filter((control: any) => {
         const matchesSearch =
-            control.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            control.controlId.toLowerCase().includes(searchQuery.toLowerCase()) ||
             control.title.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesStatus = !selectedStatus || control.status === selectedStatus;
         return matchesSearch && matchesStatus;
-    });
+    }) || [];
 
     const complianceStats = {
-        total: mockControls.length,
-        compliant: mockControls.filter((c) => c.status === "COMPLIANT").length,
-        nonCompliant: mockControls.filter((c) => c.status === "NON_COMPLIANT").length,
-        partial: mockControls.filter((c) => c.status === "PARTIALLY_COMPLIANT").length,
+        total: selectedFramework?.controls?.length || 0,
+        compliant: selectedFramework?.controls?.filter((c: any) => c.status === "COMPLIANT").length || 0,
+        nonCompliant: selectedFramework?.controls?.filter((c: any) => c.status === "NON_COMPLIANT").length || 0,
+        partial: selectedFramework?.controls?.filter((c: any) => c.status === "PARTIALLY_COMPLIANT").length || 0,
     };
+
+    if (isLoading && frameworks.length === 0) {
+        return (
+            <DashboardLayout>
+                <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                    <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+                    <p className="text-[var(--text-secondary)]">Gathering compliance data...</p>
+                </div>
+            </DashboardLayout>
+        );
+    }
 
     return (
         <DashboardLayout>
@@ -152,13 +109,13 @@ export default function CompliancePage() {
 
                 {/* Framework Overview */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {mockComplianceOverview.map((framework) => (
+                    {frameworks.map((framework) => (
                         <div
                             key={framework.frameworkId}
                             onClick={() => setSelectedFramework(framework)}
                             className={cn(
                                 "card p-4 cursor-pointer transition-all",
-                                selectedFramework.frameworkId === framework.frameworkId
+                                selectedFramework?.frameworkId === framework.frameworkId
                                     ? "border-blue-500/50 bg-blue-500/5"
                                     : "hover:border-[var(--border-hover)]"
                             )}
@@ -210,243 +167,169 @@ export default function CompliancePage() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     {/* Controls List */}
                     <div className="lg:col-span-8">
-                        <Card
-                            title={`${selectedFramework.frameworkName} Controls`}
-                            subtitle={`${selectedFramework.totalControls} total controls`}
-                            noPadding
-                        >
-                            {/* Filters */}
-                            <div className="p-4 border-b border-[var(--border-color)] flex flex-col md:flex-row gap-4">
-                                <div className="relative flex-1">
-                                    <Search
-                                        size={16}
-                                        className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
-                                    />
-                                    <input
-                                        type="text"
-                                        placeholder="Search controls..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="input pl-9 py-2 text-sm"
-                                    />
+                        {selectedFramework ? (
+                            <Card
+                                title={`${selectedFramework.frameworkName} Controls`}
+                                subtitle={`${selectedFramework.totalControls} total controls`}
+                                noPadding
+                            >
+                                {/* Filters */}
+                                <div className="p-4 border-b border-[var(--border-color)] flex flex-col md:flex-row gap-4">
+                                    <div className="relative flex-1">
+                                        <Search
+                                            size={16}
+                                            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Search controls..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="input pl-9 py-2 text-sm"
+                                        />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button className="btn btn-secondary text-sm py-2">
+                                            <Filter size={14} />
+                                            Filters
+                                            <ChevronDown size={14} />
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="flex gap-2">
-                                    <button className="btn btn-secondary text-sm py-2">
-                                        <Filter size={14} />
-                                        Filters
-                                        <ChevronDown size={14} />
+
+                                {/* Status Tabs */}
+                                <div className="px-4 py-3 border-b border-[var(--border-color)] flex gap-2 overflow-x-auto">
+                                    <button
+                                        onClick={() => setSelectedStatus(null)}
+                                        className={cn(
+                                            "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors",
+                                            !selectedStatus
+                                                ? "bg-blue-500/20 text-blue-400"
+                                                : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
+                                        )}
+                                    >
+                                        All ({complianceStats.total})
+                                    </button>
+                                    <button
+                                        onClick={() => setSelectedStatus("COMPLIANT")}
+                                        className={cn(
+                                            "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1",
+                                            selectedStatus === "COMPLIANT"
+                                                ? "bg-green-500/20 text-green-400"
+                                                : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
+                                        )}
+                                    >
+                                        <CheckCircle size={12} />
+                                        Compliant ({complianceStats.compliant})
+                                    </button>
+                                    <button
+                                        onClick={() => setSelectedStatus("NON_COMPLIANT")}
+                                        className={cn(
+                                            "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1",
+                                            selectedStatus === "NON_COMPLIANT"
+                                                ? "bg-red-500/20 text-red-400"
+                                                : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
+                                        )}
+                                    >
+                                        <XCircle size={12} />
+                                        Non-Compliant ({complianceStats.nonCompliant})
+                                    </button>
+                                    <button
+                                        onClick={() => setSelectedStatus("PARTIALLY_COMPLIANT")}
+                                        className={cn(
+                                            "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1",
+                                            selectedStatus === "PARTIALLY_COMPLIANT"
+                                                ? "bg-yellow-500/20 text-yellow-400"
+                                                : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
+                                        )}
+                                    >
+                                        <AlertTriangle size={12} />
+                                        Partial ({complianceStats.partial})
                                     </button>
                                 </div>
-                            </div>
 
-                            {/* Status Tabs */}
-                            <div className="px-4 py-3 border-b border-[var(--border-color)] flex gap-2 overflow-x-auto">
-                                <button
-                                    onClick={() => setSelectedStatus(null)}
-                                    className={cn(
-                                        "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors",
-                                        !selectedStatus
-                                            ? "bg-blue-500/20 text-blue-400"
-                                            : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
-                                    )}
-                                >
-                                    All ({complianceStats.total})
-                                </button>
-                                <button
-                                    onClick={() => setSelectedStatus("COMPLIANT")}
-                                    className={cn(
-                                        "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1",
-                                        selectedStatus === "COMPLIANT"
-                                            ? "bg-green-500/20 text-green-400"
-                                            : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
-                                    )}
-                                >
-                                    <CheckCircle size={12} />
-                                    Compliant ({complianceStats.compliant})
-                                </button>
-                                <button
-                                    onClick={() => setSelectedStatus("NON_COMPLIANT")}
-                                    className={cn(
-                                        "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1",
-                                        selectedStatus === "NON_COMPLIANT"
-                                            ? "bg-red-500/20 text-red-400"
-                                            : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
-                                    )}
-                                >
-                                    <XCircle size={12} />
-                                    Non-Compliant ({complianceStats.nonCompliant})
-                                </button>
-                                <button
-                                    onClick={() => setSelectedStatus("PARTIALLY_COMPLIANT")}
-                                    className={cn(
-                                        "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1",
-                                        selectedStatus === "PARTIALLY_COMPLIANT"
-                                            ? "bg-yellow-500/20 text-yellow-400"
-                                            : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
-                                    )}
-                                >
-                                    <AlertTriangle size={12} />
-                                    Partial ({complianceStats.partial})
-                                </button>
-                            </div>
+                                {/* Controls List */}
+                                <div className="divide-y divide-[var(--border-color)]">
+                                    {filteredControls.map((control: any) => {
+                                        const status = statusConfig[control.status as keyof typeof statusConfig] || statusConfig.NOT_ASSESSED;
+                                        const StatusIcon = status.icon;
 
-                            {/* Controls List */}
-                            <div className="divide-y divide-[var(--border-color)]">
-                                {filteredControls.map((control) => {
-                                    const status = statusConfig[control.status as keyof typeof statusConfig];
-                                    const StatusIcon = status.icon;
-
-                                    return (
-                                        <div
-                                            key={control.id}
-                                            className="p-4 hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"
-                                        >
-                                            <div className="flex items-start gap-4">
-                                                <div
-                                                    className="p-2 rounded-lg"
-                                                    style={{ background: `${status.color}15` }}
-                                                >
-                                                    <StatusIcon size={18} style={{ color: status.color }} />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <span className="font-mono text-sm text-blue-400">
-                                                            {control.id}
-                                                        </span>
-                                                        <span
-                                                            className="px-2 py-0.5 rounded text-[10px] font-medium"
-                                                            style={{
-                                                                background: `${status.color}15`,
-                                                                color: status.color,
-                                                            }}
-                                                        >
-                                                            {status.label}
-                                                        </span>
+                                        return (
+                                            <div
+                                                key={control.id}
+                                                className="p-4 hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"
+                                            >
+                                                <div className="flex items-start gap-4">
+                                                    <div
+                                                        className="p-2 rounded-lg"
+                                                        style={{ background: `${status.color}15` }}
+                                                    >
+                                                        <StatusIcon size={18} style={{ color: status.color }} />
                                                     </div>
-                                                    <h3 className="font-medium text-white mb-1">{control.title}</h3>
-                                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
-                                                        <span>{control.category}</span>
-                                                        <span>Implementation: {control.implementationStatus.replace(/_/g, " ")}</span>
-                                                        <span className="flex items-center gap-1">
-                                                            <Calendar size={10} />
-                                                            Last assessed: {control.lastAssessed}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                {control.linkedVulns > 0 && (
-                                                    <div className="text-right hidden md:block">
-                                                        <div className="flex items-center gap-1 text-orange-400">
-                                                            <Shield size={14} />
-                                                            <span className="text-sm font-medium">{control.linkedVulns}</span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className="font-mono text-sm text-blue-400">
+                                                                {control.controlId}
+                                                            </span>
+                                                            <span
+                                                                className="px-2 py-0.5 rounded text-[10px] font-medium"
+                                                                style={{
+                                                                    background: `${status.color}15`,
+                                                                    color: status.color,
+                                                                }}
+                                                            >
+                                                                {status.label}
+                                                            </span>
                                                         </div>
-                                                        <span className="text-xs text-[var(--text-muted)]">
-                                                            Related Vulns
-                                                        </span>
+                                                        <h3 className="font-medium text-white mb-1">{control.title}</h3>
+                                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
+                                                            <span>{control.category}</span>
+                                                            <span className="flex items-center gap-1">
+                                                                <Calendar size={10} />
+                                                                Last assessed: {new Date(control.updatedAt).toLocaleDateString()}
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                )}
-                                                <ChevronRight
-                                                    size={18}
-                                                    className="text-[var(--text-muted)] flex-shrink-0"
-                                                />
+                                                    <ChevronRight
+                                                        size={18}
+                                                        className="text-[var(--text-muted)] flex-shrink-0"
+                                                    />
+                                                </div>
                                             </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })}
+                                </div>
+                            </Card>
+                        ) : (
+                            <div className="card p-20 text-center">
+                                <FileCheck className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4 opacity-20" />
+                                <p className="text-[var(--text-secondary)]">Select a framework to view controls</p>
                             </div>
-                        </Card>
+                        )}
                     </div>
 
                     {/* Sidebar */}
                     <div className="lg:col-span-4 space-y-4">
                         {/* Compliance Score Breakdown */}
                         <Card title="Compliance Scores" subtitle="All frameworks">
-                            <ComplianceBarChart data={mockComplianceOverview} />
+                            <ComplianceBarChart data={frameworks} />
                         </Card>
 
-                        {/* Non-Compliant Summary */}
-                        <Card title="Non-Compliance Summary" subtitle="Items requiring attention">
-                            <div className="space-y-3">
-                                {[
-                                    {
-                                        control: "A.8.8",
-                                        issue: "127 unpatched critical vulnerabilities",
-                                        priority: "critical",
-                                    },
-                                    {
-                                        control: "A.8.20",
-                                        issue: "Network segmentation incomplete",
-                                        priority: "high",
-                                    },
-                                    {
-                                        control: "A.8.9",
-                                        issue: "45 configuration drift detected",
-                                        priority: "medium",
-                                    },
-                                ].map((item) => (
-                                    <div
-                                        key={item.control}
-                                        className="p-3 rounded-lg bg-[var(--bg-tertiary)] border-l-2"
-                                        style={{
-                                            borderColor:
-                                                item.priority === "critical"
-                                                    ? "#ef4444"
-                                                    : item.priority === "high"
-                                                        ? "#f97316"
-                                                        : "#eab308",
-                                        }}
-                                    >
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="font-mono text-xs text-blue-400">{item.control}</span>
-                                            <span
-                                                className="px-1.5 py-0.5 rounded text-[10px] font-medium uppercase"
-                                                style={{
-                                                    background:
-                                                        item.priority === "critical"
-                                                            ? "rgba(239, 68, 68, 0.1)"
-                                                            : item.priority === "high"
-                                                                ? "rgba(249, 115, 22, 0.1)"
-                                                                : "rgba(234, 179, 8, 0.1)",
-                                                    color:
-                                                        item.priority === "critical"
-                                                            ? "#ef4444"
-                                                            : item.priority === "high"
-                                                                ? "#f97316"
-                                                                : "#eab308",
-                                                }}
-                                            >
-                                                {item.priority}
-                                            </span>
-                                        </div>
-                                        <p className="text-sm text-[var(--text-secondary)]">{item.issue}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </Card>
-
-                        {/* Quick Stats */}
+                        {/* Assessment Schedule */}
                         <Card title="Assessment Schedule">
                             <div className="space-y-3">
-                                {[
-                                    { framework: "ISO 27001:2022", nextDate: "Feb 15, 2024", daysLeft: 22 },
-                                    { framework: "PCI DSS 4.0", nextDate: "Mar 1, 2024", daysLeft: 36 },
-                                    { framework: "SOC 2 Type II", nextDate: "Apr 10, 2024", daysLeft: 76 },
-                                ].map((item) => (
+                                {frameworks.map((item: any) => (
                                     <div
-                                        key={item.framework}
+                                        key={item.frameworkId}
                                         className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-tertiary)]"
                                     >
                                         <div>
-                                            <p className="text-sm text-white">{item.framework}</p>
-                                            <p className="text-xs text-[var(--text-muted)]">{item.nextDate}</p>
+                                            <p className="text-sm text-white">{item.frameworkName}</p>
+                                            <p className="text-xs text-[var(--text-muted)]">Scheduled for review</p>
                                         </div>
                                         <div className="text-right">
-                                            <span
-                                                className={cn(
-                                                    "text-sm font-medium",
-                                                    item.daysLeft <= 30 ? "text-orange-400" : "text-green-400"
-                                                )}
-                                            >
-                                                {item.daysLeft} days
+                                            <span className="text-sm font-medium text-green-400">
+                                                Active
                                             </span>
                                         </div>
                                     </div>

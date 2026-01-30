@@ -15,22 +15,14 @@ export default function LoginPage() {
         e.preventDefault();
         setIsLoading(true);
 
-        // For now, allow any demo login to redirect
+        // For now, allow login to redirect to dashboard
         // In a real app, you'd use signIn("credentials", { email, password })
         await new Promise((resolve) => setTimeout(resolve, 1000));
-        window.location.href = "/dashboard?demo=true";
+        window.location.href = "/dashboard";
     };
 
     const handleOAuthSignIn = (provider: string) => {
         signIn(provider, { callbackUrl: "/dashboard" });
-    };
-
-    const handleDemoSignIn = () => {
-        setIsLoading(true);
-        // Redirect to dashboard with demo flag
-        setTimeout(() => {
-            window.location.href = "/dashboard?demo=true";
-        }, 800);
     };
 
     return (
@@ -187,15 +179,6 @@ export default function LoginPage() {
                             GitHub
                         </button>
                     </div>
-
-                    {/* Demo Login Button */}
-                    <button
-                        onClick={handleDemoSignIn}
-                        className="btn btn-secondary w-full mt-3 py-2.5 flex items-center justify-center gap-2 border-dashed border-blue-500/50 hover:border-blue-500"
-                    >
-                        <Shield size={18} className="text-blue-400" />
-                        Explore Demo Mode
-                    </button>
                 </div>
 
                 {/* Footer */}

@@ -42,7 +42,7 @@ export default function Home() {
               Sign In
             </Link>
             <Link href="/dashboard" className="btn btn-primary text-sm">
-              Launch Demo
+              Dashboard
               <ChevronRight size={16} />
             </Link>
           </div>
@@ -279,12 +279,12 @@ export default function Home() {
               Ready to Take Control of Cyber Risk?
             </h2>
             <p className="text-[var(--text-secondary)] mb-8 max-w-2xl mx-auto">
-              Explore the interactive demo to see how SecYourFlow unifies your
+              Explore the platform to see how SecYourFlow unifies your
               security operations into a single pane of glass.
             </p>
             <Link href="/dashboard" className="btn btn-primary text-base px-8 py-3">
               <Eye size={18} />
-              Launch Interactive Demo
+              Get Started
             </Link>
           </div>
         </div>

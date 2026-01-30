@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mockVulnerabilities, mockExploitedVulnerabilities } from "@/lib/mock-data";
+import { prisma } from "@/lib/prisma";
+import { Severity, VulnStatus, VulnSource } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
@@ -12,68 +13,106 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
 
-    let filteredVulns = [...mockVulnerabilities];
+    try {
+        const org = await prisma.organization.findFirst();
+        if (!org) throw new Error("No organization found");
 
-    // Apply filters
-    if (severity) {
-        filteredVulns = filteredVulns.filter((v) => v.severity === severity);
-    }
-    if (status) {
-        filteredVulns = filteredVulns.filter((v) => v.status === status);
-    }
-    if (isExploited === "true") {
-        filteredVulns = filteredVulns.filter((v) => v.isExploited);
-    }
-    if (cisaKev === "true") {
-        filteredVulns = filteredVulns.filter((v) => v.cisaKev);
-    }
-    if (source) {
-        filteredVulns = filteredVulns.filter((v) => v.source === source);
-    }
-    if (search) {
-        const searchLower = search.toLowerCase();
-        filteredVulns = filteredVulns.filter(
-            (v) =>
-                v.title.toLowerCase().includes(searchLower) ||
-                v.cveId?.toLowerCase().includes(searchLower)
+        const where: any = { organizationId: org.id };
+
+        if (severity) where.severity = severity as Severity;
+        if (status) where.status = status as VulnStatus;
+        if (isExploited === "true") where.isExploited = true;
+        if (cisaKev === "true") where.cisaKev = true;
+        if (source) where.source = source as VulnSource;
+
+        if (search) {
+            where.OR = [
+                { title: { contains: search, mode: 'insensitive' } },
+                { cveId: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } },
+            ];
+        }
+
+        const [vulns, total, severityDistribution, sourceDistribution] = await Promise.all([
+            prisma.vulnerability.findMany({
+                where,
+                skip: (page - 1) * limit,
+                take: limit,
+                orderBy: { updatedAt: 'desc' },
+                include: {
+                    _count: {
+                        select: { assets: true }
+                    }
+                }
+            }),
+            prisma.vulnerability.count({ where }),
+            prisma.vulnerability.groupBy({
+                by: ['severity'],
+                where: { organizationId: org.id },
+                _count: { _all: true }
+            }),
+            prisma.vulnerability.groupBy({
+                by: ['source'],
+                where: { organizationId: org.id },
+                _count: { _all: true }
+            })
+        ]);
+
+        const formattedVulns = vulns.map(v => ({
+            ...v,
+            affectedAssets: v._count.assets,
+        }));
+
+        const severityDist = severityDistribution.map(s => ({
+            severity: s.severity,
+            count: s._count._all
+        }));
+
+        const sourceDist = sourceDistribution.map(s => ({
+            source: s.source,
+            count: s._count._all
+        }));
+
+        return NextResponse.json({
+            data: formattedVulns,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+            },
+            summary: {
+                severityDistribution: severityDist,
+                sourceDistribution: sourceDist
+            }
+        });
+    } catch (error) {
+        console.error("Vulnerabilities API Error:", error);
+        return NextResponse.json(
+            { error: "Failed to fetch vulnerabilities" },
+            { status: 500 }
         );
     }
-
-    // Sort by risk score (descending)
-    filteredVulns.sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0));
-
-    // Pagination
-    const total = filteredVulns.length;
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedVulns = filteredVulns.slice(startIndex, endIndex);
-
-    return NextResponse.json({
-        data: paginatedVulns,
-        pagination: {
-            page,
-            limit,
-            total,
-            totalPages: Math.ceil(total / limit),
-        },
-    });
 }
 
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
 
-        // In production, this would create a new vulnerability in the database
-        const newVuln = {
-            id: Date.now().toString(),
-            firstDetected: new Date(),
-            lastSeen: new Date(),
-            status: "OPEN",
-            ...body,
-        };
+        const org = await prisma.organization.findFirst();
+        if (!org) throw new Error("No organization found");
+
+        const newVuln = await prisma.vulnerability.create({
+            data: {
+                ...body,
+                organizationId: org.id,
+                status: body.status || "OPEN",
+            },
+        });
 
         return NextResponse.json(newVuln, { status: 201 });
-    } catch {
+    } catch (error) {
+        console.error("Create Vulnerability Error:", error);
         return NextResponse.json(
             { error: "Failed to create vulnerability" },
             { status: 400 }

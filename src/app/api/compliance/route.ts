@@ -1,38 +1,76 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mockComplianceOverview } from "@/lib/mock-data";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const frameworkId = searchParams.get("frameworkId");
 
-    let frameworks = [...mockComplianceOverview];
+    try {
+        const where: any = {};
+        if (frameworkId) where.id = frameworkId;
 
-    if (frameworkId) {
-        frameworks = frameworks.filter((f) => f.frameworkId === frameworkId);
+        const frameworks = await prisma.complianceFramework.findMany({
+            where,
+            include: {
+                controls: true,
+                _count: {
+                    select: { controls: true }
+                }
+            }
+        });
+
+        const formattedFrameworks = frameworks.map(f => {
+            const total = f.controls.length;
+            const compliant = f.controls.filter(c => c.status === 'COMPLIANT').length;
+            const nonCompliant = f.controls.filter(c => c.status === 'NON_COMPLIANT').length;
+            const partiallyCompliant = f.controls.filter(c => c.status === 'PARTIALLY_COMPLIANT').length;
+            const notAssessed = f.controls.filter(c => c.status === 'NOT_ASSESSED').length;
+
+            return {
+                frameworkId: f.id,
+                frameworkName: f.name,
+                totalControls: total,
+                compliant,
+                nonCompliant,
+                partiallyCompliant,
+                notAssessed,
+                compliancePercentage: total > 0 ? (compliant / total) * 100 : 0
+            };
+        });
+
+        const totalFrameworks = formattedFrameworks.length;
+        const avgCompliance = totalFrameworks > 0
+            ? formattedFrameworks.reduce((acc, f) => acc + f.compliancePercentage, 0) / totalFrameworks
+            : 0;
+
+        return NextResponse.json({
+            data: formattedFrameworks,
+            summary: {
+                totalFrameworks,
+                averageCompliance: avgCompliance,
+            },
+        });
+    } catch (error) {
+        console.error("Compliance API Error:", error);
+        return NextResponse.json(
+            { error: "Failed to fetch framework" },
+            { status: 500 }
+        );
     }
-
-    return NextResponse.json({
-        data: frameworks,
-        summary: {
-            totalFrameworks: mockComplianceOverview.length,
-            averageCompliance:
-                mockComplianceOverview.reduce((acc, f) => acc + f.compliancePercentage, 0) /
-                mockComplianceOverview.length,
-        },
-    });
 }
 
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
+        const org = await prisma.organization.findFirst();
+        if (!org) throw new Error("No organization found");
 
-        // In production, this would create a new compliance framework
-        const newFramework = {
-            id: Date.now().toString(),
-            isActive: true,
-            createdAt: new Date(),
-            ...body,
-        };
+        const newFramework = await prisma.complianceFramework.create({
+            data: {
+                ...body,
+                organizationId: org.id,
+            },
+        });
 
         return NextResponse.json(newFramework, { status: 201 });
     } catch {
