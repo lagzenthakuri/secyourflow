@@ -26,7 +26,10 @@ import {
     Target,
     FileCheck,
     Plus,
+    Loader2,
 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Modal } from "@/components/ui/Modal";
 
 const reports = [
     {
@@ -95,6 +98,64 @@ const reportTypeIcons: Record<string, typeof BarChart3> = {
 };
 
 export default function ReportsPage() {
+    const [reportsList, setReportsList] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isGenerating, setIsGenerating] = useState<string | null>(null);
+    const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+    const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+
+    const fetchReports = async () => {
+        try {
+            setIsLoading(true);
+            const response = await fetch("/api/reports");
+            const data = await response.json();
+            if (Array.isArray(data)) {
+                setReportsList(data);
+            } else {
+                setReportsList([]);
+                console.error("API returned non-array data:", data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch reports:", error);
+            setReportsList([]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchReports();
+    }, []);
+
+    const handleGenerate = async (reportTemplate: any) => {
+        try {
+            setIsGenerating(reportTemplate.id);
+            const response = await fetch("/api/reports", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: reportTemplate.name,
+                    type: reportTemplate.type,
+                    description: reportTemplate.description,
+                    format: reportTemplate.format,
+                }),
+            });
+            if (response.ok) {
+                fetchReports();
+            }
+        } catch (error) {
+            console.error("Failed to generate report:", error);
+        } finally {
+            setIsGenerating(null);
+        }
+    };
+
+    const handleSchedule = () => {
+        // Mock scheduling
+        setIsScheduleModalOpen(false);
+        alert(`Successfully scheduled ${selectedTemplate?.name}`);
+    };
+
     const stats = mockDashboardStats;
 
     return (
@@ -109,7 +170,7 @@ export default function ReportsPage() {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button className="btn btn-secondary">
+                        <button className="btn btn-secondary" onClick={() => setIsScheduleModalOpen(true)}>
                             <Calendar size={16} />
                             Schedule
                         </button>
@@ -250,11 +311,25 @@ export default function ReportsPage() {
                                         <span>{report.format}</span>
                                     </div>
                                     <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[var(--border-color)]">
-                                        <button className="btn btn-primary text-xs py-1.5 flex-1">
-                                            <Download size={12} />
-                                            Generate
+                                        <button
+                                            className="btn btn-primary text-xs py-1.5 flex-1"
+                                            onClick={() => handleGenerate(report)}
+                                            disabled={isGenerating === report.id}
+                                        >
+                                            {isGenerating === report.id ? (
+                                                <Loader2 size={12} className="animate-spin" />
+                                            ) : (
+                                                <Download size={12} />
+                                            )}
+                                            {isGenerating === report.id ? "Generating..." : "Generate"}
                                         </button>
-                                        <button className="btn btn-secondary text-xs py-1.5">
+                                        <button
+                                            className="btn btn-secondary text-xs py-1.5"
+                                            onClick={() => {
+                                                setSelectedTemplate(report);
+                                                setIsScheduleModalOpen(true);
+                                            }}
+                                        >
                                             <Calendar size={12} />
                                         </button>
                                     </div>
@@ -267,35 +342,91 @@ export default function ReportsPage() {
                 {/* Recent Reports */}
                 <Card title="Recently Generated" subtitle="Download previous reports">
                     <div className="space-y-2">
-                        {[
-                            { name: "Executive Risk Summary", date: "Jan 22, 2024", size: "1.2 MB" },
-                            { name: "Vulnerability Status Report", date: "Jan 24, 2024", size: "3.4 MB" },
-                            { name: "Asset Inventory Report", date: "Jan 21, 2024", size: "856 KB" },
-                            { name: "Threat Intelligence Brief", date: "Jan 24, 2024", size: "542 KB" },
-                        ].map((report, idx) => (
-                            <div
-                                key={idx}
-                                className="flex items-center justify-between p-3 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 rounded-lg bg-[var(--bg-tertiary)]">
-                                        <FileText size={16} className="text-blue-400" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-white">{report.name}</p>
-                                        <p className="text-xs text-[var(--text-muted)]">
-                                            {report.date} • {report.size}
-                                        </p>
-                                    </div>
-                                </div>
-                                <button className="btn btn-ghost text-sm py-1.5">
-                                    <Download size={14} />
-                                </button>
+                        {isLoading ? (
+                            <div className="py-10 flex flex-col items-center justify-center gap-2">
+                                <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                                <p className="text-xs text-[var(--text-muted)]">Loading reports...</p>
                             </div>
-                        ))}
+                        ) : reportsList.length === 0 ? (
+                            <div className="py-10 text-center text-sm text-[var(--text-muted)]">
+                                No reports generated yet.
+                            </div>
+                        ) : (
+                            reportsList.map((report) => (
+                                <div
+                                    key={report.id}
+                                    className="flex items-center justify-between p-3 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-lg bg-[var(--bg-tertiary)]">
+                                            <FileText size={16} className="text-blue-400" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-white">{report.name}</p>
+                                            <p className="text-xs text-[var(--text-muted)]">
+                                                {new Date(report.createdAt).toLocaleDateString()} • {report.size}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button className="btn btn-ghost text-sm py-1.5">
+                                        <Download size={14} />
+                                    </button>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </Card>
             </div>
+
+            <Modal
+                isOpen={isScheduleModalOpen}
+                onClose={() => setIsScheduleModalOpen(false)}
+                title="Schedule Report"
+                footer={
+                    <div className="flex justify-end gap-3">
+                        <button className="btn btn-secondary" onClick={() => setIsScheduleModalOpen(false)}>
+                            Cancel
+                        </button>
+                        <button className="btn btn-primary" onClick={handleSchedule}>
+                            Save Schedule
+                        </button>
+                    </div>
+                }
+            >
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                            Select Report Template
+                        </label>
+                        <select
+                            className="input"
+                            value={selectedTemplate?.id || ""}
+                            onChange={(e) => setSelectedTemplate(reports.find(r => r.id === e.target.value))}
+                        >
+                            <option value="">Choose a template...</option>
+                            {reports.map(r => (
+                                <option key={r.id} value={r.id}>{r.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                            Frequency
+                        </label>
+                        <select className="input">
+                            <option>Daily</option>
+                            <option>Weekly</option>
+                            <option>Monthly</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                            Recipients (Email)
+                        </label>
+                        <input type="text" placeholder="security-team@acme.com" className="input" />
+                    </div>
+                </div>
+            </Modal>
         </DashboardLayout>
     );
 }

@@ -56,11 +56,20 @@ export default function VulnerabilitiesPage() {
 
             const response = await fetch(`/api/vulnerabilities?${params.toString()}`);
             const result = await response.json();
-            setVulns(result.data);
-            setPagination(prev => ({ ...prev, ...result.pagination }));
-            setSummary(result.summary);
+            if (result && Array.isArray(result.data)) {
+                setVulns(result.data);
+                if (result.pagination) {
+                    setPagination(prev => ({ ...prev, ...result.pagination }));
+                }
+                if (result.summary) {
+                    setSummary(result.summary);
+                }
+            } else {
+                setVulns([]);
+            }
         } catch (error) {
             console.error("Failed to fetch vulnerabilities:", error);
+            setVulns([]);
         } finally {
             setIsLoading(false);
         }
@@ -178,13 +187,19 @@ export default function VulnerabilitiesPage() {
                                         type="text"
                                         placeholder="Search by CVE ID or title..."
                                         value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        onChange={(e) => {
+                                            setSearchQuery(e.target.value);
+                                            setPagination(prev => ({ ...prev, page: 1 }));
+                                        }}
                                         className="input pl-9 py-2 text-sm"
                                     />
                                 </div>
                                 <div className="flex gap-2">
                                     <button
-                                        onClick={() => setShowExploited(!showExploited)}
+                                        onClick={() => {
+                                            setShowExploited(!showExploited);
+                                            setPagination(prev => ({ ...prev, page: 1 }));
+                                        }}
                                         className={cn(
                                             "btn text-sm py-2",
                                             showExploited
@@ -206,7 +221,10 @@ export default function VulnerabilitiesPage() {
                             {/* Severity Tabs */}
                             <div className="px-4 py-3 border-b border-[var(--border-color)] flex gap-2 overflow-x-auto">
                                 <button
-                                    onClick={() => setSelectedSeverity(null)}
+                                    onClick={() => {
+                                        setSelectedSeverity(null);
+                                        setPagination(prev => ({ ...prev, page: 1 }));
+                                    }}
                                     className={cn(
                                         "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors",
                                         !selectedSeverity
@@ -219,7 +237,10 @@ export default function VulnerabilitiesPage() {
                                 {["CRITICAL", "HIGH", "MEDIUM", "LOW"].map((severity) => (
                                     <button
                                         key={severity}
-                                        onClick={() => setSelectedSeverity(severity)}
+                                        onClick={() => {
+                                            setSelectedSeverity(severity);
+                                            setPagination(prev => ({ ...prev, page: 1 }));
+                                        }}
                                         className={cn(
                                             "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors",
                                             selectedSeverity === severity

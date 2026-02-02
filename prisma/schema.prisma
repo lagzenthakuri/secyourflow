@@ -33,6 +33,7 @@ model User {
   organizationId String?
   auditLogs     AuditLog[]
   comments      Comment[]
+  reports       Report[]
   
   @@index([email])
   @@index([organizationId])
@@ -96,6 +97,8 @@ model Organization {
   assets      Asset[]
   vulnerabilities Vulnerability[]
   complianceFrameworks ComplianceFramework[]
+  settings    Setting?
+  reports     Report[]
   
   @@index([name])
 }
@@ -594,4 +597,53 @@ model RiskSnapshot {
   metadata        Json?
   
   @@index([date])
+}
+
+// ==================== SETTINGS & REPORTS ====================
+
+model Setting {
+  id              String   @id @default(cuid())
+  organizationId  String   @unique
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  
+  timezone        String   @default("UTC")
+  dateFormat      String   @default("MMM DD, YYYY")
+  
+  // Notification Preferences
+  notifyCritical  Boolean  @default(true)
+  notifyExploited Boolean  @default(true)
+  notifyCompliance Boolean  @default(true)
+  notifyScan      Boolean  @default(false)
+  notifyWeekly    Boolean  @default(true)
+  
+  // Security
+  require2FA      Boolean  @default(false)
+  sessionTimeout  Int      @default(30)
+  passwordPolicy  String   @default("STRONG")
+  
+  updatedAt       DateTime @updatedAt
+}
+
+model Report {
+  id              String   @id @default(cuid())
+  name            String
+  type            String
+  description     String?
+  format          String   @default("PDF")
+  frequency       String?
+  status          String   @default("PENDING")
+  url             String?
+  size            String?
+  
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([organizationId])
+  @@index([userId])
 }

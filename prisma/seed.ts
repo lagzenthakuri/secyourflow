@@ -92,6 +92,32 @@ async function main() {
         })
     }
 
+    // Add 50 more dummy vulnerabilities for pagination
+    for (let i = 1; i <= 50; i++) {
+        const severity = [Severity.LOW, Severity.MEDIUM, Severity.HIGH, Severity.CRITICAL][Math.floor(Math.random() * 4)]
+        const vuln = await prisma.vulnerability.create({
+            data: {
+                cveId: `CVE-2023-${1000 + i}`,
+                title: `Dummy Vulnerability ${i}`,
+                description: `This is a dummy vulnerability number ${i} for testing pagination.`,
+                severity: severity,
+                cvssScore: Math.random() * 10,
+                isExploited: Math.random() > 0.8,
+                organizationId: org.id,
+                source: VulnSource.API,
+                status: VulnStatus.OPEN,
+            }
+        })
+        const randomAsset = assets[Math.floor(Math.random() * assets.length)]
+        await prisma.assetVulnerability.create({
+            data: {
+                assetId: randomAsset.id,
+                vulnerabilityId: vuln.id,
+                status: VulnStatus.OPEN,
+            }
+        })
+    }
+
     // 5. Create Compliance
     const framework = await prisma.complianceFramework.create({
         data: {

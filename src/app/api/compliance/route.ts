@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
                 nonCompliant,
                 partiallyCompliant,
                 notAssessed,
-                compliancePercentage: total > 0 ? (compliant / total) * 100 : 0
+                compliancePercentage: total > 0 ? (compliant / total) * 100 : 0,
+                controls: f.controls,
             };
         });
 

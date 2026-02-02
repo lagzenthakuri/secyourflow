@@ -22,6 +22,7 @@ import {
     Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Modal } from "@/components/ui/Modal";
 
 const statusConfig = {
     COMPLIANT: { label: "Compliant", color: "#22c55e", icon: CheckCircle },
@@ -37,20 +38,49 @@ export default function CompliancePage() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [newFramework, setNewFramework] = useState({ name: "", description: "" });
 
     const fetchCompliance = async () => {
         try {
             setIsLoading(true);
             const response = await fetch("/api/compliance");
             const result = await response.json();
-            setFrameworks(result.data);
-            if (result.data.length > 0 && !selectedFramework) {
-                setSelectedFramework(result.data[0]);
+            if (result && Array.isArray(result.data)) {
+                setFrameworks(result.data);
+                if (result.data.length > 0 && !selectedFramework) {
+                    setSelectedFramework(result.data[0]);
+                }
+            } else {
+                setFrameworks([]);
             }
         } catch (error) {
             console.error("Failed to fetch compliance:", error);
+            setFrameworks([]);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleAddFramework = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            setIsSubmitting(true);
+            const response = await fetch("/api/compliance", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(newFramework),
+            });
+            if (response.ok) {
+                setIsAddModalOpen(false);
+                setNewFramework({ name: "", description: "" });
+                fetchCompliance();
+            }
+        } catch (error) {
+            console.error("Failed to add framework:", error);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -96,11 +126,23 @@ export default function CompliancePage() {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button className="btn btn-secondary">
+                        <button className="btn btn-secondary" onClick={() => {
+                            if (!selectedFramework) return;
+                            const csv = [
+                                ["Control ID", "Title", "Status", "Category"].join(","),
+                                ...selectedFramework.controls.map((c: any) => [c.controlId, c.title, c.status, c.category].join(","))
+                            ].join("\n");
+                            const blob = new Blob([csv], { type: 'text/csv' });
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `${selectedFramework.frameworkName}_report.csv`;
+                            a.click();
+                        }}>
                             <Download size={16} />
                             Export Report
                         </button>
-                        <button className="btn btn-primary">
+                        <button className="btn btn-primary" onClick={() => setIsAddModalOpen(true)}>
                             <Plus size={16} />
                             Add Framework
                         </button>
@@ -339,6 +381,56 @@ export default function CompliancePage() {
                     </div>
                 </div>
             </div>
+
+            <Modal
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+                title="Add New Compliance Framework"
+                footer={
+                    <div className="flex justify-end gap-3">
+                        <button
+                            className="btn btn-secondary"
+                            onClick={() => setIsAddModalOpen(false)}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            className="btn btn-primary"
+                            onClick={handleAddFramework}
+                            disabled={isSubmitting || !newFramework.name}
+                        >
+                            {isSubmitting ? "Adding..." : "Add Framework"}
+                        </button>
+                    </div>
+                }
+            >
+                <form className="space-y-4" onSubmit={handleAddFramework}>
+                    <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                            Framework Name
+                        </label>
+                        <input
+                            type="text"
+                            required
+                            placeholder="e.g. NIST CSF 2.0"
+                            className="input"
+                            value={newFramework.name}
+                            onChange={(e) => setNewFramework({ ...newFramework, name: e.target.value })}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                            Description
+                        </label>
+                        <textarea
+                            placeholder="Brief description of the framework..."
+                            className="input min-h-[100px]"
+                            value={newFramework.description}
+                            onChange={(e) => setNewFramework({ ...newFramework, description: e.target.value })}
+                        />
+                    </div>
+                </form>
+            </Modal>
         </DashboardLayout>
     );
 }

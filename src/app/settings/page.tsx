@@ -17,6 +17,8 @@ import {
     ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 
 const settingsSections = [
     { id: "general", label: "General", icon: Settings },
@@ -28,6 +30,54 @@ const settingsSections = [
 
 export default function SettingsPage() {
     const [activeSection, setActiveSection] = useState("general");
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [settings, setSettings] = useState<any>(null);
+
+    const fetchSettings = async () => {
+        try {
+            setIsLoading(true);
+            const response = await fetch("/api/settings");
+            const data = await response.json();
+            setSettings(data);
+        } catch (error) {
+            console.error("Failed to fetch settings:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchSettings();
+    }, []);
+
+    const handleSave = async () => {
+        try {
+            setIsSaving(true);
+            const response = await fetch("/api/settings", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(settings),
+            });
+            if (response.ok) {
+                // Show success?
+            }
+        } catch (error) {
+            console.error("Failed to save settings:", error);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <DashboardLayout>
+                <div className="flex items-center justify-center min-h-[60vh]">
+                    <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                </div>
+            </DashboardLayout>
+        );
+    }
 
     return (
         <DashboardLayout>
@@ -74,7 +124,8 @@ export default function SettingsPage() {
                                         </label>
                                         <input
                                             type="text"
-                                            defaultValue="Acme Corporation"
+                                            value={settings?.organizationName || ""}
+                                            onChange={(e) => setSettings({ ...settings, organizationName: e.target.value })}
                                             className="input"
                                         />
                                     </div>
@@ -84,7 +135,8 @@ export default function SettingsPage() {
                                         </label>
                                         <input
                                             type="text"
-                                            defaultValue="acme.com"
+                                            value={settings?.domain || ""}
+                                            onChange={(e) => setSettings({ ...settings, domain: e.target.value })}
                                             className="input"
                                         />
                                     </div>
@@ -92,7 +144,11 @@ export default function SettingsPage() {
                                         <label className="block text-sm font-medium text-white mb-2">
                                             Timezone
                                         </label>
-                                        <select className="input">
+                                        <select
+                                            className="input"
+                                            value={settings?.timezone || "UTC"}
+                                            onChange={(e) => setSettings({ ...settings, timezone: e.target.value })}
+                                        >
                                             <option>UTC</option>
                                             <option>America/New_York</option>
                                             <option>Europe/London</option>
@@ -103,16 +159,24 @@ export default function SettingsPage() {
                                         <label className="block text-sm font-medium text-white mb-2">
                                             Date Format
                                         </label>
-                                        <select className="input">
+                                        <select
+                                            className="input"
+                                            value={settings?.dateFormat || "MMM DD, YYYY"}
+                                            onChange={(e) => setSettings({ ...settings, dateFormat: e.target.value })}
+                                        >
                                             <option>MMM DD, YYYY</option>
                                             <option>DD/MM/YYYY</option>
                                             <option>YYYY-MM-DD</option>
                                         </select>
                                     </div>
                                     <div className="pt-4 border-t border-[var(--border-color)]">
-                                        <button className="btn btn-primary">
+                                        <button
+                                            className="btn btn-primary"
+                                            onClick={handleSave}
+                                            disabled={isSaving}
+                                        >
                                             <Save size={16} />
-                                            Save Changes
+                                            {isSaving ? "Saving..." : "Save Changes"}
                                         </button>
                                     </div>
                                 </div>
@@ -124,33 +188,33 @@ export default function SettingsPage() {
                                 <div className="space-y-4">
                                     {[
                                         {
+                                            id: "notifyCritical",
                                             title: "Critical Vulnerability Alerts",
                                             description: "Get notified when critical vulnerabilities are detected",
-                                            enabled: true,
                                         },
                                         {
+                                            id: "notifyExploited",
                                             title: "Exploitation Alerts",
                                             description: "Alert when a vulnerability in your environment is being exploited",
-                                            enabled: true,
                                         },
                                         {
+                                            id: "notifyCompliance",
                                             title: "Compliance Drift",
                                             description: "Notify when compliance status changes",
-                                            enabled: true,
                                         },
                                         {
+                                            id: "notifyScan",
                                             title: "Scan Completion",
                                             description: "Alert when vulnerability scans complete",
-                                            enabled: false,
                                         },
                                         {
+                                            id: "notifyWeekly",
                                             title: "Weekly Summary",
                                             description: "Receive weekly risk summary via email",
-                                            enabled: true,
                                         },
                                     ].map((notification) => (
                                         <div
-                                            key={notification.title}
+                                            key={notification.id}
                                             className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]"
                                         >
                                             <div>
@@ -164,7 +228,8 @@ export default function SettingsPage() {
                                             <label className="relative inline-flex items-center cursor-pointer">
                                                 <input
                                                     type="checkbox"
-                                                    defaultChecked={notification.enabled}
+                                                    checked={settings?.[notification.id] || false}
+                                                    onChange={(e) => setSettings({ ...settings, [notification.id]: e.target.checked })}
                                                     className="sr-only peer"
                                                 />
                                                 <div className="w-11 h-6 bg-[var(--bg-elevated)] peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500" />
@@ -172,9 +237,13 @@ export default function SettingsPage() {
                                         </div>
                                     ))}
                                     <div className="pt-4 border-t border-[var(--border-color)]">
-                                        <button className="btn btn-primary">
+                                        <button
+                                            className="btn btn-primary"
+                                            onClick={handleSave}
+                                            disabled={isSaving}
+                                        >
                                             <Save size={16} />
-                                            Save Changes
+                                            {isSaving ? "Saving..." : "Save Changes"}
                                         </button>
                                     </div>
                                 </div>
@@ -195,7 +264,12 @@ export default function SettingsPage() {
                                                 </p>
                                             </div>
                                             <label className="relative inline-flex items-center cursor-pointer">
-                                                <input type="checkbox" defaultChecked className="sr-only peer" />
+                                                <input
+                                                    type="checkbox"
+                                                    checked={settings?.require2FA || false}
+                                                    onChange={(e) => setSettings({ ...settings, require2FA: e.target.checked })}
+                                                    className="sr-only peer"
+                                                />
                                                 <div className="w-11 h-6 bg-[var(--bg-elevated)] peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500" />
                                             </label>
                                         </div>
@@ -206,7 +280,8 @@ export default function SettingsPage() {
                                         </label>
                                         <input
                                             type="number"
-                                            defaultValue={30}
+                                            value={settings?.sessionTimeout || 30}
+                                            onChange={(e) => setSettings({ ...settings, sessionTimeout: parseInt(e.target.value) })}
                                             className="input w-32"
                                         />
                                     </div>
@@ -214,16 +289,24 @@ export default function SettingsPage() {
                                         <label className="block text-sm font-medium text-white mb-2">
                                             Password Policy
                                         </label>
-                                        <select className="input">
-                                            <option>Strong (12+ chars, mixed case, numbers, symbols)</option>
-                                            <option>Medium (8+ chars, mixed case, numbers)</option>
-                                            <option>Basic (8+ chars)</option>
+                                        <select
+                                            className="input"
+                                            value={settings?.passwordPolicy || "STRONG"}
+                                            onChange={(e) => setSettings({ ...settings, passwordPolicy: e.target.value })}
+                                        >
+                                            <option value="STRONG">Strong (12+ chars, mixed case, numbers, symbols)</option>
+                                            <option value="MEDIUM">Medium (8+ chars, mixed case, numbers)</option>
+                                            <option value="BASIC">Basic (8+ chars)</option>
                                         </select>
                                     </div>
                                     <div className="pt-4 border-t border-[var(--border-color)]">
-                                        <button className="btn btn-primary">
+                                        <button
+                                            className="btn btn-primary"
+                                            onClick={handleSave}
+                                            disabled={isSaving}
+                                        >
                                             <Save size={16} />
-                                            Save Changes
+                                            {isSaving ? "Saving..." : "Save Changes"}
                                         </button>
                                     </div>
                                 </div>
