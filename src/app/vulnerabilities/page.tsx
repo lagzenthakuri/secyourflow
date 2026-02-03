@@ -25,6 +25,8 @@ import {
 import { cn } from "@/lib/utils";
 import { Vulnerability } from "@/types";
 import { mockSeverityDistribution, mockVulnSourceDistribution } from "@/lib/mock-data";
+import { AddVulnerabilityModal } from "@/components/vulnerabilities/AddVulnerabilityModal";
+import { Plus } from "lucide-react";
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
     OPEN: { label: "Open", color: "#ef4444", icon: AlertTriangle },
@@ -43,6 +45,7 @@ export default function VulnerabilitiesPage() {
     const [showExploited, setShowExploited] = useState(false);
     const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
     const [summary, setSummary] = useState<any>(null);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     const fetchVulnerabilities = async () => {
         try {
@@ -116,9 +119,16 @@ export default function VulnerabilitiesPage() {
                             <Download size={16} />
                             Export
                         </button>
-                        <button className="btn btn-primary">
+                        <button className="btn btn-secondary">
                             <TrendingUp size={16} />
                             Import Scan
+                        </button>
+                        <button
+                            className="btn btn-primary"
+                            onClick={() => setIsAddModalOpen(true)}
+                        >
+                            <Plus size={16} />
+                            Add Vulnerability
                         </button>
                     </div>
                 </div>
@@ -490,6 +500,14 @@ export default function VulnerabilitiesPage() {
                     </div>
                 </div>
             </div>
+
+            <AddVulnerabilityModal
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+                onSuccess={() => {
+                    fetchVulnerabilities();
+                }}
+            />
         </DashboardLayout>
     );
 }

@@ -97,16 +97,27 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        const body = await request.json();
+        const { assetId, ...vulnData } = await request.json();
 
         const org = await prisma.organization.findFirst();
         if (!org) throw new Error("No organization found");
 
         const newVuln = await prisma.vulnerability.create({
             data: {
-                ...body,
+                ...vulnData,
                 organizationId: org.id,
-                status: body.status || "OPEN",
+                source: vulnData.source || "MANUAL",
+                status: vulnData.status || "OPEN",
+                firstDetected: new Date(),
+                lastSeen: new Date(),
+                ...(assetId ? {
+                    assets: {
+                        create: {
+                            assetId: assetId,
+                            status: "OPEN"
+                        }
+                    }
+                } : {})
             },
         });
 
