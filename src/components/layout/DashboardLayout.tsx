@@ -44,9 +44,16 @@ export function Sidebar() {
     const { data: session, status } = useSession();
     const [isMobileOpen, setIsMobileOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [orgName, setOrgName] = useState<string>("");
 
     useEffect(() => {
         setMounted(true);
+        fetch("/api/settings")
+            .then(res => res.json())
+            .then(data => {
+                if (data.organizationName) setOrgName(data.organizationName);
+            })
+            .catch(err => console.error("Failed to fetch org settings", err));
     }, []);
 
     const userRole = session?.user?.role || "ANALYST";
@@ -92,7 +99,9 @@ export function Sidebar() {
                             <Shield className="w-5 h-5 text-white" />
                         </div>
                         <div>
-                            <h1 className="text-lg font-bold text-white">SecYourFlow</h1>
+                            <h1 className="text-lg font-bold text-white truncate max-w-[140px]">
+                                {orgName || "SecYourFlow"}
+                            </h1>
                             <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
                                 Cyber Risk Platform
                             </p>
@@ -183,6 +192,53 @@ export function Sidebar() {
 }
 
 export function TopBar() {
+    const [threatsCount, setThreatsCount] = useState(0);
+    const [notificationsCount, setNotificationsCount] = useState(0);
+    const [notifications, setNotifications] = useState<any[]>([]);
+    const [showNotifications, setShowNotifications] = useState(false);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                // Fetch Threats
+                const threatsRes = await fetch("/api/threats");
+                const threatsData = await threatsRes.json();
+                if (threatsData.stats) {
+                    setThreatsCount(threatsData.stats.activeThreatsCount || 0);
+                }
+
+                // Fetch Notifications
+                const notifRes = await fetch("/api/notifications");
+                const notifData = await notifRes.json();
+                if (notifData.unreadCount !== undefined) {
+                    setNotificationsCount(notifData.unreadCount);
+                    setNotifications(notifData.notifications || []);
+                }
+            } catch (error) {
+                console.error("Failed to fetch topbar data", error);
+            }
+        };
+
+        fetchData();
+        // Poll every minute
+        const interval = setInterval(fetchData, 60000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const markAsRead = async () => {
+        try {
+            await fetch("/api/notifications", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ markAllRead: true }),
+            });
+            setNotificationsCount(0);
+            setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     return (
         <header className="h-16 bg-[var(--bg-secondary)] border-b border-[var(--border-color)] flex items-center justify-between px-6 sticky top-0 z-20">
             {/* Search */}
@@ -203,17 +259,55 @@ export function TopBar() {
             {/* Right Section */}
             <div className="flex items-center gap-3 ml-4">
                 {/* Live Threats Indicator */}
-                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20">
-                    <span className="live-indicator text-xs font-medium text-red-400">
-                        23 Active Threats
-                    </span>
-                </div>
+                <Link href="/threats">
+                    <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-colors cursor-pointer">
+                        <span className="live-indicator text-xs font-medium text-red-400">
+                            {threatsCount} Active Threats
+                        </span>
+                    </div>
+                </Link>
 
                 {/* Notifications */}
-                <button className="relative p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-white transition-colors">
-                    <Bell size={20} />
-                    <span className="notification-badge">5</span>
-                </button>
+                <div className="relative">
+                    <button
+                        onClick={() => setShowNotifications(!showNotifications)}
+                        className="relative p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-white transition-colors"
+                    >
+                        <Bell size={20} />
+                        {notificationsCount > 0 && (
+                            <span className="notification-badge">{notificationsCount}</span>
+                        )}
+                    </button>
+
+                    {/* Dropdown */}
+                    {showNotifications && (
+                        <div className="absolute right-0 top-full mt-2 w-80 bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-xl shadow-2xl z-50 overflow-hidden">
+                            <div className="p-3 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-tertiary)]">
+                                <h3 className="font-semibold text-sm">Notifications</h3>
+                                {notificationsCount > 0 && (
+                                    <button onClick={markAsRead} className="text-xs text-blue-400 hover:text-blue-300">
+                                        Mark all read
+                                    </button>
+                                )}
+                            </div>
+                            <div className="max-h-80 overflow-y-auto">
+                                {notifications.length === 0 ? (
+                                    <div className="p-4 text-center text-sm text-[var(--text-muted)]">
+                                        No notifications
+                                    </div>
+                                ) : (
+                                    notifications.map(notif => (
+                                        <div key={notif.id} className={`p-3 border-b border-[var(--border-color)] hover:bg-[var(--bg-tertiary)] ${!notif.read ? 'bg-[var(--bg-tertiary)]/50' : ''}`}>
+                                            <p className="text-sm font-medium">{notif.title}</p>
+                                            <p className="text-xs text-[var(--text-muted)] mt-1">{notif.message}</p>
+                                            <p className="text-[10px] text-[var(--text-muted)] mt-2">{new Date(notif.createdAt).toLocaleString()}</p>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
 
                 {/* User Menu */}
                 <button className="flex items-center gap-2 p-1.5 pr-3 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors">

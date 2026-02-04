@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logActivity } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
     try {
@@ -39,6 +40,48 @@ export async function GET(request: NextRequest) {
     } catch (error) {
         console.error("Users API Error:", error);
         return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
+    }
+}
+
+export async function PUT(request: NextRequest) {
+    try {
+        const session = await auth();
+        // Check if user is authenticated and is MAIN_OFFICER
+        if (!session || !session.user || session.user.role !== 'MAIN_OFFICER') {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const body = await request.json();
+        const { userId, role } = body;
+
+        if (!userId || !role) {
+            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+        }
+
+        const currentUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { role: true, email: true }
+        });
+
+        const updatedUser = await prisma.user.update({
+            where: { id: userId },
+            data: { role },
+        });
+
+        await logActivity(
+            "Role updated",
+            "user",
+            updatedUser.email,
+            currentUser?.role,
+            role,
+            `Role changed from ${currentUser?.role} to ${role} by ${session.user.name}`
+        );
+
+        return NextResponse.json(updatedUser);
+
+    } catch (error) {
+        console.error("Update User Error:", error);
+        return NextResponse.json({ error: "Failed to update user" }, { status: 500 });
     }
 }
 

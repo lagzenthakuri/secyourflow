@@ -60,10 +60,14 @@ export default function SettingsPage() {
                 body: JSON.stringify(settings),
             });
             if (response.ok) {
-                // Show success?
+                const data = await response.json();
+                setSettings({ ...settings, ...data });
+                // Simple feedback - could be improved with a Toast component
+                alert("Settings saved successfully!");
             }
         } catch (error) {
             console.error("Failed to save settings:", error);
+            alert("Failed to save settings");
         } finally {
             setIsSaving(false);
         }

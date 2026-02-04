@@ -15,6 +15,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             if (user) {
                 token.id = user.id;
                 token.role = (user as any).role || "ANALYST";
+                // Log login
+                // We do this fire-and-forget to avoid slowing down auth
+                import("./logger").then(({ logActivity }) => {
+                    logActivity("User login", "auth", user.email || "unknown", null, null, "User logged in");
+                });
             }
             return token;
         },
