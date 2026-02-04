@@ -14,7 +14,12 @@ import {
   Activity,
 } from "lucide-react";
 
-export default function Home() {
+import { auth } from "@/lib/auth";
+
+export default async function Home() {
+  const session = await auth();
+  const isLoggedIn = !!session?.user;
+
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] bg-grid bg-gradient-radial">
       {/* Navigation */}
@@ -38,9 +43,15 @@ export default function Home() {
             </a>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/login" className="btn btn-ghost text-sm">
-              Sign In
-            </Link>
+            {!isLoggedIn ? (
+              <Link href="/login" className="btn btn-ghost text-sm">
+                Sign In
+              </Link>
+            ) : (
+              <span className="text-sm text-[var(--text-secondary)] mr-2">
+                Hi, {session?.user?.name || session?.user?.email}
+              </span>
+            )}
             <Link href="/dashboard" className="btn btn-primary text-sm">
               Dashboard
               <ChevronRight size={16} />

@@ -8,12 +8,6 @@ import {
     ComplianceBarChart,
 } from "@/components/charts/DashboardCharts";
 import {
-    mockRiskTrends,
-    mockComplianceOverview,
-    mockRemediationTrends,
-    mockDashboardStats,
-} from "@/lib/mock-data";
-import {
     BarChart3,
     Download,
     FileText,
@@ -99,32 +93,34 @@ const reportTypeIcons: Record<string, typeof BarChart3> = {
 
 export default function ReportsPage() {
     const [reportsList, setReportsList] = useState<any[]>([]);
+    const [dashboardData, setDashboardData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isGenerating, setIsGenerating] = useState<string | null>(null);
     const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
     const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
 
-    const fetchReports = async () => {
+    const fetchData = async () => {
         try {
             setIsLoading(true);
-            const response = await fetch("/api/reports");
-            const data = await response.json();
-            if (Array.isArray(data)) {
-                setReportsList(data);
-            } else {
-                setReportsList([]);
-                console.error("API returned non-array data:", data);
-            }
+            const [reportsRes, dashboardRes] = await Promise.all([
+                fetch("/api/reports"),
+                fetch("/api/dashboard")
+            ]);
+
+            const reportsData = await reportsRes.json();
+            const dashboardData = await dashboardRes.json();
+
+            if (Array.isArray(reportsData)) setReportsList(reportsData);
+            setDashboardData(dashboardData);
         } catch (error) {
-            console.error("Failed to fetch reports:", error);
-            setReportsList([]);
+            console.error("Failed to fetch data:", error);
         } finally {
             setIsLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchReports();
+        fetchData();
     }, []);
 
     const handleGenerate = async (reportTemplate: any) => {
@@ -141,7 +137,9 @@ export default function ReportsPage() {
                 }),
             });
             if (response.ok) {
-                fetchReports();
+                const reportsRes = await fetch("/api/reports");
+                const data = await reportsRes.json();
+                if (Array.isArray(data)) setReportsList(data);
             }
         } catch (error) {
             console.error("Failed to generate report:", error);
@@ -151,12 +149,20 @@ export default function ReportsPage() {
     };
 
     const handleSchedule = () => {
-        // Mock scheduling
         setIsScheduleModalOpen(false);
         alert(`Successfully scheduled ${selectedTemplate?.name}`);
     };
 
-    const stats = mockDashboardStats;
+    const stats = dashboardData?.stats || {
+        overallRiskScore: 0,
+        complianceScore: 0,
+        fixedThisMonth: 0,
+        meanTimeToRemediate: 0
+    };
+
+    const riskTrends = dashboardData?.riskTrends || [];
+    const remediationTrends = dashboardData?.remediationTrends || [];
+    const complianceOverview = dashboardData?.complianceOverview || [];
 
     return (
         <DashboardLayout>
@@ -238,19 +244,19 @@ export default function ReportsPage() {
                 {/* Charts Row */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <Card title="Risk Score Trend" subtitle="Last 6 weeks">
-                        <RiskTrendChart data={mockRiskTrends} />
+                        <RiskTrendChart data={riskTrends} />
                     </Card>
                     <Card title="Remediation Activity" subtitle="Opened vs Closed">
-                        <VulnStatusChart data={mockRemediationTrends} />
+                        <VulnStatusChart data={remediationTrends} />
                     </Card>
                 </div>
 
                 {/* Compliance Overview */}
                 <Card title="Compliance Overview" subtitle="Framework compliance scores">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <ComplianceBarChart data={mockComplianceOverview} />
+                        <ComplianceBarChart data={complianceOverview} />
                         <div className="space-y-4">
-                            {mockComplianceOverview.map((framework) => (
+                            {complianceOverview.map((framework: any) => (
                                 <div key={framework.frameworkId}>
                                     <div className="flex items-center justify-between mb-2">
                                         <span className="text-sm text-white">{framework.frameworkName}</span>

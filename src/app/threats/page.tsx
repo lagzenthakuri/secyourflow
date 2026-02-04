@@ -37,13 +37,14 @@ export default function ThreatsPage() {
             const exploited = await exploitedRes.json();
             const kev = await kevRes.json();
 
-            setExploitedVulns(exploited.data);
-            setKevVulns(kev.data);
+            setExploitedVulns(exploited.data || []);
+            setKevVulns(kev.data || []);
             setSummary({
-                exploitedTotal: exploited.pagination.total,
-                kevTotal: kev.pagination.total,
-                highEpss: exploited.data.filter((v: any) => (v.epssScore || 0) > 0.7).length,
-                assetsAtRisk: exploited.data.reduce((acc: number, v: any) => acc + (v.affectedAssets || 0), 0)
+                exploitedTotal: exploited.pagination?.total || 0,
+                kevTotal: kev.pagination?.total || 0,
+                highEpss: (exploited.data || []).filter((v: any) => (v.epssScore || 0) > 0.7).length,
+                assetsAtRisk: (exploited.data || []).reduce((acc: number, v: any) => acc + (v.affectedAssets || 0), 0),
+                feedsTotal: 0
             });
         } catch (error) {
             console.error("Failed to fetch threats:", error);
@@ -151,7 +152,9 @@ export default function ThreatsPage() {
                     </div>
                     <div className="card p-4 border-l-2 border-blue-500">
                         <p className="text-xs text-[var(--text-muted)] mb-1">Threat Feeds Active</p>
-                        <p className="text-2xl font-bold text-blue-400">4</p>
+                        <p className="text-2xl font-bold text-blue-400">
+                            {summary?.feedsTotal || 0}
+                        </p>
                         <p className="text-xs text-[var(--text-muted)] mt-1">Connected sources</p>
                     </div>
                 </div>
@@ -254,28 +257,20 @@ export default function ThreatsPage() {
                         {/* Threat Feeds */}
                         <Card title="Active Threat Feeds" subtitle="Connected intelligence sources">
                             <div className="space-y-3">
-                                {[
-                                    { name: "NVD CVE Feed", status: "active", lastSync: "2 min ago" },
-                                    { name: "CISA KEV Catalog", status: "active", lastSync: "5 min ago" },
-                                    { name: "EPSS Scores", status: "active", lastSync: "1 hour ago" },
-                                    { name: "MITRE ATT&CK", status: "active", lastSync: "6 hours ago" },
-                                ].map((feed) => (
-                                    <div
-                                        key={feed.name}
-                                        className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-tertiary)]"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div
-                                                className={`w-2 h-2 rounded-full ${feed.status === "active"
-                                                    ? "bg-green-400"
-                                                    : "bg-gray-500"
-                                                    }`}
-                                            />
-                                            <span className="text-sm text-white">{feed.name}</span>
-                                        </div>
-                                        <span className="text-xs text-[var(--text-muted)]">{feed.lastSync}</span>
+                                {summary?.feedsTotal > 0 ? (
+                                    // Placeholder for real feeds if they existed
+                                    <div className="text-sm text-[var(--text-muted)] text-center py-4">
+                                        Loading threat feeds...
                                     </div>
-                                ))}
+                                ) : (
+                                    <div className="text-sm text-[var(--text-muted)] text-center py-10">
+                                        <Activity size={24} className="mx-auto mb-2 opacity-20" />
+                                        <p>No threat feeds connected.</p>
+                                        <button className="text-blue-400 hover:underline mt-2 text-xs">
+                                            Configure Feeds
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </Card>
 
