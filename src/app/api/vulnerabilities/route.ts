@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Severity, VulnStatus, VulnSource } from "@prisma/client";
+import { logActivity } from "@/lib/logger";
+import { processRiskAssessment } from "@/lib/risk-engine";
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
@@ -135,6 +137,64 @@ export async function POST(request: NextRequest) {
                 } : {})
             },
         });
+
+        // --- Event Trigger: VULNERABILITY_CREATED ---
+
+        // 1. Log the Activity
+        await logActivity(
+            "VULNERABILITY_CREATED",
+            "Vulnerability",
+            newVuln.id,
+            null,
+            { title: newVuln.title, severity: newVuln.severity, assetId },
+            `Vulnerability detected: ${newVuln.title}`
+        );
+
+        // 2. Trigger Notifications
+        // We notify all IT Officers and Main Officers about the new vulnerability
+        try {
+            const securityTeam = await prisma.user.findMany({
+                where: {
+                    role: { in: ['IT_OFFICER', 'MAIN_OFFICER', 'ANALYST'] },
+                    organizationId: org.id
+                },
+                select: { id: true }
+            });
+
+            if (securityTeam.length > 0) {
+                let assetName = "Unknown Asset";
+                if (assetId) {
+                    const asset = await prisma.asset.findUnique({
+                        where: { id: assetId },
+                        select: { name: true }
+                    });
+                    if (asset) assetName = asset.name;
+                }
+
+                await prisma.notification.createMany({
+                    data: securityTeam.map(user => ({
+                        userId: user.id,
+                        title: "New Vulnerability Detected",
+                        message: `A ${newVuln.severity} severity vulnerability '${newVuln.title}' was detected on ${assetName}.`,
+                        type: "WARNING", // Use WARNING for vulnerabilities
+                        link: `/vulnerabilities/${newVuln.id}`
+                    }))
+                });
+            }
+        } catch (notifyError) {
+            console.error("Failed to trigger notifications:", notifyError);
+            // Don't fail the request if notifications fail
+        }
+
+        // --- Event Trigger: RISK_CALCULATION ---
+        // 3. Trigger AI Risk Engine Pipeline
+        // We run this asynchronously (fire and forget for API response speed, but awaited here since we want to be sure it starts)
+        // In production, this would go to a job queue.
+        if (assetId) {
+            processRiskAssessment(newVuln.id, assetId, org.id).catch(err =>
+                console.error("Background Risk Assessment Validation Failed", err)
+            );
+        }
 
         return NextResponse.json(newVuln, { status: 201 });
     } catch (error) {
