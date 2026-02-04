@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
 
 const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"] },
-    { name: "Assets", href: "/assets", icon: Server, roles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER"] },
+    { name: "Assets", href: "/assets", icon: Server, roles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"] },
     { name: "Vulnerabilities", href: "/vulnerabilities", icon: Shield, roles: ["MAIN_OFFICER", "PENTESTER", "ANALYST"] },
     { name: "Threats", href: "/threats", icon: AlertTriangle, roles: ["MAIN_OFFICER", "PENTESTER"] },
     { name: "Compliance", href: "/compliance", icon: FileCheck, roles: ["MAIN_OFFICER", "IT_OFFICER", "ANALYST"] },
@@ -41,8 +41,13 @@ const secondaryNav = [
 
 export function Sidebar() {
     const pathname = usePathname();
-    const { data: session } = useSession();
+    const { data: session, status } = useSession();
     const [isMobileOpen, setIsMobileOpen] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const userRole = session?.user?.role || "ANALYST";
     const userName = session?.user?.name || "User";
@@ -50,6 +55,10 @@ export function Sidebar() {
 
     const filteredNav = navigation.filter(item => item.roles.includes(userRole));
     const filteredSecondaryNav = secondaryNav.filter(item => item.roles.includes(userRole));
+
+    if (!mounted) {
+        return <div className="sidebar animate-pulse bg-[var(--bg-secondary)]" />;
+    }
 
     return (
         <>

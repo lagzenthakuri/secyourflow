@@ -12,5 +12,7 @@ export const config = {
         "/compliance/:path*",
         "/reports/:path*",
         "/settings/:path*",
+        "/users/:path*",
+        "/scanners/:path*",
     ],
 };

@@ -513,10 +513,10 @@ export default function VulnerabilitiesPage() {
                         <Card title="EPSS Score Ranges">
                             <div className="space-y-3">
                                 {[
-                                    { range: "High (>70%)", count: vulns.filter(v => (v.epssScore || 0) > 0.7).length, color: "#ef4444" },
-                                    { range: "Medium (30-70%)", count: vulns.filter(v => (v.epssScore || 0) <= 0.7 && (v.epssScore || 0) > 0.3).length, color: "#f97316" },
-                                    { range: "Low (10-30%)", count: vulns.filter(v => (v.epssScore || 0) <= 0.3 && (v.epssScore || 0) > 0.1).length, color: "#eab308" },
-                                    { range: "Minimal (<10%)", count: vulns.filter(v => (v.epssScore || 0) <= 0.1).length, color: "#22c55e" },
+                                    { range: "High (>70%)", count: summary?.epssDistribution?.high || 0, color: "#ef4444" },
+                                    { range: "Medium (30-70%)", count: summary?.epssDistribution?.medium || 0, color: "#f97316" },
+                                    { range: "Low (10-30%)", count: summary?.epssDistribution?.low || 0, color: "#eab308" },
+                                    { range: "Minimal (<10%)", count: summary?.epssDistribution?.minimal || 0, color: "#22c55e" },
                                 ].map((item) => (
                                     <div
                                         key={item.range}

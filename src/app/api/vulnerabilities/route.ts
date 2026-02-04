@@ -73,6 +73,15 @@ export async function GET(request: NextRequest) {
             count: s._count._all
         }));
 
+        // Calculate EPSS ranges manually from the count or via raw queries if needed, 
+        // but since we want the whole organization, we can do a simplified count for each range.
+        const epssDistribution = await Promise.all([
+            prisma.vulnerability.count({ where: { ...where, epssScore: { gt: 0.7 } } }),
+            prisma.vulnerability.count({ where: { ...where, epssScore: { gt: 0.3, lte: 0.7 } } }),
+            prisma.vulnerability.count({ where: { ...where, epssScore: { gt: 0.1, lte: 0.3 } } }),
+            prisma.vulnerability.count({ where: { ...where, epssScore: { lte: 0.1 } } }),
+        ]);
+
         return NextResponse.json({
             data: formattedVulns,
             pagination: {
@@ -83,7 +92,13 @@ export async function GET(request: NextRequest) {
             },
             summary: {
                 severityDistribution: severityDist,
-                sourceDistribution: sourceDist
+                sourceDistribution: sourceDist,
+                epssDistribution: {
+                    high: epssDistribution[0],
+                    medium: epssDistribution[1],
+                    low: epssDistribution[2],
+                    minimal: epssDistribution[3],
+                }
             }
         });
     } catch (error) {
