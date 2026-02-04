@@ -26,7 +26,9 @@ export const authConfig = {
                 nextUrl.pathname.startsWith("/threats") ||
                 nextUrl.pathname.startsWith("/compliance") ||
                 nextUrl.pathname.startsWith("/reports") ||
-                nextUrl.pathname.startsWith("/settings");
+                nextUrl.pathname.startsWith("/settings") ||
+                nextUrl.pathname.startsWith("/users") ||
+                nextUrl.pathname.startsWith("/scanners");
 
             if (isOnDashboard) {
                 if (isLoggedIn) return true;

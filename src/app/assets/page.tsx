@@ -45,6 +45,10 @@ const statusColors: Record<string, { bg: string; text: string; icon: any }> = {
     DECOMMISSIONED: { bg: "bg-red-500/10", text: "text-red-400", icon: XCircle },
 };
 
+import { AssetActions } from "@/components/assets/AssetActions";
+import { AddAssetModal } from "@/components/assets/AddAssetModal";
+import { EditAssetModal } from "@/components/assets/EditAssetModal";
+
 export default function AssetsPage() {
     const [assets, setAssets] = useState<Asset[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -52,6 +56,12 @@ export default function AssetsPage() {
     const [selectedType, setSelectedType] = useState<string | null>(null);
     const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
     const [summary, setSummary] = useState<any>(null);
+
+    // Modal states
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
 
     const fetchAssets = async () => {
         try {
@@ -71,6 +81,27 @@ export default function AssetsPage() {
             console.error("Failed to fetch assets:", error);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        try {
+            setDeletingId(id);
+            const response = await fetch(`/api/assets/${id}`, {
+                method: "DELETE",
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to delete asset");
+            }
+
+            fetchAssets();
+        } catch (error: any) {
+            console.error("Delete error:", error);
+            alert(`Delete failed: ${error.message}`);
+        } finally {
+            setDeletingId(null);
         }
     };
 
@@ -115,7 +146,7 @@ export default function AssetsPage() {
                             <Download size={16} />
                             Export
                         </button>
-                        <button className="btn btn-primary">
+                        <button className="btn btn-primary" onClick={() => setIsAddModalOpen(true)}>
                             <Plus size={16} />
                             Add Asset
                         </button>
@@ -310,9 +341,15 @@ export default function AssetsPage() {
                                                             <span className="text-xs text-green-400">No vulnerabilities</span>
                                                         )}
                                                     </div>
-                                                    <button className="p-1.5 rounded-lg hover:bg-[var(--bg-elevated)] text-[var(--text-muted)]">
-                                                        <MoreVertical size={16} />
-                                                    </button>
+                                                    <AssetActions
+                                                        asset={asset}
+                                                        onEdit={() => {
+                                                            setEditingAsset(asset);
+                                                            setIsEditModalOpen(true);
+                                                        }}
+                                                        onDelete={() => handleDelete(asset.id)}
+                                                        isDeleting={deletingId === asset.id}
+                                                    />
                                                 </div>
                                             </div>
                                         );
@@ -403,6 +440,24 @@ export default function AssetsPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Modals */}
+            <AddAssetModal 
+                isOpen={isAddModalOpen} 
+                onClose={() => setIsAddModalOpen(false)} 
+                onSuccess={fetchAssets}
+            />
+            {editingAsset && (
+                <EditAssetModal 
+                    isOpen={isEditModalOpen} 
+                    onClose={() => {
+                        setIsEditModalOpen(false);
+                        setEditingAsset(null);
+                    }} 
+                    onSuccess={fetchAssets}
+                    asset={editingAsset}
+                />
+            )}
         </DashboardLayout>
     );
 }
