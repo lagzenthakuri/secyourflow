@@ -81,6 +81,7 @@ model Organization {
   settings             Setting?
   users                User[]
   vulnerabilities      Vulnerability[]
+  riskRegisters        RiskRegister[]
 
   @@index([name])
 }
@@ -112,6 +113,7 @@ model Asset {
   organization       Organization             @relation(fields: [organizationId], references: [id])
   complianceControls AssetComplianceControl[]
   vulnerabilities    AssetVulnerability[]
+  riskRegisters      RiskRegister[]
 
   @@index([name])
   @@index([type])
@@ -156,6 +158,7 @@ model Vulnerability {
   comments           Comment[]
   organization       Organization                     @relation(fields: [organizationId], references: [id])
   complianceControls VulnerabilityComplianceControl[]
+  riskRegisters      RiskRegister[]
 
   @@index([cveId])
   @@index([severity])
@@ -386,6 +389,28 @@ model RiskSnapshot {
   metadata         Json?
 
   @@index([date])
+}
+
+model RiskRegister {
+  id              String        @id @default(cuid())
+  assetId         String
+  vulnerabilityId String
+  riskScore       Float
+  impactScore     Float?
+  likelihoodScore Float?
+  aiAnalysis      Json?
+  status          String        @default("ACTIVE")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  organizationId  String
+  
+  asset           Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  vulnerability   Vulnerability @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+  organization    Organization  @relation(fields: [organizationId], references: [id])
+
+  @@index([assetId])
+  @@index([vulnerabilityId])
+  @@index([organizationId])
 }
 
 model Setting {
