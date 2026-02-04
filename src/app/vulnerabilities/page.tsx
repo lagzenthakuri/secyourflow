@@ -26,6 +26,8 @@ import { cn } from "@/lib/utils";
 import { Vulnerability } from "@/types";
 import { mockSeverityDistribution, mockVulnSourceDistribution } from "@/lib/mock-data";
 import { AddVulnerabilityModal } from "@/components/vulnerabilities/AddVulnerabilityModal";
+import { EditVulnerabilityModal } from "@/components/vulnerabilities/EditVulnerabilityModal";
+import { VulnerabilityActions } from "@/components/vulnerabilities/VulnerabilityActions";
 import { Plus } from "lucide-react";
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
@@ -46,6 +48,9 @@ export default function VulnerabilitiesPage() {
     const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
     const [summary, setSummary] = useState<any>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    
+    const [editingVuln, setEditingVuln] = useState<Vulnerability | null>(null);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
 
     const fetchVulnerabilities = async () => {
         try {
@@ -84,6 +89,37 @@ export default function VulnerabilitiesPage() {
         }, 300);
         return () => clearTimeout(timer);
     }, [searchQuery, selectedSeverity, showExploited, pagination.page]);
+
+    const handleDelete = async (id: string) => {
+        if (!id) {
+            console.error("Delete failed: No ID provided");
+            alert("Error: Cannot delete vulnerability without a valid ID.");
+            return;
+        }
+
+        console.log(`Starting deletion for vulnerability ID: ${id}`);
+        try {
+            setDeletingId(id);
+            const response = await fetch(`/api/vulnerabilities/${id}`, {
+                method: "DELETE",
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                console.error("Delete API failed:", result);
+                throw new Error(result.error || "Failed to delete vulnerability");
+            }
+
+            console.log("Delete successful:", result);
+            fetchVulnerabilities();
+        } catch (error: any) {
+            console.error("Delete error caught:", error);
+            alert(`Delete failed: ${error.message}`);
+        } finally {
+            setDeletingId(null);
+        }
+    };
 
     const stats = {
         total: pagination.total,
@@ -370,9 +406,12 @@ export default function VulnerabilitiesPage() {
                                                             Affected Assets
                                                         </div>
                                                     </div>
-                                                    <button className="p-1.5 rounded-lg hover:bg-[var(--bg-elevated)] text-[var(--text-muted)]">
-                                                        <MoreVertical size={16} />
-                                                    </button>
+                                                    <VulnerabilityActions
+                                                        vulnerability={vuln}
+                                                        onEdit={() => setEditingVuln(vuln)}
+                                                        onDelete={() => handleDelete(vuln.id)}
+                                                        isDeleting={deletingId === vuln.id}
+                                                    />
                                                 </div>
                                             </div>
                                         );
@@ -508,6 +547,17 @@ export default function VulnerabilitiesPage() {
                     fetchVulnerabilities();
                 }}
             />
+
+            {editingVuln && (
+                <EditVulnerabilityModal
+                    isOpen={!!editingVuln}
+                    vulnerability={editingVuln}
+                    onClose={() => setEditingVuln(null)}
+                    onSuccess={() => {
+                        fetchVulnerabilities();
+                    }}
+                />
+            )}
         </DashboardLayout>
     );
 }
