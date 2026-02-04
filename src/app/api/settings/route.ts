@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { logActivity } from "@/lib/logger";
 
 export async function GET() {
     try {
@@ -47,6 +49,9 @@ export async function POST(request: NextRequest) {
             });
         }
 
+        const session = await auth();
+        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
         const updatedSettings = await prisma.setting.upsert({
             where: { organizationId: org.id },
             update: settingsData,
@@ -55,6 +60,15 @@ export async function POST(request: NextRequest) {
                 organizationId: org.id,
             }
         });
+
+        await logActivity(
+            "Settings updated",
+            "settings",
+            updatedSettings.id,
+            null,
+            null,
+            `Settings updated by ${session.user.name}`
+        );
 
         return NextResponse.json(updatedSettings);
     } catch (error) {

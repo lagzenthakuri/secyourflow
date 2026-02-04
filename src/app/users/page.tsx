@@ -11,13 +11,13 @@ import {
     Mail,
     Calendar,
     ChevronDown,
+    Loader2
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getTimeAgo } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 
 const roleColors = {
     MAIN_OFFICER: "#ef4444",
@@ -29,21 +29,49 @@ const roleColors = {
 export default function UsersPage() {
     const { data: session, status } = useSession();
     const [users, setUsers] = useState<any[]>([]);
+    const [logs, setLogs] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [editingUser, setEditingUser] = useState<string | null>(null);
     const router = useRouter();
 
-    const fetchUsers = async () => {
+    const fetchData = async () => {
         try {
             setIsLoading(true);
-            const response = await fetch("/api/users");
-            const data = await response.json();
-            if (Array.isArray(data)) {
-                setUsers(data);
+            const [usersRes, logsRes] = await Promise.all([
+                fetch("/api/users"),
+                fetch("/api/activity?limit=5")
+            ]);
+
+            const usersData = await usersRes.json();
+            const logsData = await logsRes.json();
+
+            if (Array.isArray(usersData)) {
+                setUsers(usersData);
+            }
+            if (logsData.logs) {
+                setLogs(logsData.logs);
             }
         } catch (error) {
-            console.error("Failed to fetch users:", error);
+            console.error("Failed to fetch data:", error);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleRoleChange = async (userId: string, newRole: string) => {
+        try {
+            const response = await fetch("/api/users", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId, role: newRole }),
+            });
+
+            if (response.ok) {
+                setEditingUser(null);
+                fetchData(); // Refresh data to show new role and log
+            }
+        } catch (error) {
+            console.error("Failed to update role:", error);
         }
     };
 
@@ -53,7 +81,7 @@ export default function UsersPage() {
         } else if (status === "authenticated" && session?.user?.role !== "MAIN_OFFICER") {
             router.push("/dashboard");
         } else if (status === "authenticated") {
-            fetchUsers();
+            fetchData();
         }
     }, [session, status, router]);
 
@@ -131,7 +159,7 @@ export default function UsersPage() {
                                 {users.map((user) => (
                                     <div
                                         key={user.id}
-                                        className="p-4 hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"
+                                        className="p-4 hover:bg-[var(--bg-tertiary)] transition-colors"
                                     >
                                         <div className="flex items-center gap-4">
                                             <div className="relative">
@@ -155,15 +183,31 @@ export default function UsersPage() {
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-0.5">
                                                     <h3 className="font-medium text-white">{user.name}</h3>
-                                                    <span
-                                                        className="px-2 py-0.5 rounded text-[10px] font-medium"
-                                                        style={{
-                                                            background: `${roleColors[user.role as keyof typeof roleColors]}15`,
-                                                            color: roleColors[user.role as keyof typeof roleColors],
-                                                        }}
-                                                    >
-                                                        {user.role}
-                                                    </span>
+                                                    {editingUser === user.id ? (
+                                                        <select
+                                                            value={user.role}
+                                                            onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                                                            onBlur={() => setEditingUser(null)}
+                                                            autoFocus
+                                                            className="text-xs bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded px-1 py-0.5 text-white"
+                                                        >
+                                                            {Object.keys(roleColors).map(role => (
+                                                                <option key={role} value={role}>{role}</option>
+                                                            ))}
+                                                        </select>
+                                                    ) : (
+                                                        <span
+                                                            className="px-2 py-0.5 rounded text-[10px] font-medium cursor-pointer hover:underline"
+                                                            onClick={() => setEditingUser(user.id)}
+                                                            title="Click to edit role"
+                                                            style={{
+                                                                background: `${roleColors[user.role as keyof typeof roleColors]}15`,
+                                                                color: roleColors[user.role as keyof typeof roleColors],
+                                                            }}
+                                                        >
+                                                            {user.role}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
                                                     <span className="flex items-center gap-1">
@@ -217,26 +261,35 @@ export default function UsersPage() {
                             </div>
                         </Card>
 
-                        <Card title="Activity Log">
+                        <Card
+                            title="Activity Log"
+                            action={
+                                <Link href="/reports/activity" className="text-xs text-blue-400 hover:text-blue-300">
+                                    See all
+                                </Link>
+                            }
+                        >
                             <div className="space-y-3">
-                                {[
-                                    { action: "User login", user: "Sarah Chen", time: "2 min ago" },
-                                    { action: "Role updated", user: "Mike Johnson", time: "1 hour ago" },
-                                    { action: "User invited", user: "New User", time: "3 hours ago" },
-                                ].map((log, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="flex items-center justify-between p-2 rounded-lg hover:bg-[var(--bg-tertiary)]"
-                                    >
-                                        <div>
-                                            <p className="text-sm text-[var(--text-secondary)]">
-                                                {log.action}
-                                            </p>
-                                            <p className="text-xs text-[var(--text-muted)]">{log.user}</p>
+                                {logs.length === 0 ? (
+                                    <p className="text-xs text-[var(--text-muted)] text-center py-4">No recent activity</p>
+                                ) : (
+                                    logs.map((log) => (
+                                        <div
+                                            key={log.id}
+                                            className="flex items-center justify-between p-2 rounded-lg hover:bg-[var(--bg-tertiary)]"
+                                        >
+                                            <div className="min-w-0 flex-1 mr-2">
+                                                <p className="text-sm text-[var(--text-secondary)] truncate" title={log.action}>
+                                                    {log.action}
+                                                </p>
+                                                <p className="text-xs text-[var(--text-muted)] truncate">{log.user?.name || 'System'}</p>
+                                            </div>
+                                            <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">
+                                                {getTimeAgo(new Date(log.createdAt))}
+                                            </span>
                                         </div>
-                                        <span className="text-xs text-[var(--text-muted)]">{log.time}</span>
-                                    </div>
-                                ))}
+                                    ))
+                                )}
                             </div>
                         </Card>
                     </div>

@@ -6,18 +6,34 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get("type");
 
     try {
-        const [feeds, indicators] = await Promise.all([
+        const [feeds, indicators, activeThreatsCount, criticalThreatsCount] = await Promise.all([
             prisma.threatFeed.findMany({
                 orderBy: { name: 'asc' }
             }),
             prisma.threatIndicator.findMany({
                 orderBy: { createdAt: 'desc' },
                 take: 50
+            }),
+            prisma.threatIndicator.count({
+                where: {
+                    OR: [
+                        { expiresAt: null },
+                        { expiresAt: { gt: new Date() } }
+                    ]
+                }
+            }),
+            prisma.threatIndicator.count({
+                where: {
+                    severity: 'CRITICAL',
+                    OR: [
+                        { expiresAt: null },
+                        { expiresAt: { gt: new Date() } }
+                    ]
+                }
             })
         ]);
 
         const activeFeeds = feeds.filter((f) => f.isActive).length;
-        const criticalThreats = indicators.filter((i) => i.severity === "CRITICAL").length;
 
         if (type === "feeds") {
             return NextResponse.json({ data: feeds });
@@ -33,7 +49,8 @@ export async function GET(request: NextRequest) {
             stats: {
                 activeFeeds,
                 totalIndicators: indicators.length,
-                criticalThreats,
+                criticalThreats: criticalThreatsCount,
+                activeThreatsCount,
             },
         });
     } catch (error) {
