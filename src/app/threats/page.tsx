@@ -37,13 +37,16 @@ export default function ThreatsPage() {
             const exploited = await exploitedRes.json();
             const kev = await kevRes.json();
 
-            setExploitedVulns(exploited.data);
-            setKevVulns(kev.data);
+            const exploitedData = exploited?.data || [];
+            const kevData = kev?.data || [];
+
+            setExploitedVulns(exploitedData);
+            setKevVulns(kevData);
             setSummary({
-                exploitedTotal: exploited.pagination.total,
-                kevTotal: kev.pagination.total,
-                highEpss: exploited.data.filter((v: any) => (v.epssScore || 0) > 0.7).length,
-                assetsAtRisk: exploited.data.reduce((acc: number, v: any) => acc + (v.affectedAssets || 0), 0)
+                exploitedTotal: exploited?.pagination?.total || 0,
+                kevTotal: kev?.pagination?.total || 0,
+                highEpss: exploitedData.filter((v: any) => (v.epssScore || 0) > 0.7).length,
+                assetsAtRisk: exploitedData.reduce((acc: number, v: any) => acc + (v.affectedAssets || 0), 0)
             });
         } catch (error) {
             console.error("Failed to fetch threats:", error);

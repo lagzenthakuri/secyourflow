@@ -312,7 +312,7 @@ export default function CompliancePage() {
                                 title={`${selectedFramework.frameworkName} Controls`}
                                 subtitle={`${selectedFramework.totalControls} total controls`}
                                 noPadding
-                                headerAction={
+                                action={
                                     <button 
                                         className="btn btn-primary text-xs py-1.5 px-3"
                                         onClick={() => setIsAddControlModalOpen(true)}
