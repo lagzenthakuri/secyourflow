@@ -127,27 +127,41 @@ export async function GET(request: Request) {
                 fixedThisMonth: vulnsByMonth.filter(v =>
                     v.fixedAt && v.fixedAt.getMonth() === new Date().getMonth() && v.fixedAt.getFullYear() === new Date().getFullYear()
                 ).length,
-                meanTimeToRemediate: 14.2, // Still hard to calculate accurately without complex SQL
+                meanTimeToRemediate: 0, // Set to 0 since no data exists yet
             },
-            riskTrends: riskSnapshots.map((s: any) => ({
+            riskTrends: riskSnapshots.length > 0 ? riskSnapshots.map((s: any) => ({
                 date: s.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
                 riskScore: s.overallRiskScore,
                 criticalVulns: s.criticalVulns,
                 highVulns: s.highVulns,
-            })),
-            severityDistribution: severityDistribution.map((s: any) => ({
+            })) : Array.from({ length: 6 }, (_, i) => {
+                const d = new Date();
+                d.setDate(d.getDate() - (5 - i) * 7);
+                return {
+                    date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                    riskScore: 0,
+                    criticalVulns: 0,
+                    highVulns: 0,
+                };
+            }),
+            severityDistribution: severityDistribution.length > 0 ? severityDistribution.map((s: any) => ({
                 severity: s.severity,
                 count: s._count._all,
                 percentage: totalVulnerabilities > 0 ? (s._count._all / totalVulnerabilities) * 100 : 0
-            })),
+            })) : [
+                { severity: 'CRITICAL', count: 0, percentage: 0 },
+                { severity: 'HIGH', count: 0, percentage: 0 },
+                { severity: 'MEDIUM', count: 0, percentage: 0 },
+                { severity: 'LOW', count: 0, percentage: 0 },
+            ],
             topRiskyAssets: topRiskyAssets.map((a: any) => ({
                 id: a.id,
                 name: a.name,
                 type: a.type,
                 criticality: a.criticality,
                 vulnerabilityCount: a._count.vulnerabilities,
-                criticalVulnCount: Math.floor(a._count.vulnerabilities * 0.2),
-                riskScore: Math.min(100, 40 + (a._count.vulnerabilities * 3))
+                criticalVulnCount: 0, // Needs real calculation based on joined table
+                riskScore: 0
             })),
             recentActivities: recentActivities.map((a: any) => ({
                 id: a.id,

@@ -24,7 +24,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Vulnerability } from "@/types";
-import { mockSeverityDistribution, mockVulnSourceDistribution } from "@/lib/mock-data";
 import { AddVulnerabilityModal } from "@/components/vulnerabilities/AddVulnerabilityModal";
 import { EditVulnerabilityModal } from "@/components/vulnerabilities/EditVulnerabilityModal";
 import { VulnerabilityActions } from "@/components/vulnerabilities/VulnerabilityActions";
@@ -48,7 +47,7 @@ export default function VulnerabilitiesPage() {
     const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
     const [summary, setSummary] = useState<any>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    
+
     const [editingVuln, setEditingVuln] = useState<Vulnerability | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
 

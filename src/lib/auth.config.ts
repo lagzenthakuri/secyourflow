@@ -29,10 +29,15 @@ export const authConfig = {
                 nextUrl.pathname.startsWith("/settings") ||
                 nextUrl.pathname.startsWith("/users") ||
                 nextUrl.pathname.startsWith("/scanners");
+            const isOnLoginPage = nextUrl.pathname.startsWith("/login");
 
             if (isOnDashboard) {
                 if (isLoggedIn) return true;
                 return false; // Redirect unauthenticated users to login page
+            } else if (isOnLoginPage) {
+                if (isLoggedIn) {
+                    return Response.redirect(new URL("/dashboard", nextUrl));
+                }
             }
             return true;
         },

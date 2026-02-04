@@ -95,9 +95,9 @@ export default function DashboardPage() {
         );
     }
 
-    const { stats, riskTrends, severityDistribution, topRiskyAssets, complianceOverview, recentActivities, exploitedVulnerabilities, remediationTrends, assetTypeDistribution } = data as any;
+    const { stats, riskTrends, severityDistribution, topRiskyAssets, complianceOverview, recentActivities, exploitedVulnerabilities, remediationTrends, assetTypeDistribution, lastUpdated } = data as any;
 
-    const lastUpdated = "2 minutes ago"; // Could be dynamic
+    const lastUpdatedFormatted = lastUpdated ? getTimeAgo(new Date(lastUpdated)) : "Just now";
 
     return (
         <DashboardLayout>
@@ -114,7 +114,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-3">
                         <span className="text-sm text-[var(--text-muted)]">
-                            Last updated: {lastUpdated}
+                            Last updated: {lastUpdatedFormatted}
                         </span>
                         <button className="btn btn-primary">
                             <Activity size={16} />

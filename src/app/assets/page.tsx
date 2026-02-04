@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, SeverityBadge, ProgressBar } from "@/components/ui/Cards";
-import { mockAssetTypeDistribution } from "@/lib/mock-data";
 import { AssetTypeChart } from "@/components/charts/DashboardCharts";
 import {
     Server,

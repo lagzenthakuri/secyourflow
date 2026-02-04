@@ -17,53 +17,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-const users = [
-    {
-        id: "1",
-        name: "Sarah Chen",
-        email: "sarah.chen@company.com",
-        role: "MAIN_OFFICER",
-        department: "Security",
-        lastActive: "2 minutes ago",
-        status: "online",
-    },
-    {
-        id: "2",
-        name: "Mike Johnson",
-        email: "mike.j@company.com",
-        role: "ANALYST",
-        department: "IT Operations",
-        lastActive: "15 minutes ago",
-        status: "online",
-    },
-    {
-        id: "3",
-        name: "Lisa Park",
-        email: "lisa.park@company.com",
-        role: "IT_OFFICER",
-        department: "Compliance",
-        lastActive: "1 hour ago",
-        status: "away",
-    },
-    {
-        id: "4",
-        name: "James Wilson",
-        email: "j.wilson@company.com",
-        role: "PENTESTER",
-        department: "Security",
-        lastActive: "3 hours ago",
-        status: "offline",
-    },
-    {
-        id: "5",
-        name: "Emma Davis",
-        email: "emma.d@company.com",
-        role: "ANALYST",
-        department: "Executive",
-        lastActive: "1 day ago",
-        status: "offline",
-    },
-];
+import { useState } from "react";
 
 const roleColors = {
     MAIN_OFFICER: "#ef4444",
@@ -74,17 +28,36 @@ const roleColors = {
 
 export default function UsersPage() {
     const { data: session, status } = useSession();
+    const [users, setUsers] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
+
+    const fetchUsers = async () => {
+        try {
+            setIsLoading(true);
+            const response = await fetch("/api/users");
+            const data = await response.json();
+            if (Array.isArray(data)) {
+                setUsers(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch users:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
         if (status === "unauthenticated") {
             router.push("/login");
         } else if (status === "authenticated" && session?.user?.role !== "MAIN_OFFICER") {
             router.push("/dashboard");
+        } else if (status === "authenticated") {
+            fetchUsers();
         }
     }, [session, status, router]);
 
-    if (status === "loading" || (status === "authenticated" && session?.user?.role !== "MAIN_OFFICER")) {
+    if (status === "loading" || isLoading || (status === "authenticated" && session?.user?.role !== "MAIN_OFFICER")) {
         return (
             <DashboardLayout>
                 <div className="flex items-center justify-center min-h-[60vh]">
@@ -126,12 +99,12 @@ export default function UsersPage() {
                     </div>
                     <div className="card p-4">
                         <p className="text-2xl font-bold text-purple-400">
-                            {users.filter((u) => u.role === "ADMIN").length}
+                            {users.filter((u) => u.role === "MAIN_OFFICER").length}
                         </p>
-                        <p className="text-xs text-[var(--text-muted)]">Admins</p>
+                        <p className="text-xs text-[var(--text-muted)]">Main Officers</p>
                     </div>
                     <div className="card p-4">
-                        <p className="text-2xl font-bold text-blue-400">4</p>
+                        <p className="text-2xl font-bold text-blue-400">{Object.keys(roleColors).length}</p>
                         <p className="text-xs text-[var(--text-muted)]">Roles Defined</p>
                     </div>
                 </div>
@@ -165,7 +138,7 @@ export default function UsersPage() {
                                                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-medium">
                                                     {user.name
                                                         .split(" ")
-                                                        .map((n) => n[0])
+                                                        .map((n: string) => n[0])
                                                         .join("")}
                                                 </div>
                                                 <div
