@@ -18,8 +18,7 @@ import {
     Search,
     Calendar,
     Shield,
-    TrendingUp,
-    Loader2,
+    TrendingUp
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Modal } from "@/components/ui/Modal";
@@ -28,6 +27,7 @@ import { AddControlModal } from "@/components/compliance/AddControlModal";
 import { AssessControlModal } from "@/components/compliance/AssessControlModal";
 import { ControlActions } from "@/components/compliance/ControlActions";
 import { FrameworkActions } from "@/components/compliance/FrameworkActions";
+import { SecurityLoader } from "@/components/ui/SecurityLoader";
 
 const statusConfig = {
     COMPLIANT: { label: "Compliant", color: "#22c55e", icon: CheckCircle },
@@ -43,7 +43,7 @@ export default function CompliancePage() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-    
+
     // Framework Modals
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditFrameworkModalOpen, setIsEditFrameworkModalOpen] = useState(false);
@@ -64,7 +64,7 @@ export default function CompliancePage() {
             const result = await response.json();
             if (result && Array.isArray(result.data)) {
                 setFrameworks(result.data);
-                
+
                 // If we already had a selected framework, refresh its data from the new list
                 if (selectedFramework) {
                     const updated = result.data.find((f: any) => f.frameworkId === selectedFramework.frameworkId);
@@ -185,8 +185,12 @@ export default function CompliancePage() {
         return (
             <DashboardLayout>
                 <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-                    <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
-                    <p className="text-[var(--text-secondary)]">Gathering compliance data...</p>
+                    <SecurityLoader
+                        size="xl"
+                        icon="shield"
+                        variant="cyber"
+                        text="Gathering compliance data..."
+                    />
                 </div>
             </DashboardLayout>
         );
@@ -258,7 +262,7 @@ export default function CompliancePage() {
                                     >
                                         {framework.compliancePercentage.toFixed(0)}%
                                     </span>
-                                    <FrameworkActions 
+                                    <FrameworkActions
                                         framework={framework}
                                         onEdit={() => {
                                             setSelectedFramework(framework);
@@ -293,9 +297,9 @@ export default function CompliancePage() {
                         </div>
                     ))}
                     {frameworks.length === 0 && (
-                        <button 
+                        <button
                             onClick={() => setIsAddModalOpen(true)}
-                            className="card p-4 border-dashed border-2 flex flex-col items-center justify-center gap-2 hover:bg-white/5 transition-colors"
+                            className="card p-4 border-dashed border-2 flex flex-col items-center justify-center gap-2 hover:bg-white/5 transition-all duration-300 ease-in-out"
                         >
                             <Plus className="text-[var(--text-muted)]" />
                             <span className="text-sm font-medium text-[var(--text-muted)]">Add First Framework</span>
@@ -313,7 +317,7 @@ export default function CompliancePage() {
                                 subtitle={`${selectedFramework.totalControls} total controls`}
                                 noPadding
                                 action={
-                                    <button 
+                                    <button
                                         className="btn btn-primary text-xs py-1.5 px-3"
                                         onClick={() => setIsAddControlModalOpen(true)}
                                     >
@@ -350,7 +354,7 @@ export default function CompliancePage() {
                                     <button
                                         onClick={() => setSelectedStatus(null)}
                                         className={cn(
-                                            "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors",
+                                            "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-300 ease-in-out",
                                             !selectedStatus
                                                 ? "bg-blue-500/20 text-blue-400"
                                                 : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
@@ -361,7 +365,7 @@ export default function CompliancePage() {
                                     <button
                                         onClick={() => setSelectedStatus("COMPLIANT")}
                                         className={cn(
-                                            "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1",
+                                            "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-300 ease-in-out flex items-center gap-1",
                                             selectedStatus === "COMPLIANT"
                                                 ? "bg-green-500/20 text-green-400"
                                                 : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
@@ -373,7 +377,7 @@ export default function CompliancePage() {
                                     <button
                                         onClick={() => setSelectedStatus("NON_COMPLIANT")}
                                         className={cn(
-                                            "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1",
+                                            "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-300 ease-in-out flex items-center gap-1",
                                             selectedStatus === "NON_COMPLIANT"
                                                 ? "bg-red-500/20 text-red-400"
                                                 : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
@@ -385,7 +389,7 @@ export default function CompliancePage() {
                                     <button
                                         onClick={() => setSelectedStatus("PARTIALLY_COMPLIANT")}
                                         className={cn(
-                                            "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1",
+                                            "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-300 ease-in-out flex items-center gap-1",
                                             selectedStatus === "PARTIALLY_COMPLIANT"
                                                 ? "bg-yellow-500/20 text-yellow-400"
                                                 : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
@@ -411,7 +415,7 @@ export default function CompliancePage() {
                                             return (
                                                 <div
                                                     key={control.id}
-                                                    className="p-4 hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer group"
+                                                    className="p-4 hover:bg-[var(--bg-tertiary)] transition-all duration-300 ease-in-out cursor-pointer group"
                                                     onClick={() => {
                                                         setSelectedControl(control);
                                                         setIsAssessModalOpen(true);
@@ -439,7 +443,7 @@ export default function CompliancePage() {
                                                                     {status.label}
                                                                 </span>
                                                             </div>
-                                                            <h3 className="font-medium text-white mb-1 group-hover:text-blue-400 transition-colors">
+                                                            <h3 className="font-medium text-white mb-1 group-hover:text-blue-400 transition-all duration-300 ease-in-out">
                                                                 {control.title}
                                                             </h3>
                                                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-[var(--text-muted)] uppercase tracking-tight">
@@ -454,7 +458,7 @@ export default function CompliancePage() {
                                                                 </span>
                                                             </div>
                                                         </div>
-                                                        <ControlActions 
+                                                        <ControlActions
                                                             control={control}
                                                             onAssess={() => {
                                                                 setSelectedControl(control);
@@ -577,7 +581,11 @@ export default function CompliancePage() {
                             Cancel
                         </button>
                         <button type="submit" className="btn btn-primary" disabled={isSubmitting || !newFramework.name}>
-                            {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                            {isSubmitting ? (
+                                <SecurityLoader size="xs" icon="shield" variant="cyber" className="mr-2" />
+                            ) : (
+                                <Plus size={16} className="mr-2" />
+                            )}
                             {isSubmitting ? "Adding..." : "Add Framework"}
                         </button>
                     </div>
@@ -617,7 +625,8 @@ export default function CompliancePage() {
                             Cancel
                         </button>
                         <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                            {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : "Save Changes"}
+                            {isSubmitting ? <SecurityLoader size="xs" icon="shield" variant="cyber" className="mr-2" /> : null}
+                            {isSubmitting ? "Saving..." : "Save Changes"}
                         </button>
                     </div>
                 </form>
@@ -625,7 +634,7 @@ export default function CompliancePage() {
 
             {/* Control Modals */}
             {selectedFramework && (
-                <AddControlModal 
+                <AddControlModal
                     isOpen={isAddControlModalOpen}
                     onClose={() => setIsAddControlModalOpen(false)}
                     onSuccess={fetchCompliance}
@@ -634,7 +643,7 @@ export default function CompliancePage() {
             )}
 
             {selectedControl && (
-                <AssessControlModal 
+                <AssessControlModal
                     isOpen={isAssessModalOpen}
                     onClose={() => {
                         setIsAssessModalOpen(false);

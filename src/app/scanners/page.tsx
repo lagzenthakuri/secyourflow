@@ -17,10 +17,10 @@ import {
     ChevronRight,
     ExternalLink,
     Calendar,
-    FileJson,
-    Loader2,
+    FileJson
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SecurityLoader } from "@/components/ui/SecurityLoader";
 
 const statusConfig = {
     active: { label: "Active", color: "#22c55e", icon: CheckCircle },
@@ -102,7 +102,7 @@ export default function ScannersPage() {
                     <button
                         onClick={() => setActiveTab("scanners")}
                         className={cn(
-                            "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                            "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ease-in-out",
                             activeTab === "scanners"
                                 ? "bg-blue-500/20 text-blue-400"
                                 : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
@@ -113,7 +113,7 @@ export default function ScannersPage() {
                     <button
                         onClick={() => setActiveTab("scans")}
                         className={cn(
-                            "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                            "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ease-in-out",
                             activeTab === "scans"
                                 ? "bg-blue-500/20 text-blue-400"
                                 : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
@@ -124,7 +124,7 @@ export default function ScannersPage() {
                     <button
                         onClick={() => setActiveTab("import")}
                         className={cn(
-                            "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                            "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ease-in-out",
                             activeTab === "import"
                                 ? "bg-blue-500/20 text-blue-400"
                                 : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
@@ -141,8 +141,12 @@ export default function ScannersPage() {
                             <div className="space-y-4">
                                 {isLoading ? (
                                     <div className="card p-20 text-center">
-                                        <Loader2 size={48} className="text-blue-500 mx-auto mb-4 animate-spin" />
-                                        <p className="text-[var(--text-secondary)]">Loading scanners...</p>
+                                        <SecurityLoader
+                                            size="xl"
+                                            icon="scan"
+                                            variant="cyber"
+                                            text="Loading scanners..."
+                                        />
                                     </div>
                                 ) : scanners.length > 0 ? (
                                     scanners.map((scanner) => {
@@ -152,7 +156,7 @@ export default function ScannersPage() {
                                         return (
                                             <div
                                                 key={scanner.id}
-                                                className="card p-5 hover:border-[var(--border-hover)] transition-colors"
+                                                className="card p-5 hover:border-[var(--border-hover)] transition-all duration-300 ease-in-out"
                                             >
                                                 <div className="flex items-start gap-4">
                                                     <div className="p-3 rounded-xl bg-[var(--bg-tertiary)]">
@@ -206,10 +210,10 @@ export default function ScannersPage() {
                                                         </div>
                                                     </div>
                                                     <div className="flex gap-2">
-                                                        <button className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-white transition-colors">
+                                                        <button className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-white transition-all duration-300 ease-in-out">
                                                             <RefreshCw size={16} />
                                                         </button>
-                                                        <button className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-white transition-colors">
+                                                        <button className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-white transition-all duration-300 ease-in-out">
                                                             <Settings size={16} />
                                                         </button>
                                                     </div>
@@ -262,7 +266,7 @@ export default function ScannersPage() {
                                         (scanner) => (
                                             <button
                                                 key={scanner}
-                                                className="p-3 rounded-lg bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] text-sm text-[var(--text-secondary)] hover:text-white transition-colors"
+                                                className="p-3 rounded-lg bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] text-sm text-[var(--text-secondary)] hover:text-white transition-all duration-300 ease-in-out"
                                             >
                                                 {scanner}
                                             </button>
@@ -285,7 +289,7 @@ export default function ScannersPage() {
                                     return (
                                         <div
                                             key={scan.id}
-                                            className="p-4 hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"
+                                            className="p-4 hover:bg-[var(--bg-tertiary)] transition-all duration-300 ease-in-out cursor-pointer"
                                         >
                                             <div className="flex items-center gap-4">
                                                 <div
@@ -346,7 +350,7 @@ export default function ScannersPage() {
                 {activeTab === "import" && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <Card title="Upload Scan Results" subtitle="Import findings from exported scan files">
-                            <div className="border-2 border-dashed border-[var(--border-color)] rounded-xl p-8 text-center hover:border-blue-500/50 transition-colors cursor-pointer">
+                            <div className="border-2 border-dashed border-[var(--border-color)] rounded-xl p-8 text-center hover:border-blue-500/50 transition-all duration-300 ease-in-out cursor-pointer">
                                 <FileJson size={48} className="text-[var(--text-muted)] mx-auto mb-4" />
                                 <h3 className="font-medium text-white mb-2">
                                     Drop scan file here or click to browse

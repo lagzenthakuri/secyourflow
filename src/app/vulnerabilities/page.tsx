@@ -19,8 +19,7 @@ import {
     XCircle,
     ExternalLink,
     MoreVertical,
-    TrendingUp,
-    Loader2,
+    TrendingUp
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Vulnerability } from "@/types";
@@ -28,6 +27,7 @@ import { AddVulnerabilityModal } from "@/components/vulnerabilities/AddVulnerabi
 import { EditVulnerabilityModal } from "@/components/vulnerabilities/EditVulnerabilityModal";
 import { VulnerabilityActions } from "@/components/vulnerabilities/VulnerabilityActions";
 import { Plus } from "lucide-react";
+import { SecurityLoader } from "@/components/ui/SecurityLoader";
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
     OPEN: { label: "Open", color: "#ef4444", icon: AlertTriangle },
@@ -271,7 +271,7 @@ export default function VulnerabilitiesPage() {
                                         setPagination(prev => ({ ...prev, page: 1 }));
                                     }}
                                     className={cn(
-                                        "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors",
+                                        "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-300 ease-in-out",
                                         !selectedSeverity
                                             ? "bg-blue-500/20 text-blue-400"
                                             : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
@@ -287,7 +287,7 @@ export default function VulnerabilitiesPage() {
                                             setPagination(prev => ({ ...prev, page: 1 }));
                                         }}
                                         className={cn(
-                                            "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors",
+                                            "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-300 ease-in-out",
                                             selectedSeverity === severity
                                                 ? `severity-${severity.toLowerCase()}`
                                                 : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
@@ -302,8 +302,12 @@ export default function VulnerabilitiesPage() {
                             <div className="divide-y divide-[var(--border-color)]">
                                 {isLoading ? (
                                     <div className="p-20 flex flex-col items-center justify-center gap-4">
-                                        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-                                        <p className="text-sm text-[var(--text-muted)]">Fetching vulnerabilities...</p>
+                                        <SecurityLoader
+                                            size="lg"
+                                            icon="shield"
+                                            variant="cyber"
+                                            text="Fetching vulnerabilities..."
+                                        />
                                     </div>
                                 ) : vulns.length === 0 ? (
                                     <div className="p-20 text-center">
@@ -317,7 +321,7 @@ export default function VulnerabilitiesPage() {
                                         return (
                                             <div
                                                 key={vuln.id}
-                                                className="p-4 hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"
+                                                className="p-4 hover:bg-[var(--bg-tertiary)] transition-all duration-300 ease-in-out cursor-pointer"
                                             >
                                                 <div className="flex items-start gap-4">
                                                     <div
@@ -477,7 +481,7 @@ export default function VulnerabilitiesPage() {
                                 </>
                             ) : (
                                 <div className="h-[200px] flex items-center justify-center">
-                                    <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                                    <SecurityLoader size="md" icon="shield" variant="cyber" />
                                 </div>
                             )}
                         </Card>

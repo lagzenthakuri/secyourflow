@@ -39,10 +39,14 @@ const secondaryNav = [
     { name: "Settings", href: "/settings", icon: Settings, roles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"] },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+    isOpen: boolean;
+    setIsOpen: (open: boolean) => void;
+}
+
+export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     const pathname = usePathname();
-    const { data: session, status } = useSession();
-    const [isMobileOpen, setIsMobileOpen] = useState(false);
+    const { data: session } = useSession();
     const [mounted, setMounted] = useState(false);
     const [orgName, setOrgName] = useState<string>("");
 
@@ -69,27 +73,19 @@ export function Sidebar() {
 
     return (
         <>
-            {/* Mobile Menu Button */}
-            <button
-                onClick={() => setIsMobileOpen(!isMobileOpen)}
-                className="lg:fixed fixed top-4 left-4 z-50 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-color)]"
-            >
-                {isMobileOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
-
             {/* Mobile Overlay */}
-            {isMobileOpen && (
+            {isOpen && (
                 <div
-                    className="lg:hidden fixed inset-0 bg-black/50 z-30"
-                    onClick={() => setIsMobileOpen(false)}
+                    className="lg:hidden fixed inset-0 bg-black/50 z-30 transition-opacity duration-300 ease-in-out"
+                    onClick={() => setIsOpen(false)}
                 />
             )}
 
             {/* Sidebar */}
             <aside
                 className={cn(
-                    "sidebar",
-                    isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+                    "sidebar transition-transform duration-400 ease-out",
+                    isOpen ? "translate-x-0" : "-translate-x-full"
                 )}
             >
                 {/* Logo */}
@@ -110,7 +106,7 @@ export function Sidebar() {
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 py-4 overflow-y-auto">
+                <nav className="flex-1 py-4 overflow-y-auto min-h-0">
                     <div className="px-4 mb-2">
                         <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                             Main Menu
@@ -123,7 +119,9 @@ export function Sidebar() {
                                 key={item.href}
                                 href={item.href}
                                 className={cn("sidebar-link", isActive && "active")}
-                                onClick={() => setIsMobileOpen(false)}
+                                onClick={() => {
+                                    if (window.innerWidth < 1024) setIsOpen(false);
+                                }}
                             >
                                 <item.icon size={18} />
                                 {item.name}
@@ -143,7 +141,9 @@ export function Sidebar() {
                                 key={item.href}
                                 href={item.href}
                                 className={cn("sidebar-link", isActive && "active")}
-                                onClick={() => setIsMobileOpen(false)}
+                                onClick={() => {
+                                    if (window.innerWidth < 1024) setIsOpen(false);
+                                }}
                             >
                                 <item.icon size={18} />
                                 {item.name}
@@ -153,9 +153,9 @@ export function Sidebar() {
                 </nav>
 
                 {/* User Section */}
-                <div className="p-4 border-t border-[var(--border-color)]">
+                <div className="p-4 border-t border-[var(--border-color)] mt-auto">
                     <div className="group relative">
-                        <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer">
+                        <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-all duration-300 ease-in-out cursor-pointer">
                             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-medium">
                                 {userInitials}
                             </div>
@@ -167,17 +167,17 @@ export function Sidebar() {
                                     {userRole.replace('_', ' ')}
                                 </p>
                             </div>
-                            <button className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-white transition-colors">
+                            <button className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-white transition-all duration-300 ease-in-out">
                                 <ChevronDown size={14} />
                             </button>
                         </div>
 
                         {/* Simple Tooltip-style Logout Menu */}
-                        <div className="absolute bottom-full left-0 w-full mb-2 hidden group-hover:block z-50">
+                        <div className="absolute bottom-full left-0 w-full mb-2 hidden group-hover:block z-50 animate-fade-in">
                             <div className="bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-xl shadow-2xl p-1 overflow-hidden">
                                 <button
                                     onClick={() => signOut({ callbackUrl: "/" })}
-                                    className="w-full flex items-center gap-2 p-2.5 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                    className="w-full flex items-center gap-2 p-2.5 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-all duration-300 ease-in-out"
                                 >
                                     <LogOut size={16} />
                                     Sign Out
@@ -191,7 +191,11 @@ export function Sidebar() {
     );
 }
 
-export function TopBar() {
+interface TopBarProps {
+    onToggleSidebar: () => void;
+}
+
+export function TopBar({ onToggleSidebar }: TopBarProps) {
     const [threatsCount, setThreatsCount] = useState(0);
     const [notificationsCount, setNotificationsCount] = useState(0);
     const [notifications, setNotifications] = useState<any[]>([]);
@@ -241,9 +245,17 @@ export function TopBar() {
 
     return (
         <header className="h-16 bg-[var(--bg-secondary)] border-b border-[var(--border-color)] flex items-center justify-between px-6 sticky top-0 z-20">
-            {/* Search */}
-            <div className="flex-1 max-w-xl">
-                <div className="relative">
+            {/* Left Section: Menu Toggle & Search */}
+            <div className="flex items-center gap-4 flex-1 max-w-xl">
+                <button
+                    onClick={onToggleSidebar}
+                    className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-white transition-all duration-300 ease-in-out"
+                    aria-label="Toggle Sidebar"
+                >
+                    <Menu size={20} />
+                </button>
+
+                <div className="relative flex-1">
                     <Search
                         size={18}
                         className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
@@ -251,7 +263,7 @@ export function TopBar() {
                     <input
                         type="text"
                         placeholder="Search assets, vulnerabilities, or CVEs..."
-                        className="input pl-10 py-2.5 text-sm bg-[var(--bg-tertiary)]"
+                        className="input !pl-10 py-2.5 text-sm bg-[var(--bg-tertiary)]"
                     />
                 </div>
             </div>
@@ -260,7 +272,7 @@ export function TopBar() {
             <div className="flex items-center gap-3 ml-4">
                 {/* Live Threats Indicator */}
                 <Link href="/threats">
-                    <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-colors cursor-pointer">
+                    <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all duration-300 ease-in-out cursor-pointer">
                         <span className="live-indicator text-xs font-medium text-red-400">
                             {threatsCount} Active Threats
                         </span>
@@ -271,7 +283,7 @@ export function TopBar() {
                 <div className="relative">
                     <button
                         onClick={() => setShowNotifications(!showNotifications)}
-                        className="relative p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-white transition-colors"
+                        className="relative p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-white transition-all duration-300 ease-in-out"
                     >
                         <Bell size={20} />
                         {notificationsCount > 0 && (
@@ -281,11 +293,11 @@ export function TopBar() {
 
                     {/* Dropdown */}
                     {showNotifications && (
-                        <div className="absolute right-0 top-full mt-2 w-80 bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-xl shadow-2xl z-50 overflow-hidden">
+                        <div className="absolute right-0 top-full mt-2 w-80 bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-xl shadow-2xl z-50 overflow-hidden animate-fade-in">
                             <div className="p-3 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-tertiary)]">
                                 <h3 className="font-semibold text-sm">Notifications</h3>
                                 {notificationsCount > 0 && (
-                                    <button onClick={markAsRead} className="text-xs text-blue-400 hover:text-blue-300">
+                                    <button onClick={markAsRead} className="text-xs text-blue-400 hover:text-blue-300 transition-all duration-300 ease-in-out duration-300">
                                         Mark all read
                                     </button>
                                 )}
@@ -297,7 +309,7 @@ export function TopBar() {
                                     </div>
                                 ) : (
                                     notifications.map(notif => (
-                                        <div key={notif.id} className={`p-3 border-b border-[var(--border-color)] hover:bg-[var(--bg-tertiary)] ${!notif.read ? 'bg-[var(--bg-tertiary)]/50' : ''}`}>
+                                        <div key={notif.id} className={`p-3 border-b border-[var(--border-color)] hover:bg-[var(--bg-tertiary)] transition-all duration-300 ease-in-out ${!notif.read ? 'bg-[var(--bg-tertiary)]/50' : ''}`}>
                                             <p className="text-sm font-medium">{notif.title}</p>
                                             <p className="text-xs text-[var(--text-muted)] mt-1">{notif.message}</p>
                                             <p className="text-[10px] text-[var(--text-muted)] mt-2">{new Date(notif.createdAt).toLocaleString()}</p>
@@ -308,25 +320,39 @@ export function TopBar() {
                         </div>
                     )}
                 </div>
-
-                {/* User Menu */}
-                <button className="flex items-center gap-2 p-1.5 pr-3 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-medium">
-                        SC
-                    </div>
-                    <ChevronDown size={16} className="text-[var(--text-muted)]" />
-                </button>
             </div>
         </header>
     );
 }
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+    // Close sidebar on initial mobile load
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth < 1024) {
+                setIsSidebarOpen(false);
+            } else {
+                setIsSidebarOpen(true);
+            }
+        };
+
+        // Set initial state
+        handleResize();
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     return (
         <div className="min-h-screen bg-[var(--bg-primary)] bg-grid bg-gradient-radial">
-            <Sidebar />
-            <div className="lg:ml-[260px]">
-                <TopBar />
+            <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+            <div className={cn(
+                "transition-all duration-400 ease-out",
+                isSidebarOpen ? "lg:ml-[260px]" : "lg:ml-0"
+            )}>
+                <TopBar onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
                 <main className="p-6">{children}</main>
             </div>
         </div>

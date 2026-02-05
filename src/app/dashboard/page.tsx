@@ -31,8 +31,8 @@ import {
     Target,
     FileCheck,
     Activity,
-    Loader2,
 } from "lucide-react";
+import { SecurityLoader } from "@/components/ui/SecurityLoader";
 import Link from "next/link";
 
 export default function DashboardPage() {
@@ -62,10 +62,12 @@ export default function DashboardPage() {
         return (
             <DashboardLayout>
                 <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-                    <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
-                    <p className="text-[var(--text-secondary)] animate-pulse">
-                        Calculating risk scores and gathering intelligence...
-                    </p>
+                    <SecurityLoader
+                        size="xl"
+                        icon="shield"
+                        variant="cyber"
+                        text="Calculating risk scores and gathering intelligence..."
+                    />
                 </div>
             </DashboardLayout>
         );
@@ -263,7 +265,7 @@ export default function DashboardPage() {
                                 {(exploitedVulnerabilities || []).slice(0, 5).map((vuln: any, idx: number) => (
                                     <div
                                         key={vuln.id}
-                                        className="flex items-center gap-4 p-3 rounded-lg bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer group"
+                                        className="flex items-center gap-4 p-3 rounded-lg bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-all duration-300 ease-in-out cursor-pointer group"
                                     >
                                         <div
                                             className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold"
@@ -307,7 +309,7 @@ export default function DashboardPage() {
                                         </div>
                                         <ChevronRight
                                             size={18}
-                                            className="text-[var(--text-muted)] group-hover:text-white transition-colors"
+                                            className="text-[var(--text-muted)] group-hover:text-white transition-all duration-300 ease-in-out"
                                         />
                                     </div>
                                 ))}
@@ -352,7 +354,7 @@ export default function DashboardPage() {
                                 {(topRiskyAssets || []).map((asset: any) => (
                                     <div
                                         key={asset.id}
-                                        className="p-3 rounded-lg bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer"
+                                        className="p-3 rounded-lg bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-all duration-300 ease-in-out cursor-pointer"
                                     >
                                         <div className="flex items-center justify-between mb-2">
                                             <div className="flex items-center gap-2">
@@ -481,7 +483,7 @@ export default function DashboardPage() {
                                 {(recentActivities || []).map((activity: any) => (
                                     <div
                                         key={activity.id}
-                                        className="flex items-start gap-3 p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"
+                                        className="flex items-start gap-3 p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-all duration-300 ease-in-out cursor-pointer"
                                     >
                                         <div
                                             className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"

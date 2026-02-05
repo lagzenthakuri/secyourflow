@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { SecurityLoader } from "@/components/ui/SecurityLoader";
 
 const settingsSections = [
     { id: "general", label: "General", icon: Settings },
@@ -77,7 +77,7 @@ export default function SettingsPage() {
         return (
             <DashboardLayout>
                 <div className="flex items-center justify-center min-h-[60vh]">
-                    <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                    <SecurityLoader size="lg" icon="shield" variant="cyber" />
                 </div>
             </DashboardLayout>
         );
@@ -103,7 +103,7 @@ export default function SettingsPage() {
                                     key={section.id}
                                     onClick={() => setActiveSection(section.id)}
                                     className={cn(
-                                        "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors",
+                                        "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-300 ease-in-out",
                                         activeSection === section.id
                                             ? "bg-blue-500/15 text-blue-400"
                                             : "text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"

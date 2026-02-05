@@ -32,13 +32,13 @@ export default async function Home() {
             <span className="text-xl font-bold text-white">SecYourFlow</span>
           </Link>
           <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-sm text-[var(--text-secondary)] hover:text-white transition-colors">
+            <a href="#features" className="text-sm text-[var(--text-secondary)] hover:text-white transition-all duration-300 ease-in-out">
               Features
             </a>
-            <a href="#capabilities" className="text-sm text-[var(--text-secondary)] hover:text-white transition-colors">
+            <a href="#capabilities" className="text-sm text-[var(--text-secondary)] hover:text-white transition-all duration-300 ease-in-out">
               Capabilities
             </a>
-            <a href="#integrations" className="text-sm text-[var(--text-secondary)] hover:text-white transition-colors">
+            <a href="#integrations" className="text-sm text-[var(--text-secondary)] hover:text-white transition-all duration-300 ease-in-out">
               Integrations
             </a>
           </div>
@@ -228,7 +228,7 @@ export default async function Home() {
                 key={idx}
                 className="card p-6 flex gap-4 group hover:border-blue-500/30"
               >
-                <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/20 transition-colors">
+                <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/20 transition-all duration-300 ease-in-out">
                   <item.icon size={20} className="text-blue-400" />
                 </div>
                 <div>
@@ -270,7 +270,7 @@ export default async function Home() {
             ].map((tool) => (
               <div
                 key={tool}
-                className="card p-4 text-center hover:border-blue-500/30 transition-colors"
+                className="card p-4 text-center hover:border-blue-500/30 transition-all duration-300 ease-in-out"
               >
                 <span className="text-sm font-medium text-[var(--text-secondary)]">
                   {tool}
@@ -312,16 +312,16 @@ export default async function Home() {
               <span className="font-semibold text-white">SecYourFlow</span>
             </div>
             <div className="flex items-center gap-6 text-sm text-[var(--text-muted)]">
-              <a href="#" className="hover:text-white transition-colors">
+              <a href="#" className="hover:text-white transition-all duration-300 ease-in-out">
                 Privacy
               </a>
-              <a href="#" className="hover:text-white transition-colors">
+              <a href="#" className="hover:text-white transition-all duration-300 ease-in-out">
                 Terms
               </a>
-              <a href="#" className="hover:text-white transition-colors">
+              <a href="#" className="hover:text-white transition-all duration-300 ease-in-out">
                 Documentation
               </a>
-              <a href="#" className="hover:text-white transition-colors">
+              <a href="#" className="hover:text-white transition-all duration-300 ease-in-out">
                 GitHub
               </a>
             </div>

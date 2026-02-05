@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, SeverityBadge, ProgressBar } from "@/components/ui/Cards";
+import { SecurityLoader } from "@/components/ui/SecurityLoader";
 import {
     AlertTriangle,
     Zap,
@@ -15,8 +16,7 @@ import {
     Activity,
     TrendingUp,
     RefreshCw,
-    Filter,
-    Loader2,
+    Filter
 } from "lucide-react";
 
 export default function ThreatsPage() {
@@ -61,8 +61,12 @@ export default function ThreatsPage() {
         return (
             <DashboardLayout>
                 <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-                    <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
-                    <p className="text-[var(--text-secondary)]">Analyzing live threat intelligence...</p>
+                    <SecurityLoader
+                        size="xl"
+                        icon="shield"
+                        variant="cyber"
+                        text="Analyzing live threat intelligence..."
+                    />
                 </div>
             </DashboardLayout>
         );
@@ -172,7 +176,7 @@ export default function ThreatsPage() {
                                     exploitedVulns.map((vuln, idx) => (
                                         <div
                                             key={vuln.id}
-                                            className="p-4 rounded-xl bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer border border-transparent hover:border-red-500/20"
+                                            className="p-4 rounded-xl bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-all duration-300 ease-in-out cursor-pointer border border-transparent hover:border-red-500/20"
                                         >
                                             <div className="flex items-start gap-4">
                                                 <div

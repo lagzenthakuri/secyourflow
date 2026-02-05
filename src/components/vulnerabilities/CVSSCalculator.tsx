@@ -107,7 +107,7 @@ export function CVSSCalculator({ onScoreChange }: CVSSCalculatorProps) {
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors"
+                className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-all duration-300 ease-in-out"
             >
                 <span className="text-sm font-medium">CVSS v3.1 Calculator</span>
                 {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}

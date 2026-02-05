@@ -48,7 +48,7 @@ export function FrameworkActions({
                 type="button"
                 onClick={handleToggle}
                 className={cn(
-                    "p-1.5 rounded-lg transition-colors border bg-[var(--bg-tertiary)] border-[var(--border-color)]",
+                    "p-1.5 rounded-lg transition-all duration-300 ease-in-out border bg-[var(--bg-tertiary)] border-[var(--border-color)]",
                     isOpen 
                         ? "text-white border-blue-500/50" 
                         : "text-[var(--text-muted)] hover:text-white"
@@ -76,7 +76,7 @@ export function FrameworkActions({
                                     onEdit();
                                     setIsOpen(false);
                                 }}
-                                className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-white hover:bg-white/5 rounded-lg transition-colors text-left"
+                                className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-white hover:bg-white/5 rounded-lg transition-all duration-300 ease-in-out text-left"
                             >
                                 <Edit2 size={12} />
                                 Edit Basic Info
@@ -88,7 +88,7 @@ export function FrameworkActions({
                                     e.stopPropagation();
                                     setIsConfirming(true);
                                 }}
-                                className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-500/10 rounded-lg transition-colors text-left"
+                                className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-500/10 rounded-lg transition-all duration-300 ease-in-out text-left"
                             >
                                 <Trash2 size={12} />
                                 Delete Framework

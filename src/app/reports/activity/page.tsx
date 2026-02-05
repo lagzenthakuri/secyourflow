@@ -131,7 +131,7 @@ export default function ActivityLogPage() {
                                     </tr>
                                 ) : (
                                     logs.map((log) => (
-                                        <tr key={log.id} className="hover:bg-[var(--bg-tertiary)] transition-colors">
+                                        <tr key={log.id} className="hover:bg-[var(--bg-tertiary)] transition-all duration-300 ease-in-out">
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center gap-2">
                                                     <div className="p-1.5 rounded-lg bg-[var(--bg-elevated)]">
