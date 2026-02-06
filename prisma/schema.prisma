@@ -453,8 +453,17 @@ model RiskRegister {
   likelihoodScore  Float
   status           String        @default("ACTIVE")
   aiAnalysis       Json
+  
+  // User requested fields
   treatmentOption  String?
   responsibleParty String?
+  currentControls  String?
+  riskCategory2    String?
+  actionPlan       String?
+  selectedControls String?
+  remarks          String?
+  isResolved       Boolean       @default(false)
+  
   confidence       Float?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
