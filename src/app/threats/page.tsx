@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, SeverityBadge, ProgressBar } from "@/components/ui/Cards";
+import { SecurityLoader } from "@/components/ui/SecurityLoader";
 import {
     AlertTriangle,
     Zap,
@@ -15,36 +16,39 @@ import {
     Activity,
     TrendingUp,
     RefreshCw,
-    Filter,
-    Loader2,
+    Filter
 } from "lucide-react";
 
 export default function ThreatsPage() {
     const [exploitedVulns, setExploitedVulns] = useState<any[]>([]);
     const [kevVulns, setKevVulns] = useState<any[]>([]);
+    const [indicators, setIndicators] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [summary, setSummary] = useState<any>(null);
 
     const fetchThreats = async () => {
         try {
             setIsLoading(true);
-            // Fetch exploited vulnerabilities
-            const [exploitedRes, kevRes] = await Promise.all([
+            const [exploitedRes, kevRes, threatsRes] = await Promise.all([
                 fetch("/api/vulnerabilities?exploited=true&limit=10"),
-                fetch("/api/vulnerabilities?kev=true&limit=10")
+                fetch("/api/vulnerabilities?kev=true&limit=10"),
+                fetch("/api/threats?type=indicators")
             ]);
 
             const exploited = await exploitedRes.json();
             const kev = await kevRes.json();
+            const threats = await threatsRes.json();
 
             setExploitedVulns(exploited.data || []);
             setKevVulns(kev.data || []);
+            setIndicators(threats.data || []);
+
             setSummary({
                 exploitedTotal: exploited.pagination?.total || 0,
                 kevTotal: kev.pagination?.total || 0,
                 highEpss: (exploited.data || []).filter((v: any) => (v.epssScore || 0) > 0.7).length,
                 assetsAtRisk: (exploited.data || []).reduce((acc: number, v: any) => acc + (v.affectedAssets || 0), 0),
-                feedsTotal: 0
+                feedsTotal: threats.data?.length || 0
             });
         } catch (error) {
             console.error("Failed to fetch threats:", error);
@@ -61,8 +65,12 @@ export default function ThreatsPage() {
         return (
             <DashboardLayout>
                 <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-                    <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
-                    <p className="text-[var(--text-secondary)]">Analyzing live threat intelligence...</p>
+                    <SecurityLoader
+                        size="xl"
+                        icon="shield"
+                        variant="cyber"
+                        text="Analyzing live threat intelligence..."
+                    />
                 </div>
             </DashboardLayout>
         );
@@ -172,7 +180,7 @@ export default function ThreatsPage() {
                                     exploitedVulns.map((vuln, idx) => (
                                         <div
                                             key={vuln.id}
-                                            className="p-4 rounded-xl bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer border border-transparent hover:border-red-500/20"
+                                            className="p-4 rounded-xl bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-all duration-300 ease-in-out cursor-pointer border border-transparent hover:border-red-500/20"
                                         >
                                             <div className="flex items-start gap-4">
                                                 <div
@@ -254,21 +262,36 @@ export default function ThreatsPage() {
 
                     {/* Sidebar */}
                     <div className="lg:col-span-4 space-y-4">
-                        {/* Threat Feeds */}
-                        <Card title="Active Threat Feeds" subtitle="Connected intelligence sources">
+                        {/* Live AI Intelligence */}
+                        <Card title="Live AI Intelligence" subtitle="Real-time context-aware threats">
                             <div className="space-y-3">
-                                {summary?.feedsTotal > 0 ? (
-                                    // Placeholder for real feeds if they existed
-                                    <div className="text-sm text-[var(--text-muted)] text-center py-4">
-                                        Loading threat feeds...
-                                    </div>
+                                {indicators.length > 0 ? (
+                                    indicators.map((indicator, idx) => (
+                                        <div key={idx} className="p-3 rounded-lg bg-[var(--bg-tertiary)] border border-white/5 hover:border-blue-500/20 transition-all">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">
+                                                    {indicator.type}
+                                                </span>
+                                                <span className="text-[10px] text-[var(--text-muted)]">
+                                                    {new Date(indicator.firstSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm font-medium text-white mb-1">{indicator.value}</p>
+                                            <p className="text-xs text-[var(--text-muted)] line-clamp-2">
+                                                {indicator.description}
+                                            </p>
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-[10px] text-blue-400 border border-blue-500/20">
+                                                    Confidence: {indicator.confidence}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))
                                 ) : (
                                     <div className="text-sm text-[var(--text-muted)] text-center py-10">
                                         <Activity size={24} className="mx-auto mb-2 opacity-20" />
-                                        <p>No threat feeds connected.</p>
-                                        <button className="text-blue-400 hover:underline mt-2 text-xs">
-                                            Configure Feeds
-                                        </button>
+                                        <p>No AI-driven threats identified yet.</p>
+                                        <p className="text-[10px] mt-1">Run AI Risk Assessment to generate insights.</p>
                                     </div>
                                 )}
                             </div>

@@ -10,14 +10,14 @@ import {
     Shield,
     Mail,
     Calendar,
-    ChevronDown,
-    Loader2
+    ChevronDown
 } from "lucide-react";
 import { cn, getTimeAgo } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { SecurityLoader } from "@/components/ui/SecurityLoader";
 
 const roleColors = {
     MAIN_OFFICER: "#ef4444",
@@ -89,7 +89,7 @@ export default function UsersPage() {
         return (
             <DashboardLayout>
                 <div className="flex items-center justify-center min-h-[60vh]">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                    <SecurityLoader size="lg" icon="shield" variant="cyber" />
                 </div>
             </DashboardLayout>
         );
@@ -159,7 +159,7 @@ export default function UsersPage() {
                                 {users.map((user) => (
                                     <div
                                         key={user.id}
-                                        className="p-4 hover:bg-[var(--bg-tertiary)] transition-colors"
+                                        className="p-4 hover:bg-[var(--bg-tertiary)] transition-all duration-300 ease-in-out"
                                     >
                                         <div className="flex items-center gap-4">
                                             <div className="relative">

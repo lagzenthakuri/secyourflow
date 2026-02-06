@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
         const unreadCount = await prisma.notification.count({
             where: {
                 userId: session.user.id,
-                read: false
+                isRead: false
             }
         });
 
@@ -77,20 +77,20 @@ export async function PATCH(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { id, read, markAllRead } = body;
+        const { id, isRead, markAllRead } = body;
 
         if (id) {
             const notification = await prisma.notification.update({
                 where: { id },
-                data: { read: read !== undefined ? read : true }
+                data: { isRead: isRead !== undefined ? isRead : true }
             });
             return NextResponse.json(notification);
         }
 
         if (markAllRead) {
             await prisma.notification.updateMany({
-                where: { userId: session.user.id, read: false },
-                data: { read: true }
+                where: { userId: session.user.id, isRead: false },
+                data: { isRead: true }
             });
             return NextResponse.json({ success: true });
         }

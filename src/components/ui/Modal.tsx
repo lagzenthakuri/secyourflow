@@ -66,7 +66,7 @@ export function Modal({
                     <h2 className="text-xl font-semibold text-white">{title}</h2>
                     <button
                         onClick={onClose}
-                        className="p-1 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] transition-colors"
+                        className="p-1 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] transition-all duration-300 ease-in-out"
                     >
                         <X size={20} />
                     </button>

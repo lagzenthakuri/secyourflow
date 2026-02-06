@@ -7,25 +7,25 @@ datasource db {
 }
 
 model User {
-  id             String        @id @default(cuid())
-  email          String        @unique
+  id             String         @id @default(cuid())
+  email          String         @unique
   emailVerified  DateTime?
   name           String?
   password       String?
   image          String?
-  role           Role          @default(ANALYST)
+  role           Role           @default(ANALYST)
   avatar         String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
   lastLogin      DateTime?
   organizationId String?
   accounts       Account[]
   auditLogs      AuditLog[]
   comments       Comment[]
-  reports        Report[]
   notifications  Notification[]
+  reports        Report[]
   sessions       Session[]
-  organization   Organization? @relation(fields: [organizationId], references: [id])
+  organization   Organization?  @relation(fields: [organizationId], references: [id])
 
   @@index([email])
   @@index([organizationId])
@@ -78,10 +78,10 @@ model Organization {
   assets               Asset[]
   complianceFrameworks ComplianceFramework[]
   reports              Report[]
+  riskEntries          RiskRegister[]
   settings             Setting?
   users                User[]
   vulnerabilities      Vulnerability[]
-  riskRegisters        RiskRegister[]
 
   @@index([name])
 }
@@ -113,7 +113,7 @@ model Asset {
   organization       Organization             @relation(fields: [organizationId], references: [id])
   complianceControls AssetComplianceControl[]
   vulnerabilities    AssetVulnerability[]
-  riskRegisters      RiskRegister[]
+  riskEntries        RiskRegister[]
 
   @@index([name])
   @@index([type])
@@ -156,9 +156,9 @@ model Vulnerability {
   organizationId     String
   assets             AssetVulnerability[]
   comments           Comment[]
+  riskEntries        RiskRegister[]
   organization       Organization                     @relation(fields: [organizationId], references: [id])
   complianceControls VulnerabilityComplianceControl[]
-  riskRegisters      RiskRegister[]
 
   @@index([cveId])
   @@index([severity])
@@ -391,28 +391,6 @@ model RiskSnapshot {
   @@index([date])
 }
 
-model RiskRegister {
-  id              String        @id @default(cuid())
-  assetId         String
-  vulnerabilityId String
-  riskScore       Float
-  impactScore     Float?
-  likelihoodScore Float?
-  aiAnalysis      Json?
-  status          String        @default("ACTIVE")
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  organizationId  String
-  
-  asset           Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  vulnerability   Vulnerability @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
-  organization    Organization  @relation(fields: [organizationId], references: [id])
-
-  @@index([assetId])
-  @@index([vulnerabilityId])
-  @@index([organizationId])
-}
-
 model Setting {
   id               String       @id @default(cuid())
   organizationId   String       @unique
@@ -449,6 +427,160 @@ model Report {
 
   @@index([organizationId])
   @@index([userId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("INFO")
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model RiskRegister {
+  id               String        @id @default(cuid())
+  assetId          String
+  vulnerabilityId  String
+  organizationId   String
+  riskScore        Float
+  impactScore      Float
+  likelihoodScore  Float
+  status           String        @default("ACTIVE")
+  aiAnalysis       Json
+  treatmentOption  String?
+  responsibleParty String?
+  confidence       Float?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  asset            Asset         @relation(fields: [assetId], references: [id])
+  organization     Organization  @relation(fields: [organizationId], references: [id])
+  vulnerability    Vulnerability @relation(fields: [vulnerabilityId], references: [id])
+
+  @@index([assetId])
+  @@index([vulnerabilityId])
+  @@index([organizationId])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model Cve {
+  id             String                   @id
+  cveId          String                   @unique
+  description    String
+  publishedAt    DateTime
+  lastModifiedAt DateTime
+  severity       Severity
+  cweIds         String[]
+  searchVector   Unsupported("tsvector")?
+  status         CveStatus                @default(ACTIVE)
+  isKev          Boolean                  @default(false)
+  epssScore      Float?
+  epssPercentile Float?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime
+  CveCpe         CveCpe[]
+  CveCvss        CveCvss[]
+  CveProvenance  CveProvenance[]
+  CveReference   CveReference[]
+  KevEntry       KevEntry?
+
+  @@index([cveId])
+  @@index([cveId], map: "Cve_cveId_pattern_idx")
+  @@index([cveId(ops: raw("gin_trgm_ops"))], map: "Cve_cveId_trgm_idx", type: Gin)
+  @@index([epssScore])
+  @@index([isKev, severity])
+  @@index([publishedAt(sort: Desc)])
+  @@index([searchVector], type: Gin)
+  @@index([severity, publishedAt])
+  @@index([status, lastModifiedAt])
+  @@index([status, publishedAt])
+  @@index([status, severity, publishedAt(sort: Desc)], map: "Cve_status_severity_published_idx")
+}
+
+model CveCpe {
+  id                    String  @id
+  cveId                 String
+  cpeUri                String
+  vendor                String
+  product               String
+  version               String
+  versionStartIncluding String?
+  versionEndExcluding   String?
+  vulnerable            Boolean
+  Cve                   Cve     @relation(fields: [cveId], references: [cveId])
+
+  @@index([cveId])
+  @@index([vendor, product])
+}
+
+model CveCvss {
+  id                  String @id
+  cveId               String
+  version             String
+  vectorString        String
+  baseScore           Float
+  baseSeverity        String
+  exploitabilityScore Float?
+  impactScore         Float?
+  Cve                 Cve    @relation(fields: [cveId], references: [cveId])
+
+  @@index([cveId])
+}
+
+model CveProvenance {
+  id          String   @id
+  cveId       String
+  source      String
+  field       String
+  lastUpdated DateTime
+  checksum    String
+  Cve         Cve      @relation(fields: [cveId], references: [cveId])
+
+  @@index([cveId, source])
+  @@index([source, lastUpdated(sort: Desc)])
+}
+
+model CveReference {
+  id     String   @id
+  cveId  String
+  url    String
+  source String
+  tags   String[]
+  Cve    Cve      @relation(fields: [cveId], references: [cveId])
+
+  @@index([cveId])
+}
+
+model IngestionState {
+  id               String    @id
+  source           String    @unique
+  lastSyncAt       DateTime
+  lastSuccessAt    DateTime?
+  status           String
+  errorMessage     String?
+  recordsProcessed Int       @default(0)
+
+  @@index([source])
+}
+
+model KevEntry {
+  id                String   @id
+  cveId             String   @unique
+  vulnerabilityName String
+  dateAdded         DateTime
+  dueDate           DateTime
+  requiredAction    String
+  notes             String?
+  Cve               Cve      @relation(fields: [cveId], references: [cveId])
+
+  @@index([cveId])
+  @@index([dueDate])
 }
 
 enum Role {
@@ -590,17 +722,8 @@ enum ScanStatus {
   CANCELLED
 }
 
-model Notification {
-  id        String   @id @default(cuid())
-  userId    String
-  title     String
-  message   String
-  type      String   @default("INFO")
-  read      Boolean  @default(false)
-  link      String?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([read])
+enum CveStatus {
+  ACTIVE
+  REJECTED
+  RESERVED
 }

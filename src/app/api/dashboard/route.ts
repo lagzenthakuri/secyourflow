@@ -15,6 +15,7 @@ export async function GET(request: Request) {
             exploitedVulnerabilitiesCount,
             cisaKevCount,
             openVulnerabilities,
+            threatIndicatorCount,
             recentActivities,
             topRiskyAssets,
             severityDistribution,
@@ -32,6 +33,7 @@ export async function GET(request: Request) {
             prisma.vulnerability.count({ where: { isExploited: true } }),
             prisma.vulnerability.count({ where: { cisaKev: true } }),
             prisma.vulnerability.count({ where: { status: 'OPEN' } }),
+            prisma.threatIndicator.count(),
 
             // Recent Activities
             prisma.auditLog.findMany({
@@ -121,6 +123,7 @@ export async function GET(request: Request) {
                 lowVulnerabilities,
                 exploitedVulnerabilities: exploitedVulnerabilitiesCount,
                 cisaKevCount,
+                threatIndicatorCount,
                 overallRiskScore: riskSnapshots[riskSnapshots.length - 1]?.overallRiskScore || 0,
                 complianceScore: riskSnapshots[riskSnapshots.length - 1]?.complianceScore || 0,
                 openVulnerabilities,

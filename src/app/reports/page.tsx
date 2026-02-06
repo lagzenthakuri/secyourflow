@@ -19,11 +19,11 @@ import {
     Shield,
     Target,
     FileCheck,
-    Plus,
-    Loader2,
+    Plus
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Modal } from "@/components/ui/Modal";
+import { SecurityLoader } from "@/components/ui/SecurityLoader";
 
 const reports = [
     {
@@ -299,7 +299,7 @@ export default function ReportsPage() {
                             return (
                                 <div
                                     key={report.id}
-                                    className="p-4 rounded-xl bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer border border-transparent hover:border-blue-500/20"
+                                    className="p-4 rounded-xl bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-all duration-300 ease-in-out cursor-pointer border border-transparent hover:border-blue-500/20"
                                 >
                                     <div className="flex items-start gap-3 mb-3">
                                         <div className="p-2 rounded-lg bg-blue-500/10">
@@ -323,9 +323,9 @@ export default function ReportsPage() {
                                             disabled={isGenerating === report.id}
                                         >
                                             {isGenerating === report.id ? (
-                                                <Loader2 size={12} className="animate-spin" />
+                                                <SecurityLoader size="xs" icon="shield" variant="cyber" className="mr-2" />
                                             ) : (
-                                                <Download size={12} />
+                                                <Download size={12} className="mr-2" />
                                             )}
                                             {isGenerating === report.id ? "Generating..." : "Generate"}
                                         </button>
@@ -350,8 +350,7 @@ export default function ReportsPage() {
                     <div className="space-y-2">
                         {isLoading ? (
                             <div className="py-10 flex flex-col items-center justify-center gap-2">
-                                <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
-                                <p className="text-xs text-[var(--text-muted)]">Loading reports...</p>
+                                <SecurityLoader size="md" icon="shield" variant="cyber" text="Loading reports..." />
                             </div>
                         ) : reportsList.length === 0 ? (
                             <div className="py-10 text-center text-sm text-[var(--text-muted)]">
@@ -361,7 +360,7 @@ export default function ReportsPage() {
                             reportsList.map((report) => (
                                 <div
                                     key={report.id}
-                                    className="flex items-center justify-between p-3 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"
+                                    className="flex items-center justify-between p-3 rounded-lg hover:bg-[var(--bg-tertiary)] transition-all duration-300 ease-in-out cursor-pointer"
                                 >
                                     <div className="flex items-center gap-3">
                                         <div className="p-2 rounded-lg bg-[var(--bg-tertiary)]">

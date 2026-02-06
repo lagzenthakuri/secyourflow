@@ -44,6 +44,10 @@ export async function GET(request: NextRequest) {
                 include: {
                     _count: {
                         select: { assets: true }
+                    },
+                    riskEntries: {
+                        orderBy: { createdAt: 'desc' },
+                        take: 1
                     }
                 }
             }),
@@ -60,9 +64,9 @@ export async function GET(request: NextRequest) {
             })
         ]);
 
-        const formattedVulns = vulns.map(v => ({
+        const formattedVulns = vulns.map((v: any) => ({
             ...v,
-            affectedAssets: v._count.assets,
+            affectedAssets: (v as any)._count?.assets || 0,
         }));
 
         const severityDist = severityDistribution.map(s => ({

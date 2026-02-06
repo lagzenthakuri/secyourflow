@@ -48,7 +48,7 @@ export function ControlActions({
                 type="button"
                 onClick={handleToggle}
                 className={cn(
-                    "p-2 rounded-lg transition-colors border",
+                    "p-2 rounded-lg transition-all duration-300 ease-in-out border",
                     isOpen 
                         ? "bg-[var(--bg-elevated)] text-white border-[var(--border-color)]" 
                         : "bg-transparent text-[var(--text-muted)] border-transparent hover:bg-[var(--bg-tertiary)] hover:text-white"
@@ -76,7 +76,7 @@ export function ControlActions({
                                     onAssess();
                                     setIsOpen(false);
                                 }}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-[var(--text-secondary)] hover:text-white hover:bg-white/5 rounded-lg transition-colors text-left"
+                                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-[var(--text-secondary)] hover:text-white hover:bg-white/5 rounded-lg transition-all duration-300 ease-in-out text-left"
                             >
                                 <ClipboardCheck size={14} className="text-blue-400" />
                                 Assess Control
@@ -88,7 +88,7 @@ export function ControlActions({
                                     e.stopPropagation();
                                     setIsConfirming(true);
                                 }}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-500/10 rounded-lg transition-colors text-left"
+                                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-500/10 rounded-lg transition-all duration-300 ease-in-out text-left"
                             >
                                 <Trash2 size={14} />
                                 Delete Control
@@ -106,7 +106,7 @@ export function ControlActions({
                                         onDelete();
                                         setIsOpen(false);
                                     }}
-                                    className="w-full py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-bold transition-colors"
+                                    className="w-full py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-bold transition-all duration-300 ease-in-out"
                                 >
                                     Confirm Delete
                                 </button>
@@ -117,7 +117,7 @@ export function ControlActions({
                                         e.stopPropagation();
                                         setIsConfirming(false);
                                     }}
-                                    className="w-full py-2 bg-[var(--bg-tertiary)] text-white rounded-lg text-xs transition-colors"
+                                    className="w-full py-2 bg-[var(--bg-tertiary)] text-white rounded-lg text-xs transition-all duration-300 ease-in-out"
                                 >
                                     Cancel
                                 </button>

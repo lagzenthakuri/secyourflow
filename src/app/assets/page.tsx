@@ -22,10 +22,11 @@ import {
     CheckCircle,
     XCircle,
     Clock,
-    Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Asset } from "@/types";
+import { LoadingBar } from "@/components/ui/LoadingBar";
+import { SecurityLoader } from "@/components/ui/SecurityLoader";
 
 const assetTypeIcons: Record<string, any> = {
     SERVER: Server,
@@ -120,6 +121,14 @@ export default function AssetsPage() {
 
     return (
         <DashboardLayout>
+            {/* Loading Bar */}
+            <LoadingBar
+                position="top"
+                variant="cyber"
+                isLoading={isLoading}
+                showGlow={true}
+            />
+
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -234,7 +243,7 @@ export default function AssetsPage() {
                                 <button
                                     onClick={() => setSelectedType(null)}
                                     className={cn(
-                                        "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors",
+                                        "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-300 ease-in-out",
                                         !selectedType
                                             ? "bg-blue-500/20 text-blue-400"
                                             : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
@@ -250,7 +259,7 @@ export default function AssetsPage() {
                                                 key={type}
                                                 onClick={() => setSelectedType(type)}
                                                 className={cn(
-                                                    "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1.5",
+                                                    "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-300 ease-in-out flex items-center gap-1.5",
                                                     selectedType === type
                                                         ? "bg-blue-500/20 text-blue-400"
                                                         : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
@@ -268,8 +277,12 @@ export default function AssetsPage() {
                             <div className="divide-y divide-[var(--border-color)]">
                                 {isLoading ? (
                                     <div className="p-20 flex flex-col items-center justify-center gap-4">
-                                        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-                                        <p className="text-sm text-[var(--text-muted)]">Fetching assets...</p>
+                                        <SecurityLoader
+                                            size="lg"
+                                            icon="shield"
+                                            variant="cyber"
+                                            text="Fetching assets..."
+                                        />
                                     </div>
                                 ) : assets.length === 0 ? (
                                     <div className="p-20 text-center">
@@ -285,7 +298,7 @@ export default function AssetsPage() {
                                         return (
                                             <div
                                                 key={asset.id}
-                                                className="p-4 hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"
+                                                className="p-4 hover:bg-[var(--bg-tertiary)] transition-all duration-300 ease-in-out cursor-pointer"
                                             >
                                                 <div className="flex items-start gap-4">
                                                     <div className="p-2.5 rounded-lg bg-[var(--bg-tertiary)]">
@@ -388,7 +401,7 @@ export default function AssetsPage() {
                                 <AssetTypeChart data={summary.typeDistribution} />
                             ) : (
                                 <div className="h-[200px] flex items-center justify-center">
-                                    <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                                    <SecurityLoader size="md" icon="shield" variant="cyber" />
                                 </div>
                             )}
                         </Card>
@@ -441,18 +454,18 @@ export default function AssetsPage() {
             </div>
 
             {/* Modals */}
-            <AddAssetModal 
-                isOpen={isAddModalOpen} 
-                onClose={() => setIsAddModalOpen(false)} 
+            <AddAssetModal
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
                 onSuccess={fetchAssets}
             />
             {editingAsset && (
-                <EditAssetModal 
-                    isOpen={isEditModalOpen} 
+                <EditAssetModal
+                    isOpen={isEditModalOpen}
                     onClose={() => {
                         setIsEditModalOpen(false);
                         setEditingAsset(null);
-                    }} 
+                    }}
                     onSuccess={fetchAssets}
                     asset={editingAsset}
                 />
