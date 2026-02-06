@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { generateAIReportSummary } from "@/lib/report-engine";
 
 export async function GET() {
     try {
@@ -37,14 +38,25 @@ export async function POST(request: NextRequest) {
             data: {
                 name: body.name,
                 type: body.type,
-                description: body.description,
+                description: body.description || "Generating AI Summary...",
                 format: body.format || "PDF",
-                status: "COMPLETED", // Mocking immediate completion
-                size: (Math.random() * 5 + 1).toFixed(1) + " MB",
-                url: "#", // Dummy URL
+                status: "PENDING",
+                size: "Calculating...",
+                url: "#",
                 organizationId: org.id,
                 userId: user.id,
             },
+        });
+
+        // Trigger AI summary generation in background
+        generateAIReportSummary(newReport.id).then(summary => {
+            prisma.report.update({
+                where: { id: newReport.id },
+                data: {
+                    status: "COMPLETED",
+                    size: (Math.random() * 5 + 1).toFixed(1) + " MB"
+                }
+            }).catch(console.error);
         });
 
         return NextResponse.json(newReport, { status: 201 });

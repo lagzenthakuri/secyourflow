@@ -1,6 +1,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/logger";
+import { updateComplianceFromRisk } from "@/lib/compliance-engine";
 
 // Type definition for the AI Risk Analysis Output
 interface AIRiskAnalysis {
@@ -14,62 +15,111 @@ interface AIRiskAnalysis {
 }
 
 /**
- * Mocks the AI Risk Engine API call (e.g. to OpenRouter)
- * Calculates C/I/A and Likelihood based on inputs.
+ * Calls the OpenRouter LLM API to analyze risk.
  */
 async function analyzeRiskWithAI(
     vulnerability: any,
     asset: any
-): Promise<AIRiskAnalysis> {
-    // Simulate API latency
-    await new Promise(resolve => setTimeout(resolve, 1000));
+): Promise<any> {
+    const apiKey = process.env.OPENROUTER_API_KEY;
 
-    // Intelligence Logic:
-    // Confidentiality (C): High if DB or Auth related.
-    // Integrity (I): High if Write access potential.
-    // Availability (A): High if DoS potential.
-
-    let c = 3, i = 3, a = 3;
-    let likelihood = 3;
-
-    // 1. Determine Factors based on Vulnerability Severity
-    if (vulnerability.severity === 'CRITICAL') {
-        c = 5; i = 5; a = 4;
-        likelihood = 5;
-    } else if (vulnerability.severity === 'HIGH') {
-        c = 4; i = 4; a = 3;
-        likelihood = 4;
-    } else if (vulnerability.severity === 'MEDIUM') {
-        c = 3; i = 3; a = 3;
-        likelihood = 3;
-    } else {
-        c = 2; i = 2; a = 1;
-        likelihood = 2;
+    if (!apiKey) {
+        console.warn("[RiskEngine] OPENROUTER_API_KEY is not set. Falling back to mock analysis.");
+        return mockAnalysis(vulnerability, asset);
     }
 
-    // 2. Adjust based on Asset Criticality
-    if (asset.criticality === 'CRITICAL') {
-        c = Math.min(5, c + 1);
-        likelihood = Math.min(5, likelihood + 1);
-    }
+    const prompt = `
+Evaluate the risk of this vulnerability on this asset. 
+Asset Info: 
+- Type: ${asset.type}
+- Name: ${asset.name}
+- Environment: ${asset.environment}
+- Criticality: ${asset.criticality}
+- Owner: ${asset.owner || 'Unknown'}
 
-    // 3. Specific Keywords adjustments
+Vulnerability Info:
+- Title: ${vulnerability.title}
+- CVE: ${vulnerability.cveId || 'N/A'}
+- CVSS: ${vulnerability.cvssScore || 'N/A'}
+- Severity: ${vulnerability.severity}
+- Description: ${vulnerability.description || 'N/A'}
+
+Business Context:
+- Organization criticality: High
+- Regulatory exposure: GDPR, ISO 27001
+
+Give likelihood (1-5), impact CIA (1-5 each), risk category, rationale, recommended controls, and ISO 27001 mapping.
+Return ONLY structured JSON in this format:
+{
+  "risk": "description of the risk",
+  "threat": "description of the threat",
+  "confidentiality_impact": 1-5,
+  "integrity_impact": 1-5,
+  "availability_impact": 1-5,
+  "likelihood_score": 1-5,
+  "risk_category": "Critical/High/Medium/Low",
+  "rationale_for_risk_rating": "detailed rationale",
+  "current_controls": ["control1", "control2"],
+  "selected_controls": ["control3", "control4"],
+  "controls_violated_iso27001": ["A.9.1", "A.13.1"],
+  "treatment_option": "Mitigate/Avoid/Transfer/Accept",
+  "responsible_party": "role or team",
+  "remarks": "",
+  "confidence": 0.0-1.0
+}
+`;
+
+    try {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${apiKey}`,
+                "HTTP-Referer": `https://secyourflow.com`, // Optional, for OpenRouter rankings
+                "X-Title": `SecYourFlow`, // Optional
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                "model": "google/gemini-2.0-flash-001", // Using a fast and capable model
+                "messages": [
+                    { "role": "system", "content": "You are a specialized Cybersecurity Risk Analyst. Output only valid JSON." },
+                    { "role": "user", "content": prompt }
+                ],
+                "response_format": { "type": "json_object" }
+            })
+        });
+
+        const data = await response.json();
+        const content = data.choices[0].message.content;
+        return JSON.parse(content);
+    } catch (error) {
+        console.error("[RiskEngine] OpenRouter API call failed:", error);
+        return mockAnalysis(vulnerability, asset);
+    }
+}
+
+/**
+ * Mock analysis for fallback
+ */
+function mockAnalysis(vulnerability: any, asset: any) {
     const title = vulnerability.title.toLowerCase();
-    if (title.includes("database") || title.includes("sql") || title.includes("postgre")) {
-        c = 5; // DB leaks are critical for Confidentiality
-    }
-    if (title.includes("dos") || title.includes("denial")) {
-        a = 5; // Availability impact
-    }
+    const isDB = title.includes("database") || title.includes("sql") || title.includes("postgre");
 
     return {
-        c_impact: c,
-        i_impact: i,
-        a_impact: a,
-        likelihood: likelihood,
-        summary: `Risk of ${title.includes("database") ? "Data Exfiltration" : "System Compromise"} via ${vulnerability.title}`,
-        rationale: `Asset ${asset.name} is ${asset.criticality} criticality. Vulnerability severity is ${vulnerability.severity}. High likelihood due to exposed vectors.`,
-        affectedControls: ["ISO-27001-A.9.1.2", "ISO-27001-A.12.6.1", "ISO-27001-A.14.2.1"] // Mock ISO controls
+        "risk": isDB ? "Unauthorized DB access" : "System Compromise",
+        "threat": vulnerability.title,
+        "confidentiality_impact": isDB ? 5 : 3,
+        "integrity_impact": 4,
+        "availability_impact": title.includes("dos") ? 5 : 3,
+        "likelihood_score": 4,
+        "risk_category": vulnerability.severity === 'CRITICAL' ? "Critical" : "High",
+        "rationale_for_risk_rating": "Simulated analysis based on severity and asset type.",
+        "current_controls": ["Firewall"],
+        "selected_controls": ["MFA", "Encryption"],
+        "controls_violated_iso27001": ["A.9.1", "A.13.1"],
+        "treatment_option": "Mitigate",
+        "responsible_party": "Cloud Security Lead",
+        "remarks": "Generated from mock fallback",
+        "confidence": 0.8
     };
 }
 
@@ -82,6 +132,7 @@ export async function processRiskAssessment(
     assetId: string,
     organizationId: string
 ) {
+    let riskEntryId: string | null = null;
     try {
         console.log(`[RiskEngine] Starting specific assessment flow for Vuln ${vulnerabilityId}`);
 
@@ -100,104 +151,77 @@ export async function processRiskAssessment(
             return;
         }
 
-        // 2. AI Risk Engine (OpenRouter) -> Validate JSON
-        const analysis = await analyzeRiskWithAI(vulnerability, asset);
-
-        // 3. Calculate Impact Score = (C + I + A) / 3
-        const impactScore = (analysis.c_impact + analysis.i_impact + analysis.a_impact) / 3;
-
-        // 4. Calculate Final Risk Score = Impact * Likelihood
-        const riskScore = impactScore * analysis.likelihood; // Range 1-25
-
-        console.log(`[RiskEngine] Scores - C:${analysis.c_impact} I:${analysis.i_impact} A:${analysis.a_impact} => Impact:${impactScore.toFixed(2)} * Likelihood:${analysis.likelihood} = Risk:${riskScore.toFixed(2)}`);
-
-        // 5. INSERT INTO risk_register
-        const riskEntry = await prisma.riskRegister.create({
+        // 1b. Create initial "PROCESSING" record to track state
+        const initialEntry = await prisma.riskRegister.create({
             data: {
                 assetId,
                 vulnerabilityId,
                 organizationId,
+                riskScore: 0,
+                impactScore: 0,
+                likelihoodScore: 0,
+                status: "PROCESSING",
+                aiAnalysis: {},
+            }
+        });
+        riskEntryId = initialEntry.id;
+
+        // 2. AI Risk Engine (OpenRouter)
+        const analysis = await analyzeRiskWithAI(vulnerability, asset);
+
+        // 3. Calculate Impact Score = (C + I + A) / 3
+        const impactScore = (analysis.confidentiality_impact + analysis.integrity_impact + analysis.availability_impact) / 3;
+
+        // 4. Calculate Final Risk Score = Impact * Likelihood
+        const riskScore = impactScore * analysis.likelihood_score; // Range 1-25
+
+        console.log(`[RiskEngine] Scores - C:${analysis.confidentiality_impact} I:${analysis.integrity_impact} A:${analysis.availability_impact} => Impact:${impactScore.toFixed(2)} * Likelihood:${analysis.likelihood_score} = Risk:${riskScore.toFixed(2)}`);
+
+        // 5. UPDATE risk_register entry
+        const riskEntry = await prisma.riskRegister.update({
+            where: { id: riskEntryId },
+            data: {
                 riskScore: parseFloat(riskScore.toFixed(2)),
                 impactScore: parseFloat(impactScore.toFixed(2)),
-                likelihoodScore: parseFloat(analysis.likelihood.toString()),
-                aiAnalysis: {
-                    c: analysis.c_impact,
-                    i: analysis.i_impact,
-                    a: analysis.a_impact,
-                    rationale: analysis.rationale,
-                    risk_statement: analysis.summary,
-                    violated_controls: analysis.affectedControls
-                },
-                status: "ACTIVE"
+                likelihoodScore: parseFloat(analysis.likelihood_score.toString()),
+                aiAnalysis: analysis,
+                status: "ACTIVE",
+                treatmentOption: analysis.treatment_option,
+                responsibleParty: analysis.responsible_party,
+                confidence: analysis.confidence,
+                updatedAt: new Date()
             }
         });
 
-        // 6. Compliance Engine Updates ISO Status
-        // Logic: specific controls_violated_iso27001[] -> Mark ISO Controls as FAILED
-
-        if (riskScore >= 9) { // Threshold for "High" risk (e.g., 3*3)
-            console.log(`[RiskEngine] High Risk detected. Triggering definition of failure for controls.`);
-
-            // 1. Identify which controls are relevant for this asset (Mocking logic - normally we match by control code)
-            // We find all controls currently linked to this asset.
-            const attachedControls = await prisma.assetComplianceControl.findMany({
-                where: { assetId },
-                select: { controlId: true }
+        // 5b. Notify relevant users
+        try {
+            const securityTeam = await prisma.user.findMany({
+                where: {
+                    role: { in: ['IT_OFFICER', 'MAIN_OFFICER', 'ANALYST'] },
+                    organizationId: organizationId
+                },
+                select: { id: true }
             });
 
-            const controlIds = attachedControls.map(c => c.controlId);
-
-            if (controlIds.length > 0) {
-                // 2. Mark Asset-Specific Controls as FAILED
-                const updateResult = await prisma.assetComplianceControl.updateMany({
-                    where: {
-                        assetId: assetId,
-                        controlId: { in: controlIds }
-                    },
-                    data: {
-                        status: "NON_COMPLIANT",
-                        evidence: `[AUTO-RISK] FAILED due to Risk ${riskScore.toFixed(1)}/25. ${analysis.summary}`
-                    }
+            if (securityTeam.length > 0) {
+                await prisma.notification.createMany({
+                    data: securityTeam.map(user => ({
+                        userId: user.id,
+                        title: "AI Risk Assessment Complete",
+                        message: `AI has analyzed risk for '${vulnerability.title}' on '${asset.name}'. Score: ${riskScore.toFixed(1)}/25.`,
+                        type: "INFO",
+                        link: `/vulnerabilities`
+                    }))
                 });
-                console.log(`[RiskEngine] Asset Controls marked FAILED: ${updateResult.count}`);
-
-                // 3. Mark Global Controls as FAILED (to ensure Dashboard Compliance % Drops)
-                // If an asset fails a control, the control itself is considered failing in this context.
-                const globalUpdate = await prisma.complianceControl.updateMany({
-                    where: { id: { in: controlIds } },
-                    data: {
-                        status: "NON_COMPLIANT",
-                        notes: `Automatically flagged as NON_COMPLIANT due to high risk vulnerability on asset ${asset.name}.`
-                    }
-                });
-                console.log(`[RiskEngine] Global Compliance Controls updated: ${globalUpdate.count}`);
             }
-
-            // "Evidence Tasks Created" - Log via Comment
-            await prisma.comment.create({
-                data: {
-                    content: `EVIDENCE TASK: Provide mitigation evidence for impacted controls. Triggered by Risk #${riskEntry.id}.`,
-                    entityType: "RiskRegister",
-                    entityId: riskEntry.id,
-                    userId: asset.owner || "SYSTEM", // Fallback if owner not UUID. Ideally we query a system user.
-                }
-            }).catch(async () => {
-                // Fallback: find any admin
-                const admin = await prisma.user.findFirst({ where: { role: 'MAIN_OFFICER' } });
-                if (admin) {
-                    await prisma.comment.create({
-                        data: {
-                            content: `EVIDENCE TASK: Provide mitigation evidence for impacted controls. Triggered by Risk #${riskEntry.id}.`,
-                            entityType: "RiskRegister",
-                            entityId: riskEntry.id,
-                            userId: admin.id
-                        }
-                    });
-                }
-            });
+        } catch (notifyErr) {
+            console.error("[RiskEngine] Failed to notify after assessment:", notifyErr);
         }
 
-        // 7. Report Cache Refresh / Log
+        // 6. Compliance Engine Updates (The "Glue")
+        // Logic: specific controls_violated_iso27001[] -> Mark ISO Controls as FAILED
+        await updateComplianceFromRisk(riskEntry, vulnerability, asset);
+
         console.log(`[RiskEngine] Pipeline Complete. Compliance % should reflect drop.`);
 
         await logActivity(
@@ -206,10 +230,16 @@ export async function processRiskAssessment(
             riskEntry.id,
             null,
             { riskScore, impactScore },
-            `Risk calculated: ${riskScore.toFixed(1)}/25. ${analysis.summary}`
+            `Risk calculated: ${riskScore.toFixed(1)}/25. ${analysis.risk}`
         );
 
     } catch (error) {
         console.error("[RiskEngine] Pipeline Failed:", error);
+        if (riskEntryId) {
+            await prisma.riskRegister.update({
+                where: { id: riskEntryId },
+                data: { status: "FAILED" }
+            }).catch(err => console.error("Failed to update risk entry status to FAILED", err));
+        }
     }
 }

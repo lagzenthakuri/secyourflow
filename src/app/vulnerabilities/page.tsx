@@ -28,6 +28,7 @@ import { EditVulnerabilityModal } from "@/components/vulnerabilities/EditVulnera
 import { VulnerabilityActions } from "@/components/vulnerabilities/VulnerabilityActions";
 import { Plus } from "lucide-react";
 import { SecurityLoader } from "@/components/ui/SecurityLoader";
+import { RiskAssessmentView } from "@/components/vulnerabilities/RiskAssessmentView";
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
     OPEN: { label: "Open", color: "#ef4444", icon: AlertTriangle },
@@ -49,6 +50,7 @@ export default function VulnerabilitiesPage() {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     const [editingVuln, setEditingVuln] = useState<Vulnerability | null>(null);
+    const [activeVulnId, setActiveVulnId] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
     const fetchVulnerabilities = async () => {
@@ -321,7 +323,11 @@ export default function VulnerabilitiesPage() {
                                         return (
                                             <div
                                                 key={vuln.id}
-                                                className="p-4 hover:bg-[var(--bg-tertiary)] transition-all duration-300 ease-in-out cursor-pointer"
+                                                className={cn(
+                                                    "p-4 hover:bg-[var(--bg-tertiary)] transition-all duration-300 ease-in-out cursor-pointer border-l-4",
+                                                    activeVulnId === vuln.id ? "border-purple-500 bg-[var(--bg-tertiary)]" : "border-transparent"
+                                                )}
+                                                onClick={() => setActiveVulnId(activeVulnId === vuln.id ? null : vuln.id)}
                                             >
                                                 <div className="flex items-start gap-4">
                                                     <div
@@ -416,6 +422,17 @@ export default function VulnerabilitiesPage() {
                                                         isDeleting={deletingId === vuln.id}
                                                     />
                                                 </div>
+
+                                                {/* Expanded AI Risk Section */}
+                                                {activeVulnId === vuln.id && (
+                                                    <div className="mt-4 pt-4 border-t border-white/5 pl-14">
+                                                        <RiskAssessmentView
+                                                            riskEntry={vuln.riskEntries?.[0]}
+                                                            vulnerabilityId={vuln.id}
+                                                            onRefresh={fetchVulnerabilities}
+                                                        />
+                                                    </div>
+                                                )}
                                             </div>
                                         );
                                     })

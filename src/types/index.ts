@@ -113,6 +113,7 @@ export interface Vulnerability {
     affectedAssets?: number;
     firstDetected: Date;
     lastSeen: Date;
+    riskEntries?: any[];
 }
 
 export interface ComplianceFramework {

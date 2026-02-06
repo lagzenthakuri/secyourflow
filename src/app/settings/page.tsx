@@ -19,6 +19,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
 import { SecurityLoader } from "@/components/ui/SecurityLoader";
+import { useSession } from "next-auth/react";
+import { Users as UsersIcon, ShieldCheck } from "lucide-react";
 
 const settingsSections = [
     { id: "general", label: "General", icon: Settings },
@@ -26,6 +28,7 @@ const settingsSections = [
     { id: "security", label: "Security", icon: Shield },
     { id: "integrations", label: "Integrations", icon: Database },
     { id: "api", label: "API Access", icon: Key },
+    { id: "users", label: "Users & Roles", icon: UsersIcon },
 ];
 
 export default function SettingsPage() {
@@ -414,9 +417,133 @@ export default function SettingsPage() {
                                 </div>
                             </Card>
                         )}
+                        {activeSection === "users" && <UsersManagementTab />}
                     </div>
                 </div>
             </div>
         </DashboardLayout>
+    );
+}
+
+function UsersManagementTab() {
+    const { data: session } = useSession();
+    const [users, setUsers] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isUpdating, setIsUpdating] = useState<string | null>(null);
+
+    const fetchUsers = async () => {
+        try {
+            setIsLoading(true);
+            const response = await fetch("/api/users");
+            const data = await response.json();
+            if (Array.isArray(data)) setUsers(data);
+        } catch (error) {
+            console.error("Failed to fetch users:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchUsers();
+    }, []);
+
+    const handleRoleChange = async (userId: string, newRole: string) => {
+        try {
+            setIsUpdating(userId);
+            const response = await fetch("/api/users", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId, role: newRole }),
+            });
+
+            if (response.ok) {
+                setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+            } else {
+                const err = await response.json();
+                alert(err.error || "Failed to update role");
+            }
+        } catch (error) {
+            console.error("Failed to update role:", error);
+        } finally {
+            setIsUpdating(null);
+        }
+    };
+
+    if (session?.user?.role !== 'MAIN_OFFICER') {
+        return (
+            <Card title="Restricted Access" subtitle="Permissions required">
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <ShieldCheck size={48} className="text-red-500/50 mb-4" />
+                    <p className="text-[var(--text-secondary)] max-w-md">
+                        Only users with the <span className="text-white font-bold">MAIN_OFFICER</span> role can manage user permissions and roles.
+                    </p>
+                </div>
+            </Card>
+        );
+    }
+
+    return (
+        <Card title="User Management" subtitle="Manage permissions and platform access levels">
+            <div className="space-y-4">
+                {isLoading ? (
+                    <div className="flex justify-center py-10">
+                        <SecurityLoader size="md" icon="shield" variant="cyber" />
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="text-xs uppercase text-[var(--text-muted)] border-b border-[var(--border-color)]">
+                                    <th className="px-4 py-3 font-medium">User</th>
+                                    <th className="px-4 py-3 font-medium">Current Role</th>
+                                    <th className="px-4 py-3 font-medium">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[var(--border-color)]">
+                                {users.map((user) => (
+                                    <tr key={user.id} className="text-sm">
+                                        <td className="px-4 py-4">
+                                            <div>
+                                                <p className="font-medium text-white">{user.name}</p>
+                                                <p className="text-xs text-[var(--text-muted)]">{user.email}</p>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <span className={cn(
+                                                "px-2 py-1 rounded-full text-[10px] font-bold uppercase",
+                                                user.role === 'MAIN_OFFICER' ? "bg-purple-500/10 text-purple-400" :
+                                                    user.role === 'ANALYST' ? "bg-blue-500/10 text-blue-400" :
+                                                        "bg-gray-500/10 text-gray-400"
+                                            )}>
+                                                {user.role}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <div className="flex items-center gap-2">
+                                                <select
+                                                    className="input py-1 text-xs w-32"
+                                                    value={user.role}
+                                                    onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                                                    disabled={isUpdating === user.id}
+                                                >
+                                                    <option value="ANALYST">ANALYST</option>
+                                                    <option value="IT_OFFICER">IT_OFFICER</option>
+                                                    <option value="PENTESTER">PENTESTER</option>
+                                                    <option value="MAIN_OFFICER">MAIN_OFFICER</option>
+                                                </select>
+                                                {isUpdating === user.id && (
+                                                    <SecurityLoader size="xs" icon="shield" />
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </Card>
     );
 }

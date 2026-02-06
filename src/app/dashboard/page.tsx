@@ -142,9 +142,9 @@ export default function DashboardPage() {
                         trend={{ value: -8, label: "this week" }}
                     />
                     <StatCard
-                        title="Actively Exploited"
-                        value={stats?.exploitedVulnerabilities || 0}
-                        subtitle={`${stats?.cisaKevCount || 0} in CISA KEV`}
+                        title="Active Threats"
+                        value={(stats?.exploitedVulnerabilities || 0) + (stats?.threatIndicatorCount || 0)}
+                        subtitle={`${stats?.cisaKevCount || 0} KEV, ${stats?.threatIndicatorCount || 0} AI Identified`}
                         icon={<AlertTriangle size={18} className="text-red-400" />}
                         severity="CRITICAL"
                     />
