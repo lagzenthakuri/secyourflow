@@ -20,6 +20,7 @@ import {
     ChevronDown,
     LogOut,
     User,
+    ClipboardList,
 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ const navigation = [
     { name: "Assets", href: "/assets", icon: Server, roles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"] },
     { name: "Vulnerabilities", href: "/vulnerabilities", icon: Shield, roles: ["MAIN_OFFICER", "PENTESTER", "ANALYST"] },
     { name: "Threats", href: "/threats", icon: AlertTriangle, roles: ["MAIN_OFFICER", "PENTESTER", "ANALYST"] },
+    { name: "Risk Register", href: "/risk-register", icon: ClipboardList, roles: ["MAIN_OFFICER", "IT_OFFICER", "ANALYST"] },
     { name: "Compliance", href: "/compliance", icon: FileCheck, roles: ["MAIN_OFFICER", "IT_OFFICER", "ANALYST"] },
     { name: "Reports", href: "/reports", icon: BarChart3, roles: ["MAIN_OFFICER", "ANALYST"] },
     { name: "Scanners", href: "/scanners", icon: Scan, roles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"] },

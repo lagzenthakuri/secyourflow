@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SecurityLoader } from "@/components/ui/SecurityLoader";
+import { Modal } from "@/components/ui/Modal";
 
 const statusConfig = {
     active: { label: "Active", color: "#22c55e", icon: CheckCircle },
@@ -41,6 +42,14 @@ export default function ScannersPage() {
     const [scanners, setScanners] = useState<any[]>([]);
     const [recentScans, setRecentScans] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [assets, setAssets] = useState<any[]>([]);
+    const [isScanning, setIsScanning] = useState(false);
+    const [scanConfig, setScanConfig] = useState({
+        assetId: "",
+        apiKey: "",
+        model: "google/gemini-2.0-flash-001"
+    });
 
     const fetchData = async () => {
         try {
@@ -64,7 +73,45 @@ export default function ScannersPage() {
 
     useEffect(() => {
         fetchData();
+        fetchAssets();
     }, []);
+
+    const fetchAssets = async () => {
+        try {
+            const res = await fetch("/api/assets?limit=100");
+            const data = await res.json();
+            if (data.data) setAssets(data.data);
+        } catch (error) {
+            console.error("Failed to fetch assets:", error);
+        }
+    };
+
+    const handleRunScan = async () => {
+        if (!scanConfig.assetId) return;
+
+        try {
+            setIsScanning(true);
+            const res = await fetch("/api/scans/run", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(scanConfig),
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                alert(`Scan completed! Found ${data.vulnerabilitiesFound} vulnerabilities.`);
+                setIsAddModalOpen(false);
+                fetchData(); // Refresh scans
+            } else {
+                alert(`Scan failed: ${data.error}`);
+            }
+        } catch (error) {
+            console.error("Scan error:", error);
+            alert("An error occurred during scanning.");
+        } finally {
+            setIsScanning(false);
+        }
+    };
 
     return (
         <DashboardLayout>
@@ -90,12 +137,109 @@ export default function ScannersPage() {
                             <FileJson size={16} />
                             Import Scan
                         </button>
-                        <button className="btn btn-primary">
+                        <button className="btn btn-primary" onClick={() => setIsAddModalOpen(true)}>
                             <Plus size={16} />
                             Add Scanner
                         </button>
                     </div>
                 </div>
+
+                {/* AI Scan Modal */}
+                <Modal
+                    isOpen={isAddModalOpen}
+                    onClose={() => setIsAddModalOpen(false)}
+                    title="Configure AI Security Scanner"
+                    maxWidth="md"
+                    footer={
+                        <div className="flex justify-end gap-3">
+                            <button
+                                className="btn btn-secondary"
+                                onClick={() => setIsAddModalOpen(false)}
+                                disabled={isScanning}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleRunScan}
+                                disabled={isScanning || !scanConfig.assetId}
+                            >
+                                {isScanning ? (
+                                    <>
+                                        <RefreshCw size={16} className="animate-spin" />
+                                        Scanning...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Play size={16} />
+                                        Run Asset Scan
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    }
+                >
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                                Select Asset to Scan
+                            </label>
+                            <select
+                                className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                value={scanConfig.assetId}
+                                onChange={(e) => setScanConfig({ ...scanConfig, assetId: e.target.value })}
+                            >
+                                <option value="">Select an asset...</option>
+                                {assets.map((asset) => (
+                                    <option key={asset.id} value={asset.id}>
+                                        {asset.name} ({asset.ipAddress || asset.hostname || "No IP"})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                                AI Model (OpenRouter)
+                            </label>
+                            <select
+                                className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                value={scanConfig.model}
+                                onChange={(e) => setScanConfig({ ...scanConfig, model: e.target.value })}
+                            >
+                                <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash (Fast)</option>
+                                <option value="anthropic/claude-3-sonnet">Claude 3.5 Sonnet</option>
+                                <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+                                <option value="deepseek/deepseek-chat">DeepSeek Chat</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                                Custom OpenRouter API Key (Optional)
+                            </label>
+                            <input
+                                type="password"
+                                className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                placeholder="sk-or-v1-..."
+                                value={scanConfig.apiKey}
+                                onChange={(e) => setScanConfig({ ...scanConfig, apiKey: e.target.value })}
+                            />
+                            <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                                If empty, the server-side default key will be used.
+                            </p>
+                        </div>
+
+                        <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                            <div className="flex gap-3">
+                                <AlertTriangle className="text-blue-400 shrink-0" size={18} />
+                                <div className="text-xs text-blue-100/80 leading-relaxed">
+                                    The AI scanner will analyze the asset's metadata and configuration to predict vulnerabilities. Findings will be automatically sent to the vulnerabilities pipeline for risk assessment.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </Modal>
 
                 {/* Tabs */}
                 <div className="flex gap-2 border-b border-[var(--border-color)] pb-4">
