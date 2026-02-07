@@ -18,7 +18,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 // Log login
                 // We do this fire-and-forget to avoid slowing down auth
                 import("./logger").then(({ logActivity }) => {
-                    logActivity("User login", "auth", user.email || "unknown", null, null, "User logged in");
+                    logActivity("User login", "auth", user.email || "unknown", null, null, "User logged in", user.id);
                 });
             }
             return token;

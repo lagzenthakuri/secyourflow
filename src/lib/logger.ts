@@ -7,7 +7,8 @@ export async function logActivity(
     entityId: string,
     oldValue?: any,
     newValue?: any,
-    details?: string
+    details?: string,
+    customUserId?: string
 ) {
     try {
         const session = await auth();
@@ -15,7 +16,7 @@ export async function logActivity(
         // For now, we fallback to finding the first MAIN_OFFICER if no session (e.g. system jobs)
         // or just store 'SYSTEM' if schema allows string for userId (Schema says User relation, so need a real user)
 
-        let userId = session?.user?.id;
+        let userId = customUserId || session?.user?.id;
 
         if (!userId) {
             // Find a system user or admin to attribute to

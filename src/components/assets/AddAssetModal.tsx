@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
-import { 
-    AssetType, 
-    Environment, 
-    Criticality, 
-    AssetStatus, 
-    CloudProvider 
+import {
+    AssetType,
+    Environment,
+    Criticality,
+    AssetStatus,
+    CloudProvider
 } from "@prisma/client";
 import { Loader2, AlertCircle } from "lucide-react";
 
@@ -18,8 +18,8 @@ interface AddAssetModalProps {
 }
 
 const ASSET_TYPES: AssetType[] = [
-    "SERVER", "WORKSTATION", "NETWORK_DEVICE", "CLOUD_INSTANCE", 
-    "CONTAINER", "DATABASE", "APPLICATION", "API", "DOMAIN", 
+    "SERVER", "WORKSTATION", "NETWORK_DEVICE", "CLOUD_INSTANCE",
+    "CONTAINER", "DATABASE", "APPLICATION", "API", "DOMAIN",
     "CERTIFICATE", "IOT_DEVICE", "MOBILE_DEVICE", "OTHER"
 ];
 
@@ -43,7 +43,9 @@ export function AddAssetModal({ isOpen, onClose, onSuccess }: AddAssetModalProps
         status: "ACTIVE" as AssetStatus,
         owner: "",
         department: "",
+        location: "",
         cloudProvider: "" as CloudProvider | "",
+        cloudRegion: "",
         tags: "",
     });
 
@@ -83,7 +85,9 @@ export function AddAssetModal({ isOpen, onClose, onSuccess }: AddAssetModalProps
                 status: "ACTIVE",
                 owner: "",
                 department: "",
+                location: "",
                 cloudProvider: "",
+                cloudRegion: "",
                 tags: "",
             });
         } catch (err: any) {
@@ -271,6 +275,32 @@ export function AddAssetModal({ isOpen, onClose, onSuccess }: AddAssetModalProps
                             className="input w-full"
                             value={formData.department}
                             onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                            Country / Location
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="e.g., USA / East Data Center"
+                            className="input w-full"
+                            value={formData.location}
+                            onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                            Cloud Region
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="e.g., us-east-1"
+                            className="input w-full"
+                            value={formData.cloudRegion}
+                            onChange={(e) => setFormData({ ...formData, cloudRegion: e.target.value })}
                         />
                     </div>
 

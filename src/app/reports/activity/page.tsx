@@ -150,10 +150,10 @@ export default function ActivityLogPage() {
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-[10px] text-white">
-                                                        {log.user?.name?.[0] || 'S'}
+                                                        {(log.user?.name || log.user?.email)?.[0]?.toUpperCase() || 'S'}
                                                     </div>
                                                     <span className="text-sm text-[var(--text-secondary)]">
-                                                        {log.user?.name || 'System'}
+                                                        {log.user?.name || log.user?.email || 'System'}
                                                     </span>
                                                 </div>
                                             </td>
