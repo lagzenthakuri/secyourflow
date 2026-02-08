@@ -4,14 +4,18 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "test:smoke:curl": "bash scripts/curl-smoke-cves.sh",
+    "test:smoke:cves:curl": "bash scripts/smoke-cves-curl.sh",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint src/modules/cve-search src/app/api/cves"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
-    "@prisma/adapter-pg": "^7.3.0",
-    "@prisma/client": "^7.3.0",
+    "@prisma/adapter-pg": "^6.19.2",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "lucide-react": "^0.563.0",
@@ -21,22 +25,29 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "recharts": "^3.7.0",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@prisma/client": "^6.19.2",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/react": "^16.3.2",
     "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20",
     "@types/pg": "^8.16.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^9",
     "eslint-config-next": "16.1.4",
-    "prisma": "^7.3.0",
+    "jsdom": "^28.0.0",
+    "msw": "^2.12.9",
+    "prisma": "^6.19.2",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.0.18"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
