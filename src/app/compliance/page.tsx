@@ -18,7 +18,8 @@ import {
     Search,
     Calendar,
     Shield,
-    TrendingUp
+    TrendingUp,
+    Activity
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Modal } from "@/components/ui/Modal";
@@ -223,6 +224,23 @@ export default function CompliancePage() {
                         }}>
                             <Download size={16} />
                             Export Report
+                        </button>
+                        <button
+                            className="btn btn-secondary"
+                            onClick={async () => {
+                                try {
+                                    const res = await fetch("/api/compliance/monitor", { method: "POST" });
+                                    if (res.ok) {
+                                        alert("Compliance monitoring started. Evidence is being pulled from logs.");
+                                        fetchCompliance();
+                                    }
+                                } catch (e) {
+                                    alert("Failed to start monitoring.");
+                                }
+                            }}
+                        >
+                            <Activity size={16} />
+                            Monitor & Pull Evidence
                         </button>
                         <button className="btn btn-primary" onClick={() => setIsAddModalOpen(true)}>
                             <Plus size={16} />

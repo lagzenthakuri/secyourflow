@@ -26,15 +26,33 @@ export async function GET(request: NextRequest) {
             const partiallyCompliant = f.controls.filter(c => c.status === 'PARTIALLY_COMPLIANT').length;
             const notAssessed = f.controls.filter(c => c.status === 'NOT_ASSESSED').length;
 
+            // Calculate average maturity level
+            const maturitySum = f.controls.reduce((acc, c) => acc + (c.maturityLevel || 0), 0);
+            const avgMaturity = total > 0 ? maturitySum / total : 0;
+
+            // NIST CSF Function breakdown
+            const nistCsfBreakdown = {
+                GOVERN: f.controls.filter(c => c.nistCsfFunction === 'GOVERN').length,
+                IDENTIFY: f.controls.filter(c => c.nistCsfFunction === 'IDENTIFY').length,
+                PROTECT: f.controls.filter(c => c.nistCsfFunction === 'PROTECT').length,
+                DETECT: f.controls.filter(c => c.nistCsfFunction === 'DETECT').length,
+                RESPOND: f.controls.filter(c => c.nistCsfFunction === 'RESPOND').length,
+                RECOVER: f.controls.filter(c => c.nistCsfFunction === 'RECOVER').length,
+            };
+
             return {
                 frameworkId: f.id,
                 frameworkName: f.name,
+                version: f.version,
+                description: f.description,
                 totalControls: total,
                 compliant,
                 nonCompliant,
                 partiallyCompliant,
                 notAssessed,
                 compliancePercentage: total > 0 ? (compliant / total) * 100 : 0,
+                avgMaturityLevel: avgMaturity,
+                nistCsfBreakdown,
                 controls: f.controls,
             };
         });
@@ -59,6 +77,7 @@ export async function GET(request: NextRequest) {
         );
     }
 }
+
 
 export async function POST(request: NextRequest) {
     try {

@@ -1,11 +1,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
-import { runAIScan } from "@/lib/scanner-engine";
 
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { assetId, apiKey, model } = body;
+        const { assetId, scannerId, apiKey, model } = body;
 
         if (!assetId) {
             return NextResponse.json(
@@ -14,7 +13,26 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const result = await runAIScan(assetId, apiKey, model);
+        let result;
+        if (scannerId) {
+            const { prisma } = await import("@/lib/prisma");
+            const scanner = await prisma.scannerConfig.findUnique({ where: { id: scannerId } });
+
+            if ((scanner?.type as string) === "TENABLE") {
+                const { runTenableScan } = await import("@/lib/scanner-engine");
+                result = await runTenableScan(assetId, scannerId);
+            } else {
+                return NextResponse.json(
+                    { error: "Selected scanner is not supported or requires manual configuration" },
+                    { status: 400 }
+                );
+            }
+        } else {
+            return NextResponse.json(
+                { error: "scannerId is required for Tenable API scanning" },
+                { status: 400 }
+            );
+        }
 
         return NextResponse.json({
             message: "Scan completed successfully",
