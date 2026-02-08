@@ -264,6 +264,27 @@ export default function SettingsPage() {
                                         <div className="flex items-center justify-between mb-3">
                                             <div>
                                                 <h4 className="text-sm font-medium text-white">
+                                                    AI Risk Intelligence
+                                                </h4>
+                                                <p className="text-xs text-[var(--text-muted)]">
+                                                    Automatically analyze new vulnerabilities with AI
+                                                </p>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={settings?.aiRiskAssessmentEnabled !== false}
+                                                    onChange={(e) => setSettings({ ...settings, aiRiskAssessmentEnabled: e.target.checked })}
+                                                    className="sr-only peer"
+                                                />
+                                                <div className="w-11 h-6 bg-[var(--bg-elevated)] peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500" />
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div className="p-4 rounded-lg bg-[var(--bg-tertiary)]">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div>
+                                                <h4 className="text-sm font-medium text-white">
                                                     Two-Factor Authentication
                                                 </h4>
                                                 <p className="text-xs text-[var(--text-muted)]">

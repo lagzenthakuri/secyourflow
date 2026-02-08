@@ -263,7 +263,25 @@ export default function ThreatsPage() {
                     {/* Sidebar */}
                     <div className="lg:col-span-4 space-y-4">
                         {/* Live AI Intelligence */}
-                        <Card title="Live AI Intelligence" subtitle="Real-time context-aware threats">
+                        <Card
+                            title="Live AI Intelligence"
+                            subtitle="Real-time context-aware threats"
+                            action={
+                                indicators.length > 0 && (
+                                    <button
+                                        onClick={async () => {
+                                            if (confirm("Are you sure you want to purge all AI-generated threat indicators?")) {
+                                                await fetch("/api/threats", { method: "DELETE" });
+                                                fetchThreats();
+                                            }
+                                        }}
+                                        className="text-[10px] font-bold text-red-400 hover:text-red-300 transition-colors uppercase tracking-wider"
+                                    >
+                                        Purge
+                                    </button>
+                                )
+                            }
+                        >
                             <div className="space-y-3">
                                 {indicators.length > 0 ? (
                                     indicators.map((indicator, idx) => (
