@@ -58,7 +58,8 @@ export async function POST(request: NextRequest) {
             notification.id,
             null,
             notification,
-            `Notification sent to user ${targetUserId}: ${title}`
+            `Notification sent to user ${targetUserId}: ${title}`,
+            session.user.id
         );
 
         return NextResponse.json(notification);
