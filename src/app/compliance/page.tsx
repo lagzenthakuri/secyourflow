@@ -19,10 +19,18 @@ import {
     Calendar,
     Shield,
     TrendingUp,
-    Activity
+    Activity,
+    Target,
+    Eye,
+    Wrench,
+    User,
+    Layers,
+    BarChart3
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Modal } from "@/components/ui/Modal";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 import { AddControlModal } from "@/components/compliance/AddControlModal";
 import { AssessControlModal } from "@/components/compliance/AssessControlModal";
@@ -38,12 +46,37 @@ const statusConfig = {
     NOT_APPLICABLE: { label: "N/A", color: "#6b7280", icon: HelpCircle },
 };
 
+const nistCsfConfig = {
+    GOVERN: { label: "Govern", color: "#8b5cf6", icon: Layers },
+    IDENTIFY: { label: "Identify", color: "#3b82f6", icon: Search },
+    PROTECT: { label: "Protect", color: "#22c55e", icon: Shield },
+    DETECT: { label: "Detect", color: "#f97316", icon: Eye },
+    RESPOND: { label: "Respond", color: "#ef4444", icon: Target },
+    RECOVER: { label: "Recover", color: "#06b6d4", icon: Wrench },
+};
+
+const maturityLabels = [
+    { level: 0, label: "Non-existent", color: "#6b7280" },
+    { level: 1, label: "Ad Hoc", color: "#ef4444" },
+    { level: 2, label: "Repeatable", color: "#f97316" },
+    { level: 3, label: "Defined", color: "#eab308" },
+    { level: 4, label: "Managed", color: "#22c55e" },
+    { level: 5, label: "Optimized", color: "#3b82f6" },
+];
+
+const controlTypeConfig = {
+    PREVENTIVE: { label: "Preventive", color: "#22c55e" },
+    DETECTIVE: { label: "Detective", color: "#f97316" },
+    CORRECTIVE: { label: "Corrective", color: "#3b82f6" },
+};
+
 export default function CompliancePage() {
     const [frameworks, setFrameworks] = useState<any[]>([]);
     const [selectedFramework, setSelectedFramework] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+    const [selectedNistFunction, setSelectedNistFunction] = useState<string | null>(null);
 
     // Framework Modals
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -163,6 +196,112 @@ export default function CompliancePage() {
         }
     };
 
+    const exportToPDF = () => {
+        if (!selectedFramework) return;
+
+        const doc = new jsPDF();
+        const frameworkName = selectedFramework.frameworkName;
+        const date = new Date().toLocaleDateString();
+
+        // Header Style
+        doc.setFontSize(22);
+        doc.setTextColor(33, 150, 243); // Blue
+        doc.text("SECYOURFLOW", 14, 22);
+
+        doc.setFontSize(10);
+        doc.setTextColor(150, 150, 150);
+        doc.text("Enterprise Security GRC Platform", 14, 28);
+
+        // Report Title
+        doc.setFontSize(18);
+        doc.setTextColor(40, 40, 40);
+        doc.text(`${frameworkName} Compliance Report`, 14, 45);
+
+        doc.setFontSize(11);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Generated on: ${date}`, 14, 52);
+
+        // Summary Section
+        doc.setFontSize(14);
+        doc.setTextColor(60, 60, 60);
+        doc.text("Executive Summary", 14, 65);
+
+        const stats = [
+            ["Total Controls", selectedFramework.totalControls.toString()],
+            ["Compliant Controls", selectedFramework.compliant.toString()],
+            ["Non-Compliant Controls", selectedFramework.nonCompliant.toString()],
+            ["Partially Compliant Controls", selectedFramework.partiallyCompliant.toString()],
+            ["Aggregated Compliance Score", `${selectedFramework.compliancePercentage.toFixed(1)}%`],
+            ["Capability Maturity Level (Avg)", `Level ${(selectedFramework.avgMaturityLevel || 0).toFixed(1)}`]
+        ];
+
+        autoTable(doc, {
+            startY: 70,
+            head: [["Compliance Governance Metric", "Current Assessment"]],
+            body: stats,
+            theme: 'striped',
+            headStyles: { fillColor: [33, 150, 243], textColor: 255 },
+            styles: { cellPadding: 5 }
+        });
+
+        // NIST CSF Breakdown
+        if (selectedFramework.nistCsfBreakdown) {
+            const finalY = (doc as any).lastAutoTable.finalY + 15;
+            doc.setFontSize(14);
+            doc.text("NIST CSF 2.0 Mapping Breakdown", 14, finalY);
+
+            const nistData = Object.entries(nistCsfConfig).map(([key, config]) => [
+                config.label,
+                selectedFramework.nistCsfBreakdown[key] || 0
+            ]);
+
+            autoTable(doc, {
+                startY: finalY + 5,
+                head: [["NIST Function", "Control Count"]],
+                body: nistData,
+                theme: 'grid',
+                headStyles: { fillColor: [88, 88, 88] }
+            });
+        }
+
+        // Detailed Table
+        doc.addPage();
+        doc.setFontSize(14);
+        doc.setTextColor(40, 40, 40);
+        doc.text("Detailed Control Assessment List", 14, 22);
+
+        const tableData = selectedFramework.controls.map((c: any) => [
+            c.controlId,
+            c.title,
+            c.status.replace(/_/g, " "),
+            `L${c.maturityLevel || 0}`,
+            c.ownerRole || "N/A"
+        ]);
+
+        autoTable(doc, {
+            startY: 30,
+            head: [["ID", "Control Description", "Compliance Status", "Maturity", "Accountable Role"]],
+            body: tableData,
+            theme: 'grid',
+            headStyles: { fillColor: [33, 150, 243] },
+            styles: { fontSize: 8, cellPadding: 3 },
+            columnStyles: {
+                1: { cellWidth: 80 }
+            }
+        });
+
+        // Footer
+        const pageCount = (doc as any).internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150, 150, 150);
+            doc.text(`Confidential - SECYOURFLOW GRC Platform - Page ${i} of ${pageCount}`, 14, 285);
+        }
+
+        doc.save(`${frameworkName}_Board_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+    };
+
     useEffect(() => {
         fetchCompliance();
     }, []);
@@ -172,7 +311,8 @@ export default function CompliancePage() {
             control.controlId.toLowerCase().includes(searchQuery.toLowerCase()) ||
             control.title.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesStatus = !selectedStatus || control.status === selectedStatus;
-        return matchesSearch && matchesStatus;
+        const matchesNist = !selectedNistFunction || control.nistCsfFunction === selectedNistFunction;
+        return matchesSearch && matchesStatus && matchesNist;
     }) || [];
 
     const complianceStats = {
@@ -211,19 +351,32 @@ export default function CompliancePage() {
                     <div className="flex items-center gap-3">
                         <button className="btn btn-secondary" onClick={() => {
                             if (!selectedFramework) return;
-                            const csv = [
-                                ["Control ID", "Title", "Status", "Category"].join(","),
-                                ...selectedFramework.controls.map((c: any) => [c.controlId, c.title, c.status, c.category].join(","))
-                            ].join("\n");
+                            const headers = ["Control ID", "Title", "Status", "Maturity", "NIST Function", "Type", "Frequency", "Owner", "Category"];
+                            const rows = selectedFramework.controls.map((c: any) => [
+                                c.controlId,
+                                `"${c.title}"`,
+                                c.status,
+                                c.maturityLevel,
+                                c.nistCsfFunction || "N/A",
+                                c.controlType,
+                                c.frequency,
+                                c.ownerRole || "N/A",
+                                c.category || "N/A"
+                            ].join(","));
+                            const csv = [headers.join(","), ...rows].join("\n");
                             const blob = new Blob([csv], { type: 'text/csv' });
                             const url = window.URL.createObjectURL(blob);
                             const a = document.createElement('a');
                             a.href = url;
-                            a.download = `${selectedFramework.frameworkName}_report.csv`;
+                            a.download = `${selectedFramework.frameworkName}_Compliance_Report.csv`;
                             a.click();
                         }}>
                             <Download size={16} />
-                            Export Report
+                            Export CSV
+                        </button>
+                        <button className="btn btn-secondary" onClick={exportToPDF}>
+                            <FileCheck size={16} />
+                            Board PDF
                         </button>
                         <button
                             className="btn btn-secondary"
@@ -292,9 +445,22 @@ export default function CompliancePage() {
                                 </div>
                             </div>
                             <h3 className="font-medium text-white mb-1 truncate pr-8">{framework.frameworkName}</h3>
-                            <p className="text-xs text-[var(--text-muted)]">
-                                {framework.totalControls} controls
-                            </p>
+                            <div className="flex items-center justify-between">
+                                <p className="text-xs text-[var(--text-muted)]">
+                                    {framework.totalControls} controls
+                                </p>
+                                {framework.avgMaturityLevel !== undefined && (
+                                    <div className="flex items-center gap-1">
+                                        <BarChart3 size={12} className="text-[var(--text-muted)]" />
+                                        <span
+                                            className="text-xs font-bold"
+                                            style={{ color: maturityLabels[Math.round(framework.avgMaturityLevel)]?.color || "#6b7280" }}
+                                        >
+                                            L{framework.avgMaturityLevel.toFixed(1)}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
                             <ProgressBar
                                 value={framework.compliancePercentage}
                                 color={
@@ -418,6 +584,42 @@ export default function CompliancePage() {
                                     </button>
                                 </div>
 
+                                {/* NIST CSF Function Filters */}
+                                <div className="px-4 py-2 border-b border-[var(--border-color)] flex gap-1.5 overflow-x-auto">
+                                    <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider flex items-center mr-2">NIST CSF:</span>
+                                    <button
+                                        onClick={() => setSelectedNistFunction(null)}
+                                        className={cn(
+                                            "px-2 py-1 rounded text-[10px] font-medium whitespace-nowrap transition-all",
+                                            !selectedNistFunction
+                                                ? "bg-white/10 text-white"
+                                                : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
+                                        )}
+                                    >
+                                        All
+                                    </button>
+                                    {Object.entries(nistCsfConfig).map(([key, config]) => {
+                                        const NistIcon = config.icon;
+                                        const count = selectedFramework?.nistCsfBreakdown?.[key] || 0;
+                                        return (
+                                            <button
+                                                key={key}
+                                                onClick={() => setSelectedNistFunction(key)}
+                                                className={cn(
+                                                    "px-2 py-1 rounded text-[10px] font-medium whitespace-nowrap transition-all flex items-center gap-1",
+                                                    selectedNistFunction === key
+                                                        ? "text-white"
+                                                        : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
+                                                )}
+                                                style={selectedNistFunction === key ? { background: `${config.color}30`, color: config.color } : {}}
+                                            >
+                                                <NistIcon size={10} />
+                                                {config.label} ({count})
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
                                 {/* Controls List */}
                                 <div className="divide-y divide-[var(--border-color)]">
                                     {filteredControls.length === 0 ? (
@@ -447,7 +649,7 @@ export default function CompliancePage() {
                                                             <StatusIcon size={18} style={{ color: status.color }} />
                                                         </div>
                                                         <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-2 mb-1">
+                                                            <div className="flex items-center gap-2 mb-1 flex-wrap">
                                                                 <span className="font-mono text-xs text-blue-400 font-bold bg-blue-400/5 px-1.5 py-0.5 rounded">
                                                                     {control.controlId}
                                                                 </span>
@@ -460,14 +662,57 @@ export default function CompliancePage() {
                                                                 >
                                                                     {status.label}
                                                                 </span>
+                                                                {/* Maturity Level Badge */}
+                                                                {control.maturityLevel !== undefined && (
+                                                                    <span
+                                                                        className="px-1.5 py-0.5 rounded text-[10px] font-bold"
+                                                                        style={{
+                                                                            background: `${maturityLabels[control.maturityLevel]?.color}15`,
+                                                                            color: maturityLabels[control.maturityLevel]?.color,
+                                                                        }}
+                                                                    >
+                                                                        L{control.maturityLevel}
+                                                                    </span>
+                                                                )}
+                                                                {/* NIST CSF Function Badge */}
+                                                                {control.nistCsfFunction && nistCsfConfig[control.nistCsfFunction as keyof typeof nistCsfConfig] && (
+                                                                    <span
+                                                                        className="px-1.5 py-0.5 rounded text-[10px] font-medium flex items-center gap-0.5"
+                                                                        style={{
+                                                                            background: `${nistCsfConfig[control.nistCsfFunction as keyof typeof nistCsfConfig].color}15`,
+                                                                            color: nistCsfConfig[control.nistCsfFunction as keyof typeof nistCsfConfig].color,
+                                                                        }}
+                                                                    >
+                                                                        {nistCsfConfig[control.nistCsfFunction as keyof typeof nistCsfConfig].label}
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                             <h3 className="font-medium text-white mb-1 group-hover:text-blue-400 transition-all duration-300 ease-in-out">
                                                                 {control.title}
                                                             </h3>
-                                                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-[var(--text-muted)] uppercase tracking-tight">
+                                                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-[var(--text-muted)] uppercase tracking-tight">
                                                                 {control.category && (
                                                                     <span className="bg-[var(--bg-secondary)] px-1.5 py-0.5 rounded border border-[var(--border-color)]">
                                                                         {control.category}
+                                                                    </span>
+                                                                )}
+                                                                {/* Control Type */}
+                                                                {control.controlType && controlTypeConfig[control.controlType as keyof typeof controlTypeConfig] && (
+                                                                    <span
+                                                                        className="px-1.5 py-0.5 rounded"
+                                                                        style={{
+                                                                            background: `${controlTypeConfig[control.controlType as keyof typeof controlTypeConfig].color}10`,
+                                                                            color: controlTypeConfig[control.controlType as keyof typeof controlTypeConfig].color,
+                                                                        }}
+                                                                    >
+                                                                        {controlTypeConfig[control.controlType as keyof typeof controlTypeConfig].label}
+                                                                    </span>
+                                                                )}
+                                                                {/* Owner Role */}
+                                                                {control.ownerRole && (
+                                                                    <span className="flex items-center gap-1 text-[var(--text-secondary)]">
+                                                                        <User size={10} />
+                                                                        {control.ownerRole}
                                                                     </span>
                                                                 )}
                                                                 <span className="flex items-center gap-1">
@@ -515,7 +760,7 @@ export default function CompliancePage() {
                         {/* Recent Activity or Assessment Stats */}
                         {selectedFramework && (
                             <Card title="Quick Stats">
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-2 gap-3 mb-4">
                                     <div className="p-3 rounded-xl bg-[var(--bg-tertiary)] border border-[var(--border-color)]">
                                         <p className="text-xl font-bold text-white">{complianceStats.total}</p>
                                         <p className="text-[10px] text-[var(--text-muted)] uppercase">Total Controls</p>
@@ -529,9 +774,50 @@ export default function CompliancePage() {
                                         <p className="text-[10px] text-[var(--text-muted)] uppercase">Non-Compliant</p>
                                     </div>
                                     <div className="p-3 rounded-xl bg-[var(--bg-tertiary)] border border-[var(--border-color)]">
-                                        <p className="text-xl font-bold text-yellow-400">{complianceStats.partial}</p>
-                                        <p className="text-[10px] text-[var(--text-muted)] uppercase">Partial</p>
+                                        <p
+                                            className="text-xl font-bold"
+                                            style={{ color: maturityLabels[Math.round(selectedFramework.avgMaturityLevel || 0)]?.color || "#6b7280" }}
+                                        >
+                                            L{(selectedFramework.avgMaturityLevel || 0).toFixed(1)}
+                                        </p>
+                                        <p className="text-[10px] text-[var(--text-muted)] uppercase">Avg Maturity</p>
                                     </div>
+                                </div>
+                            </Card>
+                        )}
+
+                        {/* NIST CSF Breakdown */}
+                        {selectedFramework?.nistCsfBreakdown && (
+                            <Card title="NIST CSF 2.0 Coverage" subtitle="Controls by security function">
+                                <div className="space-y-2">
+                                    {Object.entries(nistCsfConfig).map(([key, config]) => {
+                                        const count = selectedFramework.nistCsfBreakdown[key] || 0;
+                                        const total = selectedFramework.totalControls || 1;
+                                        const percentage = (count / total) * 100;
+                                        const NistIcon = config.icon;
+                                        return (
+                                            <div key={key} className="flex items-center gap-3">
+                                                <div
+                                                    className="w-7 h-7 rounded-lg flex items-center justify-center"
+                                                    style={{ background: `${config.color}15` }}
+                                                >
+                                                    <NistIcon size={14} style={{ color: config.color }} />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <span className="text-xs font-medium text-white">{config.label}</span>
+                                                        <span className="text-xs text-[var(--text-muted)]">{count}</span>
+                                                    </div>
+                                                    <div className="h-1.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full rounded-full transition-all duration-500"
+                                                            style={{ width: `${percentage}%`, background: config.color }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </Card>
                         )}
@@ -557,6 +843,23 @@ export default function CompliancePage() {
                                 )) : (
                                     <p className="text-xs text-[var(--text-muted)] text-center py-4 italic">No frameworks registered</p>
                                 )}
+                            </div>
+                        </Card>
+
+                        {/* Maturity Level Legend */}
+                        <Card title="Maturity Levels" subtitle="Control maturity scale (0-5)">
+                            <div className="space-y-1.5">
+                                {maturityLabels.map((level) => (
+                                    <div key={level.level} className="flex items-center gap-2">
+                                        <span
+                                            className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold"
+                                            style={{ background: `${level.color}20`, color: level.color }}
+                                        >
+                                            {level.level}
+                                        </span>
+                                        <span className="text-xs text-[var(--text-secondary)]">{level.label}</span>
+                                    </div>
+                                ))}
                             </div>
                         </Card>
                     </div>

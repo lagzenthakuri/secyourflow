@@ -17,7 +17,8 @@ import {
     ChevronRight,
     ExternalLink,
     Calendar,
-    FileJson
+    FileJson,
+    Trash2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SecurityLoader } from "@/components/ui/SecurityLoader";
@@ -111,6 +112,29 @@ export default function ScannersPage() {
             alert("An error occurred during scanning.");
         } finally {
             setIsScanning(false);
+        }
+    };
+
+    const handleDeleteScanner = async (id: string) => {
+        if (!window.confirm("Are you sure you want to delete this scanner? This action cannot be undone.")) return;
+
+        try {
+            setIsLoading(true);
+            const res = await fetch(`/api/scanners/${id}`, {
+                method: "DELETE",
+            });
+
+            if (res.ok) {
+                fetchData();
+            } else {
+                const data = await res.json();
+                alert(`Failed to delete scanner: ${data.error}`);
+            }
+        } catch (error) {
+            console.error("Delete scanner error:", error);
+            alert("An error occurred while deleting the scanner.");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -363,6 +387,13 @@ export default function ScannersPage() {
                                                         </button>
                                                         <button className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-white transition-all duration-300 ease-in-out">
                                                             <Settings size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteScanner(scanner.id)}
+                                                            className="p-2 rounded-lg hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-400 transition-all duration-300 ease-in-out"
+                                                            title="Delete Scanner"
+                                                        >
+                                                            <Trash2 size={16} />
                                                         </button>
                                                     </div>
                                                 </div>

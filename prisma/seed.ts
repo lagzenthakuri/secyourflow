@@ -204,6 +204,86 @@ async function main() {
     }
     console.log(`✅ Created ${nrbControls.length} NRB Cyber Resilience controls`);
 
+    // COBIT 2019
+    const cobit = await prisma.complianceFramework.upsert({
+        where: { id: "cobit-2019" },
+        update: {},
+        create: {
+            id: "cobit-2019",
+            name: "COBIT 2019",
+            version: "2019",
+            description: "Control Objectives for Information and Related Technologies (COBIT) 2019 Framework",
+            organizationId: org.id,
+        },
+    });
+
+    const cobitControls = [
+        { id: "EDM01", title: "Ensured Governance Framework Setting and Maintenance", category: "Evaluate, Direct and Monitor", nistCsf: "GOVERN" },
+        { id: "EDM02", title: "Ensured Benefits Delivery", category: "Evaluate, Direct and Monitor", nistCsf: "GOVERN" },
+        { id: "EDM03", title: "Ensured Risk Optimization", category: "Evaluate, Direct and Monitor", nistCsf: "GOVERN" },
+        { id: "APO01", title: "Managed I&T Management Framework", category: "Align, Plan and Organize", nistCsf: "GOVERN" },
+        { id: "APO12", title: "Managed Risk", category: "Align, Plan and Organize", nistCsf: "IDENTIFY" },
+        { id: "APO13", title: "Managed Security", category: "Align, Plan and Organize", nistCsf: "PROTECT" },
+        { id: "BAI01", title: "Managed Programs and Projects", category: "Build, Acquire and Implement", nistCsf: "PROTECT" },
+        { id: "DSS05", title: "Managed Security Services", category: "Deliver, Service and Support", nistCsf: "PROTECT" },
+        { id: "MEA01", title: "Managed Performance and Conformance Monitoring", category: "Monitor, Evaluate and Assess", nistCsf: "DETECT" },
+    ];
+
+    for (const ctrl of cobitControls) {
+        await prisma.complianceControl.upsert({
+            where: { frameworkId_controlId: { frameworkId: cobit.id, controlId: ctrl.id } },
+            update: {},
+            create: {
+                controlId: ctrl.id,
+                title: ctrl.title,
+                category: ctrl.category,
+                frameworkId: cobit.id,
+                nistCsfFunction: ctrl.nistCsf as any,
+                riskCategory: ctrl.nistCsf,
+            },
+        });
+    }
+    console.log(`✅ Created ${cobitControls.length} COBIT 2019 controls`);
+
+    // NIST CSF 2.0
+    const nist = await prisma.complianceFramework.upsert({
+        where: { id: "nist-csf-2.0" },
+        update: {},
+        create: {
+            id: "nist-csf-2.0",
+            name: "NIST CSF 2.0",
+            version: "2.0",
+            description: "NIST Cybersecurity Framework Version 2.0",
+            organizationId: org.id,
+        },
+    });
+
+    const nistControls = [
+        { id: "GV.OC-01", title: "Organizational Mission", category: "Govern", nistCsf: "GOVERN" },
+        { id: "ID.AM-01", title: "Asset Inventory", category: "Identify", nistCsf: "IDENTIFY" },
+        { id: "PR.AC-01", title: "Access Control", category: "Protect", nistCsf: "PROTECT" },
+        { id: "PR.DS-01", title: "Data Security", category: "Protect", nistCsf: "PROTECT" },
+        { id: "DE.CM-01", title: "Continuous Monitoring", category: "Detect", nistCsf: "DETECT" },
+        { id: "RS.MA-01", title: "Incident Management", category: "Respond", nistCsf: "RESPOND" },
+        { id: "RC.RP-01", title: "Recovery Planning", category: "Recover", nistCsf: "RECOVER" },
+    ];
+
+    for (const ctrl of nistControls) {
+        await prisma.complianceControl.upsert({
+            where: { frameworkId_controlId: { frameworkId: nist.id, controlId: ctrl.id } },
+            update: {},
+            create: {
+                controlId: ctrl.id,
+                title: ctrl.title,
+                category: ctrl.category,
+                frameworkId: nist.id,
+                nistCsfFunction: ctrl.nistCsf as any,
+                riskCategory: ctrl.nistCsf,
+            },
+        });
+    }
+    console.log(`✅ Created ${nistControls.length} NIST CSF 2.0 controls`);
+
     console.log("🎉 Seeding completed!");
 }
 

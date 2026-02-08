@@ -81,6 +81,8 @@ model Organization {
   riskEntries          RiskRegister[]
   settings             Setting?
   users                User[]
+  audits               Audit[]
+  policies             Policy[]
   vulnerabilities      Vulnerability[]
 
   @@index([name])
@@ -775,4 +777,69 @@ enum NistCsfFunction {
   DETECT
   RESPOND
   RECOVER
+}
+
+model Policy {
+  id             String       @id @default(cuid())
+  title          String
+  description    String?
+  version        String       @default("1.0")
+  status         PolicyStatus @default(DRAFT)
+  type           String?      // e.g., "Information Security", "Access Control"
+  url            String?      // Link to document
+  owner          String?
+  lastReview     DateTime?
+  nextReview     DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+enum PolicyStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+  UNDER_REVIEW
+}
+
+model Audit {
+  id             String       @id @default(cuid())
+  title          String
+  type           AuditType    @default(INTERNAL)
+  status         AuditStatus  @default(PLANNED)
+  scope          String?
+  findings       String?
+  recommendations String?
+  startDate      DateTime?
+  endDate        DateTime?
+  periodStart    DateTime?
+  periodEnd      DateTime?
+  auditor        String?
+  reportUrl      String?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([type])
+}
+
+enum AuditType {
+  INTERNAL
+  EXTERNAL
+  REGULATORY
+  THIRD_PARTY
+}
+
+enum AuditStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
 }
