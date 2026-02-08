@@ -86,7 +86,9 @@ export interface Asset {
     status: AssetStatus;
     owner?: string;
     department?: string;
+    location?: string;
     cloudProvider?: CloudProvider;
+    cloudRegion?: string;
     tags: string[];
     lastSeen?: Date;
     createdAt: Date;

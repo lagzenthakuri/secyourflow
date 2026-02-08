@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { Severity, VulnStatus, VulnSource } from "@prisma/client";
 import { logActivity } from "@/lib/logger";
 import { processRiskAssessment } from "@/lib/risk-engine";
@@ -123,6 +124,9 @@ export async function POST(request: NextRequest) {
         const org = await prisma.organization.findFirst();
         if (!org) throw new Error("No organization found");
 
+        const session = await auth();
+        const userId = session?.user?.id;
+
         const newVuln = await prisma.vulnerability.create({
             data: {
                 ...vulnData,
@@ -151,7 +155,8 @@ export async function POST(request: NextRequest) {
             newVuln.id,
             null,
             { title: newVuln.title, severity: newVuln.severity, assetId },
-            `Vulnerability detected: ${newVuln.title}`
+            `Vulnerability detected: ${newVuln.title}`,
+            userId
         );
 
         // 2. Trigger Notifications
@@ -195,7 +200,7 @@ export async function POST(request: NextRequest) {
         // We run this asynchronously (fire and forget for API response speed, but awaited here since we want to be sure it starts)
         // In production, this would go to a job queue.
         if (assetId) {
-            processRiskAssessment(newVuln.id, assetId, org.id).catch(err =>
+            processRiskAssessment(newVuln.id, assetId, org.id, userId).catch(err =>
                 console.error("Background Risk Assessment Validation Failed", err)
             );
         }

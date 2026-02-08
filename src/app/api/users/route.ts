@@ -74,7 +74,8 @@ export async function PUT(request: NextRequest) {
             updatedUser.email,
             currentUser?.role,
             role,
-            `Role changed from ${currentUser?.role} to ${role} by ${session.user.name}`
+            `Role changed from ${currentUser?.role} to ${role} by ${session.user.name}`,
+            session.user.id
         );
 
         return NextResponse.json(updatedUser);

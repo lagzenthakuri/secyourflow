@@ -21,6 +21,10 @@ const IMPLEMENTATION_STATUSES: ImplementationStatus[] = [
     "IMPLEMENTED", "PARTIALLY_IMPLEMENTED", "PLANNED", "NOT_IMPLEMENTED", "NOT_APPLICABLE"
 ];
 
+const CONTROL_TYPES = ["PREVENTIVE", "DETECTIVE", "CORRECTIVE"];
+const CONTROL_FREQUENCIES = ["CONTINUOUS", "DAILY", "WEEKLY", "MONTHLY", "QUARTERLY", "SEMI_ANNUAL", "ANNUAL"];
+const NIST_CSF_FUNCTIONS = ["GOVERN", "IDENTIFY", "PROTECT", "DETECT", "RESPOND", "RECOVER"];
+
 const statusStyles: Record<ComplianceStatus, { bg: string; text: string }> = {
     COMPLIANT: { bg: "bg-green-500/10", text: "text-green-400" },
     NON_COMPLIANT: { bg: "bg-red-500/10", text: "text-red-400" },
@@ -40,6 +44,11 @@ export function AssessControlModal({ isOpen, onClose, onSuccess, control }: Asse
         implementationStatus: (control?.implementationStatus || "NOT_IMPLEMENTED") as ImplementationStatus,
         evidence: control?.evidence || "",
         notes: control?.notes || "",
+        maturityLevel: control?.maturityLevel || 0,
+        controlType: control?.controlType || "PREVENTIVE",
+        frequency: control?.frequency || "ANNUAL",
+        ownerRole: control?.ownerRole || "",
+        nistCsfFunction: control?.nistCsfFunction || null,
     });
 
     useEffect(() => {
@@ -51,6 +60,11 @@ export function AssessControlModal({ isOpen, onClose, onSuccess, control }: Asse
                 implementationStatus: control.implementationStatus as ImplementationStatus,
                 evidence: control.evidence || "",
                 notes: control.notes || "",
+                maturityLevel: control.maturityLevel || 0,
+                controlType: control.controlType || "PREVENTIVE",
+                frequency: control.frequency || "ANNUAL",
+                ownerRole: control.ownerRole || "",
+                nistCsfFunction: control.nistCsfFunction || null,
             });
         }
     }, [isOpen, control]);
@@ -86,9 +100,9 @@ export function AssessControlModal({ isOpen, onClose, onSuccess, control }: Asse
             isOpen={isOpen}
             onClose={onClose}
             title={`Assess Control: ${control?.controlId}`}
-            maxWidth="lg"
+            maxWidth="xl"
         >
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="p-1 space-y-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
                 {error && (
                     <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2 text-red-400 text-sm">
                         <AlertCircle size={16} />
@@ -97,10 +111,10 @@ export function AssessControlModal({ isOpen, onClose, onSuccess, control }: Asse
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                    {/* Basic Info (Read Only or Editable?) - Let's keep it editable for convenience */}
+                    {/* Basic Info */}
                     <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-                            Title
+                            Control Title
                         </label>
                         <input
                             type="text"
@@ -111,52 +125,136 @@ export function AssessControlModal({ isOpen, onClose, onSuccess, control }: Asse
                         />
                     </div>
 
-                    {/* Assessment Status */}
-                    <div className="space-y-3">
-                        <label className="block text-sm font-medium text-[var(--text-secondary)]">
-                            Compliance Status *
-                        </label>
-                        <div className="grid grid-cols-1 gap-2">
-                            {COMPLIANCE_STATUSES.map((status) => (
-                                <button
-                                    key={status}
-                                    type="button"
-                                    onClick={() => setFormData({ ...formData, status })}
-                                    className={cn(
-                                        "flex items-center justify-between px-3 py-2 rounded-lg border text-sm transition-all",
-                                        formData.status === status
-                                            ? `${statusStyles[status].bg} ${statusStyles[status].text} border-current ring-1 ring-current`
-                                            : "bg-[var(--bg-tertiary)] text-[var(--text-muted)] border-transparent hover:bg-[var(--bg-secondary)]"
-                                    )}
-                                >
-                                    {status.replace(/_/g, " ")}
-                                    {formData.status === status && <div className="w-2 h-2 rounded-full bg-current" />}
-                                </button>
-                            ))}
+                    {/* Left Column: Statuses */}
+                    <div className="space-y-4">
+                        <div className="space-y-3">
+                            <label className="block text-sm font-medium text-[var(--text-secondary)]">
+                                Compliance Status *
+                            </label>
+                            <div className="grid grid-cols-1 gap-2">
+                                {COMPLIANCE_STATUSES.map((status) => (
+                                    <button
+                                        key={status}
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, status })}
+                                        className={cn(
+                                            "flex items-center justify-between px-3 py-2 rounded-lg border text-sm transition-all",
+                                            formData.status === status
+                                                ? `${statusStyles[status].bg} ${statusStyles[status].text} border-current ring-1 ring-current`
+                                                : "bg-[var(--bg-tertiary)] text-[var(--text-muted)] border-transparent hover:bg-[var(--bg-secondary)]"
+                                        )}
+                                    >
+                                        {status.replace(/_/g, " ")}
+                                        {formData.status === status && <div className="w-2 h-2 rounded-full bg-current" />}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            <label className="block text-sm font-medium text-[var(--text-secondary)]">
+                                Implementation Status *
+                            </label>
+                            <div className="grid grid-cols-1 gap-2">
+                                {IMPLEMENTATION_STATUSES.map((status) => (
+                                    <button
+                                        key={status}
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, implementationStatus: status })}
+                                        className={cn(
+                                            "flex items-center justify-between px-3 py-2 rounded-lg border text-sm transition-all",
+                                            formData.implementationStatus === status
+                                                ? "bg-blue-500/10 text-blue-400 border-blue-500/50 ring-1 ring-blue-500/50"
+                                                : "bg-[var(--bg-tertiary)] text-[var(--text-muted)] border-transparent hover:bg-[var(--bg-secondary)]"
+                                        )}
+                                    >
+                                        {status.replace(/_/g, " ")}
+                                        {formData.implementationStatus === status && <div className="w-2 h-2 rounded-full bg-blue-400" />}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
-                    <div className="space-y-3">
-                        <label className="block text-sm font-medium text-[var(--text-secondary)]">
-                            Implementation Status *
-                        </label>
-                        <div className="grid grid-cols-1 gap-2">
-                            {IMPLEMENTATION_STATUSES.map((status) => (
-                                <button
-                                    key={status}
-                                    type="button"
-                                    onClick={() => setFormData({ ...formData, implementationStatus: status })}
-                                    className={cn(
-                                        "flex items-center justify-between px-3 py-2 rounded-lg border text-sm transition-all",
-                                        formData.implementationStatus === status
-                                            ? "bg-blue-500/10 text-blue-400 border-blue-500/50 ring-1 ring-blue-500/50"
-                                            : "bg-[var(--bg-tertiary)] text-[var(--text-muted)] border-transparent hover:bg-[var(--bg-secondary)]"
-                                    )}
+                    {/* Right Column: Framework Metadata */}
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-1 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                                    Maturity Level (0-5)
+                                </label>
+                                <div className="flex items-center gap-4">
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="5"
+                                        step="1"
+                                        className="flex-1 accent-blue-500"
+                                        value={formData.maturityLevel}
+                                        onChange={(e) => setFormData({ ...formData, maturityLevel: parseInt(e.target.value) })}
+                                    />
+                                    <span className="text-xl font-bold text-white w-8 text-center">{formData.maturityLevel}</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                                    Control Type
+                                </label>
+                                <select
+                                    className="input w-full"
+                                    value={formData.controlType}
+                                    onChange={(e) => setFormData({ ...formData, controlType: e.target.value })}
                                 >
-                                    {status.replace(/_/g, " ")}
-                                    {formData.implementationStatus === status && <div className="w-2 h-2 rounded-full bg-blue-400" />}
-                                </button>
-                            ))}
+                                    {CONTROL_TYPES.map(type => (
+                                        <option key={type} value={type}>{type}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                                    Assessment Frequency
+                                </label>
+                                <select
+                                    className="input w-full"
+                                    value={formData.frequency}
+                                    onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
+                                >
+                                    {CONTROL_FREQUENCIES.map(freq => (
+                                        <option key={freq} value={freq}>{freq.replace(/_/g, " ")}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                                    NIST CSF Function
+                                </label>
+                                <select
+                                    className="input w-full"
+                                    value={formData.nistCsfFunction || ""}
+                                    onChange={(e) => setFormData({ ...formData, nistCsfFunction: e.target.value || null })}
+                                >
+                                    <option value="">None</option>
+                                    {NIST_CSF_FUNCTIONS.map(func => (
+                                        <option key={func} value={func}>{func}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                                    Owner Role
+                                </label>
+                                <input
+                                    type="text"
+                                    className="input w-full"
+                                    placeholder="e.g. CISO, IT Security, Risk Team"
+                                    value={formData.ownerRole}
+                                    onChange={(e) => setFormData({ ...formData, ownerRole: e.target.value })}
+                                />
+                            </div>
                         </div>
                     </div>
 

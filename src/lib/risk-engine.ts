@@ -134,7 +134,8 @@ function mockAnalysis(vulnerability: any, asset: any) {
 export async function processRiskAssessment(
     vulnerabilityId: string,
     assetId: string,
-    organizationId: string
+    organizationId: string,
+    userId?: string
 ) {
     let riskEntryId: string | null = null;
     try {
@@ -233,13 +234,16 @@ export async function processRiskAssessment(
 
         console.log(`[RiskEngine] Pipeline Complete. Compliance % should reflect drop.`);
 
+        // Log the activity
+        const logDetails = `Risk calculated: ${riskScore.toFixed(1)}/25. ${analysis.risk}`;
         await logActivity(
             "RISK_ASSESSMENT_COMPLETED",
             "RiskRegister",
             riskEntry.id,
             null,
             { riskScore, impactScore },
-            `Risk calculated: ${riskScore.toFixed(1)}/25. ${analysis.risk}`
+            logDetails,
+            userId
         );
 
     } catch (error) {

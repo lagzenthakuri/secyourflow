@@ -67,7 +67,8 @@ export async function POST(request: NextRequest) {
             updatedSettings.id,
             null,
             null,
-            `Settings updated by ${session.user.name}`
+            `Settings updated by ${session.user.name}`,
+            session.user.id
         );
 
         return NextResponse.json(updatedSettings);

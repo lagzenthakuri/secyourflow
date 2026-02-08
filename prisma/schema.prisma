@@ -82,6 +82,8 @@ model Organization {
   riskEntries          RiskRegister[]
   settings             Setting?
   users                User[]
+  audits               Audit[]
+  policies             Policy[]
   vulnerabilities      Vulnerability[]
 
   @@index([name])
@@ -111,7 +113,7 @@ model Asset {
   createdAt          DateTime                 @default(now())
   updatedAt          DateTime                 @updatedAt
   organizationId     String
-  organization       Organization             @relation(fields: [organizationId], references: [id])
+  organization       Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   complianceControls AssetComplianceControl[]
   vulnerabilities    AssetVulnerability[]
   riskEntries        RiskRegister[]
@@ -158,7 +160,7 @@ model Vulnerability {
   assets             AssetVulnerability[]
   comments           Comment[]
   riskEntries        RiskRegister[]
-  organization       Organization                     @relation(fields: [organizationId], references: [id])
+  organization       Organization                     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   complianceControls VulnerabilityComplianceControl[]
 
   @@index([cveId])
@@ -222,6 +224,17 @@ model ComplianceControl {
   createdAt            DateTime                         @default(now())
   updatedAt            DateTime                         @updatedAt
   frameworkId          String
+  
+  // New fields for JBBL compliance requirements
+  maturityLevel        Int                              @default(0) // 0-5 scale: 0=Non-existent, 1=Ad Hoc, 2=Repeatable, 3=Defined, 4=Managed, 5=Optimized
+  controlType          ControlType                      @default(PREVENTIVE) // Preventive, Detective, Corrective
+  frequency            ControlFrequency                 @default(ANNUAL) // How often to assess
+  ownerRole            String?                          // e.g., "CISO", "IT Security", "SOC Team", "Board"
+  riskCategory         String?                          // e.g., "Governance", "Protection", "Detection"
+  nistCsfFunction      NistCsfFunction?                 // Govern, Identify, Protect, Detect, Respond, Recover
+  mappedControls       Json?                            // Cross-framework mapping: { "ISO27001": ["A.5.1"], "NRB": ["GOV_01"], "COBIT": ["EDM01"] }
+  evidenceRequired     String[]                         // List of required evidence types
+  
   assets               AssetComplianceControl[]
   framework            ComplianceFramework              @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
   vulnerabilities      VulnerabilityComplianceControl[]
@@ -230,6 +243,8 @@ model ComplianceControl {
   @@index([frameworkId])
   @@index([status])
   @@index([controlId])
+  @@index([maturityLevel])
+  @@index([nistCsfFunction])
 }
 
 model AssetComplianceControl {
@@ -313,7 +328,7 @@ model AuditLog {
   userAgent  String?
   userId     String
   createdAt  DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([entityType, entityId])
   @@index([userId])
@@ -329,8 +344,8 @@ model Comment {
   vulnerabilityId String?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
-  user            User           @relation(fields: [userId], references: [id])
-  vulnerability   Vulnerability? @relation(fields: [vulnerabilityId], references: [id])
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vulnerability   Vulnerability? @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
 
   @@index([entityType, entityId])
   @@index([userId])
@@ -366,7 +381,7 @@ model ScanResult {
   rawData    Json?
   scannerId  String
   createdAt  DateTime      @default(now())
-  scanner    ScannerConfig @relation(fields: [scannerId], references: [id])
+  scanner    ScannerConfig @relation(fields: [scannerId], references: [id], onDelete: Cascade)
 
   @@index([scanId])
   @@index([scannerId])
@@ -423,8 +438,8 @@ model Report {
   userId         String
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  user           User         @relation(fields: [userId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
   @@index([userId])
@@ -468,9 +483,9 @@ model RiskRegister {
   confidence       Float?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
-  asset            Asset         @relation(fields: [assetId], references: [id])
-  organization     Organization  @relation(fields: [organizationId], references: [id])
-  vulnerability    Vulnerability @relation(fields: [vulnerabilityId], references: [id])
+  asset            Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  organization     Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vulnerability    Vulnerability @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
 
   @@index([assetId])
   @@index([vulnerabilityId])
@@ -675,6 +690,7 @@ enum VulnSource {
   RAPID7
   CROWDSTRIKE
   MANUAL
+  TENABLE
   API
   OTHER
 }
@@ -736,4 +752,95 @@ enum CveStatus {
   ACTIVE
   REJECTED
   RESERVED
+}
+
+// New enums for JBBL compliance requirements
+enum ControlType {
+  PREVENTIVE
+  DETECTIVE
+  CORRECTIVE
+}
+
+enum ControlFrequency {
+  CONTINUOUS
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  SEMI_ANNUAL
+  ANNUAL
+}
+
+enum NistCsfFunction {
+  GOVERN
+  IDENTIFY
+  PROTECT
+  DETECT
+  RESPOND
+  RECOVER
+}
+
+model Policy {
+  id             String       @id @default(cuid())
+  title          String
+  description    String?
+  version        String       @default("1.0")
+  status         PolicyStatus @default(DRAFT)
+  type           String?      // e.g., "Information Security", "Access Control"
+  url            String?      // Link to document
+  owner          String?
+  lastReview     DateTime?
+  nextReview     DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+enum PolicyStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+  UNDER_REVIEW
+}
+
+model Audit {
+  id             String       @id @default(cuid())
+  title          String
+  type           AuditType    @default(INTERNAL)
+  status         AuditStatus  @default(PLANNED)
+  scope          String?
+  findings       String?
+  recommendations String?
+  startDate      DateTime?
+  endDate        DateTime?
+  periodStart    DateTime?
+  periodEnd      DateTime?
+  auditor        String?
+  reportUrl      String?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([type])
+}
+
+enum AuditType {
+  INTERNAL
+  EXTERNAL
+  REGULATORY
+  THIRD_PARTY
+}
+
+enum AuditStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
 }

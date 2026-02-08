@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/logger";
 import { processRiskAssessment } from "@/lib/risk-engine";
 import { Severity, VulnSource, VulnStatus, ScanStatus } from "@prisma/client";
+import { TenableService } from "./scanners/tenable";
 
 interface FoundVulnerability {
     title: string;
@@ -15,39 +16,28 @@ interface FoundVulnerability {
     cisaKev?: boolean;
 }
 
+// Removed runAIScan as requested. AI is only used for detailing results, not for scanning.
+
 /**
- * Uses OpenRouter LLM to "scan" an asset and identify potential vulnerabilities.
+ * Runs a Tenable scan and uses AI to provide deep insights for each finding.
  */
-export async function runAIScan(assetId: string, apiKey?: string, model: string = "google/gemini-2.0-flash-001") {
-    const finalApiKey = apiKey || process.env.OPENROUTER_API_KEY;
+export async function runTenableScan(assetId: string, scannerId: string) {
+    const asset = await prisma.asset.findUnique({ where: { id: assetId } });
+    if (!asset) throw new Error("Asset not found");
 
-    if (!finalApiKey) {
-        throw new Error("OpenRouter API Key not provided and not found in environment.");
-    }
+    const scannerConfig = await prisma.scannerConfig.findUnique({ where: { id: scannerId } });
+    if (!scannerConfig || !scannerConfig.apiKey) throw new Error("Scanner config or API key missing");
 
-    const asset = await prisma.asset.findUnique({
-        where: { id: assetId },
-    });
-
-    if (!asset) {
-        throw new Error("Asset not found");
-    }
-
-    // 1. Create a Scan Result record
-    const scanner = await prisma.scannerConfig.findFirst({
-        where: { type: "API", name: "AI AI-Scanner" }
-    }) || await prisma.scannerConfig.create({
-        data: {
-            name: "AI AI-Scanner",
-            type: "API",
-            isActive: true,
-        }
-    });
+    // In Tenable, the apiKey is usually accessKey:secretKey
+    const apiKeyParts = scannerConfig.apiKey.split(":");
+    const accessKey = apiKeyParts[0];
+    const secretKey = apiKeyParts[1] || "";
+    const tenable = new TenableService(accessKey, secretKey);
 
     const scanRecord = await prisma.scanResult.create({
         data: {
-            scanId: `SCN-${Date.now()}`,
-            scannerId: scanner.id,
+            scanId: `TEN-${Date.now()}`,
+            scannerId: scannerId,
             status: "RUNNING",
             startTime: new Date(),
             totalHosts: 1,
@@ -55,172 +45,112 @@ export async function runAIScan(assetId: string, apiKey?: string, model: string 
     });
 
     try {
-        const prompt = `
-        You are an advanced Vulnerability Scanner. Perform a comprehensive AI-based scan on the following asset.
-        
-        ASSET DETAILS:
-        - Name: ${asset.name}
-        - Type: ${asset.type}
-        - IP Address: ${asset.ipAddress || "Unknown"}
-        - Hostname: ${asset.hostname || "Unknown"}
-        - OS: ${asset.operatingSystem || "Unknown"}
-        - Environment: ${asset.environment}
-        - Criticality: ${asset.criticality}
-        
-        Predict potential vulnerabilities for this asset based on its characteristics, common security flaws in such technologies, and standard threat landscapes.
-        
-        Return the findings as a JSON object with an array of vulnerabilities.
-        For each vulnerability, include:
-        - title: Short descriptive name
-        - description: Detailed description of what the vulnerability is and how it affects this specific asset
-        - severity: CRITICAL, HIGH, MEDIUM, LOW, or INFORMATIONAL
-        - cveId: (Optional) Mention a related real-world CVE if highly relevant
-        - cvssScore: (Optional) Estimated CVSS v3 score (0.0 to 10.0)
-        - solution: Recommended remediation steps
-        - isExploited: (Boolean) True if there is evidence of active exploitation in the wild
-        - cisaKev: (Boolean) True if this is likely a CISA Known Exploited Vulnerability
-        
-        Format your response ONLY as valid JSON like this:
-        {
-            "vulnerabilities": [
-                {
-                    "title": "...",
-                    "description": "...",
-                    "severity": "...",
-                    "cveId": "...",
-                    "cvssScore": 8.5,
-                    "solution": "...",
-                    "isExploited": false,
-                    "cisaKev": false
-                }
-            ]
-        }
-        `;
+        // 1. Fetch raw findings from Tenable (NO AI FOR SCANNING)
+        const tenableFindings = await tenable.getVulnerabilities();
 
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${finalApiKey}`,
-                "HTTP-Referer": `https://secyourflow.com`,
-                "X-Title": `SecYourFlow`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                "model": model,
-                "messages": [
-                    { "role": "system", "content": "You are a professional cybersecurity scanner. You analyze assets and report vulnerabilities in structured JSON format." },
-                    { "role": "user", "content": prompt }
-                ],
-                "response_format": { "type": "json_object" }
-            })
-        });
-
-        if (!response.ok) {
-            const errData = await response.json();
-            throw new Error(`OpenRouter API error: ${JSON.stringify(errData)}`);
-        }
-
-        const data = await response.json();
-        const content = data.choices[0].message.content;
-        const result = JSON.parse(content);
-        const findings: FoundVulnerability[] = result.vulnerabilities || [];
-
-        // 2. Process Findings
         const org = await prisma.organization.findFirst();
         if (!org) throw new Error("No organization found");
 
-        for (const finding of findings) {
-            // Check if vulnerability already exists (simplified check)
-            let vulnerability = await prisma.vulnerability.findFirst({
-                where: {
+        for (const finding of tenableFindings) {
+            // 2. Use AI for giving details of the result (AS REQUESTED)
+            const aiDetails = await getAIDetailsForResult(finding, asset);
+
+            const vulnerability = await prisma.vulnerability.upsert({
+                where: { id: `TEN-${finding.id}` }, // Using stable ID
+                create: {
+                    id: `TEN-${finding.id}`,
                     title: finding.title,
-                    organizationId: org.id
+                    description: aiDetails.description || finding.description,
+                    severity: finding.severity,
+                    cvssScore: finding.cvssScore,
+                    cveId: finding.cveId,
+                    solution: aiDetails.remediation || "Follow Tenable recommendations",
+                    source: "TENABLE" as any,
+                    status: "OPEN",
+                    organizationId: org.id,
+                    metadata: { ai_enhanced: true, original_description: finding.description },
+                    assets: {
+                        create: {
+                            assetId: asset.id,
+                            status: "OPEN"
+                        }
+                    }
+                },
+                update: {
+                    lastSeen: new Date(),
+                    description: aiDetails.description || finding.description,
+                    solution: aiDetails.remediation || "Follow Tenable recommendations",
                 }
             });
 
-            if (!vulnerability) {
-                vulnerability = await prisma.vulnerability.create({
-                    data: {
-                        title: finding.title,
-                        description: finding.description,
-                        severity: finding.severity as Severity,
-                        cveId: finding.cveId,
-                        cvssScore: finding.cvssScore,
-                        solution: finding.solution,
-                        isExploited: finding.isExploited || false,
-                        cisaKev: finding.cisaKev || false,
-                        source: "API",
-                        status: "OPEN",
-                        organizationId: org.id,
-                        assets: {
-                            create: {
-                                assetId: asset.id,
-                                status: "OPEN"
-                            }
-                        }
-                    }
-                });
-            } else {
-                // Link existing vuln to this asset if not already linked
-                await prisma.assetVulnerability.upsert({
-                    where: {
-                        assetId_vulnerabilityId: {
-                            assetId: asset.id,
-                            vulnerabilityId: vulnerability.id
-                        }
-                    },
-                    create: {
-                        assetId: asset.id,
-                        vulnerabilityId: vulnerability.id,
-                        status: "OPEN"
-                    },
-                    update: {
-                        lastSeen: new Date()
-                    }
-                });
-            }
-
-            // 3. Trigger Risk Assessment for each finding
-            processRiskAssessment(vulnerability.id, asset.id, org.id).catch(err =>
-                console.error(`[ScannerEngine] Risk Assessment failed for ${vulnerability!.id}:`, err)
-            );
+            // 3. Trigger Risk Assessment (which uses AI for control recommendations)
+            processRiskAssessment(vulnerability.id, asset.id, org.id).catch(console.error);
         }
 
-        // 4. Update Scan Record
         await prisma.scanResult.update({
             where: { id: scanRecord.id },
             data: {
                 status: "COMPLETED",
                 endTime: new Date(),
-                totalVulns: findings.length,
-                rawData: result
+                totalVulns: tenableFindings.length,
+                rawData: { findings: tenableFindings } as any
             }
         });
 
-        await logActivity(
-            "SCAN_COMPLETED",
-            "Asset",
-            asset.id,
-            null,
-            { scanId: scanRecord.id, vulnsFound: findings.length },
-            `AI Scan completed for ${asset.name}. ${findings.length} vulnerabilities found.`
-        );
+        return { scanId: scanRecord.id, vulnsFound: tenableFindings.length };
 
-        return {
-            scanId: scanRecord.id,
-            vulnerabilitiesFound: findings.length,
-            findings
-        };
-
-    } catch (error: any) {
-        console.error("[ScannerEngine] Scan failed:", error);
+    } catch (error) {
         await prisma.scanResult.update({
             where: { id: scanRecord.id },
-            data: {
-                status: "FAILED",
-                endTime: new Date(),
-            }
+            data: { status: "FAILED", endTime: new Date() }
         });
         throw error;
+    }
+}
+
+/**
+ * Uses AI to provide deep insights and context for a specific scan finding.
+ */
+async function getAIDetailsForResult(finding: any, asset: any) {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) return { description: finding.description, remediation: "" };
+
+    const prompt = `
+    Analyze this security finding from Tenable for this specific asset.
+    Asset: ${asset.name} (${asset.type}, ${asset.operatingSystem || 'Unknown OS'})
+    Finding: ${finding.title}
+    Original Description: ${finding.description}
+    CVE: ${finding.cveId || 'N/A'}
+
+    Please provide:
+    1. An enhanced, business-centric description of the risk.
+    2. Specific remediation steps tailored for a ${asset.operatingSystem || 'this type of'} system.
+    3. Potential impact if exploited on a ${asset.environment} environment.
+
+    Format as JSON:
+    {
+        "description": "...",
+        "remediation": "...",
+        "impact_analysis": "..."
+    }
+    `;
+
+    try {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${apiKey}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                "model": "google/gemini-2.0-flash-001",
+                "messages": [{ "role": "user", "content": prompt }],
+                "response_format": { "type": "json_object" }
+            })
+        });
+        const data = await response.json();
+        return JSON.parse(data.choices[0].message.content);
+    } catch (e) {
+        return { description: finding.description, remediation: "" };
     }
 }

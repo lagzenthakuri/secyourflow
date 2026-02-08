@@ -21,6 +21,10 @@ export function AddControlModal({ isOpen, onClose, onSuccess, frameworkId }: Add
         description: "",
         category: "",
         objective: "",
+        nistCsfFunction: "GOVERN",
+        controlType: "PREVENTIVE",
+        frequency: "ANNUAL",
+        ownerRole: "",
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -51,6 +55,10 @@ export function AddControlModal({ isOpen, onClose, onSuccess, frameworkId }: Add
                 description: "",
                 category: "",
                 objective: "",
+                nistCsfFunction: "GOVERN",
+                controlType: "PREVENTIVE",
+                frequency: "ANNUAL",
+                ownerRole: "",
             });
         } catch (err: any) {
             setError(err.message);
@@ -137,6 +145,71 @@ export function AddControlModal({ isOpen, onClose, onSuccess, frameworkId }: Add
                             placeholder="What this control aims to achieve..."
                             value={formData.objective}
                             onChange={(e) => setFormData({ ...formData, objective: e.target.value })}
+                        />
+                    </div>
+
+                    <div className="md:col-span-1">
+                        <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                            NIST CSF Function
+                        </label>
+                        <select
+                            className="input w-full"
+                            value={formData.nistCsfFunction}
+                            onChange={(e) => setFormData({ ...formData, nistCsfFunction: e.target.value })}
+                        >
+                            <option value="GOVERN">GOVERN</option>
+                            <option value="IDENTIFY">IDENTIFY</option>
+                            <option value="PROTECT">PROTECT</option>
+                            <option value="DETECT">DETECT</option>
+                            <option value="RESPOND">RESPOND</option>
+                            <option value="RECOVER">RECOVER</option>
+                        </select>
+                    </div>
+
+                    <div className="md:col-span-1">
+                        <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                            Control Type
+                        </label>
+                        <select
+                            className="input w-full"
+                            value={formData.controlType}
+                            onChange={(e) => setFormData({ ...formData, controlType: e.target.value })}
+                        >
+                            <option value="PREVENTIVE">PREVENTIVE</option>
+                            <option value="DETECTIVE">DETECTIVE</option>
+                            <option value="CORRECTIVE">CORRECTIVE</option>
+                        </select>
+                    </div>
+
+                    <div className="md:col-span-1">
+                        <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                            Frequency
+                        </label>
+                        <select
+                            className="input w-full"
+                            value={formData.frequency}
+                            onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
+                        >
+                            <option value="ANNUAL">ANNUAL</option>
+                            <option value="SEMI_ANNUAL">SEMI-ANNUAL</option>
+                            <option value="QUARTERLY">QUARTERLY</option>
+                            <option value="MONTHLY">MONTHLY</option>
+                            <option value="WEEKLY">WEEKLY</option>
+                            <option value="DAILY">DAILY</option>
+                            <option value="CONTINUOUS">CONTINUOUS</option>
+                        </select>
+                    </div>
+
+                    <div className="md:col-span-1">
+                        <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                            Owner Role
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="e.g., CISO"
+                            className="input w-full"
+                            value={formData.ownerRole}
+                            onChange={(e) => setFormData({ ...formData, ownerRole: e.target.value })}
                         />
                     </div>
                 </div>
