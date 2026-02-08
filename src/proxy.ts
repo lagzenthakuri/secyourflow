@@ -15,5 +15,6 @@ export const config = {
         "/settings/:path*",
         "/users/:path*",
         "/scanners/:path*",
+        "/cves/:path*",
     ],
 };

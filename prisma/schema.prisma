@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -516,11 +517,11 @@ model Cve {
 
   @@index([cveId])
   @@index([cveId], map: "Cve_cveId_pattern_idx")
-  @@index([cveId(ops: raw("gin_trgm_ops"))], map: "Cve_cveId_trgm_idx", type: Gin)
+  // @@index([cveId(ops: raw("gin_trgm_ops"))], map: "Cve_cveId_trgm_idx", type: Gin)  // Requires pg_trgm extension
   @@index([epssScore])
   @@index([isKev, severity])
   @@index([publishedAt(sort: Desc)])
-  @@index([searchVector], type: Gin)
+  // @@index([searchVector], type: Gin)  // Requires tsvector support
   @@index([severity, publishedAt])
   @@index([status, lastModifiedAt])
   @@index([status, publishedAt])

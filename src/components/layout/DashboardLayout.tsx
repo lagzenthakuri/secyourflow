@@ -21,6 +21,7 @@ import {
     LogOut,
     User,
     ClipboardList,
+    Database,
 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ const navigation = [
     { name: "Compliance", href: "/compliance", icon: FileCheck, roles: ["MAIN_OFFICER", "IT_OFFICER", "ANALYST"] },
     { name: "Reports", href: "/reports", icon: BarChart3, roles: ["MAIN_OFFICER", "ANALYST"] },
     { name: "Scanners", href: "/scanners", icon: Scan, roles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"] },
+    { name: "CVE Search", href: "/cves", icon: Database, roles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"] },
 ];
 
 const secondaryNav = [
@@ -115,7 +117,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                         </span>
                     </div>
                     {filteredNav.map((item) => {
-                        const isActive = pathname === item.href;
+                        const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
                         return (
                             <Link
                                 key={item.href}
@@ -137,7 +139,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                         </span>
                     </div>
                     {filteredSecondaryNav.map((item) => {
-                        const isActive = pathname === item.href;
+                        const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
                         return (
                             <Link
                                 key={item.href}
@@ -246,7 +248,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
     };
 
     return (
-        <header className="h-16 bg-[var(--bg-secondary)] border-b border-[var(--border-color)] flex items-center justify-between px-6 sticky top-0 z-20">
+        <header className="h-16 bg-[var(--bg-secondary)]/80 backdrop-blur-md border-b border-[var(--border-color)]/50 flex items-center justify-between px-6 sticky top-0 z-20">
             {/* Left Section: Menu Toggle & Search */}
             <div className="flex items-center gap-4 flex-1 max-w-xl">
                 <button
