@@ -57,22 +57,6 @@ export async function DELETE(
             );
         }
 
-        // Handle non-cascading relations manually
-        console.log(`Deleting related comments for ${id}`);
-        await prisma.comment.deleteMany({
-            where: {
-                OR: [
-                    { vulnerabilityId: id },
-                    { AND: [{ entityType: 'vulnerability' }, { entityId: id }] }
-                ]
-            }
-        });
-
-        console.log(`Deleting related asset vulnerabilities for ${id}`);
-        await prisma.assetVulnerability.deleteMany({
-            where: { vulnerabilityId: id }
-        });
-
         console.log(`Deleting vulnerability record: ${id}`);
         await prisma.vulnerability.delete({
             where: { id },

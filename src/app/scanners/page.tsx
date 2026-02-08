@@ -47,6 +47,7 @@ export default function ScannersPage() {
     const [isScanning, setIsScanning] = useState(false);
     const [scanConfig, setScanConfig] = useState({
         assetId: "",
+        scannerId: "",
         apiKey: "",
         model: "google/gemini-2.0-flash-001"
     });
@@ -148,7 +149,7 @@ export default function ScannersPage() {
                 <Modal
                     isOpen={isAddModalOpen}
                     onClose={() => setIsAddModalOpen(false)}
-                    title="Configure AI Security Scanner"
+                    title="Run Security Scan"
                     maxWidth="md"
                     footer={
                         <div className="flex justify-end gap-3">
@@ -200,23 +201,26 @@ export default function ScannersPage() {
 
                         <div>
                             <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-                                AI Model (OpenRouter)
+                                Scanner / Agent
                             </label>
                             <select
                                 className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                                value={scanConfig.model}
-                                onChange={(e) => setScanConfig({ ...scanConfig, model: e.target.value })}
+                                value={scanConfig.scannerId}
+                                onChange={(e) => setScanConfig({ ...scanConfig, scannerId: e.target.value })}
                             >
-                                <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash (Fast)</option>
-                                <option value="anthropic/claude-3-sonnet">Claude 3.5 Sonnet</option>
-                                <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
-                                <option value="deepseek/deepseek-chat">DeepSeek Chat</option>
+                                <option value="">Select a scanner...</option>
+                                {scanners.map((scanner) => (
+                                    <option key={scanner.id} value={scanner.id}>
+                                        {scanner.name} ({scanner.type})
+                                    </option>
+                                ))}
                             </select>
                         </div>
 
+
                         <div>
                             <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-                                Custom OpenRouter API Key (Optional)
+                                AI Insight Engine (OpenRouter)
                             </label>
                             <input
                                 type="password"
@@ -234,7 +238,7 @@ export default function ScannersPage() {
                             <div className="flex gap-3">
                                 <AlertTriangle className="text-blue-400 shrink-0" size={18} />
                                 <div className="text-xs text-blue-100/80 leading-relaxed">
-                                    The AI scanner will analyze the asset's metadata and configuration to predict vulnerabilities. Findings will be automatically sent to the vulnerabilities pipeline for risk assessment.
+                                    The Tenable API will be used to perform the scan and retrieve findings. AI will only be used to provide deep insights, remediation steps, and business context for the results.
                                 </div>
                             </div>
                         </div>
@@ -406,7 +410,7 @@ export default function ScannersPage() {
 
                             <Card title="Supported Scanners" subtitle="Click to add">
                                 <div className="grid grid-cols-2 gap-2">
-                                    {["Nessus", "OpenVAS", "Trivy", "Qualys", "Rapid7", "CrowdStrike", "Nmap", "Custom"].map(
+                                    {["Tenable", "Nessus", "OpenVAS", "Trivy", "Qualys", "Rapid7", "CrowdStrike", "Nmap"].map(
                                         (scanner) => (
                                             <button
                                                 key={scanner}

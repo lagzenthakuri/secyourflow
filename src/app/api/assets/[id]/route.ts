@@ -58,15 +58,40 @@ export async function DELETE(
     try {
         const { id } = await params;
 
-        // Prisma relation for AssetVulnerability should handle cascade if configured,
-        // but we'll manually ensure links are removed if needed.
-        // In the schema, assetId in AssetVulnerability has onDelete: Cascade.
-        
+        // 1. Find vulnerabilities currently linked to this asset
+        const linkedVulns = await prisma.assetVulnerability.findMany({
+            where: { assetId: id },
+            select: { vulnerabilityId: true }
+        });
+
+        const vulnIds = linkedVulns.map(v => v.vulnerabilityId);
+
+        // 2. Delete the asset 
+        // This will cascade and delete AssetVulnerability, RiskRegister, and AssetComplianceControl entries
         await prisma.asset.delete({
             where: { id },
         });
 
-        return NextResponse.json({ message: "Asset deleted successfully" });
+        // 3. Cleanup orphaned vulnerabilities
+        // We only delete vulnerabilities that were linked to this asset AND have no other asset links remaining
+        if (vulnIds.length > 0) {
+            const stillLinkedVulns = await prisma.assetVulnerability.findMany({
+                where: { vulnerabilityId: { in: vulnIds } },
+                select: { vulnerabilityId: true }
+            });
+
+            const stillLinkedIds = new Set(stillLinkedVulns.map(v => v.vulnerabilityId));
+            const orphanIds = vulnIds.filter(vid => !stillLinkedIds.has(vid));
+
+            if (orphanIds.length > 0) {
+                console.log(`Cleaning up ${orphanIds.length} orphaned vulnerabilities`);
+                await prisma.vulnerability.deleteMany({
+                    where: { id: { in: orphanIds } }
+                });
+            }
+        }
+
+        return NextResponse.json({ message: "Asset and associated data deleted successfully" });
     } catch (error: any) {
         console.error("Delete Asset Error:", error);
         return NextResponse.json({ error: error.message }, { status: 400 });
