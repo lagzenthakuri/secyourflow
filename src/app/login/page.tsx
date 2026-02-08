@@ -10,15 +10,33 @@ export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [authError, setAuthError] = useState<string | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
+        setAuthError(null);
 
-        // For now, allow login to redirect to dashboard
-        // In a real app, you'd use signIn("credentials", { email, password })
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        window.location.href = "/dashboard";
+        try {
+            const result = await signIn("credentials", {
+                email,
+                password,
+                redirect: false,
+                callbackUrl: "/dashboard",
+            });
+
+            if (!result || result.error) {
+                setAuthError("Invalid email or password.");
+                return;
+            }
+
+            window.location.href = result.url || "/dashboard";
+        } catch (error) {
+            console.error("Login failed:", error);
+            setAuthError("Unable to sign in right now.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleOAuthSignIn = (provider: string) => {
@@ -44,6 +62,12 @@ export default function LoginPage() {
                 {/* Login Form */}
                 <div className="card p-8">
                     <form onSubmit={handleSubmit} className="space-y-6">
+                        {authError && (
+                            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
+                                {authError}
+                            </div>
+                        )}
+
                         {/* Email */}
                         <div>
                             <label className="block text-sm font-medium text-white mb-2">
