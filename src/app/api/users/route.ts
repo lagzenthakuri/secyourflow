@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logActivity } from "@/lib/logger";
+import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
 
 export async function GET(request: NextRequest) {
     try {
         const session = await auth();
         if (!session || !session.user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        if (!isTwoFactorSatisfied(session)) {
+            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
         }
 
         // Ideally, we'd filter by organizationId if multi-tenant
@@ -49,6 +53,9 @@ export async function PUT(request: NextRequest) {
         // Check if user is authenticated and is MAIN_OFFICER
         if (!session || !session.user || session.user.role !== 'MAIN_OFFICER') {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        if (!isTwoFactorSatisfied(session)) {
+            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
         }
 
         const body = await request.json();

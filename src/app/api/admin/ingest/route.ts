@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { IngestionOrchestrator } from "@/modules/cve-ingestion/orchestrator";
 import { logger } from "@/modules/cve-ingestion/utils/logger";
+import { auth } from "@/lib/auth";
+import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const maxDuration = 300; // 5 minutes
 
-// Simple auth check - in production, use proper authentication
-function isAuthorized(request: Request): boolean {
+function isAuthorizedByAdminToken(request: Request): boolean {
   const authHeader = request.headers.get("authorization");
   const adminToken = process.env.ADMIN_API_TOKEN;
 
@@ -20,8 +21,19 @@ function isAuthorized(request: Request): boolean {
 }
 
 export async function POST(request: Request) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const tokenAuthorized = isAuthorizedByAdminToken(request);
+  if (!tokenAuthorized) {
+    const session = await auth();
+    const sessionAuthorized =
+      session?.user?.role === "MAIN_OFFICER" && isTwoFactorSatisfied(session);
+
+    if (!sessionAuthorized) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
+  if (!tokenAuthorized && process.env.ADMIN_API_TOKEN) {
+    logger.info("Admin ingest authorized via NextAuth session (MAIN_OFFICER + 2FA).");
   }
 
   try {

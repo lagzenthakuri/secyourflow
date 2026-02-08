@@ -2,6 +2,24 @@ import type { NextAuthConfig } from "next-auth";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
 
+const PROTECTED_PREFIXES = [
+    "/dashboard",
+    "/vulnerabilities",
+    "/assets",
+    "/threats",
+    "/compliance",
+    "/reports",
+    "/settings",
+    "/users",
+    "/scanners",
+    "/risk-register",
+    "/cves",
+];
+
+function startsWithAny(pathname: string, prefixes: string[]): boolean {
+    return prefixes.some((prefix) => pathname.startsWith(prefix));
+}
+
 export const authConfig = {
     providers: [
         GitHub({
@@ -19,30 +37,45 @@ export const authConfig = {
     },
     callbacks: {
         authorized({ auth, request: { nextUrl } }) {
-            const isLoggedIn = !!auth?.user;
-            const isOnDashboard = nextUrl.pathname.startsWith("/dashboard") ||
-                nextUrl.pathname.startsWith("/vulnerabilities") ||
-                nextUrl.pathname.startsWith("/assets") ||
-                nextUrl.pathname.startsWith("/threats") ||
-                nextUrl.pathname.startsWith("/compliance") ||
-                nextUrl.pathname.startsWith("/reports") ||
-                nextUrl.pathname.startsWith("/settings") ||
-                nextUrl.pathname.startsWith("/users") ||
-                nextUrl.pathname.startsWith("/scanners");
-            const isOnLoginPage = nextUrl.pathname.startsWith("/login");
+            const pathname = nextUrl.pathname;
+            const isLoggedIn = Boolean(auth?.user);
+            const isProtectedRoute = startsWithAny(pathname, PROTECTED_PREFIXES);
+            const isLoginPage = pathname.startsWith("/login");
+            const isTwoFactorPage = pathname.startsWith("/auth/2fa");
 
-            if (isOnDashboard) {
-                if (isLoggedIn) return true;
-                return false; // Redirect unauthenticated users to login page
-            } else if (isOnLoginPage) {
-                if (isLoggedIn) {
-                    return Response.redirect(new URL("/dashboard", nextUrl));
+            if (isProtectedRoute && !isLoggedIn) {
+                return false;
+            }
+
+            if (!isLoggedIn) {
+                return true;
+            }
+
+            const user = auth?.user as { totpEnabled?: boolean } | undefined;
+            const twoFactorEnabled = Boolean(user?.totpEnabled);
+            const twoFactorVerified = (auth as { twoFactorVerified?: boolean } | null)?.twoFactorVerified === true;
+
+            if (twoFactorEnabled && !twoFactorVerified) {
+                if (isTwoFactorPage) {
+                    return true;
+                }
+
+                if (isProtectedRoute || isLoginPage) {
+                    return Response.redirect(new URL("/auth/2fa", nextUrl));
                 }
             }
+
+            if (isTwoFactorPage) {
+                return Response.redirect(new URL("/dashboard", nextUrl));
+            }
+
+            if (isLoginPage) {
+                return Response.redirect(new URL("/dashboard", nextUrl));
+            }
+
             return true;
         },
         async redirect({ url, baseUrl }) {
-            // After sign in, redirect to dashboard
             if (url.startsWith("/")) return `${baseUrl}${url}`;
             if (new URL(url).origin === baseUrl) return url;
             return `${baseUrl}/dashboard`;

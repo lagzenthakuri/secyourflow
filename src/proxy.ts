@@ -6,6 +6,7 @@ export default NextAuth(authConfig).auth;
 export const config = {
     matcher: [
         "/login",
+        "/auth/2fa",
         "/dashboard/:path*",
         "/vulnerabilities/:path*",
         "/assets/:path*",
@@ -15,6 +16,7 @@ export const config = {
         "/settings/:path*",
         "/users/:path*",
         "/scanners/:path*",
+        "/risk-register/:path*",
         "/cves/:path*",
     ],
 };
