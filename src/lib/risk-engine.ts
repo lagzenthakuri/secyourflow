@@ -139,6 +139,16 @@ export async function processRiskAssessment(
 ) {
     let riskEntryId: string | null = null;
     try {
+        // 0. Check if AI Risk Assessment is enabled
+        const orgSettings = await prisma.setting.findFirst({
+            where: { organizationId: organizationId }
+        });
+
+        if (orgSettings && orgSettings.aiRiskAssessmentEnabled === false) {
+            console.log(`[RiskEngine] AI Risk Assessment is disabled by organization policy.`);
+            return;
+        }
+
         console.log(`[RiskEngine] Starting specific assessment flow for Vuln ${vulnerabilityId}`);
 
         // 1. Fetch Asset + Context

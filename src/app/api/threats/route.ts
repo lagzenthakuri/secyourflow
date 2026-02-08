@@ -61,3 +61,22 @@ export async function GET(request: NextRequest) {
         );
     }
 }
+
+export async function DELETE(request: NextRequest) {
+    try {
+        const deleted = await prisma.threatIndicator.deleteMany({
+            where: { source: "AI_RISK_ENGINE" }
+        });
+
+        return NextResponse.json({
+            message: `Successfully deleted ${deleted.count} AI threat indicators`,
+            count: deleted.count
+        });
+    } catch (error) {
+        console.error("Threats DELETE Error:", error);
+        return NextResponse.json(
+            { error: "Failed to delete threats" },
+            { status: 500 }
+        );
+    }
+}

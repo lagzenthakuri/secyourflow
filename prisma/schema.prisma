@@ -82,13 +82,13 @@ model Organization {
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   assets               Asset[]
+  audits               Audit[]
   complianceFrameworks ComplianceFramework[]
+  policies             Policy[]
   reports              Report[]
   riskEntries          RiskRegister[]
   settings             Setting?
   users                User[]
-  audits               Audit[]
-  policies             Policy[]
   vulnerabilities      Vulnerability[]
 
   @@index([name])
@@ -229,17 +229,14 @@ model ComplianceControl {
   createdAt            DateTime                         @default(now())
   updatedAt            DateTime                         @updatedAt
   frameworkId          String
-  
-  // New fields for JBBL compliance requirements
-  maturityLevel        Int                              @default(0) // 0-5 scale: 0=Non-existent, 1=Ad Hoc, 2=Repeatable, 3=Defined, 4=Managed, 5=Optimized
-  controlType          ControlType                      @default(PREVENTIVE) // Preventive, Detective, Corrective
-  frequency            ControlFrequency                 @default(ANNUAL) // How often to assess
-  ownerRole            String?                          // e.g., "CISO", "IT Security", "SOC Team", "Board"
-  riskCategory         String?                          // e.g., "Governance", "Protection", "Detection"
-  nistCsfFunction      NistCsfFunction?                 // Govern, Identify, Protect, Detect, Respond, Recover
-  mappedControls       Json?                            // Cross-framework mapping: { "ISO27001": ["A.5.1"], "NRB": ["GOV_01"], "COBIT": ["EDM01"] }
-  evidenceRequired     String[]                         // List of required evidence types
-  
+  controlType          ControlType                      @default(PREVENTIVE)
+  evidenceRequired     String[]
+  frequency            ControlFrequency                 @default(ANNUAL)
+  mappedControls       Json?
+  maturityLevel        Int                              @default(0)
+  nistCsfFunction      NistCsfFunction?
+  ownerRole            String?
+  riskCategory         String?
   assets               AssetComplianceControl[]
   framework            ComplianceFramework              @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
   vulnerabilities      VulnerabilityComplianceControl[]
@@ -425,6 +422,7 @@ model Setting {
   require2FA       Boolean      @default(false)
   sessionTimeout   Int          @default(30)
   passwordPolicy   String       @default("STRONG")
+  aiRiskAssessmentEnabled Boolean @default(true)
   updatedAt        DateTime     @updatedAt
   organization     Organization @relation(fields: [organizationId], references: [id])
 }
@@ -474,20 +472,17 @@ model RiskRegister {
   likelihoodScore  Float
   status           String        @default("ACTIVE")
   aiAnalysis       Json
-  
-  // User requested fields
   treatmentOption  String?
   responsibleParty String?
-  currentControls  String?
-  riskCategory2    String?
-  actionPlan       String?
-  selectedControls String?
-  remarks          String?
-  isResolved       Boolean       @default(false)
-  
   confidence       Float?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
+  actionPlan       String?
+  currentControls  String?
+  isResolved       Boolean       @default(false)
+  remarks          String?
+  riskCategory2    String?
+  selectedControls String?
   asset            Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
   organization     Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   vulnerability    Vulnerability @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
@@ -613,6 +608,50 @@ model KevEntry {
   @@index([dueDate])
 }
 
+model Policy {
+  id             String       @id @default(cuid())
+  title          String
+  description    String?
+  version        String       @default("1.0")
+  status         PolicyStatus @default(DRAFT)
+  type           String?
+  url            String?
+  owner          String?
+  lastReview     DateTime?
+  nextReview     DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+model Audit {
+  id              String       @id @default(cuid())
+  title           String
+  type            AuditType    @default(INTERNAL)
+  status          AuditStatus  @default(PLANNED)
+  scope           String?
+  findings        String?
+  recommendations String?
+  startDate       DateTime?
+  endDate         DateTime?
+  periodStart     DateTime?
+  periodEnd       DateTime?
+  auditor         String?
+  reportUrl       String?
+  organizationId  String
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([type])
+}
+
 enum Role {
   IT_OFFICER
   PENTESTER
@@ -695,9 +734,9 @@ enum VulnSource {
   RAPID7
   CROWDSTRIKE
   MANUAL
-  TENABLE
   API
   OTHER
+  TENABLE
 }
 
 enum ExploitMaturity {
@@ -759,7 +798,6 @@ enum CveStatus {
   RESERVED
 }
 
-// New enums for JBBL compliance requirements
 enum ControlType {
   PREVENTIVE
   DETECTIVE
@@ -785,55 +823,11 @@ enum NistCsfFunction {
   RECOVER
 }
 
-model Policy {
-  id             String       @id @default(cuid())
-  title          String
-  description    String?
-  version        String       @default("1.0")
-  status         PolicyStatus @default(DRAFT)
-  type           String?      // e.g., "Information Security", "Access Control"
-  url            String?      // Link to document
-  owner          String?
-  lastReview     DateTime?
-  nextReview     DateTime?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@index([organizationId])
-  @@index([status])
-}
-
 enum PolicyStatus {
   DRAFT
   ACTIVE
   ARCHIVED
   UNDER_REVIEW
-}
-
-model Audit {
-  id             String       @id @default(cuid())
-  title          String
-  type           AuditType    @default(INTERNAL)
-  status         AuditStatus  @default(PLANNED)
-  scope          String?
-  findings       String?
-  recommendations String?
-  startDate      DateTime?
-  endDate        DateTime?
-  periodStart    DateTime?
-  periodEnd      DateTime?
-  auditor        String?
-  reportUrl      String?
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  @@index([organizationId])
-  @@index([status])
-  @@index([type])
 }
 
 enum AuditType {
