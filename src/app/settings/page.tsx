@@ -134,7 +134,7 @@ export default function SettingsPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(settings),
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 setSettings({ ...settings, ...data });
@@ -754,6 +754,26 @@ function SecuritySection({ settings, updateSettings, handleSave, isSaving, isMai
                 <p className="text-sm text-[var(--text-muted)] p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
                     Bank-grade defaults: require2FA=true, sessionTimeout=15–30 min, passwordPolicy=STRONG
                 </p>
+
+                <RestrictedField isMainOfficer={isMainOfficer}>
+                    <div className="p-4 rounded-lg bg-[var(--bg-tertiary)]">
+                        <div className="flex items-center justify-between mb-3">
+                            <div>
+                                <h4 className="text-sm font-medium text-white">
+                                    AI Risk Intelligence
+                                </h4>
+                                <p className="text-xs text-[var(--text-muted)]">
+                                    Automatically analyze new vulnerabilities with AI
+                                </p>
+                            </div>
+                            <Toggle
+                                checked={settings?.aiRiskAssessmentEnabled !== false}
+                                onChange={(checked) => updateSettings({ aiRiskAssessmentEnabled: checked })}
+                                disabled={!isMainOfficer}
+                            />
+                        </div>
+                    </div>
+                </RestrictedField>
 
                 <RestrictedField isMainOfficer={isMainOfficer}>
                     <div className="p-4 rounded-lg bg-[var(--bg-tertiary)]">
