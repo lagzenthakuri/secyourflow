@@ -114,10 +114,12 @@ export default function Home() {
   const [isVisible, setIsVisible] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const [sectionsVisible, setSectionsVisible] = useState<Record<string, boolean>>({});
-  const currentYear = new Date().getFullYear();
 
   useEffect(() => {
-    setIsVisible(true);
+    // Set visibility after mount to trigger animations
+    const timer = setTimeout(() => setIsVisible(true), 0);
+    
+    const cleanup = () => clearTimeout(timer);
 
     // Parallax scroll effect
     const handleScroll = () => {
@@ -161,6 +163,7 @@ export default function Home() {
     document.addEventListener("click", handleClick);
     
     return () => {
+      cleanup();
       window.removeEventListener("scroll", handleScroll);
       document.removeEventListener("click", handleClick);
       sections.forEach((section) => observer.unobserve(section));

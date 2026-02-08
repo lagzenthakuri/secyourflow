@@ -495,118 +495,207 @@ export default function ThreatsPage() {
                             </div>
                           </div>
 
-                                                    <div className="flex flex-wrap items-center gap-4 text-xs text-[var(--text-muted)]">
-                                                        <div className="flex items-center gap-1">
-                                                            <Target size={12} />
-                                                            <span>
-                                                                <span className="text-white font-medium">{vuln.affectedAssets}</span> assets affected
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex items-center gap-1">
-                                                            <Activity size={12} />
-                                                            <span>
-                                                                Source:{" "}
-                                                                <span className="text-orange-400">{vuln.source}</span>
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <ChevronRight size={18} className="text-[var(--text-muted)] flex-shrink-0" />
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="py-20 text-center">
-                                        <Shield className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4 opacity-20" />
-                                        <p className="text-[var(--text-secondary)]">No actively exploited vulnerabilities detected.</p>
-                                    </div>
-                                )}
+                          <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-slate-400">
+                            <div className="flex items-center gap-1">
+                              <Target size={12} />
+                              <span>
+                                <span className="font-medium text-white">{vuln.affectedAssets}</span> assets affected
+                              </span>
                             </div>
-                        </Card>
+                            <div className="flex items-center gap-1">
+                              <Activity size={12} />
+                              <span>
+                                Source: <span className="text-orange-400">{vuln.source}</span>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <ChevronRight size={18} className="flex-shrink-0 text-slate-400" />
+                      </div>
                     </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="py-20 text-center">
+                <Shield className="mx-auto mb-4 h-12 w-12 opacity-20 text-slate-400" />
+                <p className="text-slate-300">No actively exploited vulnerabilities detected.</p>
+              </div>
+            )}
+          </article>
 
-                    {/* Sidebar */}
-                    <div className="lg:col-span-4 space-y-4">
-                        {/* Live AI Intelligence */}
-                        <Card
-                            title="Live AI Intelligence"
-                            subtitle="Real-time context-aware threats"
-                            action={
-                                indicators.length > 0 && (
-                                    <button
-                                        onClick={async () => {
-                                            if (confirm("Are you sure you want to purge all AI-generated threat indicators?")) {
-                                                await fetch("/api/threats", { method: "DELETE" });
-                                                fetchThreats();
-                                            }
-                                        }}
-                                        className="text-[10px] font-bold text-red-400 hover:text-red-300 transition-colors uppercase tracking-wider"
-                                    >
-                                        Purge
-                                    </button>
-                                )
-                            }
-                        >
-                            <div className="space-y-3">
-                                {indicators.length > 0 ? (
-                                    indicators.map((indicator, idx) => (
-                                        <div key={idx} className="p-3 rounded-lg bg-[var(--bg-tertiary)] border border-white/5 hover:border-blue-500/20 transition-all">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">
-                                                    {indicator.type}
-                                                </span>
-                                                <span className="text-[10px] text-[var(--text-muted)]">
-                                                    {new Date(indicator.firstSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                            </div>
-                                            <p className="text-sm font-medium text-white mb-1">{indicator.value}</p>
-                                            <p className="text-xs text-[var(--text-muted)] line-clamp-2">
-                                                {indicator.description}
-                                            </p>
-                                            <div className="flex items-center gap-2 mt-2">
-                                                <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-[10px] text-blue-400 border border-blue-500/20">
-                                                    Confidence: {indicator.confidence}%
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="text-sm text-[var(--text-muted)] text-center py-10">
-                                        <Activity size={24} className="mx-auto mb-2 opacity-20" />
-                                        <p>No AI-driven threats identified yet.</p>
-                                        <p className="text-[10px] mt-1">Run AI Risk Assessment to generate insights.</p>
-                                    </div>
-                                )}
-                            </div>
-                        </Card>
+          <article className="overflow-hidden rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)]">
+            <header className="border-b border-white/10 p-4">
+              <h2 className="text-lg font-semibold text-white">Threat Intelligence Feeds</h2>
+              <p className="text-sm text-slate-400">Active external threat data sources</p>
+            </header>
 
-                        {/* Recent Threat Updates */}
-                        <Card title="Recent Threat Updates">
-                            <div className="space-y-3">
-                                {kevVulns.slice(0, 4).map((vuln, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="flex items-start gap-3 p-2 rounded-lg hover:bg-[var(--bg-tertiary)] cursor-pointer"
-                                    >
-                                        <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 bg-red-400" />
-                                        <div>
-                                            <p className="text-sm text-[var(--text-secondary)] line-clamp-2">
-                                                New KEV entry: {vuln.cveId} - {vuln.title}
-                                            </p>
-                                            <p className="text-xs text-[var(--text-muted)]">Recently detected</p>
-                                        </div>
-                                    </div>
-                                ))}
-                                {kevVulns.length === 0 && (
-                                    <p className="text-xs text-[var(--text-muted)] text-center py-4">
-                                        No recent threat updates.
-                                    </p>
-                                )}
-                            </div>
-                        </Card>
+            <div className="divide-y divide-white/10">
+              {sortedFeeds.length > 0 ? (
+                sortedFeeds.slice(0, 8).map((feed, index) => (
+                  <div
+                    key={feed.id}
+                    className="p-4 transition-all duration-200 hover:bg-white/[0.03] animate-in fade-in slide-in-from-right-2"
+                    style={{ animationDelay: `${index * 30}ms`, animationFillMode: 'backwards' }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="truncate text-sm font-medium text-white">{feed.name}</h3>
+                          {feed.isActive ? (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/35 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-200">
+                              <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                              Active
+                            </span>
+                          ) : (
+                            <span className="rounded-full border border-slate-400/35 bg-slate-500/10 px-2 py-0.5 text-[11px] text-slate-300">
+                              Inactive
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 text-xs text-slate-400">
+                          Source: {feed.source} • Type: {feed.type}
+                        </p>
+                        {feed.lastSync ? (
+                          <p className="mt-1 text-xs text-slate-500">
+                            Last sync: {getTimeAgo(new Date(feed.lastSync))}
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
+                  </div>
+                ))
+              ) : (
+                <div className="py-20 text-center">
+                  <Activity className="mx-auto mb-4 h-12 w-12 opacity-20 text-slate-400" />
+                  <p className="text-slate-300">No threat intelligence feeds configured.</p>
                 </div>
+              )}
             </div>
-        </DashboardLayout>
-    );
+          </article>
+        </section>
+
+        <section className="overflow-hidden rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)]">
+          <header className="border-b border-white/10 p-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Threat Indicators</h2>
+                <p className="text-sm text-slate-400">
+                  IOCs and threat intelligence from external feeds
+                </p>
+              </div>
+              <div className="text-xs text-slate-500">
+                Showing {filteredIndicators.length} of {indicators.length}
+              </div>
+            </div>
+
+            <div className="mt-3 grid gap-2 md:grid-cols-[1.2fr_0.8fr]">
+              <label className="relative block">
+                <Search
+                  size={14}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 transition-colors duration-200"
+                />
+                <input
+                  type="text"
+                  value={indicatorSearch}
+                  onChange={(event) => setIndicatorSearch(event.target.value)}
+                  placeholder="Search indicators"
+                  className="input h-9 w-full !pl-9 text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30"
+                />
+              </label>
+
+              <div className="relative">
+                <Filter
+                  size={14}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 transition-colors duration-200"
+                />
+                <select
+                  value={indicatorSeverity}
+                  onChange={(event) =>
+                    setIndicatorSeverity(event.target.value as SeverityFilter)
+                  }
+                  className="input h-9 w-full appearance-none !pl-9 text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30"
+                >
+                  {severityOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option === "ALL" ? "All Severities" : option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </header>
+
+          {filteredIndicators.length > 0 ? (
+            <div className="divide-y divide-white/10">
+              {filteredIndicators.slice(0, 20).map((indicator, index) => (
+                <div
+                  key={indicator.id}
+                  className="p-4 transition-all duration-200 hover:bg-white/[0.03] animate-in fade-in slide-in-from-bottom-2"
+                  style={{ animationDelay: `${index * 20}ms`, animationFillMode: 'backwards' }}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full border border-sky-400/35 bg-sky-500/10 px-2 py-0.5 text-[11px] text-sky-200">
+                          {indicator.type}
+                        </span>
+
+                        {indicator.severity ? (
+                          <span
+                            className={cn(
+                              "rounded-full border px-2 py-0.5 text-[11px]",
+                              getSeverityTone(indicator.severity),
+                            )}
+                          >
+                            {indicator.severity}
+                          </span>
+                        ) : null}
+
+                        {indicator.confidence ? (
+                          <span className="text-xs text-slate-400">
+                            Confidence: {indicator.confidence}%
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <p className="mt-2 font-mono text-sm text-white">{indicator.value}</p>
+
+                      {indicator.description ? (
+                        <p className="mt-1 text-sm text-slate-300">{indicator.description}</p>
+                      ) : null}
+
+                      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                        <span>First seen: {getTimeAgo(new Date(indicator.firstSeen))}</span>
+                        <span>Last seen: {getTimeAgo(new Date(indicator.lastSeen))}</span>
+                        {indicator.source ? <span>Source: {indicator.source}</span> : null}
+                      </div>
+
+                      {indicator.tags.length > 0 ? (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {indicator.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="rounded border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] text-slate-300"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-20 text-center">
+              <Activity className="mx-auto mb-4 h-12 w-12 opacity-20 text-slate-400" />
+              <p className="text-slate-300">No threat indicators found.</p>
+            </div>
+          )}
+        </section>
+      </div>
+    </DashboardLayout>
+  );
 }
