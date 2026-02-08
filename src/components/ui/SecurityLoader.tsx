@@ -20,38 +20,43 @@ interface SecurityLoaderProps {
 
 const sizeConfig = {
     xs: {
-        container: "w-5 h-5",
-        ring: "w-5 h-5",
-        icon: 10,
-        ringWidth: 1.5,
+        badge: "h-4 w-4 rounded-md",
+        bar: "h-[2px] w-6",
+        gap: "gap-1.5",
+        inline: true,
+        icon: 9,
         text: "text-[10px]",
     },
     sm: {
-        container: "w-12 h-12",
-        ring: "w-12 h-12",
-        icon: 16,
-        ringWidth: 2,
+        badge: "h-5 w-5 rounded-md",
+        bar: "h-[2px] w-10",
+        gap: "gap-2",
+        inline: false,
+        icon: 11,
         text: "text-xs",
     },
     md: {
-        container: "w-20 h-20",
-        ring: "w-20 h-20",
-        icon: 24,
-        ringWidth: 3,
+        badge: "h-6 w-6 rounded-lg",
+        bar: "h-[2px] w-14",
+        gap: "gap-2",
+        inline: false,
+        icon: 13,
         text: "text-sm",
     },
     lg: {
-        container: "w-32 h-32",
-        ring: "w-32 h-32",
-        icon: 40,
-        ringWidth: 4,
+        badge: "h-7 w-7 rounded-lg",
+        bar: "h-[3px] w-[4.5rem]",
+        gap: "gap-2.5",
+        inline: false,
+        icon: 15,
         text: "text-base",
     },
     xl: {
-        container: "w-40 h-40",
-        ring: "w-40 h-40",
-        icon: 56,
-        ringWidth: 5,
+        badge: "h-8 w-8 rounded-lg",
+        bar: "h-[3px] w-24",
+        gap: "gap-3",
+        inline: false,
+        icon: 17,
         text: "text-lg",
     },
 };
@@ -66,34 +71,34 @@ const iconMap = {
 
 const variantColors = {
     primary: {
-        ring: "stroke-blue-500",
-        glow: "shadow-[0_0_30px_rgba(59,130,246,0.5)]",
-        icon: "text-blue-400",
-        bg: "bg-blue-500/10",
+        badge: "border-blue-400/35 bg-blue-500/10",
+        icon: "text-blue-300",
+        track: "bg-blue-500/15",
+        fill: "from-blue-300 via-blue-200 to-blue-300",
     },
     cyber: {
-        ring: "stroke-cyan-500",
-        glow: "shadow-[0_0_30px_rgba(6,182,212,0.5)]",
-        icon: "text-cyan-400",
-        bg: "bg-cyan-500/10",
+        badge: "border-cyan-400/35 bg-cyan-500/10",
+        icon: "text-cyan-300",
+        track: "bg-cyan-500/15",
+        fill: "from-cyan-300 via-sky-200 to-cyan-300",
     },
     success: {
-        ring: "stroke-green-500",
-        glow: "shadow-[0_0_30px_rgba(34,197,94,0.5)]",
-        icon: "text-green-400",
-        bg: "bg-green-500/10",
+        badge: "border-green-400/35 bg-green-500/10",
+        icon: "text-green-300",
+        track: "bg-green-500/15",
+        fill: "from-green-300 via-emerald-200 to-green-300",
     },
     warning: {
-        ring: "stroke-yellow-500",
-        glow: "shadow-[0_0_30px_rgba(234,179,8,0.5)]",
-        icon: "text-yellow-400",
-        bg: "bg-yellow-500/10",
+        badge: "border-yellow-400/35 bg-yellow-500/10",
+        icon: "text-yellow-300",
+        track: "bg-yellow-500/15",
+        fill: "from-yellow-300 via-amber-200 to-yellow-300",
     },
     danger: {
-        ring: "stroke-red-500",
-        glow: "shadow-[0_0_30px_rgba(239,68,68,0.5)]",
-        icon: "text-red-400",
-        bg: "bg-red-500/10",
+        badge: "border-red-400/35 bg-red-500/10",
+        icon: "text-red-300",
+        track: "bg-red-500/15",
+        fill: "from-red-300 via-orange-200 to-red-300",
     },
 };
 
@@ -108,68 +113,44 @@ export function SecurityLoader({
     const config = sizeConfig[size];
     const Icon = iconMap[icon];
     const colors = variantColors[variant];
+    const animationDuration = Math.max(speed, 650);
 
     return (
-        <div className={cn("flex flex-col items-center justify-center", size === "xs" ? "gap-1" : "gap-4", className)}>
-            {/* Loader Container */}
-            <div className={cn("relative", config.container)}>
-                {/* Background Circle */}
-                <div
-                    className={cn(
-                        "absolute inset-0 rounded-full",
-                        colors.bg,
-                        "animate-pulse-glow"
-                    )}
+        <div
+            className={cn(
+                "inline-flex justify-center",
+                config.inline
+                    ? cn("items-center", config.gap)
+                    : cn("flex-col items-center", config.gap),
+                className
+            )}
+        >
+            <div
+                className={cn(
+                    "flex items-center justify-center border",
+                    config.badge,
+                    colors.badge
+                )}
+            >
+                <Icon
+                    size={config.icon}
+                    className={cn(colors.icon, "animate-security-loader-icon")}
+                    strokeWidth={2.2}
                 />
-
-                {/* Animated Ring */}
-                <svg
-                    className={cn("absolute inset-0", config.ring)}
-                    viewBox="0 0 100 100"
-                    style={{
-                        transform: "rotate(-90deg)",
-                    }}
-                >
-                    {/* Background track */}
-                    <circle
-                        cx="50"
-                        cy="50"
-                        r="45"
-                        fill="none"
-                        stroke="rgba(255, 255, 255, 0.1)"
-                        strokeWidth={config.ringWidth}
-                    />
-
-                    {/* Animated ring */}
-                    <circle
-                        cx="50"
-                        cy="50"
-                        r="45"
-                        fill="none"
-                        className={cn(colors.ring, colors.glow)}
-                        strokeWidth={config.ringWidth}
-                        strokeLinecap="round"
-                        strokeDasharray="283"
-                        strokeDashoffset="0"
-                        style={{
-                            animation: `security-spin ${speed}ms linear infinite`,
-                        }}
-                    />
-                </svg>
-
-                {/* Center Icon */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <Icon
-                        size={config.icon}
-                        className={cn(colors.icon, "animate-pulse-glow")}
-                        strokeWidth={2.5}
-                    />
-                </div>
             </div>
 
-            {/* Text */}
+            <div className={cn("relative overflow-hidden rounded-full", config.bar, colors.track)}>
+                <div
+                    className={cn(
+                        "absolute inset-y-0 left-0 w-[45%] rounded-full bg-gradient-to-r animate-security-loader-bar",
+                        colors.fill
+                    )}
+                    style={{ animationDuration: `${animationDuration}ms` }}
+                />
+            </div>
+
             {text && (
-                <p className={cn(config.text, "text-[var(--text-secondary)] animate-pulse font-medium")}>
+                <p className={cn(config.text, "text-[var(--text-secondary)] font-medium")}>
                     {text}
                 </p>
             )}

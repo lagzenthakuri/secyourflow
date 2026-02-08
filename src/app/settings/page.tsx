@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/Cards";
 import {
@@ -21,6 +21,7 @@ import {
     Zap,
     Activity,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SecurityLoader } from "@/components/ui/SecurityLoader";
 import { useSession } from "next-auth/react";
@@ -47,26 +48,90 @@ function Toast({ message, type, onClose }: { message: string; type: "success" | 
     );
 }
 
-const settingsSections = [
-    { id: "general", label: "General", icon: Settings },
-    { id: "governance", label: "Governance", icon: FileText },
-    { id: "notifications", label: "Notifications", icon: Bell },
-    { id: "soc-notifications", label: "SOC Routing", icon: Activity },
-    { id: "security", label: "Security", icon: Shield },
-    { id: "ai-assist", label: "AI Assist", icon: Zap },
-    { id: "system-health", label: "System Health", icon: Activity },
-    { id: "integrations", label: "Integrations", icon: Database },
-    { id: "api", label: "API Access", icon: Key },
-    { id: "users", label: "Users & Roles", icon: UsersIcon },
+interface SettingSystemHealth {
+    nvdApiKeyConfigured?: boolean;
+    githubTokenConfigured?: boolean;
+    openrouterConfigured?: boolean;
+    nextauthSecretConfigured?: boolean;
+    databaseUrlConfigured?: boolean;
+}
+
+interface PlatformSettings {
+    organizationName?: string;
+    domain?: string;
+    timezone?: string;
+    dateFormat?: string;
+    notifyCritical?: boolean;
+    notifyExploited?: boolean;
+    notifyCompliance?: boolean;
+    notifyScan?: boolean;
+    notifyWeekly?: boolean;
+    require2FA?: boolean;
+    sessionTimeout?: number;
+    passwordPolicy?: string;
+    systemHealth?: SettingSystemHealth;
+    serverTimestamp?: string;
+    [key: string]: unknown;
+}
+
+interface FeatureFlags {
+    changeControlMode: string;
+    settingsChangeReasonRequired: boolean;
+    auditLogRetentionDays: number;
+    dataRetentionDays: number;
+    quietHoursEnabled: boolean;
+    quietHoursStart: string;
+    quietHoursEnd: string;
+    notifyKevOnly: boolean;
+    epssAlertThreshold: number;
+    aiAssistEnabled: boolean;
+    aiRiskAutofillEnabled: boolean;
+    aiHumanReviewRequired: boolean;
+    aiDataRedactionMode: string;
+    aiModelAllowlist: string[];
+    [key: string]: unknown;
+}
+
+type SettingsSectionId =
+    | "general"
+    | "governance"
+    | "notifications"
+    | "soc-notifications"
+    | "security"
+    | "ai-assist"
+    | "system-health"
+    | "integrations"
+    | "api"
+    | "users";
+
+interface SettingsSectionItem {
+    id: SettingsSectionId;
+    label: string;
+    description: string;
+    icon: LucideIcon;
+    mainOfficerOnly?: boolean;
+}
+
+const settingsSections: SettingsSectionItem[] = [
+    { id: "general", label: "General", description: "Organization profile and baseline preferences", icon: Settings },
+    { id: "governance", label: "Governance", description: "Change control, retention, and audit guardrails", icon: FileText, mainOfficerOnly: true },
+    { id: "notifications", label: "Notifications", description: "Alert channels and summary signals", icon: Bell },
+    { id: "soc-notifications", label: "SOC Routing", description: "Quiet hours and incident-routing thresholds", icon: Activity, mainOfficerOnly: true },
+    { id: "security", label: "Security", description: "Identity, sessions, password and 2FA controls", icon: Shield, mainOfficerOnly: true },
+    { id: "ai-assist", label: "AI Assist", description: "Model governance and human-review policies", icon: Zap, mainOfficerOnly: true },
+    { id: "system-health", label: "System Health", description: "Runtime configuration and dependency checks", icon: Activity },
+    { id: "integrations", label: "Integrations", description: "Third-party connectors and workflow links", icon: Database },
+    { id: "api", label: "API Access", description: "API keys and service access governance", icon: Key },
+    { id: "users", label: "Users & Roles", description: "Role assignment and access administration", icon: UsersIcon, mainOfficerOnly: true },
 ];
 
 export default function SettingsPage() {
     const { data: session } = useSession();
-    const [activeSection, setActiveSection] = useState("general");
+    const [activeSection, setActiveSection] = useState<SettingsSectionId>("general");
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
-    const [settings, setSettings] = useState<any>(null);
-    const [featureFlags, setFeatureFlags] = useState<any>({});
+    const [settings, setSettings] = useState<PlatformSettings | null>(null);
+    const [featureFlags, setFeatureFlags] = useState<FeatureFlags>(getDefaultFeatureFlags());
     const [isEditingGeneral, setIsEditingGeneral] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -80,7 +145,7 @@ export default function SettingsPage() {
             const stored = localStorage.getItem(FEATURE_FLAGS_KEY);
             if (stored) {
                 try {
-                    return JSON.parse(stored);
+                    return JSON.parse(stored) as FeatureFlags;
                 } catch (e) {
                     console.error("Failed to parse feature flags:", e);
                 }
@@ -90,17 +155,17 @@ export default function SettingsPage() {
     }, []);
 
     // Save feature flags to localStorage
-    const saveFeatureFlags = useCallback((flags: any) => {
+    const saveFeatureFlags = useCallback((flags: FeatureFlags) => {
         if (typeof window !== 'undefined') {
             localStorage.setItem(FEATURE_FLAGS_KEY, JSON.stringify(flags));
         }
     }, []);
 
-    const fetchSettings = async () => {
+    const fetchSettings = useCallback(async () => {
         try {
             setIsLoading(true);
             const response = await fetch("/api/settings");
-            const data = await response.json();
+            const data = await response.json() as PlatformSettings;
             setSettings(data);
             setFeatureFlags(loadFeatureFlags());
         } catch (error) {
@@ -109,11 +174,11 @@ export default function SettingsPage() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [loadFeatureFlags]);
 
     useEffect(() => {
-        fetchSettings();
-    }, []);
+        void fetchSettings();
+    }, [fetchSettings]);
 
     useEffect(() => {
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -136,12 +201,12 @@ export default function SettingsPage() {
             });
 
             if (response.ok) {
-                const data = await response.json();
-                setSettings({ ...settings, ...data });
+                const data = await response.json() as PlatformSettings;
+                setSettings((prev) => ({ ...(prev ?? {}), ...data }));
                 setHasUnsavedChanges(false);
                 setToast({ message: "Settings saved successfully!", type: "success" });
             } else {
-                const error = await response.json();
+                const error = await response.json() as { error?: string };
                 setToast({ message: error.error || "Failed to save settings", type: "error" });
             }
         } catch (error) {
@@ -157,25 +222,71 @@ export default function SettingsPage() {
         setToast({ message: "Feature flags saved!", type: "success" });
     };
 
-    const updateSettings = (updates: any) => {
-        setSettings({ ...settings, ...updates });
+    const updateSettings = (updates: Partial<PlatformSettings>) => {
+        setSettings((prev) => ({ ...(prev ?? {}), ...updates }));
         setHasUnsavedChanges(true);
     };
 
-    const updateFeatureFlags = (updates: any) => {
-        setFeatureFlags({ ...featureFlags, ...updates });
+    const updateFeatureFlags = (updates: Partial<FeatureFlags>) => {
+        setFeatureFlags((prev) => ({ ...prev, ...updates }));
     };
 
-    // Filter sections based on search
-    const filteredSections = settingsSections.filter(section =>
-        section.label.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredSections = useMemo(
+        () =>
+            settingsSections.filter((section) =>
+                `${section.label} ${section.description}`.toLowerCase().includes(searchQuery.toLowerCase()),
+            ),
+        [searchQuery],
+    );
+
+    const activeSectionInfo = useMemo(
+        () => settingsSections.find((section) => section.id === activeSection),
+        [activeSection],
+    );
+
+    const notificationsEnabledCount = useMemo(() => {
+        const notificationKeys: Array<keyof PlatformSettings> = [
+            "notifyCritical",
+            "notifyExploited",
+            "notifyCompliance",
+            "notifyScan",
+            "notifyWeekly",
+        ];
+        return notificationKeys.filter((key) => Boolean(settings?.[key])).length;
+    }, [settings]);
+
+    const configuredEnvCount = useMemo(() => {
+        const health = settings?.systemHealth;
+        if (!health) return 0;
+        return [
+            health.nvdApiKeyConfigured,
+            health.githubTokenConfigured,
+            health.openrouterConfigured,
+            health.nextauthSecretConfigured,
+            health.databaseUrlConfigured,
+        ].filter(Boolean).length;
+    }, [settings]);
+
+    const enabledFeatureFlagCount = useMemo(
+        () =>
+            Object.values(featureFlags).filter((value) => {
+                if (typeof value === "boolean") return value;
+                if (Array.isArray(value)) return value.length > 0;
+                return false;
+            }).length,
+        [featureFlags],
     );
 
     if (isLoading) {
         return (
             <DashboardLayout>
-                <div className="flex items-center justify-center min-h-[60vh]">
-                    <SecurityLoader size="lg" icon="shield" variant="cyber" />
+                <div className="flex min-h-[60vh] items-center justify-center">
+                    <SecurityLoader
+                        size="xl"
+                        icon="shield"
+                        variant="cyber"
+                        text="Loading configuration workspace..."
+                    />
                 </div>
             </DashboardLayout>
         );
@@ -184,146 +295,262 @@ export default function SettingsPage() {
     return (
         <DashboardLayout>
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-            <div className="space-y-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-white">Settings</h1>
-                        <p className="text-[var(--text-secondary)] mt-1">
-                            Configure platform settings and preferences
-                        </p>
-                    </div>
-                    {session?.user && (
-                        <div className={cn(
-                            "px-3 py-1.5 rounded-full text-xs font-bold uppercase",
-                            isMainOfficer ? "bg-purple-500/10 text-purple-400 border border-purple-500/30" : "bg-blue-500/10 text-blue-400 border border-blue-500/30"
-                        )}>
-                            {session.user.role}
+            <div className="space-y-5">
+                <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(132deg,rgba(56,189,248,0.2),rgba(18,18,26,0.9)_44%,rgba(18,18,26,0.96))] p-6 sm:p-8 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-sky-300/20 blur-3xl animate-pulse" />
+                    <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+                        <div className="max-w-3xl">
+                            <div className="inline-flex items-center gap-2 rounded-full border border-sky-300/35 bg-sky-300/10 px-3 py-1 text-xs font-medium text-sky-200">
+                                <Settings size={13} />
+                                Configuration Center
+                            </div>
+                            <h1 className="mt-4 text-2xl font-semibold text-white sm:text-3xl">Settings</h1>
+                            <p className="mt-3 text-sm leading-relaxed text-slate-200 sm:text-base">
+                                Configure security controls, governance policy, operational alerts, and
+                                platform integrations in one auditable workspace.
+                            </p>
+                            <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-100">
+                                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
+                                    {filteredSections.length} sections visible
+                                </span>
+                                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
+                                    {enabledFeatureFlagCount} feature flags enabled
+                                </span>
+                                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
+                                    {configuredEnvCount}/5 system checks configured
+                                </span>
+                            </div>
                         </div>
-                    )}
-                </div>
 
-                {/* Search */}
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
-                    <input
-                        type="text"
-                        placeholder="Search settings..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="input pl-10 w-full max-w-md"
-                    />
-                </div>
-
-                {hasUnsavedChanges && (
-                    <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-400">
-                        <AlertTriangle size={18} />
-                        <span className="text-sm font-medium">You have unsaved changes</span>
-                    </div>
-                )}
-
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    {/* Settings Navigation */}
-                    <div className="lg:col-span-3">
-                        <div className="card p-2">
-                            {filteredSections.map((section) => (
-                                <button
-                                    key={section.id}
-                                    onClick={() => setActiveSection(section.id)}
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                            {session?.user ? (
+                                <div
                                     className={cn(
-                                        "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-300 ease-in-out",
-                                        activeSection === section.id
-                                            ? "bg-blue-500/15 text-blue-400"
-                                            : "text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
+                                        "rounded-xl border px-3 py-2 text-xs font-bold uppercase tracking-wide",
+                                        isMainOfficer
+                                            ? "border-purple-400/40 bg-purple-500/10 text-purple-200"
+                                            : "border-sky-400/40 bg-sky-500/10 text-sky-100",
                                     )}
                                 >
-                                    <section.icon size={18} />
-                                    <span className="text-sm font-medium">{section.label}</span>
-                                    <ChevronRight size={16} className="ml-auto opacity-50" />
-                                </button>
-                            ))}
+                                    {session.user.role}
+                                </div>
+                            ) : null}
+                            <button
+                                type="button"
+                                onClick={fetchSettings}
+                                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95"
+                            >
+                                <Activity size={14} />
+                                Refresh
+                            </button>
                         </div>
                     </div>
+                </section>
 
-                    {/* Settings Content */}
-                    <div className="lg:col-span-9">
-                        {activeSection === "general" && (
-                            <GeneralSection
-                                settings={settings}
-                                updateSettings={updateSettings}
-                                isEditingGeneral={isEditingGeneral}
-                                setIsEditingGeneral={setIsEditingGeneral}
-                                handleSave={handleSave}
-                                fetchSettings={fetchSettings}
-                                isSaving={isSaving}
-                                isMainOfficer={isMainOfficer}
-                            />
-                        )}
+                {hasUnsavedChanges ? (
+                    <section className="flex items-center gap-2 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-yellow-300 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <AlertTriangle size={17} className="animate-pulse" />
+                        <span className="text-sm font-medium">You have unsaved changes.</span>
+                    </section>
+                ) : null}
 
-                        {activeSection === "governance" && (
-                            <GovernanceSection
-                                featureFlags={featureFlags}
-                                updateFeatureFlags={updateFeatureFlags}
-                                handleSaveFeatureFlags={handleSaveFeatureFlags}
-                                isMainOfficer={isMainOfficer}
-                            />
-                        )}
+                <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    {[
+                        {
+                            label: "Alerts Enabled",
+                            value: notificationsEnabledCount,
+                            hint: "Notification channels currently active",
+                            icon: Bell,
+                        },
+                        {
+                            label: "Session Timeout",
+                            value: `${settings?.sessionTimeout ?? 30} min`,
+                            hint: "Current authentication session policy",
+                            icon: Shield,
+                        },
+                        {
+                            label: "Password Policy",
+                            value: String(settings?.passwordPolicy ?? "STRONG"),
+                            hint: "Credential complexity baseline",
+                            icon: Key,
+                        },
+                        {
+                            label: "2FA Requirement",
+                            value: settings?.require2FA ? "Required" : "Optional",
+                            hint: "Global multi-factor enforcement state",
+                            icon: ShieldCheck,
+                        },
+                    ].map((metric, index) => {
+                        const Icon = metric.icon;
+                        return (
+                            <article
+                                key={metric.label}
+                                className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-300/35 hover:shadow-lg hover:shadow-sky-300/10 animate-in fade-in slide-in-from-bottom-4"
+                                style={{ animationDelay: `${index * 90}ms`, animationFillMode: "backwards" }}
+                            >
+                                <div className="flex items-start justify-between">
+                                    <p className="text-sm text-slate-300">{metric.label}</p>
+                                    <div className="rounded-lg border border-white/10 bg-white/5 p-2 transition-transform duration-200 hover:scale-110">
+                                        <Icon size={15} className="text-slate-200" />
+                                    </div>
+                                </div>
+                                <p className="mt-4 text-2xl font-semibold text-white">{metric.value}</p>
+                                <p className="mt-1 text-sm text-slate-400">{metric.hint}</p>
+                            </article>
+                        );
+                    })}
+                </section>
 
-                        {activeSection === "notifications" && (
-                            <NotificationsSection
-                                settings={settings}
-                                updateSettings={updateSettings}
-                                handleSave={handleSave}
-                                isSaving={isSaving}
-                            />
-                        )}
+                <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+                    <aside className="lg:col-span-4 xl:col-span-3">
+                        <div className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-4 animate-in fade-in slide-in-from-left-4 duration-500" style={{ animationDelay: '350ms', animationFillMode: 'backwards' }}>
+                            <div className="relative mb-3">
+                                <Search
+                                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+                                    size={16}
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="Search settings..."
+                                    value={searchQuery}
+                                    onChange={(event) => setSearchQuery(event.target.value)}
+                                    className="h-10 w-full rounded-xl border border-white/10 bg-white/[0.03] pl-9 pr-3 text-sm text-white outline-none transition-colors duration-200 placeholder:text-slate-500 focus:border-sky-300/45"
+                                />
+                            </div>
 
-                        {activeSection === "soc-notifications" && (
-                            <SOCRoutingSection
-                                featureFlags={featureFlags}
-                                updateFeatureFlags={updateFeatureFlags}
-                                handleSaveFeatureFlags={handleSaveFeatureFlags}
-                                isMainOfficer={isMainOfficer}
-                            />
-                        )}
+                            <div className="space-y-1.5">
+                                {filteredSections.map((section, index) => (
+                                    <button
+                                        key={section.id}
+                                        onClick={() => setActiveSection(section.id)}
+                                        className={cn(
+                                            "group w-full rounded-xl border px-3 py-3 text-left transition-all duration-200 animate-in fade-in slide-in-from-left-2",
+                                            activeSection === section.id
+                                                ? "border-sky-300/30 bg-sky-300/10 shadow-lg shadow-sky-300/10"
+                                                : "border-transparent bg-white/[0.01] hover:border-white/10 hover:bg-white/[0.04] hover:scale-[1.02]",
+                                        )}
+                                        style={{ animationDelay: `${index * 30}ms`, animationFillMode: 'backwards' }}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <section.icon
+                                                size={16}
+                                                className={cn(
+                                                    activeSection === section.id ? "text-sky-200" : "text-slate-400 group-hover:text-slate-200",
+                                                )}
+                                            />
+                                            <p
+                                                className={cn(
+                                                    "text-sm font-medium",
+                                                    activeSection === section.id ? "text-sky-100" : "text-slate-200",
+                                                )}
+                                            >
+                                                {section.label}
+                                            </p>
+                                            {section.mainOfficerOnly ? (
+                                                <span className="ml-auto rounded-md border border-red-400/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-200">
+                                                    Officer
+                                                </span>
+                                            ) : (
+                                                <ChevronRight size={14} className="ml-auto text-slate-500" />
+                                            )}
+                                        </div>
+                                        <p className="mt-1 text-xs text-slate-500">{section.description}</p>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </aside>
 
-                        {activeSection === "security" && (
-                            <SecuritySection
-                                settings={settings}
-                                updateSettings={updateSettings}
-                                handleSave={handleSave}
-                                isSaving={isSaving}
-                                isMainOfficer={isMainOfficer}
-                            />
-                        )}
+                    <div className="lg:col-span-8 xl:col-span-9 space-y-4">
+                        <div className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] px-5 py-4 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '350ms', animationFillMode: 'backwards' }}>
+                            <p className="text-xs uppercase tracking-wide text-slate-500">Active Section</p>
+                            <h2 className="mt-1 text-lg font-semibold text-white">
+                                {activeSectionInfo?.label ?? "Settings"}
+                            </h2>
+                            <p className="mt-1 text-sm text-slate-400">
+                                {activeSectionInfo?.description ?? "Manage platform configuration"}
+                            </p>
+                        </div>
 
-                        {activeSection === "ai-assist" && (
-                            <AIAssistSection
-                                featureFlags={featureFlags}
-                                updateFeatureFlags={updateFeatureFlags}
-                                handleSaveFeatureFlags={handleSaveFeatureFlags}
-                                isMainOfficer={isMainOfficer}
-                            />
-                        )}
+                        <div className="animate-in fade-in slide-in-from-bottom-3 duration-500" style={{ animationDelay: '450ms', animationFillMode: 'backwards' }}>
+                            {activeSection === "general" && (
+                                <GeneralSection
+                                    settings={settings}
+                                    updateSettings={updateSettings}
+                                    isEditingGeneral={isEditingGeneral}
+                                    setIsEditingGeneral={setIsEditingGeneral}
+                                    handleSave={handleSave}
+                                    fetchSettings={fetchSettings}
+                                    isSaving={isSaving}
+                                    isMainOfficer={isMainOfficer}
+                                />
+                            )}
 
-                        {activeSection === "system-health" && (
-                            <SystemHealthSection settings={settings} fetchSettings={fetchSettings} />
-                        )}
+                            {activeSection === "governance" && (
+                                <GovernanceSection
+                                    featureFlags={featureFlags}
+                                    updateFeatureFlags={updateFeatureFlags}
+                                    handleSaveFeatureFlags={handleSaveFeatureFlags}
+                                    isMainOfficer={isMainOfficer}
+                                />
+                            )}
 
-                        {activeSection === "integrations" && <IntegrationsSection />}
+                            {activeSection === "notifications" && (
+                                <NotificationsSection
+                                    settings={settings}
+                                    updateSettings={updateSettings}
+                                    handleSave={handleSave}
+                                    isSaving={isSaving}
+                                />
+                            )}
 
-                        {activeSection === "api" && <APIAccessSection />}
+                            {activeSection === "soc-notifications" && (
+                                <SOCRoutingSection
+                                    featureFlags={featureFlags}
+                                    updateFeatureFlags={updateFeatureFlags}
+                                    handleSaveFeatureFlags={handleSaveFeatureFlags}
+                                    isMainOfficer={isMainOfficer}
+                                />
+                            )}
 
-                        {activeSection === "users" && <UsersManagementTab />}
+                            {activeSection === "security" && (
+                                <SecuritySection
+                                    settings={settings}
+                                    updateSettings={updateSettings}
+                                    handleSave={handleSave}
+                                    isSaving={isSaving}
+                                    isMainOfficer={isMainOfficer}
+                                />
+                            )}
+
+                            {activeSection === "ai-assist" && (
+                                <AIAssistSection
+                                    featureFlags={featureFlags}
+                                    updateFeatureFlags={updateFeatureFlags}
+                                    handleSaveFeatureFlags={handleSaveFeatureFlags}
+                                    isMainOfficer={isMainOfficer}
+                                />
+                            )}
+
+                            {activeSection === "system-health" && (
+                                <SystemHealthSection settings={settings} fetchSettings={fetchSettings} />
+                            )}
+
+                            {activeSection === "integrations" && <IntegrationsSection />}
+
+                            {activeSection === "api" && <APIAccessSection />}
+
+                            {activeSection === "users" && <UsersManagementTab />}
+                        </div>
                     </div>
-                </div>
+                </section>
             </div>
         </DashboardLayout>
     );
 }
 
 // Helper function for default feature flags
-function getDefaultFeatureFlags() {
+function getDefaultFeatureFlags(): FeatureFlags {
     return {
         changeControlMode: "SINGLE_APPROVER",
         settingsChangeReasonRequired: true,
@@ -353,7 +580,7 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
                 disabled={disabled}
                 className="sr-only peer"
             />
-            <div className="w-11 h-6 bg-[var(--bg-elevated)] peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500" />
+            <div className="w-11 h-6 bg-[var(--bg-elevated)] peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all duration-200 peer-checked:bg-blue-500" />
         </label>
     );
 }
@@ -365,7 +592,7 @@ function RestrictedField({ isMainOfficer, children }: { isMainOfficer: boolean; 
             <div className="relative">
                 <div className="opacity-50 pointer-events-none">{children}</div>
                 <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400 text-xs font-medium">
+                    <div className="px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400 text-xs font-medium animate-in fade-in zoom-in-95 duration-300">
                         MAIN_OFFICER only
                     </div>
                 </div>
@@ -375,8 +602,46 @@ function RestrictedField({ isMainOfficer, children }: { isMainOfficer: boolean; 
     return <>{children}</>;
 }
 
+interface GeneralSectionProps {
+    settings: PlatformSettings | null;
+    updateSettings: (updates: Partial<PlatformSettings>) => void;
+    isEditingGeneral: boolean;
+    setIsEditingGeneral: React.Dispatch<React.SetStateAction<boolean>>;
+    handleSave: () => Promise<void>;
+    fetchSettings: () => Promise<void>;
+    isSaving: boolean;
+    isMainOfficer: boolean;
+}
+
+interface FeatureFlagSectionProps {
+    featureFlags: FeatureFlags;
+    updateFeatureFlags: (updates: Partial<FeatureFlags>) => void;
+    handleSaveFeatureFlags: () => void;
+    isMainOfficer: boolean;
+}
+
+interface NotificationSectionProps {
+    settings: PlatformSettings | null;
+    updateSettings: (updates: Partial<PlatformSettings>) => void;
+    handleSave: () => Promise<void>;
+    isSaving: boolean;
+}
+
+interface SecuritySectionProps {
+    settings: PlatformSettings | null;
+    updateSettings: (updates: Partial<PlatformSettings>) => void;
+    handleSave: () => Promise<void>;
+    isSaving: boolean;
+    isMainOfficer: boolean;
+}
+
+interface SystemHealthSectionProps {
+    settings: PlatformSettings | null;
+    fetchSettings: () => Promise<void>;
+}
+
 // General Section
-function GeneralSection({ settings, updateSettings, isEditingGeneral, setIsEditingGeneral, handleSave, fetchSettings, isSaving, isMainOfficer }: any) {
+function GeneralSection({ settings, updateSettings, isEditingGeneral, setIsEditingGeneral, handleSave, fetchSettings, isSaving, isMainOfficer }: GeneralSectionProps) {
     return (
         <Card title="General Settings" subtitle="Basic platform configuration">
             <div className="space-y-6">
@@ -479,7 +744,7 @@ function GeneralSection({ settings, updateSettings, isEditingGeneral, setIsEditi
 }
 
 // Governance Section
-function GovernanceSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFlags, isMainOfficer }: any) {
+function GovernanceSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFlags, isMainOfficer }: FeatureFlagSectionProps) {
     return (
         <Card title="Governance & Compliance" subtitle="Bank-grade change control, audit, and retention">
             <div className="space-y-6">
@@ -573,7 +838,7 @@ function GovernanceSection({ featureFlags, updateFeatureFlags, handleSaveFeature
 }
 
 // SOC Routing Section
-function SOCRoutingSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFlags, isMainOfficer }: any) {
+function SOCRoutingSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFlags, isMainOfficer }: FeatureFlagSectionProps) {
     return (
         <Card title="SOC Routing" subtitle="Alert thresholds, quiet hours, and escalation">
             <div className="space-y-6">
@@ -682,37 +947,43 @@ function SOCRoutingSection({ featureFlags, updateFeatureFlags, handleSaveFeature
 }
 
 // Notifications Section
-function NotificationsSection({ settings, updateSettings, handleSave, isSaving }: any) {
+function NotificationsSection({ settings, updateSettings, handleSave, isSaving }: NotificationSectionProps) {
+    const notifications: Array<{
+        id: "notifyCritical" | "notifyExploited" | "notifyCompliance" | "notifyScan" | "notifyWeekly";
+        title: string;
+        description: string;
+    }> = [
+        {
+            id: "notifyCritical",
+            title: "Critical Vulnerability Alerts",
+            description: "Get notified when critical vulnerabilities are detected",
+        },
+        {
+            id: "notifyExploited",
+            title: "Exploitation Alerts",
+            description: "Alert when a vulnerability in your environment is being exploited",
+        },
+        {
+            id: "notifyCompliance",
+            title: "Compliance Drift",
+            description: "Notify when compliance status changes",
+        },
+        {
+            id: "notifyScan",
+            title: "Scan Completion",
+            description: "Alert when vulnerability scans complete",
+        },
+        {
+            id: "notifyWeekly",
+            title: "Weekly Summary",
+            description: "Receive weekly risk summary via email",
+        },
+    ];
+
     return (
         <Card title="Notification Settings" subtitle="Configure alerts and notifications">
             <div className="space-y-4">
-                {[
-                    {
-                        id: "notifyCritical",
-                        title: "Critical Vulnerability Alerts",
-                        description: "Get notified when critical vulnerabilities are detected",
-                    },
-                    {
-                        id: "notifyExploited",
-                        title: "Exploitation Alerts",
-                        description: "Alert when a vulnerability in your environment is being exploited",
-                    },
-                    {
-                        id: "notifyCompliance",
-                        title: "Compliance Drift",
-                        description: "Notify when compliance status changes",
-                    },
-                    {
-                        id: "notifyScan",
-                        title: "Scan Completion",
-                        description: "Alert when vulnerability scans complete",
-                    },
-                    {
-                        id: "notifyWeekly",
-                        title: "Weekly Summary",
-                        description: "Receive weekly risk summary via email",
-                    },
-                ].map((notification) => (
+                {notifications.map((notification) => (
                     <div
                         key={notification.id}
                         className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]"
@@ -726,7 +997,7 @@ function NotificationsSection({ settings, updateSettings, handleSave, isSaving }
                             </p>
                         </div>
                         <Toggle
-                            checked={settings?.[notification.id] || false}
+                            checked={Boolean(settings?.[notification.id])}
                             onChange={(checked) => updateSettings({ [notification.id]: checked })}
                         />
                     </div>
@@ -747,7 +1018,7 @@ function NotificationsSection({ settings, updateSettings, handleSave, isSaving }
 }
 
 // Security Section
-function SecuritySection({ settings, updateSettings, handleSave, isSaving, isMainOfficer }: any) {
+function SecuritySection({ settings, updateSettings, handleSave, isSaving, isMainOfficer }: SecuritySectionProps) {
     return (
         <Card title="Security Settings" subtitle="Authentication and access control">
             <div className="space-y-6">
@@ -849,7 +1120,7 @@ function SecuritySection({ settings, updateSettings, handleSave, isSaving, isMai
 }
 
 // AI Assist Section
-function AIAssistSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFlags, isMainOfficer }: any) {
+function AIAssistSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFlags, isMainOfficer }: FeatureFlagSectionProps) {
     return (
         <Card title="AI Assist" subtitle="Guardrails for OpenRouter and risk autofill">
             <div className="space-y-6">
@@ -937,7 +1208,7 @@ function AIAssistSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFl
                                             const current = featureFlags.aiModelAllowlist || [];
                                             const updated = e.target.checked
                                                 ? [...current, model]
-                                                : current.filter((m: string) => m !== model);
+                                                : current.filter((m) => m !== model);
                                             updateFeatureFlags({ aiModelAllowlist: updated });
                                         }}
                                         disabled={!isMainOfficer}
@@ -969,7 +1240,7 @@ function AIAssistSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFl
 }
 
 // System Health Section
-function SystemHealthSection({ settings, fetchSettings }: any) {
+function SystemHealthSection({ settings, fetchSettings }: SystemHealthSectionProps) {
     const systemHealth = settings?.systemHealth || {};
 
     const envVars = [
@@ -1111,26 +1382,33 @@ function APIAccessSection() {
 // Users Management Tab
 function UsersManagementTab() {
     const { data: session } = useSession();
-    const [users, setUsers] = useState<any[]>([]);
+    interface UserRecord {
+        id: string;
+        name: string;
+        email: string;
+        role: "ANALYST" | "IT_OFFICER" | "PENTESTER" | "MAIN_OFFICER";
+    }
+
+    const [users, setUsers] = useState<UserRecord[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
-    const fetchUsers = async () => {
+    const fetchUsers = useCallback(async () => {
         try {
             setIsLoading(true);
             const response = await fetch("/api/users");
-            const data = await response.json();
+            const data = await response.json() as UserRecord[];
             if (Array.isArray(data)) setUsers(data);
         } catch (error) {
             console.error("Failed to fetch users:", error);
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
-        fetchUsers();
-    }, []);
+        void fetchUsers();
+    }, [fetchUsers]);
 
     const handleRoleChange = async (userId: string, newRole: string) => {
         try {
@@ -1142,9 +1420,13 @@ function UsersManagementTab() {
             });
 
             if (response.ok) {
-                setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+                setUsers((prev) =>
+                    prev.map((user) =>
+                        user.id === userId ? { ...user, role: newRole as UserRecord["role"] } : user,
+                    ),
+                );
             } else {
-                const err = await response.json();
+                const err = await response.json() as { error?: string };
                 alert(err.error || "Failed to update role");
             }
         } catch (error) {

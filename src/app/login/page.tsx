@@ -72,11 +72,11 @@ export default function LoginPage() {
                 <div className="text-center mb-8">
                     <Link href="/" className="inline-block">
                         <Image
-                            src="/logo.png"
+                            src="/logo1.png"
                             alt="SecYourFlow"
                             width={80}
                             height={80}
-                            className="rounded-xl mx-auto"
+                            className="mx-auto"
                         />
                     </Link>
                     <p className="text-[var(--text-secondary)] mt-4">

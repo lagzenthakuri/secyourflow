@@ -1,557 +1,986 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import {
-    StatCard,
-    RiskScoreCard,
-    SeverityBadge,
-    Card,
-    ProgressBar,
-} from "@/components/ui/Cards";
-import {
-    RiskTrendChart,
-    SeverityDistributionChart,
-    ComplianceBarChart,
-    VulnStatusChart,
-    AssetTypeChart,
-    EPSSChart,
-} from "@/components/charts/DashboardCharts";
+import { SecurityLoader } from "@/components/ui/SecurityLoader";
 import { getTimeAgo } from "@/lib/utils";
 import {
-    Shield,
-    Server,
-    AlertTriangle,
-    Bug,
-    TrendingDown,
-    Clock,
-    ExternalLink,
-    ChevronRight,
-    Zap,
-    Target,
-    FileCheck,
-    Activity,
+  Activity,
+  AlertTriangle,
+  ArrowRight,
+  ChevronRight,
+  CircleAlert,
+  FileCheck2,
+  Gauge,
+  RefreshCw,
+  Server,
+  ShieldAlert,
+  Siren,
+  LogIn,
+  UserPlus,
+  Settings,
+  Bell,
+  Calculator,
+  FileText,
+  CheckCircle2,
+  XCircle,
+  Edit,
+  Trash2,
+  Upload,
+  Download,
+  Lock,
+  Unlock,
+  UserCheck,
+  AlertCircle,
 } from "lucide-react";
-import { SecurityLoader } from "@/components/ui/SecurityLoader";
-import Link from "next/link";
+
+const RiskTrendChart = dynamic(
+  () =>
+    import("@/components/charts/DashboardCharts").then((mod) => mod.RiskTrendChart),
+  {
+    ssr: false,
+    loading: () => <div className="h-[280px] animate-pulse rounded-xl bg-white/5" />,
+  },
+);
+
+const VulnStatusChart = dynamic(
+  () =>
+    import("@/components/charts/DashboardCharts").then((mod) => mod.VulnStatusChart),
+  {
+    ssr: false,
+    loading: () => <div className="h-[240px] animate-pulse rounded-xl bg-white/5" />,
+  },
+);
+
+type Severity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFORMATIONAL";
+
+interface DashboardStats {
+  totalAssets: number;
+  criticalAssets: number;
+  totalVulnerabilities: number;
+  criticalVulnerabilities: number;
+  highVulnerabilities: number;
+  mediumVulnerabilities: number;
+  lowVulnerabilities: number;
+  exploitedVulnerabilities: number;
+  cisaKevCount: number;
+  threatIndicatorCount: number;
+  overallRiskScore: number;
+  complianceScore: number;
+  openVulnerabilities: number;
+  fixedThisMonth: number;
+  meanTimeToRemediate: number;
+}
+
+interface RiskTrendPoint {
+  date: string;
+  riskScore: number;
+  criticalVulns: number;
+  highVulns: number;
+}
+
+interface SeverityPoint {
+  severity: Severity;
+  count: number;
+  percentage: number;
+}
+
+interface RiskAsset {
+  id: string;
+  name: string;
+  type: string;
+  vulnerabilityCount: number;
+  criticalVulnCount: number;
+  riskScore: number;
+}
+
+interface ComplianceOverviewItem {
+  frameworkId: string;
+  frameworkName: string;
+  compliant: number;
+  nonCompliant: number;
+  compliancePercentage: number;
+}
+
+interface ActivityItem {
+  id: string;
+  action: string;
+  entityType: string;
+  entityName: string;
+  timestamp: string;
+}
+
+interface ExploitedVulnerability {
+  id: string;
+  cveId?: string | null;
+  title: string;
+  severity: Severity;
+  epssScore?: number | null;
+  affectedAssets?: number | null;
+  cisaKev?: boolean;
+}
+
+interface RemediationPoint {
+  month: string;
+  opened: number;
+  closed: number;
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  riskTrends: RiskTrendPoint[];
+  severityDistribution: SeverityPoint[];
+  topRiskyAssets: RiskAsset[];
+  complianceOverview: ComplianceOverviewItem[];
+  recentActivities: ActivityItem[];
+  exploitedVulnerabilities: ExploitedVulnerability[];
+  remediationTrends: RemediationPoint[];
+  lastUpdated: string;
+}
+
+const defaultStats: DashboardStats = {
+  totalAssets: 0,
+  criticalAssets: 0,
+  totalVulnerabilities: 0,
+  criticalVulnerabilities: 0,
+  highVulnerabilities: 0,
+  mediumVulnerabilities: 0,
+  lowVulnerabilities: 0,
+  exploitedVulnerabilities: 0,
+  cisaKevCount: 0,
+  threatIndicatorCount: 0,
+  overallRiskScore: 0,
+  complianceScore: 0,
+  openVulnerabilities: 0,
+  fixedThisMonth: 0,
+  meanTimeToRemediate: 0,
+};
+
+const severityOrder: Severity[] = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
+
+const numberFormatter = new Intl.NumberFormat("en-US");
+
+function getRiskBand(score: number) {
+  if (score >= 80) return { label: "Critical", color: "text-red-300", rail: "bg-red-400" };
+  if (score >= 60) return { label: "High", color: "text-orange-300", rail: "bg-orange-400" };
+  if (score >= 40) return { label: "Medium", color: "text-yellow-300", rail: "bg-yellow-400" };
+  return { label: "Low", color: "text-emerald-300", rail: "bg-emerald-400" };
+}
+
+function getComplianceTone(value: number) {
+  if (value >= 80) return "bg-emerald-400";
+  if (value >= 60) return "bg-yellow-400";
+  return "bg-red-400";
+}
+
+function getSeverityBadgeTone(severity: Severity) {
+  if (severity === "CRITICAL") return "border-red-400/35 bg-red-500/10 text-red-200";
+  if (severity === "HIGH") return "border-orange-400/35 bg-orange-500/10 text-orange-200";
+  if (severity === "MEDIUM") return "border-yellow-400/35 bg-yellow-500/10 text-yellow-200";
+  if (severity === "LOW") return "border-emerald-400/35 bg-emerald-500/10 text-emerald-200";
+  return "border-slate-400/35 bg-slate-500/10 text-slate-200";
+}
+
+function getSeverityRailTone(severity: Severity) {
+  if (severity === "CRITICAL") return "bg-red-400";
+  if (severity === "HIGH") return "bg-orange-400";
+  if (severity === "MEDIUM") return "bg-yellow-400";
+  if (severity === "LOW") return "bg-emerald-400";
+  return "bg-slate-400";
+}
+
+function getActivityTone(entityType: string, action: string) {
+  // Specific action-based icons
+  if (action === "User login" || action.toLowerCase().includes("login")) {
+    return {
+      icon: LogIn,
+      iconColor: "text-emerald-300",
+      shell: "border-emerald-400/20 bg-emerald-500/10",
+    };
+  }
+
+  if (action === "VULNERABILITY_CREATED" || action.toLowerCase().includes("vulnerability created")) {
+    return {
+      icon: ShieldAlert,
+      iconColor: "text-red-300",
+      shell: "border-red-400/20 bg-red-500/10",
+    };
+  }
+
+  if (action === "RISK_ASSESSMENT_COMPLETED" || action.toLowerCase().includes("risk")) {
+    return {
+      icon: Calculator,
+      iconColor: "text-orange-300",
+      shell: "border-orange-400/20 bg-orange-500/10",
+    };
+  }
+
+  if (action.toLowerCase().includes("user created") || action.toLowerCase().includes("user added")) {
+    return {
+      icon: UserPlus,
+      iconColor: "text-blue-300",
+      shell: "border-blue-400/20 bg-blue-500/10",
+    };
+  }
+
+  if (action.toLowerCase().includes("role updated") || action.toLowerCase().includes("permission")) {
+    return {
+      icon: UserCheck,
+      iconColor: "text-purple-300",
+      shell: "border-purple-400/20 bg-purple-500/10",
+    };
+  }
+
+  if (action.toLowerCase().includes("settings") || action.toLowerCase().includes("config")) {
+    return {
+      icon: Settings,
+      iconColor: "text-slate-300",
+      shell: "border-slate-400/20 bg-slate-500/10",
+    };
+  }
+
+  if (action.toLowerCase().includes("notification")) {
+    return {
+      icon: Bell,
+      iconColor: "text-cyan-300",
+      shell: "border-cyan-400/20 bg-cyan-500/10",
+    };
+  }
+
+  if (action.toLowerCase().includes("scan") || action.toLowerCase().includes("scanner")) {
+    return {
+      icon: Activity,
+      iconColor: "text-indigo-300",
+      shell: "border-indigo-400/20 bg-indigo-500/10",
+    };
+  }
+
+  if (action.toLowerCase().includes("report") || action.toLowerCase().includes("export")) {
+    return {
+      icon: FileText,
+      iconColor: "text-amber-300",
+      shell: "border-amber-400/20 bg-amber-500/10",
+    };
+  }
+
+  if (action.toLowerCase().includes("deleted") || action.toLowerCase().includes("removed")) {
+    return {
+      icon: Trash2,
+      iconColor: "text-red-300",
+      shell: "border-red-400/20 bg-red-500/10",
+    };
+  }
+
+  if (action.toLowerCase().includes("updated") || action.toLowerCase().includes("modified") || action.toLowerCase().includes("edited")) {
+    return {
+      icon: Edit,
+      iconColor: "text-yellow-300",
+      shell: "border-yellow-400/20 bg-yellow-500/10",
+    };
+  }
+
+  if (action.toLowerCase().includes("approved") || action.toLowerCase().includes("completed") || action.toLowerCase().includes("resolved")) {
+    return {
+      icon: CheckCircle2,
+      iconColor: "text-green-300",
+      shell: "border-green-400/20 bg-green-500/10",
+    };
+  }
+
+  if (action.toLowerCase().includes("rejected") || action.toLowerCase().includes("failed")) {
+    return {
+      icon: XCircle,
+      iconColor: "text-red-300",
+      shell: "border-red-400/20 bg-red-500/10",
+    };
+  }
+
+  if (action.toLowerCase().includes("upload") || action.toLowerCase().includes("import")) {
+    return {
+      icon: Upload,
+      iconColor: "text-teal-300",
+      shell: "border-teal-400/20 bg-teal-500/10",
+    };
+  }
+
+  if (action.toLowerCase().includes("download")) {
+    return {
+      icon: Download,
+      iconColor: "text-blue-300",
+      shell: "border-blue-400/20 bg-blue-500/10",
+    };
+  }
+
+  if (action.toLowerCase().includes("locked") || action.toLowerCase().includes("disabled")) {
+    return {
+      icon: Lock,
+      iconColor: "text-gray-300",
+      shell: "border-gray-400/20 bg-gray-500/10",
+    };
+  }
+
+  if (action.toLowerCase().includes("unlocked") || action.toLowerCase().includes("enabled")) {
+    return {
+      icon: Unlock,
+      iconColor: "text-green-300",
+      shell: "border-green-400/20 bg-green-500/10",
+    };
+  }
+
+  if (action.toLowerCase().includes("alert") || action.toLowerCase().includes("warning")) {
+    return {
+      icon: AlertCircle,
+      iconColor: "text-orange-300",
+      shell: "border-orange-400/20 bg-orange-500/10",
+    };
+  }
+
+  // Entity type fallbacks
+  if (entityType === "vulnerability") {
+    return {
+      icon: ShieldAlert,
+      iconColor: "text-red-300",
+      shell: "border-red-400/20 bg-red-500/10",
+    };
+  }
+
+  if (entityType === "asset") {
+    return {
+      icon: Server,
+      iconColor: "text-sky-300",
+      shell: "border-sky-400/20 bg-sky-500/10",
+    };
+  }
+
+  if (entityType === "user" || entityType === "auth") {
+    return {
+      icon: UserCheck,
+      iconColor: "text-violet-300",
+      shell: "border-violet-400/20 bg-violet-500/10",
+    };
+  }
+
+  if (entityType === "compliance") {
+    return {
+      icon: FileCheck2,
+      iconColor: "text-emerald-300",
+      shell: "border-emerald-400/20 bg-emerald-500/10",
+    };
+  }
+
+  if (entityType === "RiskRegister" || entityType === "risk") {
+    return {
+      icon: Calculator,
+      iconColor: "text-orange-300",
+      shell: "border-orange-400/20 bg-orange-500/10",
+    };
+  }
+
+  // Default fallback
+  return {
+    icon: Activity,
+    iconColor: "text-violet-300",
+    shell: "border-violet-400/20 bg-violet-500/10",
+  };
+}
+
+function formatAssetType(type: string) {
+  return type
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
 
 export default function DashboardPage() {
-    const [data, setData] = useState<any>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<DashboardResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            try {
-                setIsLoading(true);
-                const response = await fetch("/api/dashboard");
-                if (!response.ok) throw new Error("Failed to fetch dashboard data");
-                const jsonData = await response.json();
-                setData(jsonData);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : "An error occurred");
-            } finally {
-                setIsLoading(false);
-            }
-        };
+  const fetchDashboardData = useCallback(
+    async ({ signal, silent }: { signal?: AbortSignal; silent?: boolean } = {}) => {
+      if (silent) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
 
-        fetchDashboardData();
-    }, []);
+      try {
+        setError(null);
+        const response = await fetch("/api/dashboard", { signal, cache: "no-store" });
+        if (!response.ok) {
+          throw new Error("Failed to fetch dashboard data");
+        }
+        const payload = (await response.json()) as DashboardResponse;
+        setData(payload);
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        if (silent) {
+          setIsRefreshing(false);
+        } else {
+          setIsLoading(false);
+        }
+      }
+    },
+    [],
+  );
 
-    if (isLoading) {
-        return (
-            <DashboardLayout>
-                <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-                    <SecurityLoader
-                        size="xl"
-                        icon="shield"
-                        variant="cyber"
-                        text="Calculating risk scores and gathering intelligence..."
-                    />
-                </div>
-            </DashboardLayout>
-        );
-    }
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchDashboardData({ signal: controller.signal });
+    return () => controller.abort();
+  }, [fetchDashboardData]);
 
-    if (error || !data) {
-        return (
-            <DashboardLayout>
-                <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-                    <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center">
-                        <AlertTriangle className="w-8 h-8 text-red-500" />
-                    </div>
-                    <div className="text-center">
-                        <h2 className="text-xl font-bold text-white mb-2">Error Loading Dashboard</h2>
-                        <p className="text-[var(--text-secondary)] max-w-md mx-auto">
-                            {error || "We couldn't load your security data. Please try refreshing the page."}
-                        </p>
-                    </div>
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="btn btn-primary mt-4"
-                    >
-                        Try Again
-                    </button>
-                </div>
-            </DashboardLayout>
-        );
-    }
+  const stats = data?.stats ?? defaultStats;
+  const riskBand = useMemo(() => getRiskBand(stats.overallRiskScore), [stats.overallRiskScore]);
+  const lastUpdatedLabel = data?.lastUpdated
+    ? getTimeAgo(new Date(data.lastUpdated))
+    : "just now";
+  const activeThreats = stats.exploitedVulnerabilities + stats.threatIndicatorCount;
 
-    const { stats, riskTrends, severityDistribution, topRiskyAssets, complianceOverview, recentActivities, exploitedVulnerabilities, remediationTrends, assetTypeDistribution, lastUpdated } = data as any;
-
-    const lastUpdatedFormatted = lastUpdated ? getTimeAgo(new Date(lastUpdated)) : "Just now";
-
-    return (
-        <DashboardLayout>
-            <div className="space-y-6">
-                {/* Header */}
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-white">
-                            Security Dashboard
-                        </h1>
-                        <p className="text-[var(--text-secondary)] mt-1">
-                            Real-time overview of your cyber risk posture
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <span className="text-sm text-[var(--text-muted)]">
-                            Last updated: {lastUpdatedFormatted}
-                        </span>
-                        <button className="btn btn-primary">
-                            <Activity size={16} />
-                            Run Scan
-                        </button>
-                    </div>
-                </div>
-
-                {/* Top Stats Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <StatCard
-                        title="Total Assets"
-                        value={(stats?.totalAssets || 0).toLocaleString()}
-                        subtitle={`${stats?.criticalAssets || 0} critical`}
-                        icon={<Server size={18} className="text-blue-400" />}
-                        trend={{ value: 12, label: "this month" }}
-                    />
-                    <StatCard
-                        title="Open Vulnerabilities"
-                        value={(stats?.openVulnerabilities || 0).toLocaleString()}
-                        subtitle={`${stats?.criticalVulnerabilities || 0} critical, ${stats?.highVulnerabilities || 0} high`}
-                        icon={<Bug size={18} className="text-orange-400" />}
-                        trend={{ value: -8, label: "this week" }}
-                    />
-                    <StatCard
-                        title="Active Threats"
-                        value={(stats?.exploitedVulnerabilities || 0) + (stats?.threatIndicatorCount || 0)}
-                        subtitle={`${stats?.cisaKevCount || 0} KEV, ${stats?.threatIndicatorCount || 0} AI Identified`}
-                        icon={<AlertTriangle size={18} className="text-red-400" />}
-                        severity="CRITICAL"
-                    />
-                    <StatCard
-                        title="Fixed This Month"
-                        value={stats?.fixedThisMonth || 0}
-                        subtitle={`MTTR: ${stats?.meanTimeToRemediate || 0} days`}
-                        icon={<TrendingDown size={18} className="text-green-400" />}
-                        trend={{ value: -15, label: "faster" }}
-                    />
-                </div>
-
-                {/* Risk Score and Charts Row */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                    {/* Risk Score */}
-                    <div className="lg:col-span-3">
-                        <RiskScoreCard
-                            score={stats?.overallRiskScore || 0}
-                            label="Overall Risk Score"
-                        />
-                    </div>
-
-                    {/* Risk Trend */}
-                    <div className="lg:col-span-6">
-                        <Card
-                            title="Risk Score Trend"
-                            subtitle="Last 6 weeks"
-                            action={
-                                <Link
-                                    href="/reports"
-                                    className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1"
-                                >
-                                    View Report <ChevronRight size={14} />
-                                </Link>
-                            }
-                        >
-                            <RiskTrendChart data={riskTrends} />
-                        </Card>
-                    </div>
-
-                    {/* Severity Distribution */}
-                    <div className="lg:col-span-3">
-                        <Card title="Severity Distribution">
-                            <SeverityDistributionChart data={severityDistribution} />
-                            <div className="grid grid-cols-2 gap-2 mt-2">
-                                {(severityDistribution || []).map((item: any) => (
-                                    <div key={item.severity} className="flex items-center gap-2">
-                                        <div
-                                            className="w-2 h-2 rounded-full"
-                                            style={{
-                                                background:
-                                                    item.severity === "CRITICAL"
-                                                        ? "#ef4444"
-                                                        : item.severity === "HIGH"
-                                                            ? "#f97316"
-                                                            : item.severity === "MEDIUM"
-                                                                ? "#eab308"
-                                                                : "#22c55e",
-                                            }}
-                                        />
-                                        <span className="text-xs text-[var(--text-muted)]">
-                                            {item.severity}: {item.count}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </Card>
-                    </div>
-                </div>
-
-                {/* Exploited Vulnerabilities Banner */}
-                <div className="card p-4 border-l-4 border-red-500 bg-red-500/5">
-                    <div className="flex items-start gap-4">
-                        <div className="p-2 rounded-lg bg-red-500/10">
-                            <Zap size={20} className="text-red-400" />
-                        </div>
-                        <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-semibold text-white">
-                                    Active Exploitation Detected
-                                </h3>
-                                <span className="live-indicator text-xs font-medium text-red-400">
-                                    Live Threats
-                                </span>
-                            </div>
-                            <p className="text-sm text-[var(--text-secondary)]">
-                                {stats?.exploitedVulnerabilities || 0} vulnerabilities are being
-                                actively exploited in the wild. {stats?.cisaKevCount || 0} are listed
-                                in the CISA Known Exploited Vulnerabilities catalog.
-                            </p>
-                        </div>
-                        <Link
-                            href="/threats"
-                            className="btn btn-secondary text-red-400 border-red-500/30 hover:bg-red-500/10"
-                        >
-                            View Threats
-                        </Link>
-                    </div>
-                </div>
-
-                {/* Middle Section */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                    {/* Top Exploited Vulnerabilities */}
-                    <div className="lg:col-span-8">
-                        <Card
-                            title="Top Exploited Vulnerabilities"
-                            subtitle="Prioritized by EPSS score and exploitation status"
-                            action={
-                                <Link
-                                    href="/vulnerabilities?filter=exploited"
-                                    className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1"
-                                >
-                                    View All <ChevronRight size={14} />
-                                </Link>
-                            }
-                        >
-                            <div className="space-y-3">
-                                {(exploitedVulnerabilities || []).slice(0, 5).map((vuln: any, idx: number) => (
-                                    <div
-                                        key={vuln.id}
-                                        className="flex items-center gap-4 p-3 rounded-lg bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-all duration-300 ease-in-out cursor-pointer group"
-                                    >
-                                        <div
-                                            className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold"
-                                            style={{
-                                                background:
-                                                    idx === 0
-                                                        ? "rgba(239, 68, 68, 0.2)"
-                                                        : "rgba(255, 255, 255, 0.05)",
-                                                color: idx === 0 ? "#ef4444" : "#94a3b8",
-                                            }}
-                                        >
-                                            {idx + 1}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className="font-mono text-sm text-blue-400">
-                                                    {vuln.cveId}
-                                                </span>
-                                                <SeverityBadge severity={vuln.severity} size="sm" />
-                                                {vuln.cisaKev && <span className="kev-badge">KEV</span>}
-                                            </div>
-                                            <p className="text-sm text-[var(--text-secondary)] truncate">
-                                                {vuln.title}
-                                            </p>
-                                        </div>
-                                        <div className="text-right hidden md:block">
-                                            <div className="text-sm font-medium text-white">
-                                                {((vuln.epssScore || 0) * 100).toFixed(1)}%
-                                            </div>
-                                            <div className="text-xs text-[var(--text-muted)]">
-                                                EPSS Score
-                                            </div>
-                                        </div>
-                                        <div className="text-right hidden md:block">
-                                            <div className="text-sm font-medium text-orange-400">
-                                                {vuln.affectedAssets}
-                                            </div>
-                                            <div className="text-xs text-[var(--text-muted)]">
-                                                Assets
-                                            </div>
-                                        </div>
-                                        <ChevronRight
-                                            size={18}
-                                            className="text-[var(--text-muted)] group-hover:text-white transition-all duration-300 ease-in-out"
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        </Card>
-                    </div>
-
-                    {/* EPSS Chart */}
-                    <div className="lg:col-span-4">
-                        <Card
-                            title="Exploit Prediction (EPSS)"
-                            subtitle="Probability of exploitation in next 30 days"
-                        >
-                            <EPSSChart
-                                data={(exploitedVulnerabilities || []).map((v: any) => ({
-                                    cveId: v.cveId,
-                                    epssScore: v.epssScore,
-                                    title: v.title,
-                                }))}
-                            />
-                        </Card>
-                    </div>
-                </div>
-
-                {/* Bottom Section */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                    {/* Top Risky Assets */}
-                    <div className="lg:col-span-4">
-                        <Card
-                            title="Top Risky Assets"
-                            subtitle="By risk score"
-                            action={
-                                <Link
-                                    href="/assets?sort=risk"
-                                    className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1"
-                                >
-                                    View All <ChevronRight size={14} />
-                                </Link>
-                            }
-                        >
-                            <div className="space-y-3">
-                                {(topRiskyAssets || []).map((asset: any) => (
-                                    <div
-                                        key={asset.id}
-                                        className="p-3 rounded-lg bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-all duration-300 ease-in-out cursor-pointer"
-                                    >
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div className="flex items-center gap-2">
-                                                <Target size={14} className="text-[var(--text-muted)]" />
-                                                <span className="text-sm font-medium text-white truncate max-w-[160px]">
-                                                    {asset.name}
-                                                </span>
-                                            </div>
-                                            <span
-                                                className="text-sm font-bold"
-                                                style={{
-                                                    color:
-                                                        asset.riskScore >= 80
-                                                            ? "#ef4444"
-                                                            : asset.riskScore >= 60
-                                                                ? "#f97316"
-                                                                : "#eab308",
-                                                }}
-                                            >
-                                                {(asset.riskScore || 0).toFixed(1)}
-                                            </span>
-                                        </div>
-                                        <ProgressBar
-                                            value={asset.riskScore}
-                                            color={
-                                                asset.riskScore >= 80
-                                                    ? "#ef4444"
-                                                    : asset.riskScore >= 60
-                                                        ? "#f97316"
-                                                        : "#eab308"
-                                            }
-                                            showLabel={false}
-                                        />
-                                        <div className="flex items-center gap-3 mt-2 text-xs text-[var(--text-muted)]">
-                                            <span>{asset.vulnerabilityCount} vulns</span>
-                                            <span>•</span>
-                                            <span className="text-red-400">
-                                                {asset.criticalVulnCount} critical
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </Card>
-                    </div>
-
-                    {/* Compliance Overview */}
-                    <div className="lg:col-span-4">
-                        <Card
-                            title="Compliance Status"
-                            subtitle="Framework compliance scores"
-                            action={
-                                <Link
-                                    href="/compliance"
-                                    className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1"
-                                >
-                                    View All <ChevronRight size={14} />
-                                </Link>
-                            }
-                        >
-                            <div className="space-y-4">
-                                {(complianceOverview || []).map((framework: any) => (
-                                    <div key={framework.frameworkId}>
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div className="flex items-center gap-2">
-                                                <FileCheck size={14} className="text-blue-400" />
-                                                <span className="text-sm font-medium text-white">
-                                                    {framework.frameworkName}
-                                                </span>
-                                            </div>
-                                            <span
-                                                className="text-sm font-bold"
-                                                style={{
-                                                    color:
-                                                        (framework.compliancePercentage || 0) >= 80
-                                                            ? "#22c55e"
-                                                            : (framework.compliancePercentage || 0) >= 60
-                                                                ? "#eab308"
-                                                                : "#ef4444",
-                                                }}
-                                            >
-                                                {(framework.compliancePercentage || 0).toFixed(0)}%
-                                            </span>
-                                        </div>
-                                        <ProgressBar
-                                            value={framework.compliancePercentage || 0}
-                                            color={
-                                                (framework.compliancePercentage || 0) >= 80
-                                                    ? "#22c55e"
-                                                    : (framework.compliancePercentage || 0) >= 60
-                                                        ? "#eab308"
-                                                        : "#ef4444"
-                                            }
-                                            showLabel={false}
-                                        />
-                                        <div className="flex items-center gap-3 mt-1 text-xs text-[var(--text-muted)]">
-                                            <span className="text-green-400">
-                                                {framework.compliant || 0} compliant
-                                            </span>
-                                            <span>•</span>
-                                            <span className="text-red-400">
-                                                {framework.nonCompliant || 0} non-compliant
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </Card>
-                    </div>
-
-                    {/* Recent Activity */}
-                    <div className="lg:col-span-4">
-                        <Card
-                            title="Recent Activity"
-                            subtitle="Latest security events"
-                            action={
-                                <Link
-                                    href="/reports/activity"
-                                    className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1"
-                                >
-                                    View All <ChevronRight size={14} />
-                                </Link>
-                            }
-                        >
-                            <div className="space-y-3">
-                                {(recentActivities || []).map((activity: any) => (
-                                    <div
-                                        key={activity.id}
-                                        className="flex items-start gap-3 p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-all duration-300 ease-in-out cursor-pointer"
-                                    >
-                                        <div
-                                            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                                            style={{
-                                                background:
-                                                    activity.entityType === "vulnerability"
-                                                        ? "rgba(239, 68, 68, 0.1)"
-                                                        : activity.entityType === "asset"
-                                                            ? "rgba(59, 130, 246, 0.1)"
-                                                            : "rgba(139, 92, 246, 0.1)",
-                                            }}
-                                        >
-                                            {activity.entityType === "vulnerability" ? (
-                                                <Shield
-                                                    size={14}
-                                                    style={{ color: "#ef4444" }}
-                                                />
-                                            ) : activity.entityType === "asset" ? (
-                                                <Server
-                                                    size={14}
-                                                    style={{ color: "#3b82f6" }}
-                                                />
-                                            ) : (
-                                                <Activity
-                                                    size={14}
-                                                    style={{ color: "#8b5cf6" }}
-                                                />
-                                            )}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm text-[var(--text-secondary)]">
-                                                {activity.action}
-                                            </p>
-                                            <p className="text-xs text-[var(--text-muted)] truncate">
-                                                {activity.entityName}
-                                            </p>
-                                        </div>
-                                        <div className="text-right flex-shrink-0">
-                                            <p className="text-xs text-[var(--text-muted)]">
-                                                {getTimeAgo(activity.timestamp)}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </Card>
-                    </div>
-                </div>
-
-                {/* Bottom Charts Row */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {/* Vulnerability Remediation Trends */}
-                    <Card
-                        title="Vulnerability Remediation"
-                        subtitle="Monthly opened vs closed vulnerabilities"
-                    >
-                        <VulnStatusChart data={remediationTrends} />
-                    </Card>
-
-                    {/* Asset Type Distribution */}
-                    <Card
-                        title="Asset Distribution"
-                        subtitle="By asset type"
-                    >
-                        <AssetTypeChart data={assetTypeDistribution} />
-                    </Card>
-                </div>
-            </div>
-        </DashboardLayout>
+  const severityRows = useMemo(() => {
+    const distributionMap = new Map(
+      (data?.severityDistribution ?? []).map((item) => [item.severity, item.count]),
     );
+    return severityOrder.map((severity) => {
+      const count = distributionMap.get(severity) ?? 0;
+      const percentage =
+        stats.totalVulnerabilities > 0 ? (count / stats.totalVulnerabilities) * 100 : 0;
+
+      return {
+        severity,
+        count,
+        percentage,
+      };
+    });
+  }, [data?.severityDistribution, stats.totalVulnerabilities]);
+
+  const priorityQueue = useMemo(
+    () => (data?.exploitedVulnerabilities ?? []).slice(0, 6),
+    [data?.exploitedVulnerabilities],
+  );
+
+  const riskyAssets = useMemo(
+    () => (data?.topRiskyAssets ?? []).slice(0, 5),
+    [data?.topRiskyAssets],
+  );
+
+  const complianceRows = useMemo(
+    () => (data?.complianceOverview ?? []).slice(0, 4),
+    [data?.complianceOverview],
+  );
+
+  const activityRows = useMemo(
+    () => (data?.recentActivities ?? []).slice(0, 6),
+    [data?.recentActivities],
+  );
+
+  const remediationTrends = data?.remediationTrends ?? [];
+  const riskTrends = data?.riskTrends ?? [];
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <SecurityLoader
+            size="xl"
+            icon="shield"
+            variant="cyber"
+            text="Loading SOC dashboard context..."
+          />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <DashboardLayout>
+        <div className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center rounded-2xl border border-red-400/25 bg-red-500/5 p-8 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full border border-red-400/25 bg-red-500/10">
+            <CircleAlert className="h-7 w-7 text-red-300" />
+          </div>
+          <h2 className="mt-5 text-xl font-semibold text-white">Unable to Load Dashboard</h2>
+          <p className="mt-2 text-sm text-slate-300">
+            {error || "We could not fetch your dashboard data right now."}
+          </p>
+          <button
+            type="button"
+            onClick={() => void fetchDashboardData()}
+            className="mt-5 inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-white/30 hover:bg-white/10"
+          >
+            Retry
+            <RefreshCw size={14} />
+          </button>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const riskMeter = Math.min(Math.max(stats.overallRiskScore, 0), 100);
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-5 animate-fade-in">
+        <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(132deg,rgba(56,189,248,0.22),rgba(18,18,26,0.86)_42%,rgba(18,18,26,0.96))] p-6 sm:p-8 transition-all duration-300 hover:border-sky-300/30">
+          <div className="pointer-events-none absolute right-[-60px] top-[-120px] h-56 w-56 rounded-full bg-sky-300/20 blur-3xl" />
+          <div className="relative flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-3xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-sky-300/35 bg-sky-300/10 px-3 py-1 text-xs font-medium text-sky-200">
+                <Siren size={13} />
+                SOC Command Surface
+              </div>
+              <h1 className="mt-4 text-2xl font-semibold leading-tight text-white sm:text-3xl">
+                Security Dashboard
+              </h1>
+              <p className="mt-3 text-sm leading-relaxed text-slate-200 sm:text-base">
+                Centralized view for risk, threat activity, and remediation progress. Built to
+                keep triage and action fast for SOC teams.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-100">
+                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 transition-all duration-200 hover:bg-white/15">
+                  Last updated {lastUpdatedLabel}
+                </span>
+                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 transition-all duration-200 hover:bg-white/15">
+                  {stats.openVulnerabilities} open vulnerabilities
+                </span>
+                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 transition-all duration-200 hover:bg-white/15">
+                  {activeThreats} active threat signals
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <button
+                type="button"
+                onClick={() => void fetchDashboardData({ silent: true })}
+                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105"
+              >
+                <RefreshCw size={15} className={isRefreshing ? "animate-spin" : ""} />
+                Refresh
+              </button>
+              <Link
+                href="/risk-register"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105"
+              >
+                Risk Register
+                <ArrowRight size={14} />
+              </Link>
+              <Link
+                href="/threats"
+                className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-200 hover:scale-105"
+              >
+                Threat Queue
+                <ChevronRight size={14} />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* HIGH PRIORITY SECTION */}
+        {activeThreats > 0 ? (
+          <section className="rounded-2xl border border-red-400/20 bg-red-500/5 p-4 animate-slide-in-up transition-all duration-300 hover:border-red-400/30 hover:bg-red-500/10">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 rounded-lg border border-red-400/25 bg-red-500/10 p-2 animate-pulse-subtle">
+                  <AlertTriangle size={16} className="text-red-300" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-semibold text-red-100">Active Exploitation Signals</h2>
+                    <span className="rounded-full bg-red-400 px-2 py-0.5 text-[10px] font-bold text-white">HIGH PRIORITY</span>
+                  </div>
+                  <p className="mt-1 text-sm text-red-100/80">
+                    {stats.exploitedVulnerabilities} exploited vulnerabilities and{" "}
+                    {stats.cisaKevCount} KEV-listed issues require attention.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/vulnerabilities?filter=exploited"
+                className="inline-flex items-center gap-2 self-start rounded-lg border border-red-300/35 bg-red-400/10 px-3 py-1.5 text-sm text-red-100 transition-all duration-200 hover:bg-red-400/20 hover:scale-105 sm:self-auto"
+              >
+                Review now
+                <ArrowRight size={14} />
+              </Link>
+            </div>
+          </section>
+        ) : null}
+
+        {/* KEY METRICS */}
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            {
+              label: "Overall Risk Score",
+              value: stats.overallRiskScore.toFixed(1),
+              hint: `${riskBand.label} risk posture`,
+              icon: Gauge,
+              bar: stats.overallRiskScore,
+              priority: stats.overallRiskScore >= 60 ? "high" : "low",
+            },
+            {
+              label: "Open Vulnerabilities",
+              value: numberFormatter.format(stats.openVulnerabilities),
+              hint: `${stats.criticalVulnerabilities} critical · ${stats.highVulnerabilities} high`,
+              icon: ShieldAlert,
+              bar: stats.totalVulnerabilities
+                ? (stats.openVulnerabilities / stats.totalVulnerabilities) * 100
+                : 0,
+              priority: stats.criticalVulnerabilities > 0 ? "high" : "low",
+            },
+            {
+              label: "Active Threat Signals",
+              value: numberFormatter.format(activeThreats),
+              hint: `${stats.exploitedVulnerabilities} exploited · ${stats.threatIndicatorCount} indicators`,
+              icon: Siren,
+              bar: Math.min(activeThreats, 100),
+              priority: activeThreats > 0 ? "high" : "low",
+            },
+            {
+              label: "Compliance Score",
+              value: `${stats.complianceScore.toFixed(0)}%`,
+              hint: "Framework coverage health",
+              icon: FileCheck2,
+              bar: stats.complianceScore,
+              priority: stats.complianceScore < 80 ? "high" : "low",
+            },
+          ].map((metric, idx) => {
+            const Icon = metric.icon;
+
+            return (
+              <article
+                key={metric.label}
+                className="group rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-300/35 hover:shadow-lg hover:shadow-sky-500/10 animate-fade-in"
+                style={{ animationDelay: `${idx * 100}ms` }}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm text-slate-300">{metric.label}</p>
+                    {metric.priority === "high" && (
+                      <span className="mt-1 inline-block rounded-full bg-orange-400/10 px-2 py-0.5 text-[10px] font-semibold text-orange-300">
+                        NEEDS ATTENTION
+                      </span>
+                    )}
+                  </div>
+                  <div className="rounded-lg border border-white/10 bg-white/5 p-2 transition-all duration-300 group-hover:scale-110 group-hover:bg-sky-300/10">
+                    <Icon size={15} className="text-slate-200 transition-colors group-hover:text-sky-300" />
+                  </div>
+                </div>
+                <p className="mt-4 text-3xl font-semibold text-white transition-all duration-300 group-hover:text-sky-300">{metric.value}</p>
+                <p className="mt-1 text-sm text-slate-400">{metric.hint}</p>
+                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-sky-300 transition-all duration-700 ease-out"
+                    style={{ width: `${Math.min(Math.max(metric.bar, 0), 100)}%` }}
+                  />
+                </div>
+              </article>
+            );
+          })}
+        </section>
+
+        {/* TOP PRIORITY SECTION */}
+        <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+          <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 transition-all duration-300 hover:border-orange-300/30 animate-slide-in-left">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-semibold text-white">Priority Queue</h2>
+                  <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white animate-pulse-subtle">
+                    TOP PRIORITY
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-slate-400">
+                  Exploited vulnerabilities ranked for immediate SOC action.
+                </p>
+              </div>
+              <Link
+                href="/vulnerabilities?filter=exploited"
+                className="text-sm text-sky-300 transition-all duration-200 hover:text-sky-200 hover:scale-105"
+              >
+                View all
+              </Link>
+            </div>
+
+            {priorityQueue.length > 0 ? (
+              <div className="mt-5 space-y-3">
+                {priorityQueue.map((vuln, index) => (
+                  <div
+                    key={vuln.id}
+                    className="group rounded-xl border border-white/10 bg-white/[0.03] p-3 transition-all duration-300 hover:border-orange-300/40 hover:bg-white/[0.08] hover:-translate-y-0.5 hover:shadow-lg animate-fade-in"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-md bg-orange-400/20 px-2 py-0.5 text-xs font-semibold text-orange-300 transition-all duration-200 group-hover:bg-orange-400/30">
+                            #{index + 1}
+                          </span>
+                          <span className="font-mono text-xs text-sky-300 transition-all duration-200 group-hover:text-sky-200">
+                            {vuln.cveId || "No CVE ID"}
+                          </span>
+                          <span
+                            className={`rounded-full border px-2 py-0.5 text-[11px] transition-all duration-200 ${getSeverityBadgeTone(vuln.severity)}`}
+                          >
+                            {vuln.severity}
+                          </span>
+                          {vuln.cisaKev ? (
+                            <span className="rounded-full border border-red-400/35 bg-red-500/10 px-2 py-0.5 text-[11px] text-red-200 animate-pulse-subtle">
+                              KEV
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="mt-2 truncate text-sm text-slate-200 transition-colors duration-200 group-hover:text-white">{vuln.title}</p>
+                      </div>
+
+                      <div className="flex items-center gap-5 text-right">
+                        <div>
+                          <p className="text-sm font-medium text-white transition-all duration-200 group-hover:text-orange-300">
+                            {((vuln.epssScore || 0) * 100).toFixed(1)}%
+                          </p>
+                          <p className="text-xs text-slate-400">EPSS</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-white transition-all duration-200 group-hover:text-orange-300">{vuln.affectedAssets || 0}</p>
+                          <p className="text-xs text-slate-400">Assets</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.03] p-5 text-sm text-slate-400">
+                No exploited vulnerabilities are currently tracked.
+              </div>
+            )}
+          </article>
+
+          <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 transition-all duration-300 hover:border-sky-300/30 animate-slide-in-right">
+            <h2 className="text-lg font-semibold text-white">SOC Risk Snapshot</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Distribution of vulnerability severity and current risk pressure.
+            </p>
+
+            <div className="mt-6 flex items-center justify-center">
+              <div
+                className="h-32 w-32 rounded-full p-[10px]"
+                style={{
+                  background: `conic-gradient(rgba(125,211,252,1) ${riskMeter}%, rgba(255,255,255,0.12) ${riskMeter}% 100%)`,
+                }}
+              >
+                <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-[var(--bg-secondary)]">
+                  <p className="text-2xl font-semibold text-white">{stats.overallRiskScore.toFixed(1)}</p>
+                  <p className={`text-xs ${riskBand.color}`}>{riskBand.label}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              {severityRows.map((entry) => (
+                <div key={entry.severity}>
+                  <div className="mb-1.5 flex items-center justify-between text-xs">
+                    <span className="text-slate-300">{entry.severity}</span>
+                    <span className="text-slate-400">
+                      {entry.count} ({entry.percentage.toFixed(1)}%)
+                    </span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className={`h-full rounded-full ${getSeverityRailTone(entry.severity)}`}
+                      style={{ width: `${Math.min(Math.max(entry.percentage, 0), 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </article>
+        </section>
+
+        {/* LOWER PRIORITY SECTION */}
+        <section className="grid gap-4 xl:grid-cols-2">
+          <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 transition-all duration-300 hover:border-sky-300/30 animate-fade-in" style={{ animationDelay: "200ms" }}>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-semibold text-white">Compliance Overview</h2>
+                  <span className="rounded-full bg-slate-500/20 px-2 py-0.5 text-[10px] font-semibold text-slate-400">
+                    MONITOR
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-slate-400">Framework posture by control status.</p>
+              </div>
+              <Link
+                href="/compliance"
+                className="text-sm text-sky-300 transition-all duration-200 hover:text-sky-200 hover:scale-105"
+              >
+                Open module
+              </Link>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              {complianceRows.length > 0 ? (
+                complianceRows.map((framework) => (
+                  <div key={framework.frameworkId}>
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <p className="text-sm text-slate-200">{framework.frameworkName}</p>
+                      <p className="text-sm font-medium text-white">
+                        {framework.compliancePercentage.toFixed(0)}%
+                      </p>
+                    </div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className={`h-full rounded-full ${getComplianceTone(framework.compliancePercentage)}`}
+                        style={{
+                          width: `${Math.min(Math.max(framework.compliancePercentage, 0), 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="mt-1.5 text-xs text-slate-400">
+                      {framework.compliant} compliant · {framework.nonCompliant} non-compliant
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+                  Compliance frameworks are not configured yet.
+                </p>
+              )}
+            </div>
+          </article>
+
+          <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 transition-all duration-300 hover:border-sky-300/30 animate-fade-in" style={{ animationDelay: "300ms" }}>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-semibold text-white">Top Risky Assets</h2>
+                  <span className="rounded-full bg-yellow-400/20 px-2 py-0.5 text-[10px] font-semibold text-yellow-300">
+                    REVIEW
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-slate-400">Assets with highest security exposure.</p>
+              </div>
+              <Link href="/assets" className="text-sm text-sky-300 transition-all duration-200 hover:text-sky-200 hover:scale-105">
+                View assets
+              </Link>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {riskyAssets.length > 0 ? (
+                riskyAssets.map((asset, idx) => (
+                  <div
+                    key={asset.id}
+                    className="group rounded-xl border border-white/10 bg-white/[0.03] p-3 transition-all duration-300 hover:border-sky-300/30 hover:bg-white/[0.06] hover:-translate-y-0.5 animate-fade-in"
+                    style={{ animationDelay: `${idx * 50}ms` }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-slate-100 transition-colors duration-200 group-hover:text-white">{asset.name}</p>
+                        <p className="mt-0.5 text-xs text-slate-400">{formatAssetType(asset.type)}</p>
+                      </div>
+                      <p className="text-sm font-medium text-white transition-all duration-200 group-hover:text-sky-300">{asset.riskScore.toFixed(1)}</p>
+                    </div>
+                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className={`h-full rounded-full transition-all duration-700 ease-out ${getRiskBand(asset.riskScore).rail}`}
+                        style={{ width: `${Math.min(Math.max(asset.riskScore, 0), 100)}%` }}
+                      />
+                    </div>
+                    <p className="mt-1.5 text-xs text-slate-400">
+                      {asset.vulnerabilityCount} vulnerabilities · {asset.criticalVulnCount} critical
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+                  No asset risk data is available yet.
+                </p>
+              )}
+            </div>
+          </article>
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+          <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
+            <h2 className="text-lg font-semibold text-white">Risk and Remediation Trends</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Weekly risk evolution and monthly fix velocity.
+            </p>
+
+            <div className="mt-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                Risk Trend
+              </p>
+              <div className="mt-2">
+                <RiskTrendChart data={riskTrends} />
+              </div>
+            </div>
+
+            <div className="mt-6 border-t border-white/10 pt-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                Remediation Velocity
+              </p>
+              <div className="mt-2">
+                <VulnStatusChart data={remediationTrends} />
+              </div>
+            </div>
+          </article>
+
+          <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Recent Activity</h2>
+                <p className="mt-1 text-sm text-slate-400">Latest high-signal events and updates.</p>
+              </div>
+              <Link
+                href="/reports/activity"
+                className="text-sm text-sky-300 transition hover:text-sky-200"
+              >
+                Full log
+              </Link>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {activityRows.length > 0 ? (
+                activityRows.map((activity) => {
+                  const activityTone = getActivityTone(activity.entityType, activity.action);
+                  const Icon = activityTone.icon;
+
+                  return (
+                    <div
+                      key={activity.id}
+                      className="group rounded-xl border border-white/10 bg-white/[0.03] p-3 transition-all duration-300 hover:border-sky-300/20 hover:bg-white/[0.06]"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-300 group-hover:scale-110 ${activityTone.shell}`}
+                        >
+                          <Icon size={14} className={`${activityTone.iconColor} transition-all duration-300`} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm text-slate-200 transition-colors duration-200 group-hover:text-white">{activity.action}</p>
+                          <p className="mt-0.5 truncate text-xs text-slate-400">{activity.entityName}</p>
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          {getTimeAgo(activity.timestamp)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+                  No recent activities were recorded.
+                </p>
+              )}
+            </div>
+          </article>
+        </section>
+      </div>
+    </DashboardLayout>
+  );
 }
