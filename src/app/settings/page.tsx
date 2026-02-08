@@ -134,7 +134,7 @@ export default function SettingsPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(settings),
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 setSettings({ ...settings, ...data });
@@ -295,87 +295,6 @@ export default function SettingsPage() {
                                 isSaving={isSaving}
                                 isMainOfficer={isMainOfficer}
                             />
-                            <Card title="Security Settings" subtitle="Authentication and access control">
-                                <div className="space-y-6">
-                                    <div className="p-4 rounded-lg bg-[var(--bg-tertiary)]">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <div>
-                                                <h4 className="text-sm font-medium text-white">
-                                                    AI Risk Intelligence
-                                                </h4>
-                                                <p className="text-xs text-[var(--text-muted)]">
-                                                    Automatically analyze new vulnerabilities with AI
-                                                </p>
-                                            </div>
-                                            <label className="relative inline-flex items-center cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={settings?.aiRiskAssessmentEnabled !== false}
-                                                    onChange={(e) => setSettings({ ...settings, aiRiskAssessmentEnabled: e.target.checked })}
-                                                    className="sr-only peer"
-                                                />
-                                                <div className="w-11 h-6 bg-[var(--bg-elevated)] peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500" />
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div className="p-4 rounded-lg bg-[var(--bg-tertiary)]">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <div>
-                                                <h4 className="text-sm font-medium text-white">
-                                                    Two-Factor Authentication
-                                                </h4>
-                                                <p className="text-xs text-[var(--text-muted)]">
-                                                    Require 2FA for all users
-                                                </p>
-                                            </div>
-                                            <label className="relative inline-flex items-center cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={settings?.require2FA || false}
-                                                    onChange={(e) => setSettings({ ...settings, require2FA: e.target.checked })}
-                                                    className="sr-only peer"
-                                                />
-                                                <div className="w-11 h-6 bg-[var(--bg-elevated)] peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500" />
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-white mb-2">
-                                            Session Timeout (minutes)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            value={settings?.sessionTimeout || 30}
-                                            onChange={(e) => setSettings({ ...settings, sessionTimeout: parseInt(e.target.value) })}
-                                            className="input w-32"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-white mb-2">
-                                            Password Policy
-                                        </label>
-                                        <select
-                                            className="input"
-                                            value={settings?.passwordPolicy || "STRONG"}
-                                            onChange={(e) => setSettings({ ...settings, passwordPolicy: e.target.value })}
-                                        >
-                                            <option value="STRONG">Strong (12+ chars, mixed case, numbers, symbols)</option>
-                                            <option value="MEDIUM">Medium (8+ chars, mixed case, numbers)</option>
-                                            <option value="BASIC">Basic (8+ chars)</option>
-                                        </select>
-                                    </div>
-                                    <div className="pt-4 border-t border-[var(--border-color)]">
-                                        <button
-                                            className="btn btn-primary"
-                                            onClick={handleSave}
-                                            disabled={isSaving}
-                                        >
-                                            <Save size={16} />
-                                            {isSaving ? "Saving..." : "Save Changes"}
-                                        </button>
-                                    </div>
-                                </div>
-                            </Card>
                         )}
 
                         {activeSection === "ai-assist" && (
@@ -835,6 +754,26 @@ function SecuritySection({ settings, updateSettings, handleSave, isSaving, isMai
                 <p className="text-sm text-[var(--text-muted)] p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
                     Bank-grade defaults: require2FA=true, sessionTimeout=15–30 min, passwordPolicy=STRONG
                 </p>
+
+                <RestrictedField isMainOfficer={isMainOfficer}>
+                    <div className="p-4 rounded-lg bg-[var(--bg-tertiary)]">
+                        <div className="flex items-center justify-between mb-3">
+                            <div>
+                                <h4 className="text-sm font-medium text-white">
+                                    AI Risk Intelligence
+                                </h4>
+                                <p className="text-xs text-[var(--text-muted)]">
+                                    Automatically analyze new vulnerabilities with AI
+                                </p>
+                            </div>
+                            <Toggle
+                                checked={settings?.aiRiskAssessmentEnabled !== false}
+                                onChange={(checked) => updateSettings({ aiRiskAssessmentEnabled: checked })}
+                                disabled={!isMainOfficer}
+                            />
+                        </div>
+                    </div>
+                </RestrictedField>
 
                 <RestrictedField isMainOfficer={isMainOfficer}>
                     <div className="p-4 rounded-lg bg-[var(--bg-tertiary)]">
