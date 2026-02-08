@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Shield, Mail, Lock, Eye, EyeOff, ArrowRight, Github } from "lucide-react";
 import { signIn } from "next-auth/react";
@@ -11,6 +11,27 @@ export default function LoginPage() {
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [authError, setAuthError] = useState<string | null>(null);
+
+    // Check for error in URL on mount
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const error = urlParams.get("error");
+        if (error) {
+            switch (error) {
+                case "Configuration":
+                    setAuthError("There is a problem with the server configuration.");
+                    break;
+                case "AccessDenied":
+                    setAuthError("Access denied. You do not have permission to sign in.");
+                    break;
+                case "Verification":
+                    setAuthError("Verification failed. The link may have expired.");
+                    break;
+                default:
+                    setAuthError("An authentication error occurred. Please try again.");
+            }
+        }
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

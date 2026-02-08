@@ -165,6 +165,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
         },
     },
     trustHost: true,
+    debug: process.env.NODE_ENV !== "production",
 });
 
 declare module "next-auth" {
