@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface CVSSCalculatorProps {
     onScoreChange: (score: string) => void;
+    onVectorChange?: (vector: string) => void;
 }
 
 type AV = "N" | "A" | "L" | "P";
@@ -25,7 +26,7 @@ interface CVSSMetrics {
     a: CIA;
 }
 
-export function CVSSCalculator({ onScoreChange }: CVSSCalculatorProps) {
+export function CVSSCalculator({ onScoreChange, onVectorChange }: CVSSCalculatorProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [metrics, setMetrics] = useState<CVSSMetrics>({
         av: "N",
@@ -51,7 +52,7 @@ export function CVSSCalculator({ onScoreChange }: CVSSCalculatorProps) {
         };
 
         const iss = 1 - (1 - WEIGHTS.cia[m.c]) * (1 - WEIGHTS.cia[m.i]) * (1 - WEIGHTS.cia[m.a]);
-        
+
         let impact: number;
         if (m.s === "U") {
             impact = 6.42 * iss;
@@ -73,29 +74,38 @@ export function CVSSCalculator({ onScoreChange }: CVSSCalculatorProps) {
         return baseScore.toFixed(1);
     };
 
-    useEffect(() => {
-        onScoreChange(calculateScore(metrics));
-    }, [metrics]);
+    const generateVector = (m: CVSSMetrics) => {
+        return `CVSS:3.1/AV:${m.av}/AC:${m.ac}/PR:${m.pr}/UI:${m.ui}/S:${m.s}/C:${m.c}/I:${m.i}/A:${m.a}`;
+    };
 
-    const MetricButton = ({ 
-        label, 
-        value, 
-        currentValue, 
-        onClick 
-    }: { 
-        label: string; 
-        value: string; 
-        currentValue: string; 
-        onClick: () => void 
+    useEffect(() => {
+        const score = calculateScore(metrics);
+        const vector = generateVector(metrics);
+
+        onScoreChange(score);
+        if (onVectorChange) {
+            onVectorChange(vector);
+        }
+    }, [metrics, onScoreChange, onVectorChange]);
+
+    const MetricButton = ({
+        label,
+        value,
+        currentValue,
+        onClick
+    }: {
+        label: string;
+        value: string;
+        currentValue: string;
+        onClick: () => void
     }) => (
         <button
             type="button"
             onClick={onClick}
-            className={`px-3 py-1.5 text-xs rounded-md border transition-all ${
-                currentValue === value
-                    ? "bg-primary/20 border-primary text-primary"
-                    : "bg-white/5 border-white/10 text-[var(--text-secondary)] hover:bg-white/10"
-            }`}
+            className={`px-3 py-1.5 text-xs rounded-md border transition-all ${currentValue === value
+                ? "bg-primary/20 border-primary text-primary"
+                : "bg-white/5 border-white/10 text-[var(--text-secondary)] hover:bg-white/10"
+                }`}
         >
             <div className="font-medium">{label}</div>
             <div className="opacity-60">{value}</div>
