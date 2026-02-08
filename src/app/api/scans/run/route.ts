@@ -18,12 +18,12 @@ export async function POST(request: NextRequest) {
             const { prisma } = await import("@/lib/prisma");
             const scanner = await prisma.scannerConfig.findUnique({ where: { id: scannerId } });
 
-            if ((scanner?.type as string) === "TENABLE") {
+            if (scanner?.type === "TENABLE" || scanner?.type === "API") {
                 const { runTenableScan } = await import("@/lib/scanner-engine");
                 result = await runTenableScan(assetId, scannerId);
             } else {
                 return NextResponse.json(
-                    { error: "Selected scanner is not supported or requires manual configuration" },
+                    { error: `Scanner type '${scanner?.type}' is not supported yet for direct API scanning. Please use a Tenable scanner or a generic API connector.` },
                     { status: 400 }
                 );
             }

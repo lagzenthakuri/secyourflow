@@ -8,30 +8,30 @@ datasource db {
 }
 
 model User {
-  id             String         @id @default(cuid())
-  email          String         @unique
-  emailVerified  DateTime?
-  name           String?
-  password       String?
-  image          String?
-  role           Role           @default(ANALYST)
-  avatar         String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  lastLogin      DateTime?
-  totpEnabled    Boolean        @default(false)
-  totpSecretEnc  String?
-  totpVerifiedAt DateTime?
+  id                    String         @id @default(cuid())
+  email                 String         @unique
+  emailVerified         DateTime?
+  name                  String?
+  password              String?
+  image                 String?
+  role                  Role           @default(ANALYST)
+  avatar                String?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  lastLogin             DateTime?
+  organizationId        String?
+  totpEnabled           Boolean        @default(false)
+  totpSecretEnc         String?
+  totpVerifiedAt        DateTime?
   totpRecoveryCodesHash Json?
-  totpLastUsedStep Int?
-  organizationId String?
-  accounts       Account[]
-  auditLogs      AuditLog[]
-  comments       Comment[]
-  notifications  Notification[]
-  reports        Report[]
-  sessions       Session[]
-  organization   Organization?  @relation(fields: [organizationId], references: [id])
+  totpLastUsedStep      Int?
+  accounts              Account[]
+  auditLogs             AuditLog[]
+  comments              Comment[]
+  notifications         Notification[]
+  reports               Report[]
+  sessions              Session[]
+  organization          Organization?  @relation(fields: [organizationId], references: [id])
 
   @@index([email])
   @@index([organizationId])
@@ -410,21 +410,21 @@ model RiskSnapshot {
 }
 
 model Setting {
-  id               String       @id @default(cuid())
-  organizationId   String       @unique
-  timezone         String       @default("UTC")
-  dateFormat       String       @default("MMM DD, YYYY")
-  notifyCritical   Boolean      @default(true)
-  notifyExploited  Boolean      @default(true)
-  notifyCompliance Boolean      @default(true)
-  notifyScan       Boolean      @default(false)
-  notifyWeekly     Boolean      @default(true)
-  require2FA       Boolean      @default(false)
-  sessionTimeout   Int          @default(30)
-  passwordPolicy   String       @default("STRONG")
-  aiRiskAssessmentEnabled Boolean @default(true)
-  updatedAt        DateTime     @updatedAt
-  organization     Organization @relation(fields: [organizationId], references: [id])
+  id                      String       @id @default(cuid())
+  organizationId          String       @unique
+  timezone                String       @default("UTC")
+  dateFormat              String       @default("MMM DD, YYYY")
+  notifyCritical          Boolean      @default(true)
+  notifyExploited         Boolean      @default(true)
+  notifyCompliance        Boolean      @default(true)
+  notifyScan              Boolean      @default(false)
+  notifyWeekly            Boolean      @default(true)
+  require2FA              Boolean      @default(false)
+  sessionTimeout          Int          @default(30)
+  passwordPolicy          String       @default("STRONG")
+  updatedAt               DateTime     @updatedAt
+  aiRiskAssessmentEnabled Boolean      @default(true)
+  organization            Organization @relation(fields: [organizationId], references: [id])
 }
 
 model Report {
@@ -517,15 +517,15 @@ model Cve {
 
   @@index([cveId])
   @@index([cveId], map: "Cve_cveId_pattern_idx")
-  // @@index([cveId(ops: raw("gin_trgm_ops"))], map: "Cve_cveId_trgm_idx", type: Gin)  // Requires pg_trgm extension
   @@index([epssScore])
   @@index([isKev, severity])
   @@index([publishedAt(sort: Desc)])
-  // @@index([searchVector], type: Gin)  // Requires tsvector support
   @@index([severity, publishedAt])
   @@index([status, lastModifiedAt])
   @@index([status, publishedAt])
   @@index([status, severity, publishedAt(sort: Desc)], map: "Cve_status_severity_published_idx")
+  @@index([cveId(ops: raw("gin_trgm_ops"))], map: "Cve_cveId_trgm_idx", type: Gin)
+  @@index([searchVector], type: Gin)
 }
 
 model CveCpe {

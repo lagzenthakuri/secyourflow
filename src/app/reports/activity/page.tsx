@@ -153,7 +153,13 @@ export default function ActivityLogPage() {
                                                         {(log.user?.name || log.user?.email)?.[0]?.toUpperCase() || 'S'}
                                                     </div>
                                                     <span className="text-sm text-[var(--text-secondary)]">
-                                                        {log.user?.name || log.user?.email || 'System'}
+                                                        {log.user?.name ? (
+                                                            <span>
+                                                                {log.user.name}
+                                                            </span>
+                                                        ) : (
+                                                            log.user?.email || 'System'
+                                                        )}
                                                     </span>
                                                 </div>
                                             </td>
