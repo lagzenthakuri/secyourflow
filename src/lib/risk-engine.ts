@@ -3,6 +3,34 @@ import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/logger";
 import { updateComplianceFromRisk } from "@/lib/compliance-engine";
 
+/**
+ * Parses CVSS v3.1 vector string to extract CIA impacts.
+ * Returns scores on 1-5 scale: None=1, Low=3, High=5.
+ */
+function parseCVSSVector(vector?: string) {
+    const defaultScores = { c: 3, i: 3, a: 3 }; // Defaults to Medium/Low (3)
+    if (!vector) return defaultScores;
+
+    const scores = { ...defaultScores };
+    const parts = vector.split('/');
+
+    const mapImpact = (val: string) => {
+        if (val === 'H') return 5;
+        if (val === 'L') return 3;
+        if (val === 'N') return 1;
+        return 3;
+    };
+
+    parts.forEach(part => {
+        const [key, value] = part.split(':');
+        if (key === 'C') scores.c = mapImpact(value);
+        if (key === 'I') scores.i = mapImpact(value);
+        if (key === 'A') scores.a = mapImpact(value);
+    });
+
+    return scores;
+}
+
 // Type definition for the AI Risk Analysis Output
 interface AIRiskAnalysis {
     c_impact: number; // 1-5
@@ -28,6 +56,8 @@ async function analyzeRiskWithAI(
         return mockAnalysis(vulnerability, asset);
     }
 
+    const cia = parseCVSSVector(vulnerability.cvssVector);
+
     const prompt = `
 Evaluate the risk of this vulnerability on this asset. 
 Asset Info: 
@@ -42,20 +72,28 @@ Vulnerability Info:
 - CVE: ${vulnerability.cveId || 'N/A'}
 - CVSS: ${vulnerability.cvssScore || 'N/A'}
 - Severity: ${vulnerability.severity}
+- CVSS Vector: ${vulnerability.cvssVector || 'N/A'}
 - Description: ${vulnerability.description || 'N/A'}
 
 Business Context:
 - Organization criticality: High
 - Regulatory exposure: GDPR, ISO 27001
 
+IMPORTANT: The technical impact metrics (CIA Triad) for this vulnerability have been pre-calculated from the CVSS vector as follows:
+- Confidentiality Impact: ${cia.c}/5
+- Integrity Impact: ${cia.i}/5
+- Availability Impact: ${cia.a}/5
+
+You MUST use these specific numeric values (1-5) for confidentiality_impact, integrity_impact, and availability_impact in your response. Do not change them.
+
 Give likelihood (1-5), impact CIA (1-5 each), risk category, rationale, recommended controls, and ISO 27001 mapping.
 Return ONLY structured JSON in this format:
 {
   "risk": "description of the risk",
   "threat": "description of the threat",
-  "confidentiality_impact": 1-5,
-  "integrity_impact": 1-5,
-  "availability_impact": 1-5,
+  "confidentiality_impact": ${cia.c},
+  "integrity_impact": ${cia.i},
+  "availability_impact": ${cia.a},
   "likelihood_score": 1-5,
   "risk_category": "Critical/High/Medium/Low",
   "risk_category_2": "Secondary Category (e.g. AppSec, Privacy)",
@@ -67,7 +105,7 @@ Return ONLY structured JSON in this format:
   "action_plan": "Implementation steps for remediation",
   "responsible_party": "role or team",
   "remarks": "",
-  "confidence": 0.0-1.0
+  "confidence": 1.0
 }
 `;
 
@@ -105,13 +143,14 @@ Return ONLY structured JSON in this format:
 function mockAnalysis(vulnerability: any, asset: any) {
     const title = vulnerability.title.toLowerCase();
     const isDB = title.includes("database") || title.includes("sql") || title.includes("postgre");
+    const cia = parseCVSSVector(vulnerability.cvssVector);
 
     return {
         "risk": isDB ? "Unauthorized DB access" : "System Compromise",
         "threat": vulnerability.title,
-        "confidentiality_impact": isDB ? 5 : 3,
-        "integrity_impact": 4,
-        "availability_impact": title.includes("dos") ? 5 : 3,
+        "confidentiality_impact": cia.c,
+        "integrity_impact": cia.i,
+        "availability_impact": cia.a,
         "likelihood_score": 4,
         "risk_category": vulnerability.severity === 'CRITICAL' ? "Critical" : "High",
         "risk_category_2": "Application Security",

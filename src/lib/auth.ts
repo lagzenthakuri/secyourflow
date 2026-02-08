@@ -87,7 +87,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 }).catch(() => undefined);
 
                 void import("./logger").then(({ logActivity }) => {
-                    return logActivity("User login", "auth", user.email || "unknown", null, null, "User logged in");
+                    return logActivity("User login", "auth", user.email || "unknown", null, null, "User logged in", user.id);
                 }).catch(() => undefined);
             }
 
