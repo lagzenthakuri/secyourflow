@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import {
@@ -94,18 +95,14 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             >
                 {/* Logo */}
                 <div className="p-6 border-b border-[var(--border-color)]">
-                    <Link href="/dashboard" className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                            <Shield className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                            <h1 className="text-lg font-bold text-white truncate max-w-[140px]">
-                                {orgName || "SecYourFlow"}
-                            </h1>
-                            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
-                                Cyber Risk Platform
-                            </p>
-                        </div>
+                    <Link href="/dashboard" className="flex justify-center">
+                        <Image
+                            src="/logo.png"
+                            alt="SecYourFlow"
+                            width={48}
+                            height={48}
+                            className="rounded-xl"
+                        />
                     </Link>
                 </div>
 
@@ -357,7 +354,18 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 isSidebarOpen ? "lg:ml-[260px]" : "lg:ml-0"
             )}>
                 <TopBar onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
-                <main className="p-6">{children}</main>
+                <main className="p-6 min-h-[calc(100vh-4rem)]">{children}</main>
+                <footer className="py-6 px-6 border-t border-[var(--border-color)] bg-[var(--bg-secondary)]/50">
+                    <div className="flex items-center justify-center">
+                        <Image
+                            src="/logo-with-words.png"
+                            alt="SecYourFlow"
+                            width={180}
+                            height={45}
+                            className="opacity-60 hover:opacity-100 transition-opacity"
+                        />
+                    </div>
+                </footer>
             </div>
         </div>
     );

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Shield, Mail, Lock, Eye, EyeOff, ArrowRight, Github } from "lucide-react";
+import Image from "next/image";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Github } from "lucide-react";
 import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
@@ -48,11 +49,14 @@ export default function LoginPage() {
             <div className="w-full max-w-md">
                 {/* Logo */}
                 <div className="text-center mb-8">
-                    <Link href="/" className="inline-flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                            <Shield className="w-6 h-6 text-white" />
-                        </div>
-                        <span className="text-2xl font-bold text-white">SecYourFlow</span>
+                    <Link href="/" className="inline-block">
+                        <Image
+                            src="/logo.png"
+                            alt="SecYourFlow"
+                            width={80}
+                            height={80}
+                            className="rounded-xl mx-auto"
+                        />
                     </Link>
                     <p className="text-[var(--text-secondary)] mt-4">
                         Sign in to your account
