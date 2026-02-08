@@ -11,6 +11,7 @@ interface FoundVulnerability {
     severity: Severity;
     cveId?: string;
     cvssScore?: number;
+    cvssVector?: string;
     solution?: string;
     isExploited?: boolean;
     cisaKev?: boolean;
@@ -64,6 +65,7 @@ export async function runTenableScan(assetId: string, scannerId: string) {
                     description: "The remote host is using an outdated version of OpenSSL that is vulnerable to the Heartbleed bug, which allows an attacker to read the memory of the connected systems.",
                     severity: "CRITICAL" as Severity,
                     cvssScore: 9.8,
+                    cvssVector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
                     cveId: "CVE-2014-0160"
                 },
                 {
@@ -72,6 +74,7 @@ export async function runTenableScan(assetId: string, scannerId: string) {
                     description: "The SSH service allows root login and uses weak cryptographic algorithms. This increases the risk of brute-force attacks and session hijacking.",
                     severity: "HIGH" as Severity,
                     cvssScore: 7.5,
+                    cvssVector: "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N",
                     cveId: "CVE-2023-1234"
                 },
                 {
@@ -79,7 +82,8 @@ export async function runTenableScan(assetId: string, scannerId: string) {
                     title: "Expired SSL Certificate",
                     description: "The SSL certificate for the web service has expired, which could lead to man-in-the-middle attacks and causes browser security warnings.",
                     severity: "MEDIUM" as Severity,
-                    cvssScore: 5.0
+                    cvssScore: 5.0,
+                    cvssVector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N"
                 }
             ];
         } else {
@@ -101,6 +105,7 @@ export async function runTenableScan(assetId: string, scannerId: string) {
                     description: aiDetails.description || finding.description,
                     severity: finding.severity,
                     cvssScore: finding.cvssScore,
+                    cvssVector: finding.cvssVector,
                     cveId: finding.cveId,
                     solution: aiDetails.remediation || "Follow Tenable recommendations",
                     source: "TENABLE" as any,

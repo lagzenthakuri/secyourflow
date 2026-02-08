@@ -145,22 +145,28 @@ function mockAnalysis(vulnerability: any, asset: any) {
     const isDB = title.includes("database") || title.includes("sql") || title.includes("postgre");
     const cia = parseCVSSVector(vulnerability.cvssVector);
 
+    // Vary likelihood based on severity
+    let likelihood = 3; // Medium
+    if (vulnerability.severity === 'CRITICAL') likelihood = 5;
+    else if (vulnerability.severity === 'HIGH') likelihood = 4;
+    else if (vulnerability.severity === 'LOW') likelihood = 2;
+
     return {
         "risk": isDB ? "Unauthorized DB access" : "System Compromise",
         "threat": vulnerability.title,
         "confidentiality_impact": cia.c,
         "integrity_impact": cia.i,
         "availability_impact": cia.a,
-        "likelihood_score": 4,
+        "likelihood_score": likelihood,
         "risk_category": vulnerability.severity === 'CRITICAL' ? "Critical" : "High",
         "risk_category_2": "Application Security",
-        "rationale_for_risk_rating": "Simulated analysis based on severity and asset type.",
+        "rationale_for_risk_rating": `Simulated analysis based on ${vulnerability.severity} severity and technical impact vector.`,
         "current_controls": ["Firewall"],
         "selected_controls": ["MFA", "Encryption"],
         "controls_violated_iso27001": ["A.9.1", "A.13.1"],
         "treatment_option": "Mitigate",
         "action_plan": "Deploy patches and verify config.",
-        "responsible_party": "Cloud Security Lead",
+        "responsible_party": "Security Team",
         "remarks": "Generated from mock fallback",
         "confidence": 0.8
     };
