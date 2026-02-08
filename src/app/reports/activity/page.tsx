@@ -363,128 +363,52 @@ export default function ActivityLogPage() {
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredLogs.map((log, index) => {
-                                        const ua = parseUserAgent(log.userAgent);
-                                        const isExpanded = expandedRow === log.id;
-                                        
-                                        return (
-                                            <>
-                                                <tr 
-                                                    key={log.id} 
-                                                    className="hover:bg-[var(--bg-tertiary)] transition-all duration-200 cursor-pointer animate-in fade-in slide-in-from-bottom-2"
-                                                    style={{ animationDelay: `${index * 30}ms` }}
-                                                    onClick={() => setExpandedRow(isExpanded ? null : log.id)}
-                                                >
-                                                    <td className="px-4 py-3 whitespace-nowrap">
-                                                        {getRiskBadge(log.action)}
-                                                    </td>
-                                                    <td className="px-4 py-3 whitespace-nowrap">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="p-1.5 rounded-lg bg-[var(--bg-elevated)] transition-transform duration-200 hover:scale-110">
-                                                                {getIcon(log.entityType)}
-                                                            </div>
-                                                            <span className="text-xs font-medium text-white capitalize">
-                                                                {log.entityType}
+                                    logs.map((log) => (
+                                        <tr key={log.id} className="hover:bg-[var(--bg-tertiary)] transition-all duration-300 ease-in-out">
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-1.5 rounded-lg bg-[var(--bg-elevated)]">
+                                                        {getIcon(log.entityType)}
+                                                    </div>
+                                                    <span className="text-sm font-medium text-white capitalize">
+                                                        {log.entityType}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className="text-sm text-[var(--text-secondary)]">
+                                                    {log.action}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-[10px] text-white">
+                                                        {(log.user?.name || log.user?.email)?.[0]?.toUpperCase() || 'S'}
+                                                    </div>
+                                                    <span className="text-sm text-[var(--text-secondary)]">
+                                                        {log.user?.name ? (
+                                                            <span>
+                                                                {log.user.name}
                                                             </span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-4 py-3">
-                                                        <span className="text-xs text-[var(--text-secondary)] font-mono">
-                                                            {log.action}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-3 whitespace-nowrap">
-                                                        <div className="flex flex-col gap-1">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-[10px] text-white font-bold shadow-lg">
-                                                                    {(log.user?.name || log.user?.email)?.[0]?.toUpperCase() || 'S'}
-                                                                </div>
-                                                                <span className="text-xs text-[var(--text-secondary)] font-medium">
-                                                                    {log.user?.name || log.user?.email || 'System'}
-                                                                </span>
-                                                            </div>
-                                                            <span className="text-[10px] text-[var(--text-muted)] ml-8">
-                                                                {log.user?.role || 'SYSTEM'}
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-4 py-3 whitespace-nowrap">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <MapPin size={12} className="text-[var(--text-muted)]" />
-                                                            <span className="text-xs font-mono text-[var(--text-secondary)]">
-                                                                {log.ipAddress || 'N/A'}
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-4 py-3 whitespace-nowrap">
-                                                        <div className="flex flex-col gap-0.5">
-                                                            <div className="flex items-center gap-1.5 text-xs text-white font-mono">
-                                                                <Clock size={12} className="text-blue-400" />
-                                                                {formatUTCTime(log.createdAt)}
-                                                            </div>
-                                                            <span className="text-[10px] text-[var(--text-muted)] ml-5">
-                                                                {getTimeAgo(new Date(log.createdAt))}
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-4 py-3">
-                                                        <button 
-                                                            className="group/btn relative text-xs text-blue-400 hover:text-blue-300 transition-all duration-200 px-3 py-1 rounded hover:bg-blue-500/10"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setExpandedRow(isExpanded ? null : log.id);
-                                                            }}
-                                                        >
-                                                            <span className="flex items-center gap-1">
-                                                                {isExpanded ? 'Hide' : 'Show'}
-                                                                <ChevronRight 
-                                                                    size={12} 
-                                                                    className={`transition-transform duration-300 ${isExpanded ? 'rotate-90' : 'rotate-0'} group-hover/btn:translate-x-0.5`}
-                                                                />
-                                                            </span>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                                {isExpanded && (
-                                                    <tr key={`${log.id}-details`} className="bg-[var(--bg-elevated)] border-t border-b border-[var(--border-color)]">
-                                                        <td colSpan={7} className="px-4 py-0 overflow-hidden">
-                                                            <div className="animate-in slide-in-from-top-2 fade-in duration-300">
-                                                                <div className="py-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-                                                                    <div className="animate-in fade-in slide-in-from-left-2 duration-300" style={{ animationDelay: '50ms' }}>
-                                                                        <p className="text-[var(--text-muted)] mb-1">Entity ID</p>
-                                                                        <p className="text-white font-mono bg-[var(--bg-tertiary)] px-2 py-1 rounded transition-all duration-200 hover:bg-[var(--bg-secondary)]">{log.entityId}</p>
-                                                                    </div>
-                                                                    <div className="animate-in fade-in slide-in-from-left-2 duration-300" style={{ animationDelay: '100ms' }}>
-                                                                        <p className="text-[var(--text-muted)] mb-1">Browser</p>
-                                                                        <div className="flex items-center gap-2">
-                                                                            <Monitor size={14} className="text-blue-400 transition-transform duration-200 hover:scale-110" />
-                                                                            <p className="text-white">{ua.browser}</p>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="animate-in fade-in slide-in-from-left-2 duration-300" style={{ animationDelay: '150ms' }}>
-                                                                        <p className="text-[var(--text-muted)] mb-1">Operating System</p>
-                                                                        <p className="text-white">{ua.os}</p>
-                                                                    </div>
-                                                                    <div className="animate-in fade-in slide-in-from-left-2 duration-300" style={{ animationDelay: '200ms' }}>
-                                                                        <p className="text-[var(--text-muted)] mb-1">Device Type</p>
-                                                                        <p className="text-white">{ua.device}</p>
-                                                                    </div>
-                                                                    <div className="animate-in fade-in slide-in-from-left-2 duration-300" style={{ animationDelay: '250ms' }}>
-                                                                        <p className="text-[var(--text-muted)] mb-1">Full User Agent</p>
-                                                                        <p className="text-white font-mono text-[10px] break-all bg-[var(--bg-tertiary)] px-2 py-1 rounded transition-all duration-200 hover:bg-[var(--bg-secondary)]">{log.userAgent || 'N/A'}</p>
-                                                                    </div>
-                                                                    <div className="animate-in fade-in slide-in-from-left-2 duration-300" style={{ animationDelay: '300ms' }}>
-                                                                        <p className="text-[var(--text-muted)] mb-1">Event ID</p>
-                                                                        <p className="text-white font-mono text-[10px] bg-[var(--bg-tertiary)] px-2 py-1 rounded transition-all duration-200 hover:bg-[var(--bg-secondary)]">{log.id}</p>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </>
-                                        );
-                                    })
+                                                        ) : (
+                                                            log.user?.email || 'System'
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="text-sm text-[var(--text-muted)] line-clamp-1">
+                                                    {log.entityId} {log.userAgent !== 'System' ? `- ${log.userAgent}` : ''}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                <div className="flex items-center justify-end gap-1 text-xs text-[var(--text-muted)]">
+                                                    <Calendar size={12} />
+                                                    {getTimeAgo(new Date(log.createdAt))}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
                                 )}
                             </tbody>
                         </table>

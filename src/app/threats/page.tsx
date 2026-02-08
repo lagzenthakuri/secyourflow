@@ -495,191 +495,118 @@ export default function ThreatsPage() {
                             </div>
                           </div>
 
-                          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
-                            <span>
-                              CVSS {typeof vuln.cvssScore === "number" ? vuln.cvssScore.toFixed(1) : "N/A"}
-                            </span>
-                            <span>Source {vuln.source}</span>
-                            <span>
-                              {typeof vuln.affectedAssets === "number"
-                                ? vuln.affectedAssets
-                                : 0}{" "}
-                              assets affected
-                            </span>
-                          </div>
-                        </div>
-
-                        <ChevronRight size={16} className="mt-1 text-slate-500" />
-                      </div>
+                                                    <div className="flex flex-wrap items-center gap-4 text-xs text-[var(--text-muted)]">
+                                                        <div className="flex items-center gap-1">
+                                                            <Target size={12} />
+                                                            <span>
+                                                                <span className="text-white font-medium">{vuln.affectedAssets}</span> assets affected
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            <Activity size={12} />
+                                                            <span>
+                                                                Source:{" "}
+                                                                <span className="text-orange-400">{vuln.source}</span>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <ChevronRight size={18} className="text-[var(--text-muted)] flex-shrink-0" />
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="py-20 text-center">
+                                        <Shield className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4 opacity-20" />
+                                        <p className="text-[var(--text-secondary)]">No actively exploited vulnerabilities detected.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </Card>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="p-14 text-center">
-                <Shield className="mx-auto h-10 w-10 text-slate-600" />
-                <p className="mt-3 text-sm text-slate-400">No exploited vulnerabilities match the filter.</p>
-              </div>
-            )}
-          </article>
 
-          <div className="space-y-4">
-            <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '300ms', animationFillMode: 'backwards' }}>
-              <h2 className="text-lg font-semibold text-white">Threat Feed Health</h2>
-              <p className="mt-1 text-sm text-slate-400">External intelligence source status.</p>
-              <div className="mt-4 space-y-2">
-                {sortedFeeds.length > 0 ? (
-                  sortedFeeds.slice(0, 8).map((feed, index) => (
-                    <div
-                      key={feed.id}
-                      className="rounded-lg border border-white/10 bg-white/[0.03] p-3 transition-all duration-200 hover:bg-white/[0.06] hover:border-sky-300/30 hover:scale-[1.02] animate-in fade-in slide-in-from-right-2"
-                      style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm text-slate-200">{feed.name}</p>
-                          <p className="mt-0.5 text-xs text-slate-500">{feed.source}</p>
-                        </div>
-                        <span
-                          className={cn(
-                            "rounded-full border px-2 py-0.5 text-[11px]",
-                            feed.isActive
-                              ? "border-emerald-400/35 bg-emerald-500/10 text-emerald-200"
-                              : "border-slate-400/35 bg-slate-500/10 text-slate-300",
-                          )}
+                    {/* Sidebar */}
+                    <div className="lg:col-span-4 space-y-4">
+                        {/* Live AI Intelligence */}
+                        <Card
+                            title="Live AI Intelligence"
+                            subtitle="Real-time context-aware threats"
+                            action={
+                                indicators.length > 0 && (
+                                    <button
+                                        onClick={async () => {
+                                            if (confirm("Are you sure you want to purge all AI-generated threat indicators?")) {
+                                                await fetch("/api/threats", { method: "DELETE" });
+                                                fetchThreats();
+                                            }
+                                        }}
+                                        className="text-[10px] font-bold text-red-400 hover:text-red-300 transition-colors uppercase tracking-wider"
+                                    >
+                                        Purge
+                                    </button>
+                                )
+                            }
                         >
-                          {feed.isActive ? "Active" : "Inactive"}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-xs text-slate-500">
-                        Last sync {feed.lastSync ? getTimeAgo(feed.lastSync) : "not available"}
-                      </p>
+                            <div className="space-y-3">
+                                {indicators.length > 0 ? (
+                                    indicators.map((indicator, idx) => (
+                                        <div key={idx} className="p-3 rounded-lg bg-[var(--bg-tertiary)] border border-white/5 hover:border-blue-500/20 transition-all">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">
+                                                    {indicator.type}
+                                                </span>
+                                                <span className="text-[10px] text-[var(--text-muted)]">
+                                                    {new Date(indicator.firstSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm font-medium text-white mb-1">{indicator.value}</p>
+                                            <p className="text-xs text-[var(--text-muted)] line-clamp-2">
+                                                {indicator.description}
+                                            </p>
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-[10px] text-blue-400 border border-blue-500/20">
+                                                    Confidence: {indicator.confidence}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-sm text-[var(--text-muted)] text-center py-10">
+                                        <Activity size={24} className="mx-auto mb-2 opacity-20" />
+                                        <p>No AI-driven threats identified yet.</p>
+                                        <p className="text-[10px] mt-1">Run AI Risk Assessment to generate insights.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </Card>
+
+                        {/* Recent Threat Updates */}
+                        <Card title="Recent Threat Updates">
+                            <div className="space-y-3">
+                                {kevVulns.slice(0, 4).map((vuln, idx) => (
+                                    <div
+                                        key={idx}
+                                        className="flex items-start gap-3 p-2 rounded-lg hover:bg-[var(--bg-tertiary)] cursor-pointer"
+                                    >
+                                        <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 bg-red-400" />
+                                        <div>
+                                            <p className="text-sm text-[var(--text-secondary)] line-clamp-2">
+                                                New KEV entry: {vuln.cveId} - {vuln.title}
+                                            </p>
+                                            <p className="text-xs text-[var(--text-muted)]">Recently detected</p>
+                                        </div>
+                                    </div>
+                                ))}
+                                {kevVulns.length === 0 && (
+                                    <p className="text-xs text-[var(--text-muted)] text-center py-4">
+                                        No recent threat updates.
+                                    </p>
+                                )}
+                            </div>
+                        </Card>
                     </div>
-                  ))
-                ) : (
-                  <p className="rounded-lg border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
-                    No threat feeds are configured.
-                  </p>
-                )}
-              </div>
-            </article>
-
-            <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '400ms', animationFillMode: 'backwards' }}>
-              <h2 className="text-lg font-semibold text-white">KEV In Environment</h2>
-              <div className="mt-4 space-y-2">
-                {kevVulns.length > 0 ? (
-                  kevVulns.slice(0, 6).map((vuln, index) => (
-                    <div
-                      key={vuln.id}
-                      className="rounded-lg border border-white/10 bg-white/[0.03] p-3 transition-all duration-200 hover:bg-white/[0.06] hover:border-sky-300/30 hover:scale-[1.02] animate-in fade-in slide-in-from-right-2"
-                      style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}
-                    >
-                      <p className="font-mono text-xs text-orange-300">{vuln.cveId || "No CVE ID"}</p>
-                      <p className="mt-1 line-clamp-2 text-sm text-slate-200">{vuln.title}</p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="rounded-lg border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
-                    No KEV-linked vulnerabilities currently detected.
-                  </p>
-                )}
-              </div>
-            </article>
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-white">Indicator Stream</h2>
-              <p className="text-sm text-slate-400">Recent external indicators with severity and confidence context.</p>
+                </div>
             </div>
-            <div className="text-xs text-slate-500">
-              Showing {filteredIndicators.length} of {indicators.length}
-            </div>
-          </div>
-
-          <div className="mt-3 grid gap-2 md:grid-cols-[1.2fr_0.8fr]">
-            <label className="relative block">
-              <Search
-                size={14}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 transition-colors duration-200"
-              />
-              <input
-                type="text"
-                value={indicatorSearch}
-                onChange={(event) => setIndicatorSearch(event.target.value)}
-                placeholder="Search indicator value or source"
-                className="input h-9 w-full !pl-9 text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30"
-              />
-            </label>
-
-            <div className="relative">
-              <Filter
-                size={14}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 transition-colors duration-200"
-              />
-              <select
-                value={indicatorSeverity}
-                onChange={(event) =>
-                  setIndicatorSeverity(event.target.value as SeverityFilter)
-                }
-                className="input h-9 w-full appearance-none !pl-9 text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30"
-              >
-                {severityOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option === "ALL" ? "All Severities" : option}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {filteredIndicators.length > 0 ? (
-              filteredIndicators.slice(0, 18).map((indicator, index) => (
-                <article
-                  key={indicator.id}
-                  className="rounded-xl border border-white/10 bg-white/[0.03] p-3 transition-all duration-200 hover:border-sky-300/25 hover:bg-white/[0.05] hover:scale-[1.02] animate-in fade-in zoom-in-95"
-                  style={{ animationDelay: `${index * 30}ms`, animationFillMode: 'backwards' }}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300">
-                      {indicator.type}
-                    </span>
-                    <span
-                      className={cn(
-                        "rounded-full border px-2 py-0.5 text-[10px]",
-                        getSeverityTone(indicator.severity),
-                      )}
-                    >
-                      {indicator.severity || "N/A"}
-                    </span>
-                  </div>
-
-                  <p className="mt-2 truncate text-sm text-slate-200">{indicator.value}</p>
-                  <p className="mt-1 line-clamp-2 text-xs text-slate-400">
-                    {indicator.description || "No description provided."}
-                  </p>
-
-                  <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-                    <span>{indicator.source || "Unknown source"}</span>
-                    <span>
-                      {typeof indicator.confidence === "number"
-                        ? `${indicator.confidence}% confidence`
-                        : "confidence n/a"}
-                    </span>
-                  </div>
-                </article>
-              ))
-            ) : (
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400 md:col-span-2 xl:col-span-3">
-                No indicators match the current filter.
-              </div>
-            )}
-          </div>
-        </section>
-      </div>
-    </DashboardLayout>
-  );
+        </DashboardLayout>
+    );
 }
