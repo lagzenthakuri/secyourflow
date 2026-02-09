@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Card, ProgressBar } from "@/components/ui/Cards";
+import { Card } from "@/components/ui/Cards";
 import {
     Scan,
     Plus,
@@ -15,8 +15,6 @@ import {
     Clock,
     AlertTriangle,
     ChevronRight,
-    ExternalLink,
-    Calendar,
     FileJson,
     Trash2
 } from "lucide-react";
@@ -38,13 +36,43 @@ const scanStatusConfig = {
     pending: { label: "Pending", color: "#eab308", icon: Clock },
 };
 
+interface Scanner {
+    id: string;
+    name: string;
+    type: string;
+    status: keyof typeof statusConfig;
+    lastSync?: string | null;
+    syncInterval?: string | null;
+    assetsScanned?: number;
+    vulnsFound?: number;
+    error?: string | null;
+}
+
+interface RecentScan {
+    id: string;
+    name: string;
+    scanner: string;
+    status: keyof typeof scanStatusConfig;
+    startTime: string;
+    duration: string;
+    hosts: number;
+    vulns: number;
+}
+
+interface AssetOption {
+    id: string;
+    name: string;
+    ipAddress?: string | null;
+    hostname?: string | null;
+}
+
 export default function ScannersPage() {
     const [activeTab, setActiveTab] = useState<"scanners" | "scans" | "import">("scanners");
-    const [scanners, setScanners] = useState<any[]>([]);
-    const [recentScans, setRecentScans] = useState<any[]>([]);
+    const [scanners, setScanners] = useState<Scanner[]>([]);
+    const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [assets, setAssets] = useState<any[]>([]);
+    const [assets, setAssets] = useState<AssetOption[]>([]);
     const [isScanning, setIsScanning] = useState(false);
     const [scanConfig, setScanConfig] = useState({
         assetId: "",
@@ -61,8 +89,8 @@ export default function ScannersPage() {
                 fetch("/api/scans?limit=10")
             ]);
 
-            const scannersData = await scannersRes.json();
-            const scansData = await scansRes.json();
+            const scannersData = await scannersRes.json() as Scanner[];
+            const scansData = await scansRes.json() as RecentScan[];
 
             if (Array.isArray(scannersData)) setScanners(scannersData);
             if (Array.isArray(scansData)) setRecentScans(scansData);
@@ -81,7 +109,7 @@ export default function ScannersPage() {
     const fetchAssets = async () => {
         try {
             const res = await fetch("/api/assets?limit=100");
-            const data = await res.json();
+            const data = await res.json() as { data?: AssetOption[] };
             if (data.data) setAssets(data.data);
         } catch (error) {
             console.error("Failed to fetch assets:", error);
@@ -274,9 +302,9 @@ export default function ScannersPage() {
                     <button
                         onClick={() => setActiveTab("scanners")}
                         className={cn(
-                            "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ease-in-out",
+                            "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                             activeTab === "scanners"
-                                ? "bg-blue-500/20 text-blue-400"
+                                ? "bg-blue-500/20 text-blue-400 shadow-lg shadow-blue-500/10"
                                 : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
                         )}
                     >
@@ -285,9 +313,9 @@ export default function ScannersPage() {
                     <button
                         onClick={() => setActiveTab("scans")}
                         className={cn(
-                            "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ease-in-out",
+                            "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                             activeTab === "scans"
-                                ? "bg-blue-500/20 text-blue-400"
+                                ? "bg-blue-500/20 text-blue-400 shadow-lg shadow-blue-500/10"
                                 : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
                         )}
                     >
@@ -296,9 +324,9 @@ export default function ScannersPage() {
                     <button
                         onClick={() => setActiveTab("import")}
                         className={cn(
-                            "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ease-in-out",
+                            "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                             activeTab === "import"
-                                ? "bg-blue-500/20 text-blue-400"
+                                ? "bg-blue-500/20 text-blue-400 shadow-lg shadow-blue-500/10"
                                 : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
                         )}
                     >
@@ -328,7 +356,8 @@ export default function ScannersPage() {
                                         return (
                                             <div
                                                 key={scanner.id}
-                                                className="card p-5 hover:border-[var(--border-hover)] transition-all duration-300 ease-in-out"
+                                                className="card p-5 hover:border-[var(--border-hover)] transition-all duration-200 hover:scale-[1.01] animate-in fade-in slide-in-from-left-2"
+                                                style={{ animationDelay: `${scanners.indexOf(scanner) * 50}ms`, animationFillMode: 'backwards' }}
                                             >
                                                 <div className="flex items-start gap-4">
                                                     <div className="p-3 rounded-xl bg-[var(--bg-tertiary)]">
@@ -382,15 +411,15 @@ export default function ScannersPage() {
                                                         </div>
                                                     </div>
                                                     <div className="flex gap-2">
-                                                        <button className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-white transition-all duration-300 ease-in-out">
+                                                        <button className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-white transition-all duration-200 hover:scale-110 active:scale-95">
                                                             <RefreshCw size={16} />
                                                         </button>
-                                                        <button className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-white transition-all duration-300 ease-in-out">
+                                                        <button className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-white transition-all duration-200 hover:scale-110 active:scale-95">
                                                             <Settings size={16} />
                                                         </button>
                                                         <button
                                                             onClick={() => handleDeleteScanner(scanner.id)}
-                                                            className="p-2 rounded-lg hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-400 transition-all duration-300 ease-in-out"
+                                                            className="p-2 rounded-lg hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-400 transition-all duration-200 hover:scale-110 active:scale-95"
                                                             title="Delete Scanner"
                                                         >
                                                             <Trash2 size={16} />
@@ -468,7 +497,8 @@ export default function ScannersPage() {
                                     return (
                                         <div
                                             key={scan.id}
-                                            className="p-4 hover:bg-[var(--bg-tertiary)] transition-all duration-300 ease-in-out cursor-pointer"
+                                            className="p-4 hover:bg-[var(--bg-tertiary)] transition-all duration-200 cursor-pointer hover:scale-[1.01] animate-in fade-in slide-in-from-left-2"
+                                            style={{ animationDelay: `${recentScans.indexOf(scan) * 30}ms`, animationFillMode: 'backwards' }}
                                         >
                                             <div className="flex items-center gap-4">
                                                 <div

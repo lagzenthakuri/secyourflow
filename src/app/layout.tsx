@@ -24,6 +24,9 @@ export const metadata: Metadata = {
     "security operations",
   ],
   authors: [{ name: "SecYourFlow" }],
+  icons: {
+    icon: "/favicon.png",
+  },
   openGraph: {
     title: "SecYourFlow | Cyber Risk Operations Platform",
     description:
