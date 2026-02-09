@@ -7,6 +7,7 @@ export interface TenableVulnerability {
     description: string;
     severity: Severity;
     cvssScore: number;
+    cvssVector?: string;
     cveId?: string;
     assetId: string;
     assetIp?: string;
