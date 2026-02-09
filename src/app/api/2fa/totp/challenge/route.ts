@@ -23,13 +23,19 @@ export async function POST(request: NextRequest) {
     if (!session.user.totpEnabled) {
         await unstable_update(
             buildTrustedTwoFactorSessionUpdate({
-                twoFactorVerified: true,
-                twoFactorVerifiedAt: Date.now(),
+                twoFactorVerified: false,
+                twoFactorVerifiedAt: null,
                 user: { totpEnabled: false },
             }),
         );
 
-        return jsonNoStore({ success: true, twoFactorVerified: true });
+        return jsonNoStore(
+            {
+                error: "Two-factor enrollment is required before verification.",
+                code: "enrollment_required",
+            },
+            { status: 403 },
+        );
     }
 
     const rateLimit = consumeRateLimit(
@@ -64,6 +70,7 @@ export async function POST(request: NextRequest) {
             store: prismaTotpStore,
             userId: session.user.id,
             code: body.code,
+            allowSameStepReplay: true,
         });
 
         resetRateLimit(`totp:challenge:${session.user.id}`);
@@ -85,13 +92,19 @@ export async function POST(request: NextRequest) {
         if (error instanceof TotpServiceError && error.code === "not_enabled") {
             await unstable_update(
                 buildTrustedTwoFactorSessionUpdate({
-                    twoFactorVerified: true,
-                    twoFactorVerifiedAt: Date.now(),
+                    twoFactorVerified: false,
+                    twoFactorVerifiedAt: null,
                     user: { totpEnabled: false },
                 }),
             );
 
-            return jsonNoStore({ success: true, twoFactorVerified: true });
+            return jsonNoStore(
+                {
+                    error: "Two-factor enrollment is required before verification.",
+                    code: "enrollment_required",
+                },
+                { status: 403 },
+            );
         }
 
         return handleTotpError(error, "Failed to verify the second authentication factor.");

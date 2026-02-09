@@ -36,6 +36,34 @@ export const authConfig = {
         error: "/login",
     },
     callbacks: {
+        async jwt({ token }) {
+            if (typeof token.totpEnabled !== "boolean") {
+                token.totpEnabled = false;
+            }
+
+            if (typeof token.twoFactorVerified !== "boolean") {
+                token.twoFactorVerified = false;
+            }
+
+            if (token.twoFactorVerified !== true) {
+                token.twoFactorVerifiedAt = null;
+            } else if (typeof token.twoFactorVerifiedAt !== "number") {
+                token.twoFactorVerifiedAt = Date.now();
+            }
+
+            return token;
+        },
+        async session({ session, token }) {
+            if (session.user) {
+                session.user.totpEnabled = token.totpEnabled === true;
+            }
+
+            (session as { twoFactorVerified?: boolean }).twoFactorVerified = token.twoFactorVerified === true;
+            (session as { twoFactorVerifiedAt?: number | null }).twoFactorVerifiedAt =
+                typeof token.twoFactorVerifiedAt === "number" ? token.twoFactorVerifiedAt : null;
+
+            return session;
+        },
         authorized({ auth, request: { nextUrl } }) {
             const pathname = nextUrl.pathname;
             const isLoggedIn = Boolean(auth?.user);
@@ -52,10 +80,10 @@ export const authConfig = {
             }
 
             const user = auth?.user as { totpEnabled?: boolean } | undefined;
-            const twoFactorEnabled = Boolean(user?.totpEnabled);
+            const hasTotpEnabled = Boolean(user?.totpEnabled);
             const twoFactorVerified = (auth as { twoFactorVerified?: boolean } | null)?.twoFactorVerified === true;
 
-            if (twoFactorEnabled && !twoFactorVerified) {
+            if (!hasTotpEnabled || !twoFactorVerified) {
                 if (isTwoFactorPage) {
                     return true;
                 }
@@ -65,7 +93,7 @@ export const authConfig = {
                 }
             }
 
-            if (isTwoFactorPage) {
+            if (isTwoFactorPage && twoFactorVerified) {
                 return Response.redirect(new URL("/dashboard", nextUrl));
             }
 

@@ -25,6 +25,7 @@ import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { TwoFactorSettingsPanel } from "@/components/settings/TwoFactorSettingsPanel";
 
 // Feature flags storage key
@@ -69,6 +70,7 @@ interface PlatformSettings {
     require2FA?: boolean;
     sessionTimeout?: number;
     passwordPolicy?: string;
+    aiRiskAssessmentEnabled?: boolean;
     systemHealth?: SettingSystemHealth;
     serverTimestamp?: string;
     [key: string]: unknown;
@@ -117,7 +119,7 @@ const settingsSections: SettingsSectionItem[] = [
     { id: "governance", label: "Governance", description: "Change control, retention, and audit guardrails", icon: FileText, mainOfficerOnly: true },
     { id: "notifications", label: "Notifications", description: "Alert channels and summary signals", icon: Bell },
     { id: "soc-notifications", label: "SOC Routing", description: "Quiet hours and incident-routing thresholds", icon: Activity, mainOfficerOnly: true },
-    { id: "security", label: "Security", description: "Identity, sessions, password and 2FA controls", icon: Shield, mainOfficerOnly: true },
+    { id: "security", label: "Security", description: "Identity, sessions, password and 2FA controls", icon: Shield },
     { id: "ai-assist", label: "AI Assist", description: "Model governance and human-review policies", icon: Zap, mainOfficerOnly: true },
     { id: "system-health", label: "System Health", description: "Runtime configuration and dependency checks", icon: Activity },
     { id: "integrations", label: "Integrations", description: "Third-party connectors and workflow links", icon: Database },
@@ -125,7 +127,38 @@ const settingsSections: SettingsSectionItem[] = [
     { id: "users", label: "Users & Roles", description: "Role assignment and access administration", icon: UsersIcon, mainOfficerOnly: true },
 ];
 
+const MAIN_OFFICER_ROLE = "MAIN_OFFICER";
+
+const COMMON_SAVE_FIELDS: Array<keyof PlatformSettings> = [
+    "timezone",
+    "dateFormat",
+    "notifyCritical",
+    "notifyExploited",
+    "notifyCompliance",
+    "notifyScan",
+    "notifyWeekly",
+];
+
+const MAIN_OFFICER_ONLY_SAVE_FIELDS: Array<keyof PlatformSettings> = [
+    "require2FA",
+    "sessionTimeout",
+    "passwordPolicy",
+    "aiRiskAssessmentEnabled",
+];
+
+function isTwoFactorRequiredError(error?: string) {
+    if (!error) return false;
+    return error.toLowerCase().includes("two-factor authentication required");
+}
+
+function formatRoleLabel(role?: string) {
+    if (!role) return "";
+    if (role === MAIN_OFFICER_ROLE) return "MAIN-OFFICER";
+    return role;
+}
+
 export default function SettingsPage() {
+    const router = useRouter();
     const { data: session } = useSession();
     const [activeSection, setActiveSection] = useState<SettingsSectionId>("general");
     const [isLoading, setIsLoading] = useState(true);
@@ -137,15 +170,22 @@ export default function SettingsPage() {
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
-    const isMainOfficer = session?.user?.role === 'MAIN_OFFICER';
+    const isMainOfficer = session?.user?.role === MAIN_OFFICER_ROLE;
 
-    // Load feature flags from localStorage
+    // Load feature flags from localStorage.
     const loadFeatureFlags = useCallback(() => {
         if (typeof window !== 'undefined') {
             const stored = localStorage.getItem(FEATURE_FLAGS_KEY);
             if (stored) {
                 try {
-                    return JSON.parse(stored) as FeatureFlags;
+                    const parsed = JSON.parse(stored) as Partial<FeatureFlags>;
+                    return {
+                        ...getDefaultFeatureFlags(),
+                        ...parsed,
+                        aiModelAllowlist: Array.isArray(parsed.aiModelAllowlist)
+                            ? parsed.aiModelAllowlist.filter((value): value is string => typeof value === "string")
+                            : getDefaultFeatureFlags().aiModelAllowlist,
+                    };
                 } catch (e) {
                     console.error("Failed to parse feature flags:", e);
                 }
@@ -164,17 +204,35 @@ export default function SettingsPage() {
     const fetchSettings = useCallback(async () => {
         try {
             setIsLoading(true);
-            const response = await fetch("/api/settings");
-            const data = await response.json() as PlatformSettings;
+            const response = await fetch("/api/settings", { cache: "no-store" });
+            const data = await response.json() as PlatformSettings | { error?: string };
+            if (!response.ok) {
+                const errorMessage =
+                    typeof (data as { error?: unknown }).error === "string"
+                        ? (data as { error: string }).error
+                        : "Failed to load settings";
+                if (response.status === 401) {
+                    router.replace("/login");
+                    return;
+                }
+                if (response.status === 403 && isTwoFactorRequiredError(errorMessage)) {
+                    setToast({ message: "Please complete two-factor verification to continue", type: "error" });
+                    router.replace("/auth/2fa");
+                    return;
+                }
+                setToast({ message: errorMessage, type: "error" });
+                return;
+            }
             setSettings(data);
             setFeatureFlags(loadFeatureFlags());
+            setHasUnsavedChanges(false);
         } catch (error) {
             console.error("Failed to fetch settings:", error);
             setToast({ message: "Failed to load settings", type: "error" });
         } finally {
             setIsLoading(false);
         }
-    }, [loadFeatureFlags]);
+    }, [loadFeatureFlags, router]);
 
     useEffect(() => {
         void fetchSettings();
@@ -192,12 +250,39 @@ export default function SettingsPage() {
     }, [hasUnsavedChanges]);
 
     const handleSave = async () => {
+        if (!settings) {
+            setToast({ message: "Settings are not loaded yet", type: "error" });
+            return;
+        }
+
         try {
             setIsSaving(true);
+            const payload: Partial<PlatformSettings> = {};
+
+            for (const field of COMMON_SAVE_FIELDS) {
+                if (settings[field] !== undefined) {
+                    payload[field] = settings[field];
+                }
+            }
+
+            if (isMainOfficer) {
+                for (const field of MAIN_OFFICER_ONLY_SAVE_FIELDS) {
+                    if (settings[field] !== undefined) {
+                        payload[field] = settings[field];
+                    }
+                }
+                if (settings.organizationName !== undefined) {
+                    payload.organizationName = settings.organizationName;
+                }
+                if (settings.domain !== undefined) {
+                    payload.domain = settings.domain;
+                }
+            }
+
             const response = await fetch("/api/settings", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(settings),
+                body: JSON.stringify(payload),
             });
 
             if (response.ok) {
@@ -207,7 +292,17 @@ export default function SettingsPage() {
                 setToast({ message: "Settings saved successfully!", type: "success" });
             } else {
                 const error = await response.json() as { error?: string };
-                setToast({ message: error.error || "Failed to save settings", type: "error" });
+                const errorMessage = error.error || "Failed to save settings";
+                if (response.status === 401) {
+                    router.replace("/login");
+                    return;
+                }
+                if (response.status === 403 && isTwoFactorRequiredError(errorMessage)) {
+                    setToast({ message: "Please complete two-factor verification to continue", type: "error" });
+                    router.replace("/auth/2fa");
+                    return;
+                }
+                setToast({ message: errorMessage, type: "error" });
             }
         } catch (error) {
             console.error("Failed to save settings:", error);
@@ -231,17 +326,31 @@ export default function SettingsPage() {
         setFeatureFlags((prev) => ({ ...prev, ...updates }));
     };
 
-    const filteredSections = useMemo(
-        () =>
-            settingsSections.filter((section) =>
-                `${section.label} ${section.description}`.toLowerCase().includes(searchQuery.toLowerCase()),
-            ),
-        [searchQuery],
+    const accessibleSections = useMemo(
+        () => settingsSections.filter((section) => !section.mainOfficerOnly || isMainOfficer),
+        [isMainOfficer],
     );
 
+    const filteredSections = useMemo(
+        () =>
+            accessibleSections.filter((section) =>
+                `${section.label} ${section.description}`.toLowerCase().includes(searchQuery.toLowerCase()),
+            ),
+        [accessibleSections, searchQuery],
+    );
+
+    useEffect(() => {
+        if (filteredSections.length === 0) return;
+        if (!filteredSections.some((section) => section.id === activeSection)) {
+            setActiveSection(filteredSections[0].id);
+        }
+    }, [activeSection, filteredSections]);
+
     const activeSectionInfo = useMemo(
-        () => settingsSections.find((section) => section.id === activeSection),
-        [activeSection],
+        () =>
+            filteredSections.find((section) => section.id === activeSection)
+            ?? accessibleSections.find((section) => section.id === activeSection),
+        [activeSection, filteredSections, accessibleSections],
     );
 
     const notificationsEnabledCount = useMemo(() => {
@@ -327,7 +436,7 @@ export default function SettingsPage() {
                                             : "border-sky-400/40 bg-sky-500/10 text-sky-100",
                                     )}
                                 >
-                                    {session.user.role}
+                                    {formatRoleLabel(session.user.role)}
                                 </div>
                             ) : null}
                             <button
@@ -371,7 +480,7 @@ export default function SettingsPage() {
                         },
                         {
                             label: "2FA Requirement",
-                            value: settings?.require2FA ? "Required" : "Optional",
+                            value: "Required",
                             hint: "Global multi-factor enforcement state",
                             icon: ShieldCheck,
                         },
@@ -452,6 +561,11 @@ export default function SettingsPage() {
                                         <p className="mt-1 text-xs text-slate-500">{section.description}</p>
                                     </button>
                                 ))}
+                                {filteredSections.length === 0 ? (
+                                    <div className="rounded-xl border border-dashed border-white/15 px-3 py-4 text-xs text-slate-400">
+                                        No settings sections match your search.
+                                    </div>
+                                ) : null}
                             </div>
                         </div>
                     </aside>
@@ -588,7 +702,7 @@ function RestrictedField({ isMainOfficer, children }: { isMainOfficer: boolean; 
                 <div className="opacity-50 pointer-events-none">{children}</div>
                 <div className="absolute inset-0 flex items-center justify-center">
                     <div className="px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400 text-xs font-medium animate-in fade-in zoom-in-95 duration-300">
-                        MAIN_OFFICER only
+                        MAIN-OFFICER only
                     </div>
                 </div>
             </div>
@@ -699,38 +813,49 @@ function GeneralSection({ settings, updateSettings, isEditingGeneral, setIsEditi
                     </select>
                 </div>
                 <div className="pt-4 border-t border-[var(--border-color)] flex gap-3">
-                    {!isEditingGeneral ? (
-                        <button
-                            className="btn btn-secondary"
-                            onClick={() => setIsEditingGeneral(true)}
-                        >
-                            <Settings size={16} />
-                            Edit Organization Info
-                        </button>
+                    {isMainOfficer ? (
+                        !isEditingGeneral ? (
+                            <button
+                                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95"
+                                onClick={() => setIsEditingGeneral(true)}
+                            >
+                                <Settings size={16} />
+                                Edit Organization Info
+                            </button>
+                        ) : (
+                            <>
+                                <button
+                                    onClick={async () => {
+                                        await handleSave();
+                                        setIsEditingGeneral(false);
+                                    }}
+                                    disabled={isSaving}
+                                    className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                                >
+                                    <Save size={16} />
+                                    {isSaving ? "Saving..." : "Save Changes"}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setIsEditingGeneral(false);
+                                        void fetchSettings();
+                                    }}
+                                    disabled={isSaving}
+                                    className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Cancel
+                                </button>
+                            </>
+                        )
                     ) : (
-                        <>
-                            <button
-                                className="btn btn-primary"
-                                onClick={() => {
-                                    handleSave();
-                                    setIsEditingGeneral(false);
-                                }}
-                                disabled={isSaving}
-                            >
-                                <Save size={16} />
-                                {isSaving ? "Saving..." : "Save Changes"}
-                            </button>
-                            <button
-                                className="btn btn-ghost"
-                                onClick={() => {
-                                    setIsEditingGeneral(false);
-                                    fetchSettings();
-                                }}
-                                disabled={isSaving}
-                            >
-                                Cancel
-                            </button>
-                        </>
+                        <button 
+                            onClick={handleSave} 
+                            disabled={isSaving}
+                            className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        >
+                            <Save size={16} />
+                            {isSaving ? "Saving..." : "Save Changes"}
+                        </button>
                     )}
                 </div>
             </div>
@@ -816,7 +941,7 @@ function GovernanceSection({ featureFlags, updateFeatureFlags, handleSaveFeature
 
                 <div className="pt-4 border-t border-[var(--border-color)]">
                     <button
-                        className="btn btn-primary"
+                        className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         onClick={handleSaveFeatureFlags}
                         disabled={!isMainOfficer}
                     >
@@ -925,7 +1050,7 @@ function SOCRoutingSection({ featureFlags, updateFeatureFlags, handleSaveFeature
 
                 <div className="pt-4 border-t border-[var(--border-color)]">
                     <button
-                        className="btn btn-primary"
+                        className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         onClick={handleSaveFeatureFlags}
                         disabled={!isMainOfficer}
                     >
@@ -999,7 +1124,7 @@ function NotificationsSection({ settings, updateSettings, handleSave, isSaving }
                 ))}
                 <div className="pt-4 border-t border-[var(--border-color)]">
                     <button
-                        className="btn btn-primary"
+                        className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         onClick={handleSave}
                         disabled={isSaving}
                     >
@@ -1049,15 +1174,18 @@ function SecuritySection({ settings, updateSettings, handleSave, isSaving, isMai
                                     Two-Factor Authentication
                                 </h4>
                                 <p className="text-xs text-[var(--text-muted)]">
-                                    Require 2FA for all users
+                                    Mandatory for all users
                                 </p>
                             </div>
                             <Toggle
-                                checked={settings?.require2FA || false}
-                                onChange={(checked) => updateSettings({ require2FA: checked })}
-                                disabled={!isMainOfficer}
+                                checked
+                                onChange={() => undefined}
+                                disabled
                             />
                         </div>
+                        <p className="text-xs text-[var(--text-muted)] mt-2">
+                            Two-factor authentication is enforced platform-wide and cannot be disabled.
+                        </p>
                     </div>
                 </RestrictedField>
 
@@ -1101,7 +1229,7 @@ function SecuritySection({ settings, updateSettings, handleSave, isSaving, isMai
 
                 <div className="pt-4 border-t border-[var(--border-color)]">
                     <button
-                        className="btn btn-primary"
+                        className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         onClick={handleSave}
                         disabled={isSaving || !isMainOfficer}
                     >
@@ -1218,7 +1346,7 @@ function AIAssistSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFl
 
                 <div className="pt-4 border-t border-[var(--border-color)]">
                     <button
-                        className="btn btn-primary"
+                        className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         onClick={handleSaveFeatureFlags}
                         disabled={!isMainOfficer}
                     >
@@ -1278,7 +1406,7 @@ function SystemHealthSection({ settings, fetchSettings }: SystemHealthSectionPro
                 )}
 
                 <div className="pt-4 border-t border-[var(--border-color)]">
-                    <button className="btn btn-secondary" onClick={fetchSettings}>
+                    <button className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95" onClick={fetchSettings}>
                         <Activity size={16} />
                         Refresh Status
                     </button>
@@ -1377,6 +1505,7 @@ function APIAccessSection() {
 // Users Management Tab
 function UsersManagementTab() {
     const { data: session } = useSession();
+    const isMainOfficer = session?.user?.role === MAIN_OFFICER_ROLE;
     interface UserRecord {
         id: string;
         name: string;
@@ -1389,6 +1518,11 @@ function UsersManagementTab() {
     const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
     const fetchUsers = useCallback(async () => {
+        if (!isMainOfficer) {
+            setIsLoading(false);
+            return;
+        }
+
         try {
             setIsLoading(true);
             const response = await fetch("/api/users");
@@ -1399,7 +1533,7 @@ function UsersManagementTab() {
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [isMainOfficer]);
 
     useEffect(() => {
         void fetchUsers();
@@ -1431,13 +1565,13 @@ function UsersManagementTab() {
         }
     };
 
-    if (session?.user?.role !== 'MAIN_OFFICER') {
+    if (!isMainOfficer) {
         return (
             <Card title="Restricted Access" subtitle="Permissions required">
                 <div className="flex flex-col items-center justify-center py-10 text-center">
                     <ShieldCheck size={48} className="text-red-500/50 mb-4" />
                     <p className="text-[var(--text-secondary)] max-w-md">
-                        Only users with the <span className="text-white font-bold">MAIN_OFFICER</span> role can manage user permissions and roles.
+                        Only users with the <span className="text-white font-bold">MAIN-OFFICER</span> role can manage user permissions and roles.
                     </p>
                 </div>
             </Card>
@@ -1473,11 +1607,11 @@ function UsersManagementTab() {
                                         <td className="px-4 py-4">
                                             <span className={cn(
                                                 "px-2 py-1 rounded-full text-[10px] font-bold uppercase",
-                                                user.role === 'MAIN_OFFICER' ? "bg-purple-500/10 text-purple-400" :
+                                                user.role === MAIN_OFFICER_ROLE ? "bg-purple-500/10 text-purple-400" :
                                                     user.role === 'ANALYST' ? "bg-blue-500/10 text-blue-400" :
                                                         "bg-gray-500/10 text-gray-400"
                                             )}>
-                                                {user.role}
+                                                {formatRoleLabel(user.role)}
                                             </span>
                                         </td>
                                         <td className="px-4 py-4">
@@ -1491,7 +1625,7 @@ function UsersManagementTab() {
                                                     <option value="ANALYST">ANALYST</option>
                                                     <option value="IT_OFFICER">IT_OFFICER</option>
                                                     <option value="PENTESTER">PENTESTER</option>
-                                                    <option value="MAIN_OFFICER">MAIN_OFFICER</option>
+                                                    <option value="MAIN_OFFICER">MAIN-OFFICER</option>
                                                 </select>
                                                 {isUpdating === user.id && (
                                                     <ShieldLoader size="sm" />

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
     LayoutDashboard,
@@ -193,27 +193,81 @@ interface ThreatsResponse {
     };
 }
 
+function getApiErrorMessage(payload: unknown): string | null {
+    if (!payload || typeof payload !== "object") {
+        return null;
+    }
+
+    const error = (payload as { error?: unknown }).error;
+    return typeof error === "string" ? error : null;
+}
+
 export function TopBar({ onToggleSidebar }: TopBarProps) {
     const router = useRouter();
     const [threatsCount, setThreatsCount] = useState(0);
     const [notificationsCount, setNotificationsCount] = useState(0);
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     const [showNotifications, setShowNotifications] = useState(false);
+    const redirectedForTwoFactorRef = useRef(false);
+
+    const handleAuthFailure = useCallback(
+        async (response: Response): Promise<boolean> => {
+            if (response.status === 401) {
+                router.replace("/login");
+                return true;
+            }
+
+            if (response.status === 403) {
+                let payload: unknown = null;
+                try {
+                    payload = await response.json();
+                } catch {
+                    payload = null;
+                }
+
+                const errorMessage = getApiErrorMessage(payload);
+                if (errorMessage?.toLowerCase().includes("two-factor authentication required")) {
+                    if (!redirectedForTwoFactorRef.current) {
+                        redirectedForTwoFactorRef.current = true;
+                        router.replace("/auth/2fa");
+                    }
+                    return true;
+                }
+            }
+
+            return false;
+        },
+        [router],
+    );
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 // Fetch Threats
                 const threatsRes = await fetch("/api/threats");
-                const threatsData = await threatsRes.json() as ThreatsResponse;
-                if (threatsData.stats) {
-                    setThreatsCount(threatsData.stats.activeThreatsCount || 0);
+                if (!threatsRes.ok) {
+                    const shouldStop = await handleAuthFailure(threatsRes);
+                    if (shouldStop) {
+                        return;
+                    }
+                } else {
+                    const threatsData = await threatsRes.json() as ThreatsResponse;
+                    if (threatsData.stats) {
+                        setThreatsCount(threatsData.stats.activeThreatsCount || 0);
+                    }
                 }
 
                 // Fetch Notifications
                 const notifRes = await fetch("/api/notifications");
                 if (!notifRes.ok) {
-                    throw new Error("Failed to fetch notifications");
+                    const shouldStop = await handleAuthFailure(notifRes);
+                    if (shouldStop) {
+                        return;
+                    }
+
+                    setNotificationsCount(0);
+                    setNotifications([]);
+                    return;
                 }
 
                 const notifData = await notifRes.json() as NotificationsResponse;
@@ -229,7 +283,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
         // Poll every minute
         const interval = setInterval(fetchData, 60000);
         return () => clearInterval(interval);
-    }, []);
+    }, [handleAuthFailure]);
 
     const markAsRead = async () => {
         try {
@@ -240,6 +294,10 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
             });
 
             if (!response.ok) {
+                const shouldStop = await handleAuthFailure(response);
+                if (shouldStop) {
+                    return;
+                }
                 throw new Error("Failed to mark notifications as read");
             }
 
@@ -264,6 +322,10 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
         });
 
         if (!response.ok) {
+            const shouldStop = await handleAuthFailure(response);
+            if (shouldStop) {
+                return;
+            }
             throw new Error("Failed to mark notification as read");
         }
 

@@ -83,9 +83,9 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 token.id = user.id;
                 token.role = signInUser.role || "ANALYST";
                 token.totpEnabled = Boolean(signInUser.totpEnabled);
-                // Always reset 2FA verification on new login
-                token.twoFactorVerified = signInUser.totpEnabled ? false : true;
-                token.twoFactorVerifiedAt = signInUser.totpEnabled ? null : Date.now();
+                // Always require a fresh 2FA flow after login.
+                token.twoFactorVerified = false;
+                token.twoFactorVerifiedAt = null;
                 token.authenticatedAt = Date.now();
 
                 void prisma.user.update({
@@ -145,10 +145,8 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
             }
 
             if (!token.totpEnabled) {
-                token.twoFactorVerified = true;
-                if (typeof token.twoFactorVerifiedAt !== "number") {
-                    token.twoFactorVerifiedAt = Date.now();
-                }
+                token.twoFactorVerified = false;
+                token.twoFactorVerifiedAt = null;
             } else if (typeof token.twoFactorVerified !== "boolean") {
                 token.twoFactorVerified = false;
                 token.twoFactorVerifiedAt = null;
@@ -175,7 +173,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 session.user.id = token.id as string;
                 session.user.role = (token.role as string) || "ANALYST";
                 session.user.totpEnabled = Boolean(token.totpEnabled);
-                session.twoFactorVerified = session.user.totpEnabled ? token.twoFactorVerified === true : true;
+                session.twoFactorVerified = token.twoFactorVerified === true;
                 session.twoFactorVerifiedAt =
                     typeof token.twoFactorVerifiedAt === "number" ? token.twoFactorVerifiedAt : null;
                 session.authenticatedAt = typeof token.authenticatedAt === "number" ? token.authenticatedAt : null;

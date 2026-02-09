@@ -10,6 +10,9 @@ export async function GET() {
         if (!session || !session.user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
+        if (session.user.role !== "MAIN_OFFICER") {
+            return NextResponse.json({ error: "MAIN-OFFICER role required" }, { status: 403 });
+        }
         if (!isTwoFactorSatisfied(session)) {
             return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
         }
@@ -50,7 +53,7 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
     try {
         const session = await auth();
-        // Check if user is authenticated and is MAIN_OFFICER
+        // Check if user is authenticated and is MAIN_OFFICER.
         if (!session || !session.user || session.user.role !== 'MAIN_OFFICER') {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
@@ -63,6 +66,11 @@ export async function PUT(request: NextRequest) {
 
         if (!userId || !role) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+        }
+
+        const validRoles = new Set(["ANALYST", "IT_OFFICER", "PENTESTER", "MAIN_OFFICER"]);
+        if (!validRoles.has(role)) {
+            return NextResponse.json({ error: "Invalid role value" }, { status: 400 });
         }
 
         const currentUser = await prisma.user.findUnique({
