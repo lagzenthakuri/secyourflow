@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Settings, MoreHorizontal, Edit2, Trash2, Loader2 } from "lucide-react";
+import { Settings, Edit2, Trash2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FrameworkActionsProps {
@@ -17,6 +17,7 @@ export function FrameworkActions({
     onDelete,
     isDeleting = false
 }: FrameworkActionsProps) {
+    void framework;
     const [isOpen, setIsOpen] = useState(false);
     const [isConfirming, setIsConfirming] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);

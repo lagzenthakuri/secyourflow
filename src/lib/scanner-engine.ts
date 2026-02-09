@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import { logActivity } from "@/lib/logger";
 import { processRiskAssessment } from "@/lib/risk-engine";
 import type { Prisma } from "@prisma/client";
-import { Severity, VulnSource, VulnStatus, ScanStatus } from "@prisma/client";
+import { Severity } from "@prisma/client";
 import { TenableService } from "./scanners/tenable";
 
 interface FoundVulnerability {
@@ -206,7 +205,8 @@ async function getAIDetailsForResult(
         }
 
         return JSON.parse(content) as AiFindingDetails;
-    } catch (e) {
+    } catch (error) {
+        console.error("[ScannerEngine] Failed to enrich finding with AI:", error);
         return { description: finding.description, remediation: "" };
     }
 }

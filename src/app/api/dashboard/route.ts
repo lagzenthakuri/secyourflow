@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cachedJsonResponse, errorResponse, CACHE_STRATEGIES } from '@/lib/api-response';
 
@@ -19,7 +18,7 @@ interface DashboardStats {
   threat_indicators: bigint;
 }
 
-export async function GET(request: Request) {
+export async function GET() {
     try {
         // OPTIMIZATION 1: Single query for all counts (replaces 11 queries)
         const [stats] = await prisma.$queryRaw<DashboardStats[]>`

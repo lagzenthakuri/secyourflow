@@ -2,8 +2,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
 
-export async function GET(req: Request) {
+export async function GET() {
     try {
         const session = await auth();
         console.log("[RiskRegister] Session:", JSON.stringify(session, null, 2));
@@ -11,6 +12,9 @@ export async function GET(req: Request) {
         if (!session || !session.user) {
             console.log("[RiskRegister] No session or user");
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        if (!isTwoFactorSatisfied(session)) {
+            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
         }
 
         // Fetch user with organizationId since it might not be in session
@@ -123,6 +127,9 @@ export async function PATCH(req: Request) {
         const session = await auth();
         if (!session || !session.user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        if (!isTwoFactorSatisfied(session)) {
+            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
         }
 
         const user = await prisma.user.findUnique({

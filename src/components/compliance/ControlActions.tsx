@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { MoreVertical, Edit2, Trash2, ClipboardCheck, Loader2 } from "lucide-react";
+import { MoreVertical, Trash2, ClipboardCheck, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ControlActionsProps {
@@ -17,6 +17,7 @@ export function ControlActions({
     onDelete,
     isDeleting = false
 }: ControlActionsProps) {
+    void control;
     const [isOpen, setIsOpen] = useState(false);
     const [isConfirming, setIsConfirming] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);

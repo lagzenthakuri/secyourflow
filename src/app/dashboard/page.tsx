@@ -5,14 +5,12 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
-import { LoadingBar } from "@/components/ui/LoadingBar";
 import { getTimeAgo } from "@/lib/utils";
 import {
   Activity,
   AlertTriangle,
   ArrowRight,
   ChevronRight,
-  CircleAlert,
   FileCheck2,
   Gauge,
   RefreshCw,
@@ -601,6 +599,12 @@ export default function DashboardPage() {
             </div>
           </div>
         </section>
+
+        {error ? (
+          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-sm text-red-200">
+            {error}
+          </section>
+        ) : null}
 
         {/* HIGH PRIORITY SECTION */}
         {activeThreats > 0 ? (

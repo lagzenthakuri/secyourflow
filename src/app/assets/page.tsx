@@ -21,7 +21,6 @@ import {
   Filter,
   Globe,
   LayoutGrid,
-  ListFilter,
   Loader2,
   MapPin,
   Monitor,

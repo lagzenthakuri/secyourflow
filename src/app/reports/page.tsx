@@ -104,6 +104,8 @@ interface DashboardData {
   }>;
 }
 
+const EMPTY_COMPLIANCE_OVERVIEW: DashboardData["complianceOverview"] = [];
+
 const reportTemplates: ReportTemplate[] = [
   {
     id: "executive-risk-summary",
@@ -349,7 +351,7 @@ export default function ReportsPage() {
 
   const riskTrends = dashboardData?.riskTrends || [];
   const remediationTrends = dashboardData?.remediationTrends || [];
-  const complianceOverview = dashboardData?.complianceOverview || [];
+  const complianceOverview = dashboardData?.complianceOverview ?? EMPTY_COMPLIANCE_OVERVIEW;
 
   const queueStats = useMemo(() => {
     const completed = reportsList.filter(

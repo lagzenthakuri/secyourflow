@@ -1,5 +1,3 @@
-import { NextResponse } from 'next/server';
-
 interface CacheConfig {
   /**
    * Browser cache duration in seconds

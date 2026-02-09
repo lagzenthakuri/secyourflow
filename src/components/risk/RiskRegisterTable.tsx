@@ -2,8 +2,6 @@ import React, { useEffect, useState } from "react";
 import {
     Download,
     Search,
-    Filter,
-    Check,
     X,
     Loader2,
     Edit2,
@@ -13,7 +11,6 @@ import {
     ChevronDown,
     ChevronUp,
     ShieldAlert,
-    MoreHorizontal
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
@@ -139,7 +136,7 @@ export function RiskRegisterTable() {
                 body: JSON.stringify({ id, isResolved: !currentValue }),
             });
             if (!res.ok) fetchRisks(); // Revert on failure
-        } catch (error) {
+        } catch {
             fetchRisks();
         }
     };

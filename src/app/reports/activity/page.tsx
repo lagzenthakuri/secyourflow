@@ -17,14 +17,9 @@ import {
     Download,
     RefreshCw,
     Clock,
-    MapPin,
-    Monitor,
-    AlertTriangle,
-    CheckCircle,
-    XCircle,
     Info,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getTimeAgo } from "@/lib/utils";
 
 interface ActivityLog {
@@ -50,10 +45,9 @@ export default function ActivityLogPage() {
     const [total, setTotal] = useState(0);
     const [filter, setFilter] = useState("all");
     const [searchTerm, setSearchTerm] = useState("");
-    const [expandedRow, setExpandedRow] = useState<string | null>(null);
     const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
-    const fetchLogs = async () => {
+    const fetchLogs = useCallback(async () => {
         setIsLoading(true);
         try {
             const params = new URLSearchParams({
@@ -78,11 +72,11 @@ export default function ActivityLogPage() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [page, filter]);
 
     useEffect(() => {
-        fetchLogs();
-    }, [page, filter]);
+        void fetchLogs();
+    }, [fetchLogs]);
 
     const getIcon = (type: string) => {
         switch (type.toLowerCase()) {
@@ -93,25 +87,6 @@ export default function ActivityLogPage() {
             case "settings": return <Settings size={16} className="text-gray-400" />;
             default: return <Activity size={16} className="text-purple-400" />;
         }
-    };
-
-    const getRiskBadge = (action: string) => {
-        const highRisk = ["delete", "remove", "disable", "failed"];
-        const mediumRisk = ["update", "modify", "change"];
-        const lowRisk = ["view", "read", "list"];
-
-        const actionLower = action.toLowerCase();
-        
-        if (highRisk.some(risk => actionLower.includes(risk))) {
-            return <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-red-500/10 text-red-400 border border-red-500/20">HIGH</span>;
-        }
-        if (mediumRisk.some(risk => actionLower.includes(risk))) {
-            return <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">MED</span>;
-        }
-        if (lowRisk.some(risk => actionLower.includes(risk))) {
-            return <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-green-500/10 text-green-400 border border-green-500/20">LOW</span>;
-        }
-        return <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">INFO</span>;
     };
 
     const formatUTCTime = (date: string) => {

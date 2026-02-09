@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { logActivity } from "@/lib/logger";
 import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
     try {
         const session = await auth();
         if (!session || !session.user) {

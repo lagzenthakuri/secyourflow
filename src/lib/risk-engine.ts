@@ -219,7 +219,7 @@ Return ONLY structured JSON in this format:
  */
 function mockAnalysis(
     vulnerability: Pick<RiskInputVulnerability, "title" | "cvssVector" | "severity">,
-    _asset: Pick<RiskInputAsset, "name" | "type">
+    asset: Pick<RiskInputAsset, "name" | "type">
 ): RiskAnalysis {
     const title = vulnerability.title.toLowerCase();
     const isDB = title.includes("database") || title.includes("sql") || title.includes("postgre");
@@ -240,7 +240,7 @@ function mockAnalysis(
         likelihood_score: likelihood,
         risk_category: vulnerability.severity === "CRITICAL" ? "Critical" : "High",
         risk_category_2: "Application Security",
-        rationale_for_risk_rating: `Simulated analysis based on ${vulnerability.severity} severity and technical impact vector.`,
+        rationale_for_risk_rating: `Simulated analysis for ${asset.name} (${asset.type}) based on ${vulnerability.severity} severity and technical impact vector.`,
         current_controls: ["Firewall"],
         selected_controls: ["MFA", "Encryption"],
         controls_violated_iso27001: ["A.9.1", "A.13.1"],

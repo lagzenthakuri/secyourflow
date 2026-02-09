@@ -14,8 +14,6 @@ import {
     Tooltip,
     ResponsiveContainer,
     Legend,
-    LineChart,
-    Line,
 } from "recharts";
 import { RiskTrend, VulnerabilitySeverityDistribution } from "@/types";
 

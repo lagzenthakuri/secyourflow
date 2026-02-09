@@ -7,7 +7,7 @@ export async function PATCH(
 ) {
     try {
         const { id } = await params;
-        const { assetId, ...vulnData } = await request.json();
+        const vulnData = await request.json();
 
         const updatedVuln = await prisma.vulnerability.update({
             where: { id },

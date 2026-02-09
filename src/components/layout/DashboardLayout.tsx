@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
     LayoutDashboard,
     Server,
@@ -24,6 +24,13 @@ import {
 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
+import {
+    markAllNotificationsRead,
+    markNotificationRead,
+    normalizeNotificationsResponse,
+    type NotificationItem,
+    type NotificationsResponse,
+} from "@/lib/notification-state";
 
 const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"] },
@@ -186,20 +193,8 @@ interface ThreatsResponse {
     };
 }
 
-interface NotificationItem {
-    id: string;
-    title: string;
-    message: string;
-    createdAt: string;
-    read: boolean;
-}
-
-interface NotificationsResponse {
-    unreadCount?: number;
-    notifications?: NotificationItem[];
-}
-
 export function TopBar({ onToggleSidebar }: TopBarProps) {
+    const router = useRouter();
     const [threatsCount, setThreatsCount] = useState(0);
     const [notificationsCount, setNotificationsCount] = useState(0);
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -217,11 +212,14 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
 
                 // Fetch Notifications
                 const notifRes = await fetch("/api/notifications");
-                const notifData = await notifRes.json() as NotificationsResponse;
-                if (notifData.unreadCount !== undefined) {
-                    setNotificationsCount(notifData.unreadCount);
-                    setNotifications(notifData.notifications || []);
+                if (!notifRes.ok) {
+                    throw new Error("Failed to fetch notifications");
                 }
+
+                const notifData = await notifRes.json() as NotificationsResponse;
+                const normalizedNotifications = normalizeNotificationsResponse(notifData);
+                setNotificationsCount(normalizedNotifications.unreadCount);
+                setNotifications(normalizedNotifications.notifications);
             } catch (error) {
                 console.error("Failed to fetch topbar data", error);
             }
@@ -235,15 +233,70 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
 
     const markAsRead = async () => {
         try {
-            await fetch("/api/notifications", {
+            const response = await fetch("/api/notifications", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ markAllRead: true }),
             });
+
+            if (!response.ok) {
+                throw new Error("Failed to mark notifications as read");
+            }
+
             setNotificationsCount(0);
-            setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+            setNotifications((previousNotifications) =>
+                markAllNotificationsRead(previousNotifications),
+            );
         } catch (e) {
             console.error(e);
+        }
+    };
+
+    const markOneNotificationAsRead = async (notification: NotificationItem) => {
+        if (notification.isRead) {
+            return;
+        }
+
+        const response = await fetch("/api/notifications", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: notification.id, isRead: true }),
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to mark notification as read");
+        }
+
+        const updateResult = await response.json() as { changedToRead?: boolean };
+
+        setNotifications((previousNotifications) =>
+            markNotificationRead(previousNotifications, notification.id).notifications,
+        );
+
+        if (updateResult.changedToRead) {
+            setNotificationsCount((previousCount) => Math.max(0, previousCount - 1));
+        }
+    };
+
+    const navigateToNotification = (link: string) => {
+        if (link.startsWith("http://") || link.startsWith("https://")) {
+            window.location.href = link;
+            return;
+        }
+
+        router.push(link);
+    };
+
+    const handleNotificationClick = async (notification: NotificationItem) => {
+        try {
+            await markOneNotificationAsRead(notification);
+        } catch (error) {
+            console.error(error);
+        }
+
+        if (notification.link) {
+            setShowNotifications(false);
+            navigateToNotification(notification.link);
         }
     };
 
@@ -313,11 +366,23 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                                     </div>
                                 ) : (
                                     notifications.map(notif => (
-                                        <div key={notif.id} className={`p-3 border-b border-[var(--border-color)] hover:bg-[var(--bg-tertiary)] transition-all duration-300 ease-in-out ${!notif.read ? 'bg-[var(--bg-tertiary)]/50' : ''}`}>
-                                            <p className="text-sm font-medium">{notif.title}</p>
+                                        <button
+                                            key={notif.id}
+                                            type="button"
+                                            onClick={() => {
+                                                void handleNotificationClick(notif);
+                                            }}
+                                            className={`w-full p-3 border-b border-[var(--border-color)] text-left hover:bg-[var(--bg-tertiary)] transition-all duration-300 ease-in-out ${!notif.isRead ? "bg-[var(--bg-tertiary)]/50" : ""}`}
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <p className="text-sm font-medium">{notif.title}</p>
+                                                {!notif.isRead && (
+                                                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-sky-400" />
+                                                )}
+                                            </div>
                                             <p className="text-xs text-[var(--text-muted)] mt-1">{notif.message}</p>
                                             <p className="text-[10px] text-[var(--text-muted)] mt-2">{new Date(notif.createdAt).toLocaleString()}</p>
-                                        </div>
+                                        </button>
                                     ))
                                 )}
                             </div>

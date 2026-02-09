@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { AssetType, AssetStatus, Criticality, Environment } from "@prisma/client";
+import { AssetType, AssetStatus, Criticality } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
@@ -114,4 +114,3 @@ export async function POST(request: NextRequest) {
         );
     }
 }
-

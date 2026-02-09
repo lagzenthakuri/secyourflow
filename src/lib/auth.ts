@@ -5,6 +5,10 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 import { authConfig } from "./auth.config";
 import { assertTotpEncryptionKeyConfigured } from "@/lib/crypto/totpSecret";
+import {
+    assertTwoFactorSessionUpdateKeyConfigured,
+    isTrustedTwoFactorSessionUpdate,
+} from "@/lib/security/two-factor-session";
 
 export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
     ...authConfig,
@@ -67,6 +71,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
         async jwt({ token, user, trigger, session }) {
             if (process.env.NODE_ENV === "production") {
                 assertTotpEncryptionKeyConfigured();
+                assertTwoFactorSessionUpdateKeyConfigured();
             }
 
             if (user) {
@@ -95,6 +100,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
 
             if (trigger === "update" && session) {
                 const updateSession = session as {
+                    __twoFactorSessionUpdateKey?: string;
                     twoFactorVerified?: boolean;
                     twoFactorVerifiedAt?: number | null;
                     authenticatedAt?: number;
@@ -103,30 +109,34 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                         totpEnabled?: boolean;
                     };
                 };
-                if (typeof updateSession.twoFactorVerified === "boolean") {
-                    token.twoFactorVerified = updateSession.twoFactorVerified;
-                }
 
-                if (
-                    typeof updateSession.twoFactorVerifiedAt === "number" ||
-                    updateSession.twoFactorVerifiedAt === null
-                ) {
-                    token.twoFactorVerifiedAt = updateSession.twoFactorVerifiedAt;
-                }
+                // Prevent client-controlled session updates from mutating sensitive 2FA state.
+                if (isTrustedTwoFactorSessionUpdate(updateSession)) {
+                    if (typeof updateSession.twoFactorVerified === "boolean") {
+                        token.twoFactorVerified = updateSession.twoFactorVerified;
+                    }
 
-                const updatedTotpEnabled =
-                    typeof updateSession.user?.totpEnabled === "boolean"
-                        ? updateSession.user.totpEnabled
-                        : typeof updateSession.totpEnabled === "boolean"
-                            ? updateSession.totpEnabled
-                            : undefined;
+                    if (
+                        typeof updateSession.twoFactorVerifiedAt === "number" ||
+                        updateSession.twoFactorVerifiedAt === null
+                    ) {
+                        token.twoFactorVerifiedAt = updateSession.twoFactorVerifiedAt;
+                    }
 
-                if (typeof updatedTotpEnabled === "boolean") {
-                    token.totpEnabled = updatedTotpEnabled;
-                }
+                    const updatedTotpEnabled =
+                        typeof updateSession.user?.totpEnabled === "boolean"
+                            ? updateSession.user.totpEnabled
+                            : typeof updateSession.totpEnabled === "boolean"
+                                ? updateSession.totpEnabled
+                                : undefined;
 
-                if (typeof updateSession.authenticatedAt === "number") {
-                    token.authenticatedAt = updateSession.authenticatedAt;
+                    if (typeof updatedTotpEnabled === "boolean") {
+                        token.totpEnabled = updatedTotpEnabled;
+                    }
+
+                    if (typeof updateSession.authenticatedAt === "number") {
+                        token.authenticatedAt = updateSession.authenticatedAt;
+                    }
                 }
             }
 

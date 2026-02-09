@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         });
 
         // Trigger AI summary generation in background
-        generateAIReportSummary(newReport.id).then(summary => {
+        generateAIReportSummary(newReport.id).then(() => {
             prisma.report.update({
                 where: { id: newReport.id },
                 data: {

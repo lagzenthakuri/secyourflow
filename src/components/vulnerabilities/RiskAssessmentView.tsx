@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Shield, AlertTriangle, CheckCircle, Clock, Info, Zap, AlertCircle } from "lucide-react";
+import { Shield, Clock, Zap, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface RiskAssessmentViewProps {
