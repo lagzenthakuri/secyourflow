@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { SecurityLoader } from "@/components/ui/SecurityLoader";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { Vulnerability } from "@/types";
 import { cn, getTimeAgo } from "@/lib/utils";
 import {
@@ -227,12 +227,7 @@ export default function ThreatsPage() {
     return (
       <DashboardLayout>
         <div className="flex min-h-[60vh] items-center justify-center">
-          <SecurityLoader
-            size="xl"
-            icon="shield"
-            variant="cyber"
-            text="Analyzing live threat intelligence..."
-          />
+          <ShieldLoader size="lg" variant="cyber" />
         </div>
       </DashboardLayout>
     );

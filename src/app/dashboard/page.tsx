@@ -4,7 +4,8 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { SecurityLoader } from "@/components/ui/SecurityLoader";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
+import { LoadingBar } from "@/components/ui/LoadingBar";
 import { getTimeAgo } from "@/lib/utils";
 import {
   Activity,
@@ -482,40 +483,11 @@ export default function DashboardPage() {
   const remediationTrends = data?.remediationTrends ?? [];
   const riskTrends = data?.riskTrends ?? [];
 
-  if (isLoading) {
+  if (isLoading || !data) {
     return (
       <DashboardLayout>
         <div className="flex min-h-[60vh] items-center justify-center">
-          <SecurityLoader
-            size="xl"
-            icon="shield"
-            variant="cyber"
-            text="Loading SOC dashboard context..."
-          />
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (error || !data) {
-    return (
-      <DashboardLayout>
-        <div className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center rounded-2xl border border-red-400/25 bg-red-500/5 p-8 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full border border-red-400/25 bg-red-500/10">
-            <CircleAlert className="h-7 w-7 text-red-300" />
-          </div>
-          <h2 className="mt-5 text-xl font-semibold text-white">Unable to Load Dashboard</h2>
-          <p className="mt-2 text-sm text-slate-300">
-            {error || "We could not fetch your dashboard data right now."}
-          </p>
-          <button
-            type="button"
-            onClick={() => void fetchDashboardData()}
-            className="mt-5 inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-white/30 hover:bg-white/10"
-          >
-            Retry
-            <RefreshCw size={14} />
-          </button>
+          <ShieldLoader size="lg" variant="cyber" />
         </div>
       </DashboardLayout>
     );

@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SecurityLoader } from "@/components/ui/SecurityLoader";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { useSession } from "next-auth/react";
 import { TwoFactorSettingsPanel } from "@/components/settings/TwoFactorSettingsPanel";
 
@@ -281,12 +281,7 @@ export default function SettingsPage() {
         return (
             <DashboardLayout>
                 <div className="flex min-h-[60vh] items-center justify-center">
-                    <SecurityLoader
-                        size="xl"
-                        icon="shield"
-                        variant="cyber"
-                        text="Loading configuration workspace..."
-                    />
+                    <ShieldLoader size="lg" variant="cyber" />
                 </div>
             </DashboardLayout>
         );
@@ -1454,7 +1449,7 @@ function UsersManagementTab() {
             <div className="space-y-4">
                 {isLoading ? (
                     <div className="flex justify-center py-10">
-                        <SecurityLoader size="md" icon="shield" variant="cyber" />
+                        <ShieldLoader size="md" variant="cyber" />
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
@@ -1499,7 +1494,7 @@ function UsersManagementTab() {
                                                     <option value="MAIN_OFFICER">MAIN_OFFICER</option>
                                                 </select>
                                                 {isUpdating === user.id && (
-                                                    <SecurityLoader size="xs" icon="shield" />
+                                                    <ShieldLoader size="sm" />
                                                 )}
                                             </div>
                                         </td>

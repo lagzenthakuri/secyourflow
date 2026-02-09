@@ -6,7 +6,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AddAssetModal } from "@/components/assets/AddAssetModal";
 import { EditAssetModal } from "@/components/assets/EditAssetModal";
 import { AssetActions } from "@/components/assets/AssetActions";
-import { SecurityLoader } from "@/components/ui/SecurityLoader";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { cn } from "@/lib/utils";
 import { Asset } from "@/types";
 import {
@@ -49,7 +49,7 @@ const AssetMap = dynamic(
     ssr: false,
     loading: () => (
       <div className="flex h-[500px] items-center justify-center rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)]">
-        <SecurityLoader size="lg" icon="shield" variant="cyber" text="Loading map" />
+        <ShieldLoader size="lg" variant="cyber" />
       </div>
     ),
   },
@@ -355,6 +355,16 @@ export default function AssetsPage() {
   const typeDistribution = summary?.typeDistribution ?? [];
   const environmentBreakdown = summary?.environmentBreakdown ?? [];
 
+  if (isLoading && assets.length === 0) {
+    return (
+      <DashboardLayout>
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <ShieldLoader size="lg" variant="cyber" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-5">
@@ -655,11 +665,7 @@ export default function AssetsPage() {
                 <div className="text-xs text-slate-500">Page {pagination.page}</div>
               </header>
 
-              {isLoading ? (
-                <div className="flex min-h-[360px] items-center justify-center">
-                  <SecurityLoader size="lg" icon="shield" variant="cyber" text="Fetching assets" />
-                </div>
-              ) : assets.length === 0 ? (
+              {assets.length === 0 ? (
                 <div className="p-16 text-center">
                   <Server className="mx-auto h-12 w-12 text-slate-600" />
                   <p className="mt-4 text-sm text-slate-400">No assets match current filters.</p>

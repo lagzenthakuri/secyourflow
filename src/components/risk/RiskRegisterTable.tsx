@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     Download,
     Search,
@@ -16,6 +16,7 @@ import {
     MoreHorizontal
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
 
 interface RiskEntry {
     id: string;
@@ -215,8 +216,7 @@ export function RiskRegisterTable() {
     if (isLoading) {
         return (
             <div className="flex flex-col items-center justify-center h-64">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
-                <p className="text-[var(--text-muted)]">Loading Risk Register...</p>
+                <ShieldLoader size="lg" variant="cyber" />
             </div>
         );
     }
@@ -281,7 +281,7 @@ export function RiskRegisterTable() {
                             const isEditing = editingId === risk.id;
 
                             return (
-                                <>
+                                <React.Fragment key={risk.id}>
                                     {/* Main Row */}
                                     <tr
                                         className={cn(
@@ -513,7 +513,7 @@ export function RiskRegisterTable() {
                                             </td>
                                         </tr>
                                     )}
-                                </>
+                                </React.Fragment>
                             );
                         })}
                     </tbody>

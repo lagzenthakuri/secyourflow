@@ -17,7 +17,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { SecurityLoader } from "@/components/ui/SecurityLoader";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
 
 const roleColors = {
     MAIN_OFFICER: "#ef4444",
@@ -89,7 +89,7 @@ export default function UsersPage() {
         return (
             <DashboardLayout>
                 <div className="flex items-center justify-center min-h-[60vh]">
-                    <SecurityLoader size="lg" icon="shield" variant="cyber" />
+                    <ShieldLoader size="lg" variant="cyber" />
                 </div>
             </DashboardLayout>
         );

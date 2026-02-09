@@ -32,7 +32,7 @@ import { AddControlModal } from "@/components/compliance/AddControlModal";
 import { AssessControlModal } from "@/components/compliance/AssessControlModal";
 import { ControlActions } from "@/components/compliance/ControlActions";
 import { FrameworkActions } from "@/components/compliance/FrameworkActions";
-import { SecurityLoader } from "@/components/ui/SecurityLoader";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
 
 interface FrameworkControl {
   id: string;
@@ -572,12 +572,7 @@ export default function CompliancePage() {
     return (
       <DashboardLayout>
         <div className="flex min-h-[60vh] items-center justify-center">
-          <SecurityLoader
-            size="xl"
-            icon="shield"
-            variant="cyber"
-            text="Gathering compliance posture..."
-          />
+          <ShieldLoader size="lg" variant="cyber" />
         </div>
       </DashboardLayout>
     );
@@ -1282,7 +1277,7 @@ export default function CompliancePage() {
               disabled={isSubmitting || !newFramework.name}
             >
               {isSubmitting ? (
-                <SecurityLoader size="xs" icon="shield" variant="cyber" className="mr-2" />
+                <ShieldLoader size="sm" variant="cyber" className="mr-2" />
               ) : (
                 <Plus size={16} className="mr-2" />
               )}
@@ -1348,7 +1343,7 @@ export default function CompliancePage() {
             </button>
             <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
               {isSubmitting ? (
-                <SecurityLoader size="xs" icon="shield" variant="cyber" className="mr-2" />
+                <ShieldLoader size="sm" variant="cyber" className="mr-2" />
               ) : null}
               {isSubmitting ? "Saving..." : "Save Changes"}
             </button>

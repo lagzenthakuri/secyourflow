@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { RiskRegisterTable } from "@/components/risk/RiskRegisterTable";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import {
   AlertTriangle,
   ArrowDownToLine,
@@ -120,6 +121,16 @@ export default function RiskRegisterPage() {
     }
     return top;
   }, [overviewData]);
+
+  if (isLoadingOverview && overviewData.length === 0) {
+    return (
+      <DashboardLayout>
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <ShieldLoader size="lg" variant="cyber" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>

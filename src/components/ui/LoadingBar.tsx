@@ -109,7 +109,8 @@ export function LoadingBar({
                         isDeterminate
                             ? ""
                             : "animate-loading-slide",
-                        showGlow && styles.glow
+                        showGlow && styles.glow,
+                        "shadow-[0_0_20px_rgba(6,182,212,0.5)]"
                     )}
                     style={{
                         width: isDeterminate ? `${clampedProgress}%` : "30%",
@@ -117,9 +118,11 @@ export function LoadingBar({
                     }}
                 >
                     <div className={cn("absolute inset-0", `bg-gradient-to-r ${styles.fill}`)} />
+                    {/* Shimmer effect */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-loading-slide" />
                     <div
                         className={cn(
-                            "absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 rounded-[4px] border flex items-center justify-center",
+                            "absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 rounded-[4px] border flex items-center justify-center shadow-lg",
                             styles.badge
                         )}
                         style={{ width: `${shieldSize}px`, height: `${shieldSize}px` }}
