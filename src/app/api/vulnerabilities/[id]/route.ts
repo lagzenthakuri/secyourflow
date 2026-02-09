@@ -64,10 +64,10 @@ export async function DELETE(
 
         console.log(`Successfully deleted vulnerability: ${id}`);
         return NextResponse.json({ message: "Vulnerability deleted successfully" });
-    } catch (error: any) {
+    } catch (error) {
         console.error("CRITICAL: Delete Vulnerability Error:", error);
         return NextResponse.json(
-            { error: `Server error: ${error.message || "Unknown error"}` },
+            { error: `Server error: ${error instanceof Error ? error.message : "Unknown error"}` },
             { status: 500 }
         );
     }

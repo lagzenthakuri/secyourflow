@@ -7,7 +7,7 @@ export class SIEMService {
     /**
      * Send alerts to SIEM
      */
-    static async sendAlert(alert: any) {
+    static async sendAlert(alert: { title: string; [key: string]: unknown }) {
         console.log("[SIEM] Sending alert:", alert.title);
         // Real implementation: POST to SIEM HEC or API
         return { status: "forwarded", id: Math.random().toString(36).substring(7) };

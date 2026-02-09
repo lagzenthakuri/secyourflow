@@ -10,26 +10,24 @@ export function NavigationProgress() {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    // Start loading animation
-    setIsLoading(true);
-    setProgress(0);
+    const timers: ReturnType<typeof setTimeout>[] = [];
 
-    // Simulate progress
-    const timer1 = setTimeout(() => setProgress(30), 100);
-    const timer2 = setTimeout(() => setProgress(60), 300);
-    const timer3 = setTimeout(() => setProgress(90), 600);
-    
-    // Complete loading
-    const timer4 = setTimeout(() => {
+    timers.push(setTimeout(() => {
+      setIsLoading(true);
+      setProgress(0);
+    }, 0));
+
+    timers.push(setTimeout(() => setProgress(30), 100));
+    timers.push(setTimeout(() => setProgress(60), 300));
+    timers.push(setTimeout(() => setProgress(90), 600));
+
+    timers.push(setTimeout(() => {
       setProgress(100);
-      setTimeout(() => setIsLoading(false), 200);
-    }, 800);
+      timers.push(setTimeout(() => setIsLoading(false), 200));
+    }, 800));
 
     return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-      clearTimeout(timer4);
+      timers.forEach((timer) => clearTimeout(timer));
     };
   }, [pathname]);
 

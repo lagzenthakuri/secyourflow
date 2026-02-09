@@ -128,6 +128,12 @@ model Asset {
   @@index([ipAddress])
   @@index([organizationId])
   @@index([criticality])
+  @@index([organizationId, criticality])
+  @@index([organizationId, environment])
+  @@index([organizationId, status])
+  @@index([organizationId, type])
+  @@index([location])
+  @@index([hostname])
 }
 
 model Vulnerability {
@@ -174,6 +180,13 @@ model Vulnerability {
   @@index([organizationId])
   @@index([isExploited])
   @@index([riskScore])
+  @@index([organizationId, severity])
+  @@index([organizationId, status])
+  @@index([organizationId, isExploited])
+  @@index([organizationId, cisaKev])
+  @@index([createdAt(sort: Desc)])
+  @@index([severity, status])
+  @@index([epssScore(sort: Desc)])
 }
 
 model AssetVulnerability {
@@ -247,6 +260,7 @@ model ComplianceControl {
   @@index([controlId])
   @@index([maturityLevel])
   @@index([nistCsfFunction])
+  @@index([frameworkId, status])
 }
 
 model AssetComplianceControl {
@@ -334,7 +348,9 @@ model AuditLog {
 
   @@index([entityType, entityId])
   @@index([userId])
-  @@index([createdAt])
+  @@index([createdAt(sort: Desc)])
+  @@index([entityType, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
 }
 
 model Comment {
@@ -460,6 +476,9 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([userId, isRead])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
 }
 
 model RiskRegister {
@@ -490,6 +509,11 @@ model RiskRegister {
   @@index([assetId])
   @@index([vulnerabilityId])
   @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([riskScore(sort: Desc)])
+  @@index([organizationId, riskScore(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@index([assetId, vulnerabilityId])
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments

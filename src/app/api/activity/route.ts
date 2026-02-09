@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
         const entityType = searchParams.get("entityType");
         const userId = searchParams.get("userId");
 
-        const where: any = {};
+        const where: Record<string, string> = {};
         if (entityType) where.entityType = entityType;
         if (userId) where.userId = userId;
 

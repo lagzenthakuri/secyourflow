@@ -38,10 +38,10 @@ export async function POST(request: NextRequest) {
             message: "Scan completed successfully",
             ...result
         });
-    } catch (error: any) {
+    } catch (error) {
         console.error("Scan Run Error:", error);
         return NextResponse.json(
-            { error: error.message || "Failed to run scan" },
+            { error: error instanceof Error ? error.message : "Failed to run scan" },
             { status: 500 }
         );
     }

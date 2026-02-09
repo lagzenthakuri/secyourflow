@@ -15,9 +15,9 @@ export async function PATCH(
         });
 
         return NextResponse.json(updatedFramework);
-    } catch (error: any) {
+    } catch (error) {
         console.error("Update Framework Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 400 });
+        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 400 });
     }
 }
 
@@ -37,8 +37,8 @@ export async function DELETE(
         });
 
         return NextResponse.json({ message: "Framework deleted successfully" });
-    } catch (error: any) {
+    } catch (error) {
         console.error("Delete Framework Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 400 });
+        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 400 });
     }
 }

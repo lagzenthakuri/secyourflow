@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
             name: user.name || "Unknown User",
             email: user.email,
             role: user.role,
-            department: (user as any).department || "Security", // Department isn't in schema yet, fallback
+            department: "Security", // Department isn't in schema yet, fallback
             lastActive: user.lastLogin ? getTimeAgo(new Date(user.lastLogin)) : "Never",
             status: user.lastLogin && (Date.now() - new Date(user.lastLogin).getTime() < 5 * 60 * 1000) ? "online" : "offline"
         }));
@@ -79,8 +79,8 @@ export async function PUT(request: NextRequest) {
             "Role updated",
             "user",
             updatedUser.email,
-            currentUser?.role,
-            role,
+            currentUser?.role ? { role: currentUser.role } : null,
+            { role },
             `Role changed from ${currentUser?.role} to ${role} by ${session.user.name}`,
             session.user.id
         );

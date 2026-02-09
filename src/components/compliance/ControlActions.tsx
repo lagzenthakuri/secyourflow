@@ -5,7 +5,7 @@ import { MoreVertical, Edit2, Trash2, ClipboardCheck, Loader2 } from "lucide-rea
 import { cn } from "@/lib/utils";
 
 interface ControlActionsProps {
-    control: any;
+    control: Record<string, unknown>;
     onAssess: () => void;
     onDelete: () => void;
     isDeleting?: boolean;

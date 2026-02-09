@@ -777,7 +777,7 @@ export default function CompliancePage() {
                         </p>
                       </div>
                       <FrameworkActions
-                        framework={framework}
+                        framework={framework as unknown as Record<string, unknown>}
                         onEdit={() => {
                           setSelectedFramework(framework);
                           setIsEditFrameworkModalOpen(true);
@@ -1099,7 +1099,7 @@ export default function CompliancePage() {
                             </div>
 
                             <ControlActions
-                              control={control}
+                              control={control as unknown as Record<string, unknown>}
                               onAssess={() => {
                                 setSelectedControl(control);
                                 setIsAssessModalOpen(true);
@@ -1368,7 +1368,18 @@ export default function CompliancePage() {
             setSelectedControl(null);
           }}
           onSuccess={() => void fetchCompliance({ silent: true })}
-          control={selectedControl}
+          control={selectedControl as unknown as {
+            id: string;
+            controlId: string;
+            title: string;
+            description?: string;
+            status?: string;
+            implementationStatus?: string;
+            maturityLevel?: number;
+            evidence?: string;
+            notes?: string;
+            [key: string]: unknown;
+          }}
         />
       ) : null}
     </DashboardLayout>

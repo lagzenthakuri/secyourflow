@@ -5,7 +5,7 @@ import { Settings, MoreHorizontal, Edit2, Trash2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FrameworkActionsProps {
-    framework: any;
+    framework: Record<string, unknown>;
     onEdit: () => void;
     onDelete: () => void;
     isDeleting?: boolean;

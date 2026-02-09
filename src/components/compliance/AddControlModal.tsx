@@ -60,8 +60,8 @@ export function AddControlModal({ isOpen, onClose, onSuccess, frameworkId }: Add
                 frequency: "ANNUAL",
                 ownerRole: "",
             });
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Unknown error');
         } finally {
             setIsSubmitting(false);
         }

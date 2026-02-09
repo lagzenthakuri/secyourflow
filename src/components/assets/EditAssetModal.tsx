@@ -97,8 +97,8 @@ export function EditAssetModal({ isOpen, onClose, onSuccess, asset }: EditAssetM
 
             onSuccess();
             onClose();
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Unknown error');
         } finally {
             setIsSubmitting(false);
         }

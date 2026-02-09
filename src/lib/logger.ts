@@ -5,8 +5,8 @@ export async function logActivity(
     action: string,
     entityType: string,
     entityId: string,
-    oldValue?: any,
-    newValue?: any,
+    oldValue?: Record<string, unknown> | null,
+    newValue?: Record<string, unknown> | null,
     details?: string,
     customUserId?: string
 ) {

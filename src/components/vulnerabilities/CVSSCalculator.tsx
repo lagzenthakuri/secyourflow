@@ -26,6 +26,29 @@ interface CVSSMetrics {
     a: CIA;
 }
 
+interface MetricButtonProps {
+    label: string;
+    value: string;
+    currentValue: string;
+    onClick: () => void;
+}
+
+function MetricButton({ label, value, currentValue, onClick }: MetricButtonProps) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`px-3 py-1.5 text-xs rounded-md border transition-all ${currentValue === value
+                ? "bg-primary/20 border-primary text-primary"
+                : "bg-white/5 border-white/10 text-[var(--text-secondary)] hover:bg-white/10"
+                }`}
+        >
+            <div className="font-medium">{label}</div>
+            <div className="opacity-60">{value}</div>
+        </button>
+    );
+}
+
 export function CVSSCalculator({ onScoreChange, onVectorChange }: CVSSCalculatorProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [metrics, setMetrics] = useState<CVSSMetrics>({
@@ -87,30 +110,6 @@ export function CVSSCalculator({ onScoreChange, onVectorChange }: CVSSCalculator
             onVectorChange(vector);
         }
     }, [metrics, onScoreChange, onVectorChange]);
-
-    const MetricButton = ({
-        label,
-        value,
-        currentValue,
-        onClick
-    }: {
-        label: string;
-        value: string;
-        currentValue: string;
-        onClick: () => void
-    }) => (
-        <button
-            type="button"
-            onClick={onClick}
-            className={`px-3 py-1.5 text-xs rounded-md border transition-all ${currentValue === value
-                ? "bg-primary/20 border-primary text-primary"
-                : "bg-white/5 border-white/10 text-[var(--text-secondary)] hover:bg-white/10"
-                }`}
-        >
-            <div className="font-medium">{label}</div>
-            <div className="opacity-60">{value}</div>
-        </button>
-    );
 
     return (
         <div className="border border-white/10 rounded-lg overflow-hidden bg-white/5">

@@ -1,7 +1,7 @@
-
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/logger";
 import { updateComplianceFromRisk } from "@/lib/compliance-engine";
+import type { Prisma, Severity } from "@prisma/client";
 
 /**
  * Parses CVSS v3.1 vector string to extract CIA impacts.
@@ -31,29 +31,102 @@ function parseCVSSVector(vector?: string) {
     return scores;
 }
 
-// Type definition for the AI Risk Analysis Output
-interface AIRiskAnalysis {
-    c_impact: number; // 1-5
-    i_impact: number; // 1-5
-    a_impact: number; // 1-5
-    likelihood: number; // 1-5
-    summary: string; // "Unauthorized access...", etc.
-    rationale: string;
-    affectedControls: string[]; // List of Control IDs (e.g., ISO-27001-A.9.2.1)
+interface RiskInputVulnerability {
+    title: string;
+    description?: string;
+    cvssVector?: string;
+    cveId?: string;
+    severity?: Severity | null;
+    cvssScore?: number;
+}
+
+interface RiskInputAsset {
+    name: string;
+    type: string;
+    criticality?: string;
+    environment?: string;
+    owner?: string;
+}
+
+interface RiskAnalysis {
+    risk: string;
+    threat: string;
+    confidentiality_impact: number;
+    integrity_impact: number;
+    availability_impact: number;
+    likelihood_score: number;
+    risk_category: string;
+    risk_category_2: string;
+    rationale_for_risk_rating: string;
+    current_controls: string[];
+    selected_controls: string[];
+    controls_violated_iso27001: string[];
+    treatment_option: string;
+    action_plan: string;
+    responsible_party: string;
+    remarks: string;
+    confidence: number;
+}
+
+function toNumber(value: unknown, fallback: number): number {
+    if (typeof value !== "number" || Number.isNaN(value)) {
+        return fallback;
+    }
+    return value;
+}
+
+function toStringValue(value: unknown, fallback: string): string {
+    return typeof value === "string" && value.trim().length > 0 ? value : fallback;
+}
+
+function toStringArray(value: unknown, fallback: string[] = []): string[] {
+    if (!Array.isArray(value)) {
+        return fallback;
+    }
+
+    return value.filter((item): item is string => typeof item === "string" && item.length > 0);
+}
+
+function normalizeRiskAnalysis(raw: unknown, fallback: RiskAnalysis): RiskAnalysis {
+    if (!raw || typeof raw !== "object") {
+        return fallback;
+    }
+
+    const value = raw as Record<string, unknown>;
+    return {
+        risk: toStringValue(value.risk, fallback.risk),
+        threat: toStringValue(value.threat, fallback.threat),
+        confidentiality_impact: toNumber(value.confidentiality_impact, fallback.confidentiality_impact),
+        integrity_impact: toNumber(value.integrity_impact, fallback.integrity_impact),
+        availability_impact: toNumber(value.availability_impact, fallback.availability_impact),
+        likelihood_score: toNumber(value.likelihood_score, fallback.likelihood_score),
+        risk_category: toStringValue(value.risk_category, fallback.risk_category),
+        risk_category_2: toStringValue(value.risk_category_2, fallback.risk_category_2),
+        rationale_for_risk_rating: toStringValue(value.rationale_for_risk_rating, fallback.rationale_for_risk_rating),
+        current_controls: toStringArray(value.current_controls, fallback.current_controls),
+        selected_controls: toStringArray(value.selected_controls, fallback.selected_controls),
+        controls_violated_iso27001: toStringArray(value.controls_violated_iso27001, fallback.controls_violated_iso27001),
+        treatment_option: toStringValue(value.treatment_option, fallback.treatment_option),
+        action_plan: toStringValue(value.action_plan, fallback.action_plan),
+        responsible_party: toStringValue(value.responsible_party, fallback.responsible_party),
+        remarks: toStringValue(value.remarks, fallback.remarks),
+        confidence: Math.min(1, Math.max(0, toNumber(value.confidence, fallback.confidence))),
+    };
 }
 
 /**
  * Calls the OpenRouter LLM API to analyze risk.
  */
 async function analyzeRiskWithAI(
-    vulnerability: any,
-    asset: any
-): Promise<any> {
+    vulnerability: RiskInputVulnerability,
+    asset: RiskInputAsset
+): Promise<RiskAnalysis> {
+    const fallback = mockAnalysis(vulnerability, asset);
     const apiKey = process.env.OPENROUTER_API_KEY;
 
     if (!apiKey) {
         console.warn("[RiskEngine] OPENROUTER_API_KEY is not set. Falling back to mock analysis.");
-        return mockAnalysis(vulnerability, asset);
+        return fallback;
     }
 
     const cia = parseCVSSVector(vulnerability.cvssVector);
@@ -129,18 +202,25 @@ Return ONLY structured JSON in this format:
         });
 
         const data = await response.json();
-        const content = data.choices[0].message.content;
-        return JSON.parse(content);
+        const content = data?.choices?.[0]?.message?.content;
+        if (typeof content !== "string") {
+            return fallback;
+        }
+
+        return normalizeRiskAnalysis(JSON.parse(content), fallback);
     } catch (error) {
         console.error("[RiskEngine] OpenRouter API call failed:", error);
-        return mockAnalysis(vulnerability, asset);
+        return fallback;
     }
 }
 
 /**
  * Mock analysis for fallback
  */
-function mockAnalysis(vulnerability: any, asset: any) {
+function mockAnalysis(
+    vulnerability: Pick<RiskInputVulnerability, "title" | "cvssVector" | "severity">,
+    _asset: Pick<RiskInputAsset, "name" | "type">
+): RiskAnalysis {
     const title = vulnerability.title.toLowerCase();
     const isDB = title.includes("database") || title.includes("sql") || title.includes("postgre");
     const cia = parseCVSSVector(vulnerability.cvssVector);
@@ -152,23 +232,23 @@ function mockAnalysis(vulnerability: any, asset: any) {
     else if (vulnerability.severity === 'LOW') likelihood = 2;
 
     return {
-        "risk": isDB ? "Unauthorized DB access" : "System Compromise",
-        "threat": vulnerability.title,
-        "confidentiality_impact": cia.c,
-        "integrity_impact": cia.i,
-        "availability_impact": cia.a,
-        "likelihood_score": likelihood,
-        "risk_category": vulnerability.severity === 'CRITICAL' ? "Critical" : "High",
-        "risk_category_2": "Application Security",
-        "rationale_for_risk_rating": `Simulated analysis based on ${vulnerability.severity} severity and technical impact vector.`,
-        "current_controls": ["Firewall"],
-        "selected_controls": ["MFA", "Encryption"],
-        "controls_violated_iso27001": ["A.9.1", "A.13.1"],
-        "treatment_option": "Mitigate",
-        "action_plan": "Deploy patches and verify config.",
-        "responsible_party": "Security Team",
-        "remarks": "Generated from mock fallback",
-        "confidence": 0.8
+        risk: isDB ? "Unauthorized DB access" : "System Compromise",
+        threat: vulnerability.title,
+        confidentiality_impact: cia.c,
+        integrity_impact: cia.i,
+        availability_impact: cia.a,
+        likelihood_score: likelihood,
+        risk_category: vulnerability.severity === "CRITICAL" ? "Critical" : "High",
+        risk_category_2: "Application Security",
+        rationale_for_risk_rating: `Simulated analysis based on ${vulnerability.severity} severity and technical impact vector.`,
+        current_controls: ["Firewall"],
+        selected_controls: ["MFA", "Encryption"],
+        controls_violated_iso27001: ["A.9.1", "A.13.1"],
+        treatment_option: "Mitigate",
+        action_plan: "Deploy patches and verify config.",
+        responsible_party: "Security Team",
+        remarks: "Generated from mock fallback",
+        confidence: 0.8,
     };
 }
 
@@ -227,7 +307,23 @@ export async function processRiskAssessment(
         riskEntryId = initialEntry.id;
 
         // 2. AI Risk Engine (OpenRouter)
-        const analysis = await analyzeRiskWithAI(vulnerability, asset);
+        const analysis = await analyzeRiskWithAI(
+            {
+                title: vulnerability.title,
+                description: vulnerability.description ?? undefined,
+                cvssVector: vulnerability.cvssVector ?? undefined,
+                cveId: vulnerability.cveId ?? undefined,
+                severity: vulnerability.severity,
+                cvssScore: vulnerability.cvssScore ?? undefined,
+            },
+            {
+                name: asset.name,
+                type: asset.type,
+                criticality: asset.criticality,
+                environment: asset.environment,
+                owner: asset.owner ?? undefined,
+            }
+        );
 
         // 3. Calculate Impact Score = (C + I + A) / 3
         const impactScore = (analysis.confidentiality_impact + analysis.integrity_impact + analysis.availability_impact) / 3;
@@ -244,14 +340,14 @@ export async function processRiskAssessment(
                 riskScore: parseFloat(riskScore.toFixed(2)),
                 impactScore: parseFloat(impactScore.toFixed(2)),
                 likelihoodScore: parseFloat(analysis.likelihood_score.toString()),
-                aiAnalysis: analysis,
+                aiAnalysis: analysis as unknown as Prisma.InputJsonValue,
                 status: "ACTIVE",
                 treatmentOption: analysis.treatment_option,
                 responsibleParty: analysis.responsible_party,
-                currentControls: Array.isArray(analysis.current_controls) ? analysis.current_controls.join(", ") : analysis.current_controls,
+                currentControls: analysis.current_controls.join(", "),
                 riskCategory2: analysis.risk_category_2,
                 actionPlan: analysis.action_plan,
-                selectedControls: Array.isArray(analysis.selected_controls) ? analysis.selected_controls.join(", ") : analysis.selected_controls,
+                selectedControls: analysis.selected_controls.join(", "),
                 remarks: analysis.remarks,
                 confidence: analysis.confidence,
                 updatedAt: new Date()
@@ -285,7 +381,23 @@ export async function processRiskAssessment(
 
         // 6. Compliance Engine Updates (The "Glue")
         // Logic: specific controls_violated_iso27001[] -> Mark ISO Controls as FAILED
-        await updateComplianceFromRisk(riskEntry, vulnerability, asset);
+        await updateComplianceFromRisk(
+            {
+                id: riskEntry.id,
+                organizationId,
+                riskScore: parseFloat(riskScore.toFixed(2)),
+                aiAnalysis: analysis,
+            },
+            {
+                title: vulnerability.title,
+                cveId: vulnerability.cveId ?? undefined,
+                severity: vulnerability.severity,
+            },
+            {
+                id: asset.id,
+                name: asset.name,
+            }
+        );
 
         console.log(`[RiskEngine] Pipeline Complete. Compliance % should reflect drop.`);
 

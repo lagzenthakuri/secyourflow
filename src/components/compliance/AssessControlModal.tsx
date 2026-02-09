@@ -10,7 +10,22 @@ interface AssessControlModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
-    control: any;
+    control: {
+        id: string;
+        controlId: string;
+        title: string;
+        description?: string | null;
+        status?: string;
+        implementationStatus?: string;
+        maturityLevel?: number | null;
+        evidence?: string | null;
+        notes?: string | null;
+        controlType?: string | null;
+        frequency?: string | null;
+        ownerRole?: string | null;
+        nistCsfFunction?: string | null;
+        [key: string]: unknown;
+    };
 }
 
 const COMPLIANCE_STATUSES: ComplianceStatus[] = [
@@ -88,8 +103,8 @@ export function AssessControlModal({ isOpen, onClose, onSuccess, control }: Asse
 
             onSuccess();
             onClose();
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Unknown error');
         } finally {
             setIsSubmitting(false);
         }

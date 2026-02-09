@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
         const org = await prisma.organization.findFirst();
         if (!org) throw new Error("No organization found");
 
-        const where: any = { organizationId: org.id };
+        const where: Record<string, unknown> = { organizationId: org.id };
 
         if (severity) where.severity = severity as Severity;
         if (status) where.status = status as VulnStatus;
@@ -65,9 +65,9 @@ export async function GET(request: NextRequest) {
             })
         ]);
 
-        const formattedVulns = vulns.map((v: any) => ({
+        const formattedVulns = vulns.map((v) => ({
             ...v,
-            affectedAssets: (v as any)._count?.assets || 0,
+            affectedAssets: v._count?.assets || 0,
         }));
 
         const severityDist = severityDistribution.map(s => ({

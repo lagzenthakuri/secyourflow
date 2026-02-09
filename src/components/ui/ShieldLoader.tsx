@@ -5,7 +5,6 @@ import { useId } from "react";
 
 interface ShieldLoaderProps {
   size?: "sm" | "md" | "lg" | "xl";
-  text?: string;
   variant?: "primary" | "cyber"; // keep minimal (blue themes)
   className?: string;
 }
@@ -45,7 +44,6 @@ const SHIELD_PATH =
  */
 export function ShieldLoader({
   size = "md",
-  text,
   variant = "primary",
   className,
 }: ShieldLoaderProps) {

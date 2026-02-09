@@ -747,7 +747,14 @@ export default function VulnerabilitiesPage() {
                       {isExpanded ? (
                         <div className="mt-4 border-t border-white/10 pt-4 pl-14">
                           <RiskAssessmentView
-                            riskEntry={vuln.riskEntries?.[0]}
+                            riskEntry={vuln.riskEntries?.[0] as {
+                              status?: string;
+                              riskScore?: number;
+                              impactScore?: number;
+                              likelihoodScore?: number;
+                              aiAnalysis?: Record<string, unknown>;
+                              [key: string]: unknown;
+                            } | null | undefined}
                             vulnerabilityId={vuln.id}
                             onRefresh={() => {
                               void fetchVulnerabilities({ silent: true });

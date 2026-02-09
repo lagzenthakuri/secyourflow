@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "20");
 
     try {
-        const where: any = {};
+        const where: Record<string, unknown> = {};
 
         if (type) where.type = type as AssetType;
         if (status) where.status = status as AssetStatus;

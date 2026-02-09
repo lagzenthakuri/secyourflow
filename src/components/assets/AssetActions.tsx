@@ -118,7 +118,7 @@ export function AssetActions({
                                 Confirm Deletion
                             </p>
                             <p className="text-xs text-[var(--text-muted)] mb-4">
-                                This will permanently remove "{asset.name}".
+                                This will permanently remove &quot;{asset.name}&quot;.
                             </p>
                             <div className="flex flex-col gap-2">
                                 <button

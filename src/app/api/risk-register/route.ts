@@ -83,7 +83,7 @@ export async function GET(req: Request) {
 
         // Format for the frontend
         const formattedRisks = risks.map((risk, index) => {
-            const analysis = risk.aiAnalysis as any || {};
+            const analysis = (risk.aiAnalysis as Record<string, unknown>) || {};
 
             return {
                 id: risk.id,

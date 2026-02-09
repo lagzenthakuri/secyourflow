@@ -28,8 +28,8 @@ const roleColors = {
 
 export default function UsersPage() {
     const { data: session, status } = useSession();
-    const [users, setUsers] = useState<any[]>([]);
-    const [logs, setLogs] = useState<any[]>([]);
+    const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; role: string; lastActive: string; status: string; department?: string }>>([]);
+    const [logs, setLogs] = useState<Array<{ id: string; action: string; createdAt: string | Date; user?: { name?: string }; [key: string]: unknown }>>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [editingUser, setEditingUser] = useState<string | null>(null);
     const router = useRouter();

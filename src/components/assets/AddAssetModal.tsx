@@ -90,8 +90,8 @@ export function AddAssetModal({ isOpen, onClose, onSuccess }: AddAssetModalProps
                 cloudRegion: "",
                 tags: "",
             });
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Unknown error');
         } finally {
             setIsSubmitting(false);
         }
