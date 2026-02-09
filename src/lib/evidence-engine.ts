@@ -21,19 +21,27 @@ export async function pullEvidenceFromLogs(controlId: string, assetId: string) {
     - Patterns matched: MFA_SUCCESS, LOGIN_SUCCESS.
     - Status: Validated via System Logs.`;
 
-    // Link evidence to the Asset-Control mapping
-    await prisma.assetComplianceControl.update({
+    // Link evidence to the Asset-Control mapping. Some asset/control pairs may
+    // not exist yet, so upsert to avoid hard failures during broad audits.
+    await prisma.assetComplianceControl.upsert({
         where: {
             assetId_controlId: {
-                assetId: assetId,
-                controlId: controlId
-            }
+                assetId,
+                controlId,
+            },
         },
-        data: {
+        update: {
             evidence: evidenceText,
             status: "COMPLIANT", // If logs prove it's working
-            assessedAt: new Date()
-        }
+            assessedAt: new Date(),
+        },
+        create: {
+            assetId,
+            controlId,
+            evidence: evidenceText,
+            status: "COMPLIANT",
+            assessedAt: new Date(),
+        },
     });
 
     return evidenceText;

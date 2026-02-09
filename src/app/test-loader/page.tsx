@@ -5,7 +5,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 
 export default function TestLoaderPage() {
-  const [variant, setVariant] = useState<"cyber" | "primary" | "success" | "warning" | "danger">("cyber");
+  const [variant, setVariant] = useState<"cyber" | "primary">("cyber");
   const [size, setSize] = useState<"sm" | "md" | "lg" | "xl">("xl");
 
   return (
@@ -19,14 +19,11 @@ export default function TestLoaderPage() {
               <label className="block text-sm text-slate-300 mb-2">Variant</label>
               <select
                 value={variant}
-                onChange={(e) => setVariant(e.target.value as any)}
+                onChange={(e) => setVariant(e.target.value as "cyber" | "primary")}
                 className="input"
               >
                 <option value="cyber">Cyber</option>
                 <option value="primary">Primary</option>
-                <option value="success">Success</option>
-                <option value="warning">Warning</option>
-                <option value="danger">Danger</option>
               </select>
             </div>
             
@@ -34,7 +31,7 @@ export default function TestLoaderPage() {
               <label className="block text-sm text-slate-300 mb-2">Size</label>
               <select
                 value={size}
-                onChange={(e) => setSize(e.target.value as any)}
+                onChange={(e) => setSize(e.target.value as "sm" | "md" | "lg" | "xl")}
                 className="input"
               >
                 <option value="sm">Small</option>
@@ -58,7 +55,7 @@ export default function TestLoaderPage() {
 
         <section className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-6">
           <h2 className="text-lg font-semibold text-white mb-4">All Variants</h2>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+          <div className="grid grid-cols-2 gap-8">
             <div className="flex flex-col items-center gap-4">
               <ShieldLoader size="md" variant="cyber" />
               <span className="text-sm text-slate-300">Cyber</span>
@@ -66,18 +63,6 @@ export default function TestLoaderPage() {
             <div className="flex flex-col items-center gap-4">
               <ShieldLoader size="md" variant="primary" />
               <span className="text-sm text-slate-300">Primary</span>
-            </div>
-            <div className="flex flex-col items-center gap-4">
-              <ShieldLoader size="md" variant="success" />
-              <span className="text-sm text-slate-300">Success</span>
-            </div>
-            <div className="flex flex-col items-center gap-4">
-              <ShieldLoader size="md" variant="warning" />
-              <span className="text-sm text-slate-300">Warning</span>
-            </div>
-            <div className="flex flex-col items-center gap-4">
-              <ShieldLoader size="md" variant="danger" />
-              <span className="text-sm text-slate-300">Danger</span>
             </div>
           </div>
         </section>

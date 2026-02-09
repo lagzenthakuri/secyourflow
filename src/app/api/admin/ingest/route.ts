@@ -13,8 +13,8 @@ function isAuthorizedByAdminToken(request: Request): boolean {
   const adminToken = process.env.ADMIN_API_TOKEN;
 
   if (!adminToken) {
-    logger.warn("ADMIN_API_TOKEN not set - ingestion endpoint is unprotected");
-    return true; // Allow if no token configured (dev mode)
+    logger.warn("ADMIN_API_TOKEN not set - falling back to session-based authorization");
+    return false;
   }
 
   return authHeader === `Bearer ${adminToken}`;
@@ -23,6 +23,14 @@ function isAuthorizedByAdminToken(request: Request): boolean {
 export async function POST(request: Request) {
   const tokenAuthorized = isAuthorizedByAdminToken(request);
   if (!tokenAuthorized) {
+    const cookieHeader = request.headers.get("cookie") ?? "";
+    const hasSessionCookie =
+      /(__Secure-)?(next-auth|authjs)\.session-token=/.test(cookieHeader);
+
+    if (!hasSessionCookie) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const session = await auth();
     const sessionAuthorized =
       session?.user?.role === "MAIN_OFFICER" && isTwoFactorSatisfied(session);
