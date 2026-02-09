@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LoadingBarProps {
@@ -24,29 +24,39 @@ interface LoadingBarProps {
 
 const variantStyles = {
     primary: {
-        bg: "bg-blue-500",
-        gradient: "from-blue-600 via-blue-500 to-cyan-500",
-        glow: "shadow-[0_0_15px_rgba(59,130,246,0.5)]",
+        track: "bg-blue-500/15",
+        fill: "from-blue-300 via-blue-200 to-blue-300",
+        badge: "border-blue-400/35 bg-blue-500/10",
+        icon: "text-blue-300",
+        glow: "shadow-[0_0_10px_rgba(59,130,246,0.35)]",
     },
     cyber: {
-        bg: "bg-cyan-500",
-        gradient: "from-blue-500 via-cyan-500 to-blue-400",
-        glow: "shadow-[0_0_15px_rgba(6,182,212,0.5)]",
+        track: "bg-cyan-500/15",
+        fill: "from-cyan-300 via-sky-200 to-cyan-300",
+        badge: "border-cyan-400/35 bg-cyan-500/10",
+        icon: "text-cyan-300",
+        glow: "shadow-[0_0_10px_rgba(6,182,212,0.35)]",
     },
     success: {
-        bg: "bg-green-500",
-        gradient: "from-green-600 via-green-500 to-emerald-500",
-        glow: "shadow-[0_0_15px_rgba(34,197,94,0.5)]",
+        track: "bg-green-500/15",
+        fill: "from-green-300 via-emerald-200 to-green-300",
+        badge: "border-green-400/35 bg-green-500/10",
+        icon: "text-green-300",
+        glow: "shadow-[0_0_10px_rgba(34,197,94,0.35)]",
     },
     warning: {
-        bg: "bg-yellow-500",
-        gradient: "from-yellow-600 via-yellow-500 to-amber-500",
-        glow: "shadow-[0_0_15px_rgba(234,179,8,0.5)]",
+        track: "bg-yellow-500/15",
+        fill: "from-yellow-300 via-amber-200 to-yellow-300",
+        badge: "border-yellow-400/35 bg-yellow-500/10",
+        icon: "text-yellow-300",
+        glow: "shadow-[0_0_10px_rgba(234,179,8,0.35)]",
     },
     danger: {
-        bg: "bg-red-500",
-        gradient: "from-red-600 via-red-500 to-orange-500",
-        glow: "shadow-[0_0_15px_rgba(239,68,68,0.5)]",
+        track: "bg-red-500/15",
+        fill: "from-red-300 via-orange-200 to-red-300",
+        badge: "border-red-400/35 bg-red-500/10",
+        icon: "text-red-300",
+        glow: "shadow-[0_0_10px_rgba(239,68,68,0.35)]",
     },
 };
 
@@ -61,15 +71,11 @@ export function LoadingBar({
     position = "top",
     className,
     showGlow = true,
+    animationSpeed = 1200,
 }: LoadingBarProps) {
-    const [mounted, setMounted] = useState(false);
     const styles = variantStyles[variant];
 
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    if (!mounted || !isLoading) {
+    if (!isLoading) {
         return null;
     }
 
@@ -83,29 +89,47 @@ export function LoadingBar({
     const clampedProgress = isDeterminate
         ? Math.min(Math.max(progress, 0), 100)
         : 0;
+    const shieldSize = Math.max(10, Math.min(14, height * 4));
 
     return (
         <div
             className={cn(positionClasses[position], className)}
             style={{ height: `${height}px` }}
         >
-            {/* Background track */}
-            <div className="w-full h-full bg-white/5 overflow-hidden">
-                {/* Progress bar */}
+            <div
+                className={cn(
+                    "relative h-full w-full overflow-hidden",
+                    position === "inline" && "rounded-full",
+                    styles.track
+                )}
+            >
                 <div
                     className={cn(
-                        "h-full transition-all duration-500 ease-out relative",
+                        "h-full transition-all duration-500 ease-out relative rounded-full bg-gradient-to-r",
                         isDeterminate
-                            ? `bg-gradient-to-r ${styles.gradient}`
-                            : `bg-gradient-to-r ${styles.gradient} animate-loading-slide`,
+                            ? ""
+                            : "animate-loading-slide",
                         showGlow && styles.glow
                     )}
                     style={{
                         width: isDeterminate ? `${clampedProgress}%` : "30%",
+                        animationDuration: !isDeterminate ? `${animationSpeed}ms` : undefined,
                     }}
                 >
-                    {/* Subtle highlight */}
-                    <div className="absolute inset-0 bg-white/20 blur-[1px]" />
+                    <div className={cn("absolute inset-0", `bg-gradient-to-r ${styles.fill}`)} />
+                    <div
+                        className={cn(
+                            "absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 rounded-[4px] border flex items-center justify-center",
+                            styles.badge
+                        )}
+                        style={{ width: `${shieldSize}px`, height: `${shieldSize}px` }}
+                    >
+                        <Shield
+                            size={Math.max(7, shieldSize - 4)}
+                            className={styles.icon}
+                            strokeWidth={2.2}
+                        />
+                    </div>
                 </div>
             </div>
         </div>

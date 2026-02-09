@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import {
@@ -16,10 +17,8 @@ import {
     Bell,
     Search,
     Menu,
-    X,
     ChevronDown,
     LogOut,
-    User,
     ClipboardList,
     Database,
 } from "lucide-react";
@@ -51,18 +50,6 @@ interface SidebarProps {
 export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     const pathname = usePathname();
     const { data: session } = useSession();
-    const [mounted, setMounted] = useState(false);
-    const [orgName, setOrgName] = useState<string>("");
-
-    useEffect(() => {
-        setMounted(true);
-        fetch("/api/settings")
-            .then(res => res.json())
-            .then(data => {
-                if (data.organizationName) setOrgName(data.organizationName);
-            })
-            .catch(err => console.error("Failed to fetch org settings", err));
-    }, []);
 
     const userRole = session?.user?.role || "ANALYST";
     const userName = session?.user?.name || "User";
@@ -70,10 +57,6 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
 
     const filteredNav = navigation.filter(item => item.roles.includes(userRole));
     const filteredSecondaryNav = secondaryNav.filter(item => item.roles.includes(userRole));
-
-    if (!mounted) {
-        return <div className="sidebar animate-pulse bg-[var(--bg-secondary)]" />;
-    }
 
     return (
         <>
@@ -93,19 +76,17 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                 )}
             >
                 {/* Logo */}
-                <div className="p-6 border-b border-[var(--border-color)]">
+                <div className="p-5 border-b border-[var(--border-color)]">
                     <Link href="/dashboard" className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                            <Shield className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                            <h1 className="text-lg font-bold text-white truncate max-w-[140px]">
-                                {orgName || "SecYourFlow"}
-                            </h1>
-                            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
-                                Cyber Risk Platform
-                            </p>
-                        </div>
+                        <Image
+                            src="/logo1.png"
+                            alt="SecYourFlow"
+                            width={40}
+                            height={40}
+                        />
+                        <span className="text-[14px] font-bold tracking-[0.22em] text-white">
+                            SECYOUR<span className="text-sky-300">FLOW</span>
+                        </span>
                     </Link>
                 </div>
 
@@ -199,10 +180,29 @@ interface TopBarProps {
     onToggleSidebar: () => void;
 }
 
+interface ThreatsResponse {
+    stats?: {
+        activeThreatsCount?: number;
+    };
+}
+
+interface NotificationItem {
+    id: string;
+    title: string;
+    message: string;
+    createdAt: string;
+    read: boolean;
+}
+
+interface NotificationsResponse {
+    unreadCount?: number;
+    notifications?: NotificationItem[];
+}
+
 export function TopBar({ onToggleSidebar }: TopBarProps) {
     const [threatsCount, setThreatsCount] = useState(0);
     const [notificationsCount, setNotificationsCount] = useState(0);
-    const [notifications, setNotifications] = useState<any[]>([]);
+    const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     const [showNotifications, setShowNotifications] = useState(false);
 
     useEffect(() => {
@@ -210,14 +210,14 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
             try {
                 // Fetch Threats
                 const threatsRes = await fetch("/api/threats");
-                const threatsData = await threatsRes.json();
+                const threatsData = await threatsRes.json() as ThreatsResponse;
                 if (threatsData.stats) {
                     setThreatsCount(threatsData.stats.activeThreatsCount || 0);
                 }
 
                 // Fetch Notifications
                 const notifRes = await fetch("/api/notifications");
-                const notifData = await notifRes.json();
+                const notifData = await notifRes.json() as NotificationsResponse;
                 if (notifData.unreadCount !== undefined) {
                     setNotificationsCount(notifData.unreadCount);
                     setNotifications(notifData.notifications || []);
@@ -357,7 +357,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 isSidebarOpen ? "lg:ml-[260px]" : "lg:ml-0"
             )}>
                 <TopBar onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
-                <main className="p-6">{children}</main>
+                <main className="p-6 min-h-[calc(100vh-4rem)]">{children}</main>
+
             </div>
         </div>
     );
