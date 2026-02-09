@@ -64,7 +64,7 @@ export default function ActivityLogPage() {
                 params.append("entityType", filter);
             }
 
-            const res = await fetch(`/api/activity?${params}`);
+            const res = await fetch(`/api/activity?${params}`, { cache: "no-store" });
             const data = await res.json();
 
             if (data.logs) {
@@ -363,7 +363,7 @@ export default function ActivityLogPage() {
                                         </td>
                                     </tr>
                                 ) : (
-                                    logs.map((log) => (
+                                    filteredLogs.map((log) => (
                                         <tr key={log.id} className="hover:bg-[var(--bg-tertiary)] transition-all duration-300 ease-in-out">
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center gap-2">

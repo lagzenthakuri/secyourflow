@@ -113,6 +113,16 @@ interface ActivityItem {
   timestamp: string;
 }
 
+interface ActivityLogResponse {
+  logs?: Array<{
+    id: string;
+    action: string;
+    entityType: string;
+    entityId: string;
+    createdAt: string;
+  }>;
+}
+
 interface ExploitedVulnerability {
   id: string;
   cveId?: string | null;
@@ -396,6 +406,7 @@ function formatAssetType(type: string) {
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardResponse | null>(null);
+  const [recentActivityLogs, setRecentActivityLogs] = useState<ActivityItem[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -430,11 +441,46 @@ export default function DashboardPage() {
     [],
   );
 
+  const fetchRecentActivity = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const response = await fetch("/api/activity?limit=6", {
+        signal,
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to fetch recent activity");
+      }
+
+      const payload = (await response.json()) as ActivityLogResponse;
+      const mappedLogs = (payload.logs ?? []).map((log) => ({
+        id: log.id,
+        action: log.action,
+        entityType: log.entityType,
+        entityName: log.entityId,
+        timestamp: log.createdAt,
+      }));
+
+      setRecentActivityLogs(mappedLogs);
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      console.error("Failed to fetch recent activity", err);
+    }
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
     void fetchDashboardData({ signal: controller.signal });
-    return () => controller.abort();
-  }, [fetchDashboardData]);
+    void fetchRecentActivity(controller.signal);
+
+    const interval = setInterval(() => {
+      void fetchRecentActivity();
+    }, 30000);
+
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+    };
+  }, [fetchDashboardData, fetchRecentActivity]);
 
   const stats = data?.stats ?? defaultStats;
   const riskBand = useMemo(() => getRiskBand(stats.overallRiskScore), [stats.overallRiskScore]);
@@ -476,8 +522,8 @@ export default function DashboardPage() {
   );
 
   const activityRows = useMemo(
-    () => (data?.recentActivities ?? []).slice(0, 6),
-    [data?.recentActivities],
+    () => (recentActivityLogs ?? data?.recentActivities ?? []).slice(0, 6),
+    [data?.recentActivities, recentActivityLogs],
   );
 
   const remediationTrends = data?.remediationTrends ?? [];
@@ -529,7 +575,10 @@ export default function DashboardPage() {
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <button
                 type="button"
-                onClick={() => void fetchDashboardData({ silent: true })}
+                onClick={() => {
+                  void fetchDashboardData({ silent: true });
+                  void fetchRecentActivity();
+                }}
                 className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105"
               >
                 <RefreshCw size={15} className={isRefreshing ? "animate-spin" : ""} />

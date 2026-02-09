@@ -140,7 +140,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                 {/* User Section */}
                 <div className="p-4 border-t border-[var(--border-color)] mt-auto">
                     <div className="group relative">
-                        <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-all duration-300 ease-in-out cursor-pointer">
+                        <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--bg-tertiary)] cursor-pointer">
                             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-medium">
                                 {userInitials}
                             </div>
@@ -152,7 +152,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                                     {userRole.replace('_', ' ')}
                                 </p>
                             </div>
-                            <button className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-white transition-all duration-300 ease-in-out">
+                            <button className="p-1.5 rounded-lg text-[var(--text-muted)]">
                                 <ChevronDown size={14} />
                             </button>
                         </div>
@@ -162,7 +162,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                             <div className="bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-xl shadow-2xl p-1 overflow-hidden">
                                 <button
                                     onClick={() => signOut({ callbackUrl: "/" })}
-                                    className="w-full flex items-center gap-2 p-2.5 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-all duration-300 ease-in-out"
+                                    className="w-full flex items-center gap-2 p-2.5 text-sm text-red-400 rounded-lg"
                                 >
                                     <LogOut size={16} />
                                     Sign Out

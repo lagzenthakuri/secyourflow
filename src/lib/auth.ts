@@ -11,6 +11,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
     adapter: PrismaAdapter(prisma),
     session: {
         strategy: "jwt",
+        maxAge: 30 * 24 * 60 * 60, // 30 days
     },
     providers: [
         Credentials({
@@ -77,8 +78,9 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 token.id = user.id;
                 token.role = signInUser.role || "ANALYST";
                 token.totpEnabled = Boolean(signInUser.totpEnabled);
-                token.twoFactorVerified = token.totpEnabled ? false : true;
-                token.twoFactorVerifiedAt = token.totpEnabled ? null : Date.now();
+                // Always reset 2FA verification on new login
+                token.twoFactorVerified = signInUser.totpEnabled ? false : true;
+                token.twoFactorVerifiedAt = signInUser.totpEnabled ? null : Date.now();
                 token.authenticatedAt = Date.now();
 
                 void prisma.user.update({
@@ -142,6 +144,14 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 token.twoFactorVerifiedAt = null;
             } else if (token.twoFactorVerified !== true) {
                 token.twoFactorVerifiedAt = null;
+            } else if (token.twoFactorVerified === true && typeof token.twoFactorVerifiedAt === "number") {
+                // Require 2FA re-verification after 12 hours
+                const timeSince2FA = Date.now() - token.twoFactorVerifiedAt;
+                const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+                if (timeSince2FA > TWELVE_HOURS_MS) {
+                    token.twoFactorVerified = false;
+                    token.twoFactorVerifiedAt = null;
+                }
             }
 
             if (typeof token.authenticatedAt !== "number") {
