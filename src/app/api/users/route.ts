@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logActivity } from "@/lib/logger";
 import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
+import { extractRequestContext } from "@/lib/request-utils";
 
 export async function GET() {
     try {
@@ -61,6 +62,8 @@ export async function PUT(request: NextRequest) {
             return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
         }
 
+        const ctx = extractRequestContext(request);
+
         const body = await request.json();
         const { userId, role } = body;
 
@@ -90,7 +93,8 @@ export async function PUT(request: NextRequest) {
             currentUser?.role ? { role: currentUser.role } : null,
             { role },
             `Role changed from ${currentUser?.role} to ${role} by ${session.user.name}`,
-            session.user.id
+            session.user.id,
+            ctx,
         );
 
         return NextResponse.json(updatedUser);

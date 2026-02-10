@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import type { RequestContext } from "@/lib/request-utils";
 
 export async function logActivity(
     action: string,
@@ -8,7 +9,8 @@ export async function logActivity(
     oldValue?: Record<string, unknown> | null,
     newValue?: Record<string, unknown> | null,
     details?: string,
-    customUserId?: string
+    customUserId?: string,
+    requestContext?: RequestContext
 ) {
     try {
         let userId = customUserId;
@@ -63,8 +65,8 @@ export async function logActivity(
                 userId,
                 oldValue: oldValue ? JSON.parse(JSON.stringify(oldValue)) : undefined,
                 newValue: newValue ? JSON.parse(JSON.stringify(newValue)) : undefined,
-                ipAddress: "Unknown", // Can be enhanced by passing req
-                userAgent: details || "System",
+                ipAddress: requestContext?.ipAddress || null,
+                userAgent: requestContext?.userAgent || null,
             }
         });
     } catch (error) {

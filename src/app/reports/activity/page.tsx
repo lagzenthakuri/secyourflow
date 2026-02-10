@@ -1,422 +1,443 @@
 "use client";
 
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Card } from "@/components/ui/Cards";
-import {
-    Activity,
-    Search,
-    Filter,
-    Calendar,
-    ChevronLeft,
-    ChevronRight,
-    User,
-    Shield,
-    Server,
-    FileText,
-    Settings,
-    Download,
-    RefreshCw,
-    Clock,
-    Info,
-} from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
-import { getTimeAgo } from "@/lib/utils";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
+import { Clock3, RefreshCw, Search, X, User, Globe, Monitor, Calendar, FileText, Activity as ActivityIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { formatIpAddress, normalizeIpAddress, parseUserAgent } from "@/lib/request-utils";
 
 interface ActivityLog {
-    id: string;
-    action: string;
-    entityType: string;
-    entityId: string;
-    ipAddress: string | null;
-    userAgent: string | null;
-    createdAt: string;
-    user: {
-        name: string | null;
-        email: string;
-        role: string;
-    };
+  id: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  oldValue?: unknown;
+  newValue?: unknown;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  createdAt: string;
+  user?: {
+    name: string | null;
+    email: string;
+    role: string;
+    image: string | null;
+  };
 }
 
-export default function ActivityLogPage() {
-    const [logs, setLogs] = useState<ActivityLog[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [total, setTotal] = useState(0);
-    const [filter, setFilter] = useState("all");
-    const [searchTerm, setSearchTerm] = useState("");
-    const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+function formatLabel(value: string) {
+  return value
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
 
-    const fetchLogs = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const params = new URLSearchParams({
-                page: page.toString(),
-                limit: "20",
-            });
-            if (filter !== "all") {
-                params.append("entityType", filter);
-            }
+function getEntityTypeColor(entityType: string) {
+  const type = entityType.toLowerCase();
+  if (type.includes("auth") || type.includes("user")) return "border-blue-400/35 bg-blue-500/10 text-blue-200";
+  if (type.includes("vulnerability")) return "border-red-400/35 bg-red-500/10 text-red-200";
+  if (type.includes("asset")) return "border-green-400/35 bg-green-500/10 text-green-200";
+  if (type.includes("compliance")) return "border-purple-400/35 bg-purple-500/10 text-purple-200";
+  if (type.includes("risk")) return "border-orange-400/35 bg-orange-500/10 text-orange-200";
+  if (type.includes("report")) return "border-yellow-400/35 bg-yellow-500/10 text-yellow-200";
+  return "border-sky-400/35 bg-sky-500/10 text-sky-200";
+}
 
-            const res = await fetch(`/api/activity?${params}`, { cache: "no-store" });
-            const data = await res.json();
+export default function ReportsActivityPage() {
+  const [activities, setActivities] = useState<ActivityLog[]>([]);
+  const [selectedActivity, setSelectedActivity] = useState<ActivityLog | null>(null);
+  const [search, setSearch] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-            if (data.logs) {
-                setLogs(data.logs);
-                setTotalPages(data.pagination.pages);
-                setTotal(data.pagination.total);
-                setLastRefresh(new Date());
-            }
-        } catch (error) {
-            console.error("Failed to fetch logs", error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [page, filter]);
+  const fetchData = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (silent) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
 
-    useEffect(() => {
-        void fetchLogs();
-    }, [fetchLogs]);
+    try {
+      setError(null);
+      const response = await fetch("/api/activity?limit=200", { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error("Failed to load activity logs");
+      }
+      const payload = (await response.json()) as { 
+        logs?: ActivityLog[];
+        error?: string;
+      };
+      
+      setActivities(payload.logs ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load activity logs");
+    } finally {
+      if (silent) {
+        setIsRefreshing(false);
+      } else {
+        setIsLoading(false);
+      }
+    }
+  }, []);
 
-    const getIcon = (type: string) => {
-        switch (type.toLowerCase()) {
-            case "auth": return <User size={16} className="text-blue-400" />;
-            case "vulnerability": return <Shield size={16} className="text-red-400" />;
-            case "asset": return <Server size={16} className="text-orange-400" />;
-            case "report": return <FileText size={16} className="text-green-400" />;
-            case "settings": return <Settings size={16} className="text-gray-400" />;
-            default: return <Activity size={16} className="text-purple-400" />;
-        }
-    };
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
 
-    const formatUTCTime = (date: string) => {
-        const d = new Date(date);
-        return d.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
-    };
+  const filteredActivities = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    if (!needle) return activities;
 
-    const parseUserAgent = (ua: string | null) => {
-        if (!ua || ua === 'System') return { browser: 'System', os: 'N/A', device: 'Server' };
-        
-        const browser = ua.includes('Chrome') ? 'Chrome' : 
-                       ua.includes('Firefox') ? 'Firefox' : 
-                       ua.includes('Safari') ? 'Safari' : 
-                       ua.includes('Edge') ? 'Edge' : 'Unknown';
-        
-        const os = ua.includes('Windows') ? 'Windows' : 
-                  ua.includes('Mac') ? 'macOS' : 
-                  ua.includes('Linux') ? 'Linux' : 
-                  ua.includes('Android') ? 'Android' : 
-                  ua.includes('iOS') ? 'iOS' : 'Unknown';
-        
-        const device = ua.includes('Mobile') ? 'Mobile' : 'Desktop';
-        
-        return { browser, os, device };
-    };
-
-    const exportToCSV = () => {
-        const headers = ['Timestamp (UTC)', 'Type', 'Action', 'Risk', 'User', 'Role', 'IP Address', 'Browser', 'OS', 'Entity ID'];
-        const rows = logs.map(log => {
-            const ua = parseUserAgent(log.userAgent);
-            return [
-                formatUTCTime(log.createdAt),
-                log.entityType,
-                log.action,
-                getRiskLevel(log.action),
-                log.user?.name || log.user?.email || 'System',
-                log.user?.role || 'N/A',
-                log.ipAddress || 'N/A',
-                ua.browser,
-                ua.os,
-                log.entityId
-            ];
-        });
-
-        const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `activity-log-${new Date().toISOString().split('T')[0]}.csv`;
-        a.click();
-    };
-
-    const getRiskLevel = (action: string): string => {
-        const highRisk = ["delete", "remove", "disable", "failed"];
-        const mediumRisk = ["update", "modify", "change"];
-        const lowRisk = ["view", "read", "list"];
-        const actionLower = action.toLowerCase();
-        
-        if (highRisk.some(risk => actionLower.includes(risk))) return 'HIGH';
-        if (mediumRisk.some(risk => actionLower.includes(risk))) return 'MEDIUM';
-        if (lowRisk.some(risk => actionLower.includes(risk))) return 'LOW';
-        return 'INFO';
-    };
-
-    const filteredLogs = logs.filter(log => {
-        if (!searchTerm) return true;
-        const search = searchTerm.toLowerCase();
-        return (
-            log.action.toLowerCase().includes(search) ||
-            log.entityType.toLowerCase().includes(search) ||
-            log.entityId.toLowerCase().includes(search) ||
-            log.user?.name?.toLowerCase().includes(search) ||
-            log.user?.email?.toLowerCase().includes(search) ||
-            log.ipAddress?.toLowerCase().includes(search)
-        );
-    });
-
-    return (
-        <DashboardLayout>
-            <div className="space-y-6">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
-                    <div>
-                        <h1 className="text-2xl font-bold text-white">SOC Activity Monitor</h1>
-                        <p className="text-[var(--text-secondary)] mt-1 flex items-center gap-2">
-                            <Clock size={14} className="animate-in spin-in-180 duration-700" />
-                            Real-time audit trail with forensic details
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={fetchLogs}
-                            className="group relative px-4 py-2 rounded-lg bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] border border-[var(--border-color)] hover:border-blue-500/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-blue-500/10"
-                            disabled={isLoading}
-                        >
-                            <div className="flex items-center gap-2">
-                                <RefreshCw 
-                                    size={16} 
-                                    className={`transition-all duration-200 ${isLoading ? 'animate-spin text-blue-400' : 'text-[var(--text-secondary)] group-hover:text-blue-400 group-hover:rotate-180'}`} 
-                                />
-                                <span className="text-sm text-[var(--text-secondary)] group-hover:text-white transition-colors">
-                                    Refresh
-                                </span>
-                            </div>
-                        </button>
-                        <button
-                            onClick={exportToCSV}
-                            className="group relative px-4 py-2 rounded-lg bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] border border-[var(--border-color)] hover:border-green-500/50 transition-all duration-200 hover:shadow-lg hover:shadow-green-500/10"
-                        >
-                            <div className="flex items-center gap-2">
-                                <Download 
-                                    size={16} 
-                                    className="text-[var(--text-secondary)] group-hover:text-green-400 transition-all duration-200 group-hover:translate-y-0.5" 
-                                />
-                                <span className="text-sm text-[var(--text-secondary)] group-hover:text-white transition-colors">
-                                    Export
-                                </span>
-                            </div>
-                        </button>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="animate-in fade-in slide-in-from-left-4 duration-500" style={{ animationDelay: '100ms' }}>
-                        <Card className="transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-blue-500/5">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-[var(--text-muted)] text-xs transition-colors duration-200">Total Events</p>
-                                    <p className="text-2xl font-bold text-white mt-1 transition-all duration-300">{total}</p>
-                                </div>
-                                <Activity className="text-blue-400 transition-transform duration-300 group-hover:scale-110" size={24} />
-                            </div>
-                        </Card>
-                    </div>
-                    <div className="animate-in fade-in slide-in-from-left-4 duration-500" style={{ animationDelay: '200ms' }}>
-                        <Card className="transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-green-500/5">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-[var(--text-muted)] text-xs transition-colors duration-200">Last Refresh</p>
-                                    <p className="text-sm font-medium text-white mt-1 transition-all duration-300">{getTimeAgo(lastRefresh)}</p>
-                                </div>
-                                <RefreshCw className="text-green-400 transition-transform duration-300 group-hover:rotate-180" size={24} />
-                            </div>
-                        </Card>
-                    </div>
-                    <div className="animate-in fade-in slide-in-from-left-4 duration-500" style={{ animationDelay: '300ms' }}>
-                        <Card className="transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-purple-500/5">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-[var(--text-muted)] text-xs transition-colors duration-200">Current Page</p>
-                                    <p className="text-2xl font-bold text-white mt-1 transition-all duration-300">{page}/{totalPages}</p>
-                                </div>
-                                <FileText className="text-purple-400 transition-transform duration-300 group-hover:scale-110" size={24} />
-                            </div>
-                        </Card>
-                    </div>
-                    <div className="animate-in fade-in slide-in-from-left-4 duration-500" style={{ animationDelay: '400ms' }}>
-                        <Card className="transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-orange-500/5">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-[var(--text-muted)] text-xs transition-colors duration-200">Filter Active</p>
-                                    <p className="text-sm font-medium text-white mt-1 capitalize transition-all duration-300">{filter}</p>
-                                </div>
-                                <Filter className="text-orange-400 transition-transform duration-300 group-hover:scale-110" size={24} />
-                            </div>
-                        </Card>
-                    </div>
-                </div>
-
-                <Card noPadding>
-                    <div className="p-4 border-b border-[var(--border-color)] flex flex-col md:flex-row gap-3 animate-in fade-in slide-in-from-top-2 duration-500" style={{ animationDelay: '500ms' }}>
-                        <div className="relative flex-1 group">
-                            <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] transition-all duration-200 group-focus-within:text-blue-400 group-focus-within:scale-110" size={20} />
-                            <input
-                                type="text"
-                                placeholder="Search activities, users, IP addresses..."
-                                className="input w-full text-sm transition-all duration-200 !pl-[52px] !pr-4 !py-2.5 focus:ring-2 focus:ring-blue-500/20 placeholder:text-[var(--text-muted)]"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                        <div className="relative">
-                            <select
-                                className="input py-2.5 pl-3 pr-8 text-sm bg-[var(--bg-tertiary)] w-full md:w-auto appearance-none cursor-pointer transition-all duration-200 focus:ring-2 focus:ring-blue-500/20 hover:border-blue-500/30 hover:bg-[var(--bg-elevated)]"
-                                value={filter}
-                                onChange={(e) => {
-                                    setFilter(e.target.value);
-                                    setPage(1);
-                                }}
-                                style={{ minWidth: '160px' }}
-                            >
-                                <option value="all">All Activities</option>
-                                <option value="auth">Authentication</option>
-                                <option value="user">User Management</option>
-                                <option value="vulnerability">Vulnerabilities</option>
-                                <option value="asset">Assets</option>
-                                <option value="settings">Settings</option>
-                                <option value="compliance">Compliance</option>
-                                <option value="scan">Scans</option>
-                            </select>
-                            <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none transition-transform duration-200" size={14} />
-                        </div>
-                    </div>
-
-                    <div className="overflow-x-auto animate-in fade-in duration-700" style={{ animationDelay: '600ms' }}>
-                        <table className="w-full">
-                            <thead className="bg-[var(--bg-tertiary)] border-b border-[var(--border-color)]">
-                                <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider transition-colors duration-200 hover:text-white">
-                                        Risk
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider transition-colors duration-200 hover:text-white">
-                                        Type
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider transition-colors duration-200 hover:text-white">
-                                        Action
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider transition-colors duration-200 hover:text-white">
-                                        User / Role
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider transition-colors duration-200 hover:text-white">
-                                        Source IP
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider transition-colors duration-200 hover:text-white">
-                                        Timestamp (UTC)
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider transition-colors duration-200 hover:text-white">
-                                        Details
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[var(--border-color)]">
-                                {isLoading ? (
-                                    <tr>
-                                        <td colSpan={7} className="px-6 py-12 text-center">
-                                            <div className="flex flex-col items-center gap-3">
-                                                <RefreshCw className="animate-spin text-blue-400" size={32} />
-                                                <p className="text-[var(--text-muted)]">Loading activity logs...</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : filteredLogs.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={7} className="px-6 py-12 text-center">
-                                            <div className="flex flex-col items-center gap-3">
-                                                <Info className="text-[var(--text-muted)]" size={32} />
-                                                <p className="text-[var(--text-muted)]">No activity logs found</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    filteredLogs.map((log) => (
-                                        <tr key={log.id} className="hover:bg-[var(--bg-tertiary)] transition-all duration-300 ease-in-out">
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="p-1.5 rounded-lg bg-[var(--bg-elevated)]">
-                                                        {getIcon(log.entityType)}
-                                                    </div>
-                                                    <span className="text-sm font-medium text-white capitalize">
-                                                        {log.entityType}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className="text-sm text-[var(--text-secondary)]">
-                                                    {log.action}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-[10px] text-white">
-                                                        {(log.user?.name || log.user?.email)?.[0]?.toUpperCase() || 'S'}
-                                                    </div>
-                                                    <span className="text-sm text-[var(--text-secondary)]">
-                                                        {log.user?.name ? (
-                                                            <span>
-                                                                {log.user.name}
-                                                            </span>
-                                                        ) : (
-                                                            log.user?.email || 'System'
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className="text-sm text-[var(--text-muted)] line-clamp-1">
-                                                    {log.entityId} {log.userAgent !== 'System' ? `- ${log.userAgent}` : ''}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                <div className="flex items-center justify-end gap-1 text-xs text-[var(--text-muted)]">
-                                                    <Calendar size={12} />
-                                                    {getTimeAgo(new Date(log.createdAt))}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {totalPages > 1 && (
-                        <div className="p-4 border-t border-[var(--border-color)] flex items-center justify-between animate-in fade-in slide-in-from-bottom-2 duration-500">
-                            <button
-                                disabled={page === 1}
-                                onClick={() => setPage(p => p - 1)}
-                                className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-110 disabled:hover:scale-100 hover:shadow-lg hover:shadow-blue-500/10"
-                            >
-                                <ChevronLeft size={16} className="transition-transform duration-200" />
-                            </button>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm text-[var(--text-muted)] transition-colors duration-200 hover:text-white">
-                                    Page {page} of {totalPages}
-                                </span>
-                                <span className="text-xs text-[var(--text-muted)] transition-colors duration-200 hover:text-white">
-                                    ({total} total events)
-                                </span>
-                            </div>
-                            <button
-                                disabled={page === totalPages}
-                                onClick={() => setPage(p => p + 1)}
-                                className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-110 disabled:hover:scale-100 hover:shadow-lg hover:shadow-blue-500/10"
-                            >
-                                <ChevronRight size={16} className="transition-transform duration-200" />
-                            </button>
-                        </div>
-                    )}
-                </Card>
-            </div>
-        </DashboardLayout>
+    return activities.filter((activity) =>
+      `${activity.action} ${activity.entityType} ${activity.user?.name || ""} ${activity.user?.email || ""} ${normalizeIpAddress(activity.ipAddress) || ""}`
+        .toLowerCase()
+        .includes(needle),
     );
+  }, [activities, search]);
+
+  const totalActivities = filteredActivities.length;
+  const todayActivities = filteredActivities.filter((activity) => {
+    const activityDate = new Date(activity.createdAt);
+    const today = new Date();
+    return activityDate.toDateString() === today.toDateString();
+  }).length;
+  const thisWeekActivities = filteredActivities.filter((activity) => {
+    const activityDate = new Date(activity.createdAt);
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return activityDate >= weekAgo;
+  }).length;
+
+  if (isLoading && activities.length === 0) {
+    return (
+      <DashboardLayout>
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <ShieldLoader size="lg" variant="cyber" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-5">
+        <section className="rounded-3xl border border-white/10 bg-[linear-gradient(132deg,rgba(56,189,248,0.2),rgba(18,18,26,0.9)_44%,rgba(18,18,26,0.96))] p-6 sm:p-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-white sm:text-3xl">Activity Log</h1>
+              <p className="mt-2 text-sm text-slate-200">
+                System activity history showing user actions, security events, and system changes.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/reports"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/15"
+              >
+                <Clock3 size={14} />
+                Back to Reports
+              </Link>
+              <button
+                type="button"
+                onClick={() => void fetchData({ silent: true })}
+                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/15"
+              >
+                <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
+                Refresh
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {error ? (
+          <section className="rounded-2xl border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            {error}
+          </section>
+        ) : null}
+
+        <section className="grid gap-4 sm:grid-cols-3">
+          {[
+            {
+              label: "Total Activities",
+              value: totalActivities,
+              tone: "border-sky-400/35 bg-sky-500/10 text-sky-200",
+            },
+            {
+              label: "Today",
+              value: todayActivities,
+              tone: "border-emerald-400/35 bg-emerald-500/10 text-emerald-200",
+            },
+            {
+              label: "This Week",
+              value: thisWeekActivities,
+              tone: "border-yellow-400/35 bg-yellow-500/10 text-yellow-200",
+            },
+          ].map((item) => (
+            <article key={item.label} className={cn("rounded-xl border px-4 py-3", item.tone)}>
+              <p className="text-xs uppercase tracking-wide">{item.label}</p>
+              <p className="mt-1 text-2xl font-semibold">{item.value}</p>
+            </article>
+          ))}
+        </section>
+
+        <section className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-4">
+          <label className="relative block">
+            <Search
+              size={15}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+            />
+            <input
+              className="input h-10 w-full !pl-9 text-sm"
+              placeholder="Search activities, users, entity types, IP addresses..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </label>
+        </section>
+
+        <section className="overflow-hidden rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)]">
+          <header className="border-b border-white/10 px-5 py-4">
+            <h2 className="text-base font-semibold text-white">Activity Log</h2>
+          </header>
+          {filteredActivities.length === 0 ? (
+            <div className="p-8 text-sm text-slate-400">No activity logs found.</div>
+          ) : (
+            <div className="divide-y divide-white/10">
+              {filteredActivities.map((activity) => {
+                const userAgentInfo = parseUserAgent(activity.userAgent);
+                const activityDate = new Date(activity.createdAt);
+                const displayIpAddress = formatIpAddress(activity.ipAddress);
+                
+                return (
+                  <div 
+                    key={activity.id} 
+                    className="px-5 py-4 cursor-pointer transition-colors hover:bg-white/[0.03]"
+                    onClick={() => setSelectedActivity(activity)}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold text-white">{activity.action}</p>
+                          <span
+                            className={cn(
+                              "rounded-full border px-2 py-0.5 text-[11px]",
+                              getEntityTypeColor(activity.entityType),
+                            )}
+                          >
+                            {formatLabel(activity.entityType)}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
+                          {activity.user && (
+                            <span className="flex items-center gap-1">
+                              <User size={12} />
+                              {activity.user.name || activity.user.email}
+                            </span>
+                          )}
+                          {displayIpAddress !== "—" && (
+                            <span className="flex items-center gap-1">
+                              <Globe size={12} />
+                              {displayIpAddress}
+                            </span>
+                          )}
+                          {userAgentInfo.os !== "—" && (
+                            <span className="flex items-center gap-1">
+                              <Monitor size={12} />
+                              {userAgentInfo.os} • {userAgentInfo.browser}
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1">
+                            <Calendar size={12} />
+                            {activityDate.toLocaleDateString("en-US", {
+                              month: "numeric",
+                              day: "numeric",
+                              year: "numeric",
+                            })}, {activityDate.toLocaleTimeString("en-US")}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        className="text-xs text-sky-300 hover:text-sky-200 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedActivity(activity);
+                        }}
+                      >
+                        View Details
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </div>
+
+      {/* Detail Modal */}
+      {selectedActivity && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={() => setSelectedActivity(null)}
+        >
+          <div 
+            className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.98)] shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[rgba(18,18,26,0.98)] px-6 py-4">
+              <h2 className="text-xl font-semibold text-white">Activity Details</h2>
+              <button
+                onClick={() => setSelectedActivity(null)}
+                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-6 p-6">
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <ActivityIcon size={16} className="text-sky-300" />
+                  <h3 className="text-sm font-semibold text-white">Action Information</h3>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs text-slate-400 mb-1">Action</p>
+                    <p className="text-sm text-white font-medium">{selectedActivity.action}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-slate-400 mb-1">Entity Type</p>
+                      <span className={cn("inline-block rounded-full border px-2 py-0.5 text-[11px]", getEntityTypeColor(selectedActivity.entityType))}>
+                        {formatLabel(selectedActivity.entityType)}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400 mb-1">Entity ID</p>
+                      <p className="text-sm text-slate-200 font-mono break-all">{selectedActivity.entityId}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {selectedActivity.user ? (
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <User size={16} className="text-blue-300" />
+                    <h3 className="text-sm font-semibold text-white">User Information</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">Name</p>
+                        <p className="text-sm text-white">{selectedActivity.user.name || "N/A"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">Email</p>
+                        <p className="text-sm text-white">{selectedActivity.user.email}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400 mb-1">Role</p>
+                      <span className="inline-block rounded-full border border-purple-400/35 bg-purple-500/10 px-2 py-0.5 text-[11px] text-purple-200">
+                        {formatLabel(selectedActivity.user.role)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Network & Device Information */}
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Globe size={16} className="text-green-300" />
+                  <h3 className="text-sm font-semibold text-white">Network & Device</h3>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs text-slate-400 mb-1">IP Address</p>
+                    <p className="text-sm text-white font-mono">{formatIpAddress(selectedActivity.ipAddress)}</p>
+                  </div>
+                  {selectedActivity.userAgent && (() => {
+                    const info = parseUserAgent(selectedActivity.userAgent);
+                    return (
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-xs text-slate-400 mb-1">Operating System</p>
+                          <p className="text-sm text-white">{info.os}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-400 mb-1">Browser</p>
+                          <p className="text-sm text-white">{info.browser}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-400 mb-1">Device Type</p>
+                          <p className="text-sm text-white">{info.device}</p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  {selectedActivity.userAgent && (
+                    <div>
+                      <p className="text-xs text-slate-400 mb-1">User Agent</p>
+                      <p className="text-xs text-slate-300 font-mono break-all">{selectedActivity.userAgent}</p>
+                    </div>
+                  )}
+                  {!selectedActivity.userAgent && (
+                    <p className="text-sm text-slate-500">No user agent information available</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Calendar size={16} className="text-yellow-300" />
+                  <h3 className="text-sm font-semibold text-white">Timestamp</h3>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 mb-1">Date & Time</p>
+                  <p className="text-sm text-white">
+                    {new Date(selectedActivity.createdAt).toLocaleDateString("en-US", {
+                      month: "numeric",
+                      day: "numeric",
+                      year: "numeric",
+                    })}, {new Date(selectedActivity.createdAt).toLocaleTimeString("en-US")}
+                  </p>
+                </div>
+              </div>
+
+              {(selectedActivity.oldValue || selectedActivity.newValue) ? (
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText size={16} className="text-orange-300" />
+                    <h3 className="text-sm font-semibold text-white">Changes</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {selectedActivity.oldValue ? (
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">Previous Value</p>
+                        <pre className="text-xs text-slate-300 bg-black/20 rounded-lg p-3 overflow-x-auto">
+                          {JSON.stringify(selectedActivity.oldValue, null, 2)}
+                        </pre>
+                      </div>
+                    ) : null}
+                    {selectedActivity.newValue ? (
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">New Value</p>
+                        <pre className="text-xs text-slate-300 bg-black/20 rounded-lg p-3 overflow-x-auto">
+                          {JSON.stringify(selectedActivity.newValue, null, 2)}
+                        </pre>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
+    </DashboardLayout>
+  );
 }

@@ -1,14 +1,77 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
+import { randomUUID } from "node:crypto";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 import { authConfig } from "./auth.config";
 import { assertTotpEncryptionKeyConfigured } from "@/lib/crypto/totpSecret";
+import { normalizeIpAddress } from "@/lib/request-utils";
 import {
     assertTwoFactorSessionUpdateKeyConfigured,
     isTrustedTwoFactorSessionUpdate,
 } from "@/lib/security/two-factor-session";
+import { hasRecentTwoFactorVerification, TWO_FACTOR_REVERIFY_INTERVAL_MS } from "@/lib/security/two-factor";
+
+class OAuthOnlyCredentialsSigninError extends CredentialsSignin {
+    code = "oauth_only";
+}
+
+function extractIpFromForwardedHeader(headerValue: string): string | null {
+    const forwardedEntries = headerValue.split(",");
+    for (const entry of forwardedEntries) {
+        const forMatch = entry.match(/(?:^|;)\s*for=(?:"([^"]+)"|([^;,\s]+))/i);
+        const candidate = forMatch?.[1] ?? forMatch?.[2] ?? null;
+        const normalized = normalizeIpAddress(candidate);
+        if (normalized) {
+            return normalized;
+        }
+    }
+
+    return null;
+}
+
+function extractLoginIpFromRequest(request?: Request): string | null {
+    if (!request) {
+        return null;
+    }
+
+    const headers = request.headers;
+
+    const forwarded = headers.get("forwarded");
+    if (forwarded) {
+        const forwardedIp = extractIpFromForwardedHeader(forwarded);
+        if (forwardedIp) {
+            return forwardedIp;
+        }
+    }
+
+    const xForwardedFor = headers.get("x-forwarded-for");
+    if (xForwardedFor) {
+        const candidates = xForwardedFor.split(",");
+        for (const candidate of candidates) {
+            const normalized = normalizeIpAddress(candidate);
+            if (normalized) {
+                return normalized;
+            }
+        }
+    }
+
+    const directHeaderCandidates = [
+        headers.get("x-real-ip"),
+        headers.get("cf-connecting-ip"),
+        headers.get("true-client-ip"),
+    ];
+
+    for (const candidate of directHeaderCandidates) {
+        const normalized = normalizeIpAddress(candidate);
+        if (normalized) {
+            return normalized;
+        }
+    }
+
+    return null;
+}
 
 export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
     ...authConfig,
@@ -24,7 +87,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 email: { label: "Email", type: "email" },
                 password: { label: "Password", type: "password" },
             },
-            async authorize(credentials) {
+            async authorize(credentials, request) {
                 const email = typeof credentials?.email === "string" ? credentials.email.trim().toLowerCase() : "";
                 const password = typeof credentials?.password === "string" ? credentials.password : "";
 
@@ -32,8 +95,15 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                     return null;
                 }
 
-                const user = await prisma.user.findUnique({
-                    where: { email },
+                const loginIp = extractLoginIpFromRequest(request);
+
+                const user = await prisma.user.findFirst({
+                    where: {
+                        email: {
+                            equals: email,
+                            mode: "insensitive",
+                        },
+                    },
                     select: {
                         id: true,
                         email: true,
@@ -45,11 +115,21 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                     },
                 });
 
-                if (!user?.password) {
+                if (!user) {
                     return null;
                 }
 
-                const isValidPassword = await bcrypt.compare(password, user.password);
+                if (!user.password) {
+                    throw new OAuthOnlyCredentialsSigninError();
+                }
+
+                let isValidPassword = false;
+                try {
+                    isValidPassword = await bcrypt.compare(password, user.password);
+                } catch {
+                    return null;
+                }
+
                 if (!isValidPassword) {
                     return null;
                 }
@@ -61,6 +141,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                     image: user.image,
                     role: user.role,
                     totpEnabled: user.totpEnabled,
+                    loginIp,
                 };
             },
         }),
@@ -78,20 +159,28 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 const signInUser = user as typeof user & {
                     role?: string;
                     totpEnabled?: boolean;
+                    loginIp?: string | null;
                 };
+                const activeSessionId = randomUUID();
+                const activeSessionIp = normalizeIpAddress(signInUser.loginIp);
 
                 token.id = user.id;
                 token.role = signInUser.role || "ANALYST";
                 token.totpEnabled = Boolean(signInUser.totpEnabled);
+                token.activeSessionId = activeSessionId;
                 // Always require a fresh 2FA flow after login.
                 token.twoFactorVerified = false;
                 token.twoFactorVerifiedAt = null;
                 token.authenticatedAt = Date.now();
 
-                void prisma.user.update({
+                await prisma.user.update({
                     where: { id: user.id },
-                    data: { lastLogin: new Date() },
-                }).catch(() => undefined);
+                    data: {
+                        lastLogin: new Date(),
+                        activeSessionId,
+                        activeSessionIp,
+                    },
+                });
 
                 void import("./logger").then(({ logActivity }) => {
                     return logActivity("User login", "auth", user.email || "unknown", null, null, "User logged in", user.id);
@@ -140,6 +229,21 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 }
             }
 
+            if (typeof token.id === "string") {
+                const sessionState = await prisma.user.findUnique({
+                    where: { id: token.id },
+                    select: { activeSessionId: true },
+                });
+
+                if (
+                    !sessionState?.activeSessionId ||
+                    typeof token.activeSessionId !== "string" ||
+                    token.activeSessionId !== sessionState.activeSessionId
+                ) {
+                    return null;
+                }
+            }
+
             if (typeof token.totpEnabled !== "boolean") {
                 token.totpEnabled = false;
             }
@@ -152,14 +256,16 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 token.twoFactorVerifiedAt = null;
             } else if (token.twoFactorVerified !== true) {
                 token.twoFactorVerifiedAt = null;
-            } else if (token.twoFactorVerified === true && typeof token.twoFactorVerifiedAt === "number") {
-                // Require 2FA re-verification after 12 hours
-                const timeSince2FA = Date.now() - token.twoFactorVerifiedAt;
-                const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
-                if (timeSince2FA > TWELVE_HOURS_MS) {
-                    token.twoFactorVerified = false;
-                    token.twoFactorVerifiedAt = null;
-                }
+            } else if (
+                !hasRecentTwoFactorVerification(
+                    true,
+                    typeof token.twoFactorVerifiedAt === "number" ? token.twoFactorVerifiedAt : null,
+                    TWO_FACTOR_REVERIFY_INTERVAL_MS,
+                )
+            ) {
+                // Require 2FA re-verification after the allowed interval.
+                token.twoFactorVerified = false;
+                token.twoFactorVerifiedAt = null;
             }
 
             if (typeof token.authenticatedAt !== "number") {
@@ -190,6 +296,7 @@ declare module "next-auth" {
     interface User {
         role?: string;
         totpEnabled?: boolean;
+        loginIp?: string | null;
     }
 
     interface Session {

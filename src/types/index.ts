@@ -35,6 +35,8 @@ export type VulnStatus =
     | "ACCEPTED"
     | "FALSE_POSITIVE";
 
+export type WorkflowState = "NEW" | "TRIAGED" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+
 export type VulnSource =
     | "NESSUS"
     | "OPENVAS"
@@ -110,12 +112,44 @@ export interface Vulnerability {
     cisaKev: boolean;
     source: VulnSource;
     status: VulnStatus;
+    workflowState?: WorkflowState;
+    assignedUserId?: string | null;
+    assignedTeam?: string | null;
+    slaDueAt?: string | Date | null;
     solution?: string;
     riskScore?: number;
     affectedAssets?: number;
+    assignedUser?: {
+        id: string;
+        name?: string | null;
+        email?: string | null;
+    } | null;
     firstDetected: Date;
     lastSeen: Date;
     riskEntries?: Array<Record<string, unknown>>;
+}
+
+export interface AssetRelationship {
+    id: string;
+    parentAssetId: string;
+    childAssetId: string;
+    relationshipType: "HOSTS" | "RUNS_ON" | "DEPENDS_ON" | "CONNECTS_TO" | "CONTAINS";
+    notes?: string | null;
+}
+
+export interface AssetGroup {
+    id: string;
+    name: string;
+    description?: string | null;
+    color?: string | null;
+    memberCount?: number;
+}
+
+export interface DashboardViewConfig {
+    id: string;
+    name: string;
+    layout: Record<string, unknown>;
+    isDefault: boolean;
 }
 
 export interface ComplianceFramework {

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logActivity } from "@/lib/logger";
 import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
+import { extractRequestContext } from "@/lib/request-utils";
 
 const PASSWORD_POLICIES = new Set(["STRONG", "MEDIUM", "BASIC"]);
 
@@ -283,6 +284,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
         }
 
+        const ctx = extractRequestContext(request);
+
         const body = parseRequestBody(await request.json());
         const org = await prisma.organization.findFirst({
             include: { settings: true },
@@ -368,7 +371,8 @@ export async function POST(request: NextRequest) {
             null,
             null,
             `Settings updated by ${session.user.name}`,
-            session.user.id
+            session.user.id,
+            ctx,
         );
 
         return NextResponse.json(updatedSettings);

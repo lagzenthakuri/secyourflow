@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
+import { useLoginAudit } from "@/hooks/useLoginAudit";
 import {
     markAllNotificationsRead,
     markNotificationRead,
@@ -57,6 +58,7 @@ interface SidebarProps {
 export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     const pathname = usePathname();
     const { data: session } = useSession();
+    const [showSignOut, setShowSignOut] = useState(false);
 
     const userRole = session?.user?.role || "ANALYST";
     const userName = session?.user?.name || "User";
@@ -146,9 +148,12 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
 
                 {/* User Section */}
                 <div className="p-4 border-t border-[var(--border-color)] mt-auto">
-                    <div className="group relative">
-                        <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--bg-tertiary)] cursor-pointer">
-                            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-medium">
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowSignOut(!showSignOut)}
+                            className="w-full flex items-center gap-3 p-3 rounded-xl bg-[var(--bg-tertiary)] cursor-pointer hover:bg-[var(--bg-tertiary)]/80 transition-colors"
+                        >
+                            <div className="w-9 h-9 rounded-lg border border-blue-400/50 bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
                                 {userInitials}
                             </div>
                             <div className="flex-1 min-w-0">
@@ -159,23 +164,25 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                                     {userRole.replace('_', ' ')}
                                 </p>
                             </div>
-                            <button className="p-1.5 rounded-lg text-[var(--text-muted)]">
+                            <div className="p-1.5 rounded-lg text-[var(--text-muted)]">
                                 <ChevronDown size={14} />
-                            </button>
-                        </div>
-
-                        {/* Simple Tooltip-style Logout Menu */}
-                        <div className="absolute bottom-full left-0 w-full mb-2 hidden group-hover:block z-50 animate-fade-in">
-                            <div className="bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-xl shadow-2xl p-1 overflow-hidden">
-                                <button
-                                    onClick={() => signOut({ callbackUrl: "/" })}
-                                    className="w-full flex items-center gap-2 p-2.5 text-sm text-red-400 rounded-lg"
-                                >
-                                    <LogOut size={16} />
-                                    Sign Out
-                                </button>
                             </div>
-                        </div>
+                        </button>
+
+                        {/* Click-triggered Sign Out Menu */}
+                        {showSignOut && (
+                            <div className="absolute bottom-full left-0 w-full mb-2 z-50 animate-fade-in">
+                                <div className="bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-xl shadow-2xl p-1 overflow-hidden">
+                                    <button
+                                        onClick={() => signOut({ callbackUrl: "/" })}
+                                        className="w-full flex items-center gap-2 p-2.5 text-sm text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
+                                    >
+                                        <LogOut size={16} />
+                                        Sign Out
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </aside>
@@ -416,7 +423,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                             <div className="p-3 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-tertiary)]">
                                 <h3 className="font-semibold text-sm">Notifications</h3>
                                 {notificationsCount > 0 && (
-                                    <button onClick={markAsRead} className="text-xs text-blue-400 hover:text-blue-300 transition-all duration-300 ease-in-out duration-300">
+                                    <button onClick={markAsRead} className="text-xs text-blue-400 hover:text-blue-300 transition-all duration-300 ease-in-out">
                                         Mark all read
                                     </button>
                                 )}
@@ -458,6 +465,9 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    
+    // Audit login events with IP and user agent
+    useLoginAudit();
 
     // Close sidebar on initial mobile load
     useEffect(() => {
@@ -477,7 +487,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     }, []);
 
     return (
-        <div className="min-h-screen bg-[var(--bg-primary)] bg-grid bg-gradient-radial">
+        <div className="dashboard-scale min-h-screen bg-[var(--bg-primary)] bg-grid">
             <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
             <div className={cn(
                 "transition-all duration-400 ease-out",
@@ -485,7 +495,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             )}>
                 <TopBar onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
                 <main className="p-6 min-h-[calc(100vh-4rem)]">{children}</main>
-
             </div>
         </div>
     );

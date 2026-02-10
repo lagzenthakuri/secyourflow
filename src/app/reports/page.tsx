@@ -4,13 +4,12 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Modal } from "@/components/ui/Modal";
+import { WidgetBuilder } from "@/components/dashboard/WidgetBuilder";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle,
   BarChart3,
-  Calendar,
   CheckCircle2,
   ChevronRight,
   Clock3,
@@ -64,13 +63,40 @@ interface ReportRecord {
   id: string;
   name: string;
   type: string;
+  templateKey?: string | null;
   description?: string | null;
   format?: string | null;
-  frequency?: string | null;
+  outputFormat?: string | null;
   status?: string | null;
   url?: string | null;
   size?: string | null;
   createdAt: string;
+}
+
+interface ReportsApiResponse {
+  data: ReportRecord[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+interface DashboardViewRecord {
+  id: string;
+  name: string;
+  layout: {
+    widgets?: string[];
+    [key: string]: unknown;
+  };
+  isDefault: boolean;
+  shares?: Array<{
+    id: string;
+    sharedWithRole?: string | null;
+    sharedWithUserId?: string | null;
+    canEdit: boolean;
+  }>;
 }
 
 interface DashboardStats {
@@ -157,6 +183,15 @@ const reportTemplates: ReportTemplate[] = [
   },
 ];
 
+const templateToKeyMap: Record<string, string> = {
+  executive: "EXECUTIVE_POSTURE",
+  technical: "VULN_ASSESSMENT",
+  compliance: "COMPLIANCE_SUMMARY",
+  inventory: "ASSET_INVENTORY",
+  threat: "TOP_RISKS",
+  tracking: "REMEDIATION_TRACKING",
+};
+
 const reportTypeMeta: Record<
   string,
   { icon: LucideIcon; tone: string; border: string; iconTone: string }
@@ -201,6 +236,14 @@ const reportTypeMeta: Record<
 
 const numberFormatter = new Intl.NumberFormat("en-US");
 
+const dashboardWidgetCatalog = [
+  "risk_trend",
+  "output_queue",
+  "compliance_snapshot",
+  "top_frameworks",
+  "recent_reports",
+];
+
 function formatLabel(value: string) {
   return value
     .replace(/_/g, " ")
@@ -233,15 +276,16 @@ export default function ReportsPage() {
   const [pageError, setPageError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(reportTemplates[0].id);
-  const [scheduleFrequency, setScheduleFrequency] = useState("Weekly");
-  const [scheduleRecipients, setScheduleRecipients] = useState("");
-
-  const selectedTemplate = useMemo(
-    () => reportTemplates.find((template) => template.id === selectedTemplateId) || null,
-    [selectedTemplateId],
-  );
+  const [dashboardViews, setDashboardViews] = useState<DashboardViewRecord[]>([]);
+  const [viewName, setViewName] = useState("SOC Operations View");
+  const [viewWidgets, setViewWidgets] = useState<string[]>([
+    "risk_trend",
+    "output_queue",
+    "recent_reports",
+  ]);
+  const [viewDefault, setViewDefault] = useState(true);
+  const [viewShareRole, setViewShareRole] = useState("ANALYST");
+  const [isSavingView, setIsSavingView] = useState(false);
 
   const fetchData = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
@@ -253,19 +297,29 @@ export default function ReportsPage() {
 
       try {
         setPageError(null);
-        const [reportsRes, dashboardRes] = await Promise.all([
+        const [reportsRes, dashboardRes, dashboardViewsRes] = await Promise.all([
           fetch("/api/reports", { cache: "no-store" }),
           fetch("/api/dashboard", { cache: "no-store" }),
+          fetch("/api/dashboard/views", { cache: "no-store" }),
         ]);
 
-        if (!reportsRes.ok || !dashboardRes.ok) {
+        if (!reportsRes.ok || !dashboardRes.ok || !dashboardViewsRes.ok) {
           throw new Error("Failed to fetch reporting data");
         }
 
-        const reportsPayload = (await reportsRes.json()) as ReportRecord[] | { error?: string };
+        const reportsPayload = (await reportsRes.json()) as ReportsApiResponse | { error?: string };
         const dashboardPayload = (await dashboardRes.json()) as DashboardData;
+        const viewsPayload = (await dashboardViewsRes.json()) as {
+          data?: DashboardViewRecord[];
+          error?: string;
+        };
+        const reportRows =
+          "data" in reportsPayload && Array.isArray(reportsPayload.data)
+            ? reportsPayload.data
+            : [];
 
-        setReportsList(Array.isArray(reportsPayload) ? reportsPayload : []);
+        setReportsList(reportRows);
+        setDashboardViews(Array.isArray(viewsPayload.data) ? viewsPayload.data : []);
         setDashboardData(dashboardPayload);
       } catch (error) {
         setPageError(
@@ -286,6 +340,76 @@ export default function ReportsPage() {
     void fetchData();
   }, [fetchData]);
 
+  useEffect(() => {
+    const defaultView = dashboardViews.find((view) => view.isDefault) || dashboardViews[0];
+    if (!defaultView) return;
+
+    if (defaultView.name && viewName === "SOC Operations View") {
+      setViewName(defaultView.name);
+    }
+    if (Array.isArray(defaultView.layout?.widgets) && defaultView.layout.widgets.length > 0) {
+      setViewWidgets(defaultView.layout.widgets);
+    }
+    setViewDefault(defaultView.isDefault);
+  }, [dashboardViews, viewName]);
+
+  const saveDashboardView = useCallback(async () => {
+    try {
+      setActionError(null);
+      setIsSavingView(true);
+      const response = await fetch("/api/dashboard/views", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: viewName,
+          layout: { widgets: viewWidgets },
+          isDefault: viewDefault,
+          shares: viewShareRole
+            ? [
+                {
+                  sharedWithRole: viewShareRole,
+                  canEdit: false,
+                },
+              ]
+            : [],
+        }),
+      });
+
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to save dashboard view");
+      }
+
+      await fetchData({ silent: true });
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to save dashboard view");
+    } finally {
+      setIsSavingView(false);
+    }
+  }, [fetchData, viewDefault, viewName, viewShareRole, viewWidgets]);
+
+  const deleteDashboardView = useCallback(
+    async (id: string) => {
+      try {
+        setActionError(null);
+        setIsSavingView(true);
+        const response = await fetch(`/api/dashboard/views?id=${id}`, {
+          method: "DELETE",
+        });
+        const payload = (await response.json()) as { error?: string };
+        if (!response.ok) {
+          throw new Error(payload.error || "Failed to delete dashboard view");
+        }
+        await fetchData({ silent: true });
+      } catch (error) {
+        setActionError(error instanceof Error ? error.message : "Failed to delete dashboard view");
+      } finally {
+        setIsSavingView(false);
+      }
+    },
+    [fetchData],
+  );
+
   const handleGenerate = useCallback(
     async (template: ReportTemplate) => {
       try {
@@ -297,9 +421,12 @@ export default function ReportsPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: template.name,
-            type: template.type,
-            description: template.description,
-            format: template.format,
+            templateKey: templateToKeyMap[template.type] || "EXECUTIVE_POSTURE",
+            outputFormat: template.format.includes("Excel")
+              ? "XLSX"
+              : template.format.includes("CSV")
+                ? "CSV"
+                : "PDF",
           }),
         });
 
@@ -319,27 +446,6 @@ export default function ReportsPage() {
     },
     [fetchData],
   );
-
-  const openScheduleModal = useCallback((templateId?: string) => {
-    if (templateId) {
-      setSelectedTemplateId(templateId);
-    }
-    setIsScheduleModalOpen(true);
-  }, []);
-
-  const handleSchedule = useCallback(() => {
-    if (!selectedTemplate) {
-      setActionError("Select a template to schedule.");
-      return;
-    }
-
-    setActionError(null);
-    setIsScheduleModalOpen(false);
-    alert(
-      `Scheduled ${selectedTemplate.name} (${scheduleFrequency})` +
-        (scheduleRecipients.trim() ? ` for ${scheduleRecipients.trim()}` : ""),
-    );
-  }, [scheduleFrequency, scheduleRecipients, selectedTemplate]);
 
   const stats = dashboardData?.stats || {
     overallRiskScore: 0,
@@ -435,14 +541,6 @@ export default function ReportsPage() {
               </Link>
               <button
                 type="button"
-                onClick={() => openScheduleModal()}
-                className="inline-flex items-center gap-2 rounded-xl border border-sky-300/30 bg-sky-300/10 px-4 py-2 text-sm font-medium text-sky-100 transition-all duration-200 hover:bg-sky-300/20 hover:scale-105 active:scale-95"
-              >
-                <Calendar size={14} />
-                Schedule
-              </button>
-              <button
-                type="button"
                 onClick={() => void handleGenerate(reportTemplates[0])}
                 disabled={isGenerating !== null}
                 className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-200 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
@@ -519,7 +617,10 @@ export default function ReportsPage() {
           })}
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-2 animate-in fade-in slide-in-from-bottom-3 duration-500" style={{ animationDelay: '450ms', animationFillMode: 'backwards' }}>
+        <section
+          className="grid gap-4 xl:grid-cols-2 animate-in fade-in slide-in-from-bottom-3 duration-500"
+          style={{ animationDelay: "450ms", animationFillMode: "backwards" }}
+        >
           <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
@@ -553,9 +654,7 @@ export default function ReportsPage() {
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-base font-semibold text-white">Report Templates</h2>
-                  <p className="text-sm text-slate-400">
-                    Generate instantly or schedule recurring delivery.
-                  </p>
+                  <p className="text-sm text-slate-400">Generate on-demand outputs for current posture.</p>
                 </div>
                 <span className="text-xs text-slate-500">
                   {reportTemplates.length} templates available
@@ -573,7 +672,7 @@ export default function ReportsPage() {
                         "rounded-xl border bg-white/[0.02] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/[0.04] hover:scale-[1.02] animate-in fade-in slide-in-from-bottom-2",
                         meta.border,
                       )}
-                      style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}
+                      style={{ animationDelay: `${index * 50}ms`, animationFillMode: "backwards" }}
                     >
                       <div className="flex items-start gap-3">
                         <div className="rounded-lg border border-white/10 bg-white/[0.04] p-2">
@@ -605,13 +704,6 @@ export default function ReportsPage() {
                             <Download size={12} />
                           )}
                           {isGenerating === template.id ? "Generating..." : "Generate"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openScheduleModal(template.id)}
-                          className="inline-flex items-center justify-center rounded-lg border border-white/20 bg-white/[0.03] px-3 py-2 text-xs font-medium text-slate-200 transition-all duration-200 hover:bg-white/[0.08] hover:scale-105 active:scale-95"
-                        >
-                          <Calendar size={12} />
                         </button>
                       </div>
                     </article>
@@ -645,7 +737,7 @@ export default function ReportsPage() {
                     <div
                       key={report.id}
                       className="flex items-center justify-between gap-3 px-5 py-4 transition-all duration-200 hover:bg-white/[0.03] animate-in fade-in slide-in-from-left-2"
-                      style={{ animationDelay: `${index * 30}ms`, animationFillMode: 'backwards' }}
+                      style={{ animationDelay: `${index * 30}ms`, animationFillMode: "backwards" }}
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
@@ -669,7 +761,7 @@ export default function ReportsPage() {
 
                       <div className="flex items-center gap-2">
                         {report.url && report.url !== "#" ? (
-                            <a
+                          <a
                             href={report.url}
                             target="_blank"
                             rel="noreferrer"
@@ -808,72 +900,99 @@ export default function ReportsPage() {
                 )}
               </div>
             </section>
+
+            <section className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
+              <h3 className="text-base font-semibold text-white">Custom Dashboard Views</h3>
+              <p className="mt-1 text-sm text-slate-400">
+                Build widget layouts, share by role, and set defaults.
+              </p>
+
+              <div className="mt-4 space-y-3">
+                <div>
+                  <label className="mb-1 block text-xs text-slate-400">View Name</label>
+                  <input
+                    className="input"
+                    value={viewName}
+                    onChange={(event) => setViewName(event.target.value)}
+                    placeholder="SOC Operations View"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="rounded-lg border border-white/10 bg-white/[0.03] p-2 text-xs text-slate-300">
+                    Share Role
+                    <select
+                      className="input mt-1 h-9 text-xs"
+                      value={viewShareRole}
+                      onChange={(event) => setViewShareRole(event.target.value)}
+                    >
+                      <option value="ANALYST">ANALYST</option>
+                      <option value="PENTESTER">PENTESTER</option>
+                      <option value="IT_OFFICER">IT_OFFICER</option>
+                      <option value="MAIN_OFFICER">MAIN_OFFICER</option>
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-2 text-xs text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={viewDefault}
+                      onChange={(event) => setViewDefault(event.target.checked)}
+                    />
+                    Default View
+                  </label>
+                </div>
+
+                <WidgetBuilder
+                  availableWidgets={dashboardWidgetCatalog}
+                  value={viewWidgets}
+                  onChange={setViewWidgets}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => void saveDashboardView()}
+                  disabled={!viewName.trim() || isSavingView}
+                  className="inline-flex items-center gap-2 rounded-lg bg-sky-300 px-3 py-2 text-xs font-semibold text-slate-950 transition hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSavingView ? "Saving..." : "Save View"}
+                </button>
+
+                <div className="space-y-2">
+                  {dashboardViews.map((view) => (
+                    <div
+                      key={view.id}
+                      className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setViewName(view.name);
+                          setViewWidgets(Array.isArray(view.layout?.widgets) ? view.layout.widgets : []);
+                          setViewDefault(view.isDefault);
+                        }}
+                        className="truncate text-left text-xs text-slate-200 hover:text-white"
+                      >
+                        {view.name} {view.isDefault ? "• default" : ""}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void deleteDashboardView(view.id)}
+                        disabled={isSavingView}
+                        className="rounded-md border border-red-400/35 bg-red-500/10 px-2 py-1 text-[11px] text-red-200 transition hover:bg-red-500/20 disabled:opacity-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
+                  {dashboardViews.length === 0 ? (
+                    <p className="text-xs text-slate-500">No saved views yet.</p>
+                  ) : null}
+                </div>
+              </div>
+            </section>
           </aside>
         </section>
       </div>
-
-      <Modal
-        isOpen={isScheduleModalOpen}
-        onClose={() => setIsScheduleModalOpen(false)}
-        title="Schedule Report"
-        footer={
-          <div className="flex justify-end gap-3">
-            <button className="btn btn-secondary" onClick={() => setIsScheduleModalOpen(false)}>
-              Cancel
-            </button>
-            <button className="btn btn-primary" onClick={handleSchedule}>
-              Save Schedule
-            </button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="mb-2 block text-sm font-medium text-white">Template</label>
-            <select
-              className="input"
-              value={selectedTemplateId}
-              onChange={(event) => setSelectedTemplateId(event.target.value)}
-            >
-              {reportTemplates.map((template) => (
-                <option key={template.id} value={template.id}>
-                  {template.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-2 block text-sm font-medium text-white">Frequency</label>
-            <select
-              className="input"
-              value={scheduleFrequency}
-              onChange={(event) => setScheduleFrequency(event.target.value)}
-            >
-              <option>Daily</option>
-              <option>Weekly</option>
-              <option>Monthly</option>
-              <option>Quarterly</option>
-            </select>
-          </div>
-          <div>
-            <label className="mb-2 block text-sm font-medium text-white">
-              Recipients (Email)
-            </label>
-            <input
-              type="text"
-              className="input"
-              placeholder="security-team@company.com"
-              value={scheduleRecipients}
-              onChange={(event) => setScheduleRecipients(event.target.value)}
-            />
-          </div>
-          {selectedTemplate ? (
-            <div className="rounded-xl border border-sky-300/25 bg-sky-300/10 p-3 text-xs text-sky-100">
-              {selectedTemplate.name} will be scheduled as {scheduleFrequency.toLowerCase()} output.
-            </div>
-          ) : null}
-        </div>
-      </Modal>
     </DashboardLayout>
   );
 }

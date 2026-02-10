@@ -15,6 +15,8 @@ import {
     AlertTriangle,
     CheckCircle2,
     XCircle,
+    Plus,
+    Trash2,
     Users as UsersIcon,
     ShieldCheck,
     FileText,
@@ -92,6 +94,18 @@ interface FeatureFlags {
     aiDataRedactionMode: string;
     aiModelAllowlist: string[];
     [key: string]: unknown;
+}
+
+interface NotificationRuleRecord {
+    id: string;
+    name: string;
+    channel: "IN_APP";
+    eventType: string;
+    minimumSeverity?: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFORMATIONAL" | null;
+    includeExploited: boolean;
+    includeKev: boolean;
+    recipients: string[];
+    isActive: boolean;
 }
 
 type SettingsSectionId =
@@ -1100,9 +1114,114 @@ function NotificationsSection({ settings, updateSettings, handleSave, isSaving }
         },
     ];
 
+    const [rules, setRules] = useState<NotificationRuleRecord[]>([]);
+    const [isLoadingRules, setIsLoadingRules] = useState(false);
+    const [rulesError, setRulesError] = useState<string | null>(null);
+    const [newRule, setNewRule] = useState({
+        name: "",
+        channel: "IN_APP" as NotificationRuleRecord["channel"],
+        eventType: "VULNERABILITY_CREATED",
+        minimumSeverity: "HIGH",
+        includeExploited: false,
+        includeKev: false,
+    });
+
+    const fetchRules = useCallback(async () => {
+        try {
+            setIsLoadingRules(true);
+            setRulesError(null);
+            const response = await fetch("/api/notification-rules", { cache: "no-store" });
+            const payload = await response.json() as { data?: NotificationRuleRecord[]; error?: string };
+            if (!response.ok) {
+                throw new Error(payload.error || "Failed to load notification rules");
+            }
+            setRules(Array.isArray(payload.data) ? payload.data : []);
+        } catch (error) {
+            setRulesError(error instanceof Error ? error.message : "Failed to load notification rules");
+        } finally {
+            setIsLoadingRules(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        void fetchRules();
+    }, [fetchRules]);
+
+    const createRule = useCallback(async () => {
+        try {
+            setRulesError(null);
+            const response = await fetch("/api/notification-rules", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: newRule.name,
+                    channel: newRule.channel,
+                    eventType: newRule.eventType,
+                    minimumSeverity: newRule.minimumSeverity || undefined,
+                    includeExploited: newRule.includeExploited,
+                    includeKev: newRule.includeKev,
+                    isActive: true,
+                }),
+            });
+            const payload = await response.json() as { error?: string };
+            if (!response.ok) {
+                throw new Error(payload.error || "Failed to create notification rule");
+            }
+
+            setNewRule({
+                name: "",
+                channel: "IN_APP",
+                eventType: "VULNERABILITY_CREATED",
+                minimumSeverity: "HIGH",
+                includeExploited: false,
+                includeKev: false,
+            });
+            await fetchRules();
+        } catch (error) {
+            setRulesError(error instanceof Error ? error.message : "Failed to create notification rule");
+        }
+    }, [fetchRules, newRule]);
+
+    const toggleRule = useCallback(async (rule: NotificationRuleRecord) => {
+        try {
+            setRulesError(null);
+            const response = await fetch("/api/notification-rules", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id: rule.id,
+                    isActive: !rule.isActive,
+                }),
+            });
+            const payload = await response.json() as { error?: string };
+            if (!response.ok) {
+                throw new Error(payload.error || "Failed to update notification rule");
+            }
+            await fetchRules();
+        } catch (error) {
+            setRulesError(error instanceof Error ? error.message : "Failed to update notification rule");
+        }
+    }, [fetchRules]);
+
+    const deleteRule = useCallback(async (id: string) => {
+        try {
+            setRulesError(null);
+            const response = await fetch(`/api/notification-rules?id=${id}`, {
+                method: "DELETE",
+            });
+            const payload = await response.json() as { error?: string };
+            if (!response.ok) {
+                throw new Error(payload.error || "Failed to delete notification rule");
+            }
+            await fetchRules();
+        } catch (error) {
+            setRulesError(error instanceof Error ? error.message : "Failed to delete notification rule");
+        }
+    }, [fetchRules]);
+
     return (
-        <Card title="Notification Settings" subtitle="Configure alerts and notifications">
-            <div className="space-y-4">
+        <Card title="Notification Settings" subtitle="Configure alerts and notification routing">
+            <div className="space-y-5">
                 {notifications.map((notification) => (
                     <div
                         key={notification.id}
@@ -1122,6 +1241,109 @@ function NotificationsSection({ settings, updateSettings, handleSave, isSaving }
                         />
                     </div>
                 ))}
+
+                <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+                    <h4 className="text-sm font-semibold text-white">Rule-Based Notification Routing</h4>
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        Route by event type, severity, and exploit context.
+                    </p>
+                    {rulesError ? (
+                        <p className="mt-2 rounded-md border border-red-500/40 bg-red-500/10 px-2 py-1 text-xs text-red-300">
+                            {rulesError}
+                        </p>
+                    ) : null}
+
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                        <input
+                            className="input"
+                            placeholder="Rule name"
+                            value={newRule.name}
+                            onChange={(e) => setNewRule((prev) => ({ ...prev, name: e.target.value }))}
+                        />
+                        <div className="input flex items-center text-sm text-slate-300">Channel: IN_APP</div>
+                        <input
+                            className="input"
+                            placeholder="Event type (e.g. VULNERABILITY_CREATED)"
+                            value={newRule.eventType}
+                            onChange={(e) => setNewRule((prev) => ({ ...prev, eventType: e.target.value }))}
+                        />
+                        <select
+                            className="input"
+                            value={newRule.minimumSeverity}
+                            onChange={(e) => setNewRule((prev) => ({ ...prev, minimumSeverity: e.target.value }))}
+                        >
+                            <option value="">No minimum severity</option>
+                            <option value="CRITICAL">CRITICAL</option>
+                            <option value="HIGH">HIGH</option>
+                            <option value="MEDIUM">MEDIUM</option>
+                            <option value="LOW">LOW</option>
+                            <option value="INFORMATIONAL">INFORMATIONAL</option>
+                        </select>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-4">
+                        <label className="inline-flex items-center gap-2 text-xs text-slate-300">
+                            <input
+                                type="checkbox"
+                                checked={newRule.includeExploited}
+                                onChange={(e) => setNewRule((prev) => ({ ...prev, includeExploited: e.target.checked }))}
+                            />
+                            Include exploited vulnerabilities
+                        </label>
+                        <label className="inline-flex items-center gap-2 text-xs text-slate-300">
+                            <input
+                                type="checkbox"
+                                checked={newRule.includeKev}
+                                onChange={(e) => setNewRule((prev) => ({ ...prev, includeKev: e.target.checked }))}
+                            />
+                            Include CISA KEV only
+                        </label>
+                        <button
+                            className="inline-flex items-center gap-2 rounded-lg border border-sky-300/40 bg-sky-300/10 px-3 py-1.5 text-xs font-semibold text-sky-100 transition hover:bg-sky-300/20"
+                            onClick={() => void createRule()}
+                            disabled={!newRule.name.trim()}
+                        >
+                            <Plus size={14} />
+                            Add Rule
+                        </button>
+                    </div>
+
+                    <div className="mt-4 space-y-2">
+                        {isLoadingRules ? (
+                            <p className="text-xs text-slate-400">Loading rules...</p>
+                        ) : rules.length === 0 ? (
+                            <p className="text-xs text-slate-500">No notification rules yet.</p>
+                        ) : (
+                            rules.map((rule) => (
+                                <div
+                                    key={rule.id}
+                                    className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2"
+                                >
+                                    <div className="min-w-0">
+                                        <p className="truncate text-xs font-semibold text-white">
+                                            {rule.name}
+                                        </p>
+                                        <p className="truncate text-[11px] text-slate-400">
+                                            {rule.channel} • {rule.eventType}
+                                            {rule.minimumSeverity ? ` • ${rule.minimumSeverity}+` : ""}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Toggle checked={rule.isActive} onChange={() => void toggleRule(rule)} />
+                                        <button
+                                            className="inline-flex items-center gap-1 rounded-md border border-red-400/40 bg-red-500/10 px-2 py-1 text-[11px] text-red-200 transition hover:bg-red-500/20"
+                                            onClick={() => void deleteRule(rule.id)}
+                                        >
+                                            <Trash2 size={12} />
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+
                 <div className="pt-4 border-t border-[var(--border-color)]">
                     <button
                         className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
@@ -1129,7 +1351,7 @@ function NotificationsSection({ settings, updateSettings, handleSave, isSaving }
                         disabled={isSaving}
                     >
                         <Save size={16} />
-                        {isSaving ? "Saving..." : "Save Changes"}
+                        {isSaving ? "Saving..." : "Save Core Notification Preferences"}
                     </button>
                 </div>
             </div>
