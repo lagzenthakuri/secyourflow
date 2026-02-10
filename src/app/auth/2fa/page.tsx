@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import { ShieldCheck, KeyRound, LogOut, QrCode } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
@@ -255,25 +256,45 @@ export default function TwoFactorChallengePage() {
 
     return (
         <div className="min-h-screen bg-[var(--bg-primary)] bg-grid bg-gradient-radial flex items-center justify-center px-4 py-8">
-            <div className="w-full max-w-md card p-8">
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="w-11 h-11 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center">
-                        <ShieldCheck className="w-6 h-6 text-blue-400" />
-                    </div>
-                    <div>
-                        <h1 className="text-xl font-semibold text-white">Two-Factor Challenge</h1>
-                        <p className="text-xs text-[var(--text-muted)]">
-                            Two-factor authentication is required before you can access the platform.
-                        </p>
-                    </div>
+            <div className="w-full max-w-md">
+                {/* Logo */}
+                <div className="text-center mb-8">
+                    <Link href="/" className="inline-flex items-center gap-3 justify-center">
+                        <Image
+                            src="/logo1.png"
+                            alt="SecYourFlow"
+                            width={80}
+                            height={80}
+                        />
+                        <span className="text-2xl font-semibold tracking-[0.25em] text-white">
+                            SECYOUR<span className="text-sky-300">FLOW</span>
+                        </span>
+                    </Link>
                 </div>
+
+                <div className="card p-8">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-11 h-11 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center">
+                            <ShieldCheck className="w-6 h-6 text-blue-400" />
+                        </div>
+                        <div>
+                            <h1 className="text-xl font-semibold text-white">Two-Factor Challenge</h1>
+                            <p className="text-xs text-[var(--text-muted)]">
+                                Two-factor authentication is required before you can access the platform.
+                            </p>
+                        </div>
+                    </div>
 
                 {!isTotpEnabled ? (
                     <div className="space-y-4">
                         {!enrollment ? (
                             <button type="button" className="btn btn-primary w-full" onClick={startEnrollment} disabled={isSubmitting}>
-                                <QrCode size={16} />
-                                {isSubmitting ? "Preparing QR..." : "Set Up 2FA Now"}
+                                {isSubmitting ? "Preparing QR..." : (
+                                    <>
+                                        <QrCode size={16} />
+                                        Set Up 2FA Now
+                                    </>
+                                )}
                             </button>
                         ) : (
                             <form onSubmit={submitEnrollmentVerification} className="space-y-4">
@@ -310,7 +331,7 @@ export default function TwoFactorChallengePage() {
                                         />
                                     </div>
                                 </label>
-                                <button type="submit" className="btn btn-secondary w-full" disabled={isSubmitting}>
+                                <button type="submit" className="btn btn-primary w-full" disabled={isSubmitting}>
                                     {isSubmitting ? "Verifying..." : "Verify and Continue"}
                                 </button>
                             </form>
@@ -335,7 +356,7 @@ export default function TwoFactorChallengePage() {
                             </div>
                         </label>
 
-                        <button type="submit" className="btn btn-secondary w-full" disabled={isSubmitting}>
+                        <button type="submit" className="btn btn-primary w-full" disabled={isSubmitting}>
                             {isSubmitting ? "Verifying..." : "Verify and Continue"}
                         </button>
                     </form>
@@ -372,6 +393,7 @@ export default function TwoFactorChallengePage() {
                     <LogOut size={16} />
                     Sign out
                 </button>
+                </div>
             </div>
         </div>
     );

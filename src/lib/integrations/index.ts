@@ -70,3 +70,5 @@ export class HRSystemIntegration {
         return { isActive: true, dep: "IT", email };
     }
 }
+
+export { MitreAttackIntegration } from "./mitre-attack";

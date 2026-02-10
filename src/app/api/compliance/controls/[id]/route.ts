@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { recordComplianceTrendSnapshot } from "@/lib/compliance-engine";
 
 export async function PATCH(
     request: NextRequest,
@@ -19,6 +20,8 @@ export async function PATCH(
             where: { id },
             data,
         });
+
+        await recordComplianceTrendSnapshot(updatedControl.frameworkId);
 
         return NextResponse.json(updatedControl);
     } catch (error) {

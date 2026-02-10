@@ -241,7 +241,7 @@ body {
 }
 
 .btn-primary {
-  background: var(--gradient-cyber);
+  background: var(--color-primary-600);
   color: white;
   box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
 }

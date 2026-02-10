@@ -70,14 +70,16 @@ export default function LoginPage() {
             <div className="w-full max-w-md">
                 {/* Logo */}
                 <div className="text-center mb-8">
-                    <Link href="/" className="inline-block">
+                    <Link href="/" className="inline-flex items-center gap-3 justify-center">
                         <Image
                             src="/logo1.png"
                             alt="SecYourFlow"
                             width={80}
                             height={80}
-                            className="mx-auto"
                         />
+                        <span className="text-2xl font-semibold tracking-[0.25em] text-white">
+                            SECYOUR<span className="text-sky-300">FLOW</span>
+                        </span>
                     </Link>
                     <p className="text-[var(--text-secondary)] mt-4">
                         Sign in to your account
@@ -169,7 +171,7 @@ export default function LoginPage() {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="btn btn-primary w-full py-3 text-base"
+                            className="btn btn-primary w-full"
                         >
                             {isLoading ? (
                                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -198,7 +200,7 @@ export default function LoginPage() {
                     <div className="grid grid-cols-2 gap-3">
                         <button
                             onClick={() => handleOAuthSignIn("google")}
-                            className="btn btn-secondary py-2.5 flex items-center justify-center gap-2"
+                            className="btn btn-secondary"
                         >
                             <svg className="w-5 h-5" viewBox="0 0 24 24">
                                 <path
@@ -222,7 +224,7 @@ export default function LoginPage() {
                         </button>
                         <button
                             onClick={() => handleOAuthSignIn("github")}
-                            className="btn btn-secondary py-2.5 flex items-center justify-center gap-2"
+                            className="btn btn-secondary"
                         >
                             <Github size={20} />
                             GitHub
@@ -233,9 +235,9 @@ export default function LoginPage() {
                 {/* Footer */}
                 <p className="text-center text-sm text-[var(--text-muted)] mt-6">
                     Don&apos;t have an account?{" "}
-                    <a href="#" className="text-blue-400 hover:text-blue-300">
+                    <Link href="/contact" className="text-blue-400 hover:text-blue-300">
                         Contact us
-                    </a>
+                    </Link>
                 </p>
             </div>
         </div>

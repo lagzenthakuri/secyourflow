@@ -46,3 +46,7 @@ next-env.d.ts
 
 # project management
 TODO.md
+
+# uploads and logs
+/public/uploads/
+*.log
