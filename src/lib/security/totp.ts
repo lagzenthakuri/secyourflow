@@ -47,7 +47,10 @@ export function verifyTotpToken(
     code: string,
     lastUsedStep: number | null,
     epochMs = Date.now(),
-): { valid: true; matchedStep: number } | { valid: false; reason: "invalid_code" | "replay" } {
+): 
+    | { valid: true; matchedStep: number }
+    | { valid: false; reason: "invalid_code" }
+    | { valid: false; reason: "replay"; matchedStep: number } {
     const normalized = normalizeTotpCode(code);
     if (!normalized) {
         return { valid: false, reason: "invalid_code" };
@@ -73,7 +76,7 @@ export function verifyTotpToken(
     const matchedStep = currentStep + delta;
 
     if (lastUsedStep !== null && matchedStep <= lastUsedStep) {
-        return { valid: false, reason: "replay" };
+        return { valid: false, reason: "replay", matchedStep };
     }
 
     return { valid: true, matchedStep };

@@ -5,10 +5,16 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
+    "buildd": "npm run build",
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run --passWithNoTests",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "import:framework": "tsx scripts/import-framework-template.ts",
+    "import:iso27001": "tsx scripts/import-iso27001-template.ts",
+    "import:nistcsf": "tsx scripts/import-nistcsf-template.ts",
+    "import:pcidss": "tsx scripts/import-pcidss-template.ts",
+    "import:soc2": "tsx scripts/import-soc2-template.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
@@ -50,8 +56,5 @@
     "tsx": "^4.21.0",
     "typescript": "^5",
     "vitest": "^4.0.18"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   }
 }

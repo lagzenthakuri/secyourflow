@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import {
     LayoutDashboard,
     Server,
@@ -24,6 +24,13 @@ import {
 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
+import {
+    markAllNotificationsRead,
+    markNotificationRead,
+    normalizeNotificationsResponse,
+    type NotificationItem,
+    type NotificationsResponse,
+} from "@/lib/notification-state";
 
 const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"] },
@@ -140,7 +147,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                 {/* User Section */}
                 <div className="p-4 border-t border-[var(--border-color)] mt-auto">
                     <div className="group relative">
-                        <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] transition-all duration-300 ease-in-out cursor-pointer">
+                        <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--bg-tertiary)] cursor-pointer">
                             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-medium">
                                 {userInitials}
                             </div>
@@ -152,7 +159,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                                     {userRole.replace('_', ' ')}
                                 </p>
                             </div>
-                            <button className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-white transition-all duration-300 ease-in-out">
+                            <button className="p-1.5 rounded-lg text-[var(--text-muted)]">
                                 <ChevronDown size={14} />
                             </button>
                         </div>
@@ -162,7 +169,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                             <div className="bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-xl shadow-2xl p-1 overflow-hidden">
                                 <button
                                     onClick={() => signOut({ callbackUrl: "/" })}
-                                    className="w-full flex items-center gap-2 p-2.5 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-all duration-300 ease-in-out"
+                                    className="w-full flex items-center gap-2 p-2.5 text-sm text-red-400 rounded-lg"
                                 >
                                     <LogOut size={16} />
                                     Sign Out
@@ -186,42 +193,87 @@ interface ThreatsResponse {
     };
 }
 
-interface NotificationItem {
-    id: string;
-    title: string;
-    message: string;
-    createdAt: string;
-    read: boolean;
-}
+function getApiErrorMessage(payload: unknown): string | null {
+    if (!payload || typeof payload !== "object") {
+        return null;
+    }
 
-interface NotificationsResponse {
-    unreadCount?: number;
-    notifications?: NotificationItem[];
+    const error = (payload as { error?: unknown }).error;
+    return typeof error === "string" ? error : null;
 }
 
 export function TopBar({ onToggleSidebar }: TopBarProps) {
+    const router = useRouter();
     const [threatsCount, setThreatsCount] = useState(0);
     const [notificationsCount, setNotificationsCount] = useState(0);
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     const [showNotifications, setShowNotifications] = useState(false);
+    const redirectedForTwoFactorRef = useRef(false);
+
+    const handleAuthFailure = useCallback(
+        async (response: Response): Promise<boolean> => {
+            if (response.status === 401) {
+                router.replace("/login");
+                return true;
+            }
+
+            if (response.status === 403) {
+                let payload: unknown = null;
+                try {
+                    payload = await response.json();
+                } catch {
+                    payload = null;
+                }
+
+                const errorMessage = getApiErrorMessage(payload);
+                if (errorMessage?.toLowerCase().includes("two-factor authentication required")) {
+                    if (!redirectedForTwoFactorRef.current) {
+                        redirectedForTwoFactorRef.current = true;
+                        router.replace("/auth/2fa");
+                    }
+                    return true;
+                }
+            }
+
+            return false;
+        },
+        [router],
+    );
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 // Fetch Threats
                 const threatsRes = await fetch("/api/threats");
-                const threatsData = await threatsRes.json() as ThreatsResponse;
-                if (threatsData.stats) {
-                    setThreatsCount(threatsData.stats.activeThreatsCount || 0);
+                if (!threatsRes.ok) {
+                    const shouldStop = await handleAuthFailure(threatsRes);
+                    if (shouldStop) {
+                        return;
+                    }
+                } else {
+                    const threatsData = await threatsRes.json() as ThreatsResponse;
+                    if (threatsData.stats) {
+                        setThreatsCount(threatsData.stats.activeThreatsCount || 0);
+                    }
                 }
 
                 // Fetch Notifications
                 const notifRes = await fetch("/api/notifications");
-                const notifData = await notifRes.json() as NotificationsResponse;
-                if (notifData.unreadCount !== undefined) {
-                    setNotificationsCount(notifData.unreadCount);
-                    setNotifications(notifData.notifications || []);
+                if (!notifRes.ok) {
+                    const shouldStop = await handleAuthFailure(notifRes);
+                    if (shouldStop) {
+                        return;
+                    }
+
+                    setNotificationsCount(0);
+                    setNotifications([]);
+                    return;
                 }
+
+                const notifData = await notifRes.json() as NotificationsResponse;
+                const normalizedNotifications = normalizeNotificationsResponse(notifData);
+                setNotificationsCount(normalizedNotifications.unreadCount);
+                setNotifications(normalizedNotifications.notifications);
             } catch (error) {
                 console.error("Failed to fetch topbar data", error);
             }
@@ -231,19 +283,82 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
         // Poll every minute
         const interval = setInterval(fetchData, 60000);
         return () => clearInterval(interval);
-    }, []);
+    }, [handleAuthFailure]);
 
     const markAsRead = async () => {
         try {
-            await fetch("/api/notifications", {
+            const response = await fetch("/api/notifications", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ markAllRead: true }),
             });
+
+            if (!response.ok) {
+                const shouldStop = await handleAuthFailure(response);
+                if (shouldStop) {
+                    return;
+                }
+                throw new Error("Failed to mark notifications as read");
+            }
+
             setNotificationsCount(0);
-            setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+            setNotifications((previousNotifications) =>
+                markAllNotificationsRead(previousNotifications),
+            );
         } catch (e) {
             console.error(e);
+        }
+    };
+
+    const markOneNotificationAsRead = async (notification: NotificationItem) => {
+        if (notification.isRead) {
+            return;
+        }
+
+        const response = await fetch("/api/notifications", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: notification.id, isRead: true }),
+        });
+
+        if (!response.ok) {
+            const shouldStop = await handleAuthFailure(response);
+            if (shouldStop) {
+                return;
+            }
+            throw new Error("Failed to mark notification as read");
+        }
+
+        const updateResult = await response.json() as { changedToRead?: boolean };
+
+        setNotifications((previousNotifications) =>
+            markNotificationRead(previousNotifications, notification.id).notifications,
+        );
+
+        if (updateResult.changedToRead) {
+            setNotificationsCount((previousCount) => Math.max(0, previousCount - 1));
+        }
+    };
+
+    const navigateToNotification = (link: string) => {
+        if (link.startsWith("http://") || link.startsWith("https://")) {
+            window.location.href = link;
+            return;
+        }
+
+        router.push(link);
+    };
+
+    const handleNotificationClick = async (notification: NotificationItem) => {
+        try {
+            await markOneNotificationAsRead(notification);
+        } catch (error) {
+            console.error(error);
+        }
+
+        if (notification.link) {
+            setShowNotifications(false);
+            navigateToNotification(notification.link);
         }
     };
 
@@ -313,11 +428,23 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                                     </div>
                                 ) : (
                                     notifications.map(notif => (
-                                        <div key={notif.id} className={`p-3 border-b border-[var(--border-color)] hover:bg-[var(--bg-tertiary)] transition-all duration-300 ease-in-out ${!notif.read ? 'bg-[var(--bg-tertiary)]/50' : ''}`}>
-                                            <p className="text-sm font-medium">{notif.title}</p>
+                                        <button
+                                            key={notif.id}
+                                            type="button"
+                                            onClick={() => {
+                                                void handleNotificationClick(notif);
+                                            }}
+                                            className={`w-full p-3 border-b border-[var(--border-color)] text-left hover:bg-[var(--bg-tertiary)] transition-all duration-300 ease-in-out ${!notif.isRead ? "bg-[var(--bg-tertiary)]/50" : ""}`}
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <p className="text-sm font-medium">{notif.title}</p>
+                                                {!notif.isRead && (
+                                                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-sky-400" />
+                                                )}
+                                            </div>
                                             <p className="text-xs text-[var(--text-muted)] mt-1">{notif.message}</p>
                                             <p className="text-[10px] text-[var(--text-muted)] mt-2">{new Date(notif.createdAt).toLocaleString()}</p>
-                                        </div>
+                                        </button>
                                     ))
                                 )}
                             </div>

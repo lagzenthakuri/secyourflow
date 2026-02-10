@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { Severity, VulnStatus, VulnSource } from "@prisma/client";
 import { logActivity } from "@/lib/logger";
 import { processRiskAssessment } from "@/lib/risk-engine";
+import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
@@ -17,10 +18,18 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "20");
 
     try {
+        const session = await auth();
+        if (!session?.user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        if (!isTwoFactorSatisfied(session)) {
+            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
+        }
+
         const org = await prisma.organization.findFirst();
         if (!org) throw new Error("No organization found");
 
-        const where: any = { organizationId: org.id };
+        const where: Record<string, unknown> = { organizationId: org.id };
 
         if (severity) where.severity = severity as Severity;
         if (status) where.status = status as VulnStatus;
@@ -65,9 +74,9 @@ export async function GET(request: NextRequest) {
             })
         ]);
 
-        const formattedVulns = vulns.map((v: any) => ({
+        const formattedVulns = vulns.map((v) => ({
             ...v,
-            affectedAssets: (v as any)._count?.assets || 0,
+            affectedAssets: v._count?.assets || 0,
         }));
 
         const severityDist = severityDistribution.map(s => ({
@@ -119,13 +128,20 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
+        const session = await auth();
+        if (!session?.user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        if (!isTwoFactorSatisfied(session)) {
+            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
+        }
+
         const { assetId, ...vulnData } = await request.json();
 
         const org = await prisma.organization.findFirst();
         if (!org) throw new Error("No organization found");
 
-        const session = await auth();
-        const userId = session?.user?.id;
+        const userId = session.user.id;
 
         const newVuln = await prisma.vulnerability.create({
             data: {

@@ -3,12 +3,16 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { processRiskAssessment } from "@/lib/risk-engine";
+import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
 
-export async function POST(req: Request) {
+export async function POST() {
     try {
         const session = await auth();
         if (!session || !session.user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        if (!isTwoFactorSatisfied(session)) {
+            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
         }
 
         let user = await prisma.user.findUnique({

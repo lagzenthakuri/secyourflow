@@ -5,12 +5,17 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 import { authConfig } from "./auth.config";
 import { assertTotpEncryptionKeyConfigured } from "@/lib/crypto/totpSecret";
+import {
+    assertTwoFactorSessionUpdateKeyConfigured,
+    isTrustedTwoFactorSessionUpdate,
+} from "@/lib/security/two-factor-session";
 
 export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
     ...authConfig,
     adapter: PrismaAdapter(prisma),
     session: {
         strategy: "jwt",
+        maxAge: 30 * 24 * 60 * 60, // 30 days
     },
     providers: [
         Credentials({
@@ -66,6 +71,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
         async jwt({ token, user, trigger, session }) {
             if (process.env.NODE_ENV === "production") {
                 assertTotpEncryptionKeyConfigured();
+                assertTwoFactorSessionUpdateKeyConfigured();
             }
 
             if (user) {
@@ -77,8 +83,9 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 token.id = user.id;
                 token.role = signInUser.role || "ANALYST";
                 token.totpEnabled = Boolean(signInUser.totpEnabled);
-                token.twoFactorVerified = token.totpEnabled ? false : true;
-                token.twoFactorVerifiedAt = token.totpEnabled ? null : Date.now();
+                // Always require a fresh 2FA flow after login.
+                token.twoFactorVerified = false;
+                token.twoFactorVerifiedAt = null;
                 token.authenticatedAt = Date.now();
 
                 void prisma.user.update({
@@ -93,6 +100,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
 
             if (trigger === "update" && session) {
                 const updateSession = session as {
+                    __twoFactorSessionUpdateKey?: string;
                     twoFactorVerified?: boolean;
                     twoFactorVerifiedAt?: number | null;
                     authenticatedAt?: number;
@@ -101,30 +109,34 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                         totpEnabled?: boolean;
                     };
                 };
-                if (typeof updateSession.twoFactorVerified === "boolean") {
-                    token.twoFactorVerified = updateSession.twoFactorVerified;
-                }
 
-                if (
-                    typeof updateSession.twoFactorVerifiedAt === "number" ||
-                    updateSession.twoFactorVerifiedAt === null
-                ) {
-                    token.twoFactorVerifiedAt = updateSession.twoFactorVerifiedAt;
-                }
+                // Prevent client-controlled session updates from mutating sensitive 2FA state.
+                if (isTrustedTwoFactorSessionUpdate(updateSession)) {
+                    if (typeof updateSession.twoFactorVerified === "boolean") {
+                        token.twoFactorVerified = updateSession.twoFactorVerified;
+                    }
 
-                const updatedTotpEnabled =
-                    typeof updateSession.user?.totpEnabled === "boolean"
-                        ? updateSession.user.totpEnabled
-                        : typeof updateSession.totpEnabled === "boolean"
-                            ? updateSession.totpEnabled
-                            : undefined;
+                    if (
+                        typeof updateSession.twoFactorVerifiedAt === "number" ||
+                        updateSession.twoFactorVerifiedAt === null
+                    ) {
+                        token.twoFactorVerifiedAt = updateSession.twoFactorVerifiedAt;
+                    }
 
-                if (typeof updatedTotpEnabled === "boolean") {
-                    token.totpEnabled = updatedTotpEnabled;
-                }
+                    const updatedTotpEnabled =
+                        typeof updateSession.user?.totpEnabled === "boolean"
+                            ? updateSession.user.totpEnabled
+                            : typeof updateSession.totpEnabled === "boolean"
+                                ? updateSession.totpEnabled
+                                : undefined;
 
-                if (typeof updateSession.authenticatedAt === "number") {
-                    token.authenticatedAt = updateSession.authenticatedAt;
+                    if (typeof updatedTotpEnabled === "boolean") {
+                        token.totpEnabled = updatedTotpEnabled;
+                    }
+
+                    if (typeof updateSession.authenticatedAt === "number") {
+                        token.authenticatedAt = updateSession.authenticatedAt;
+                    }
                 }
             }
 
@@ -133,15 +145,21 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
             }
 
             if (!token.totpEnabled) {
-                token.twoFactorVerified = true;
-                if (typeof token.twoFactorVerifiedAt !== "number") {
-                    token.twoFactorVerifiedAt = Date.now();
-                }
+                token.twoFactorVerified = false;
+                token.twoFactorVerifiedAt = null;
             } else if (typeof token.twoFactorVerified !== "boolean") {
                 token.twoFactorVerified = false;
                 token.twoFactorVerifiedAt = null;
             } else if (token.twoFactorVerified !== true) {
                 token.twoFactorVerifiedAt = null;
+            } else if (token.twoFactorVerified === true && typeof token.twoFactorVerifiedAt === "number") {
+                // Require 2FA re-verification after 12 hours
+                const timeSince2FA = Date.now() - token.twoFactorVerifiedAt;
+                const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+                if (timeSince2FA > TWELVE_HOURS_MS) {
+                    token.twoFactorVerified = false;
+                    token.twoFactorVerifiedAt = null;
+                }
             }
 
             if (typeof token.authenticatedAt !== "number") {
@@ -155,7 +173,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 session.user.id = token.id as string;
                 session.user.role = (token.role as string) || "ANALYST";
                 session.user.totpEnabled = Boolean(token.totpEnabled);
-                session.twoFactorVerified = session.user.totpEnabled ? token.twoFactorVerified === true : true;
+                session.twoFactorVerified = token.twoFactorVerified === true;
                 session.twoFactorVerifiedAt =
                     typeof token.twoFactorVerifiedAt === "number" ? token.twoFactorVerifiedAt : null;
                 session.authenticatedAt = typeof token.authenticatedAt === "number" ? token.authenticatedAt : null;

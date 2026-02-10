@@ -4,11 +4,14 @@ import { auth } from "@/lib/auth";
 import { logActivity } from "@/lib/logger";
 import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
     try {
         const session = await auth();
         if (!session || !session.user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        if (session.user.role !== "MAIN_OFFICER") {
+            return NextResponse.json({ error: "MAIN-OFFICER role required" }, { status: 403 });
         }
         if (!isTwoFactorSatisfied(session)) {
             return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
@@ -35,7 +38,7 @@ export async function GET(request: NextRequest) {
             name: user.name || "Unknown User",
             email: user.email,
             role: user.role,
-            department: (user as any).department || "Security", // Department isn't in schema yet, fallback
+            department: "Security", // Department isn't in schema yet, fallback
             lastActive: user.lastLogin ? getTimeAgo(new Date(user.lastLogin)) : "Never",
             status: user.lastLogin && (Date.now() - new Date(user.lastLogin).getTime() < 5 * 60 * 1000) ? "online" : "offline"
         }));
@@ -50,7 +53,7 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
     try {
         const session = await auth();
-        // Check if user is authenticated and is MAIN_OFFICER
+        // Check if user is authenticated and is MAIN_OFFICER.
         if (!session || !session.user || session.user.role !== 'MAIN_OFFICER') {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
@@ -63,6 +66,11 @@ export async function PUT(request: NextRequest) {
 
         if (!userId || !role) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+        }
+
+        const validRoles = new Set(["ANALYST", "IT_OFFICER", "PENTESTER", "MAIN_OFFICER"]);
+        if (!validRoles.has(role)) {
+            return NextResponse.json({ error: "Invalid role value" }, { status: 400 });
         }
 
         const currentUser = await prisma.user.findUnique({
@@ -79,8 +87,8 @@ export async function PUT(request: NextRequest) {
             "Role updated",
             "user",
             updatedUser.email,
-            currentUser?.role,
-            role,
+            currentUser?.role ? { role: currentUser.role } : null,
+            { role },
             `Role changed from ${currentUser?.role} to ${role} by ${session.user.name}`,
             session.user.id
         );

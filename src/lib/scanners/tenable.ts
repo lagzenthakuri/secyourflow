@@ -1,5 +1,5 @@
 
-import { Severity, VulnSource } from "@prisma/client";
+import { Severity } from "@prisma/client";
 
 export interface TenableVulnerability {
     id: string;

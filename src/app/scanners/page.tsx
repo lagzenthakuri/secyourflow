@@ -19,7 +19,7 @@ import {
     Trash2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SecurityLoader } from "@/components/ui/SecurityLoader";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { Modal } from "@/components/ui/Modal";
 
 const statusConfig = {
@@ -165,6 +165,16 @@ export default function ScannersPage() {
             setIsLoading(false);
         }
     };
+
+    if (isLoading && scanners.length === 0 && recentScans.length === 0) {
+        return (
+            <DashboardLayout>
+                <div className="flex min-h-[60vh] items-center justify-center">
+                    <ShieldLoader size="lg" variant="cyber" />
+                </div>
+            </DashboardLayout>
+        );
+    }
 
     return (
         <DashboardLayout>
@@ -339,16 +349,7 @@ export default function ScannersPage() {
                         {/* Scanner List */}
                         <div className="lg:col-span-8">
                             <div className="space-y-4">
-                                {isLoading ? (
-                                    <div className="card p-20 text-center">
-                                        <SecurityLoader
-                                            size="xl"
-                                            icon="scan"
-                                            variant="cyber"
-                                            text="Loading scanners..."
-                                        />
-                                    </div>
-                                ) : scanners.length > 0 ? (
+                                {scanners.length > 0 ? (
                                     scanners.map((scanner) => {
                                         const status = statusConfig[scanner.status as keyof typeof statusConfig];
                                         const StatusIcon = status.icon;

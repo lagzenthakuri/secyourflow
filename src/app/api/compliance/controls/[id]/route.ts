@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { recordComplianceTrendSnapshot } from "@/lib/compliance-engine";
 
 export async function PATCH(
     request: NextRequest,
@@ -10,7 +11,7 @@ export async function PATCH(
         const body = await request.json();
 
         // If status changed to COMPLIANT, we might want to update lastAssessed
-        const data: any = { ...body };
+        const data: Record<string, unknown> = { ...body };
         if (body.status && body.status !== "NOT_ASSESSED") {
             data.lastAssessed = new Date();
         }
@@ -20,10 +21,12 @@ export async function PATCH(
             data,
         });
 
+        await recordComplianceTrendSnapshot(updatedControl.frameworkId);
+
         return NextResponse.json(updatedControl);
-    } catch (error: any) {
+    } catch (error) {
         console.error("Update Control Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 400 });
+        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 400 });
     }
 }
 
@@ -39,8 +42,8 @@ export async function DELETE(
         });
 
         return NextResponse.json({ message: "Control deleted successfully" });
-    } catch (error: any) {
+    } catch (error) {
         console.error("Delete Control Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 400 });
+        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 400 });
     }
 }

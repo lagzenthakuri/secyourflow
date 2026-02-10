@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Modal } from "@/components/ui/Modal";
-import { SecurityLoader } from "@/components/ui/SecurityLoader";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle,
@@ -103,6 +103,8 @@ interface DashboardData {
     compliancePercentage: number;
   }>;
 }
+
+const EMPTY_COMPLIANCE_OVERVIEW: DashboardData["complianceOverview"] = [];
 
 const reportTemplates: ReportTemplate[] = [
   {
@@ -349,7 +351,7 @@ export default function ReportsPage() {
 
   const riskTrends = dashboardData?.riskTrends || [];
   const remediationTrends = dashboardData?.remediationTrends || [];
-  const complianceOverview = dashboardData?.complianceOverview || [];
+  const complianceOverview = dashboardData?.complianceOverview ?? EMPTY_COMPLIANCE_OVERVIEW;
 
   const queueStats = useMemo(() => {
     const completed = reportsList.filter(
@@ -372,6 +374,16 @@ export default function ReportsPage() {
     );
     return sorted[0]?.frameworkName || "N/A";
   }, [complianceOverview]);
+
+  if (isLoading && reportsList.length === 0 && !dashboardData) {
+    return (
+      <DashboardLayout>
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <ShieldLoader size="lg" variant="cyber" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -588,7 +600,7 @@ export default function ReportsPage() {
                           className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-sky-300 px-3 py-2 text-xs font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-200 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
                         >
                           {isGenerating === template.id ? (
-                            <SecurityLoader size="xs" icon="shield" variant="cyber" />
+                            <ShieldLoader size="sm" variant="cyber" />
                           ) : (
                             <Download size={12} />
                           )}
@@ -619,16 +631,7 @@ export default function ReportsPage() {
                 </span>
               </div>
 
-              {isLoading && reportsList.length === 0 ? (
-                <div className="flex min-h-[180px] items-center justify-center">
-                  <SecurityLoader
-                    size="md"
-                    icon="shield"
-                    variant="cyber"
-                    text="Loading reports..."
-                  />
-                </div>
-              ) : reportsList.length === 0 ? (
+              {reportsList.length === 0 ? (
                 <div className="p-12 text-center">
                   <FileText className="mx-auto h-10 w-10 text-slate-500" />
                   <p className="mt-4 text-base font-medium text-white">No Reports Yet</p>

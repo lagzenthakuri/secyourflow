@@ -7,7 +7,7 @@ export async function PATCH(
 ) {
     try {
         const { id } = await params;
-        const { assetId, ...vulnData } = await request.json();
+        const vulnData = await request.json();
 
         const updatedVuln = await prisma.vulnerability.update({
             where: { id },
@@ -64,10 +64,10 @@ export async function DELETE(
 
         console.log(`Successfully deleted vulnerability: ${id}`);
         return NextResponse.json({ message: "Vulnerability deleted successfully" });
-    } catch (error: any) {
+    } catch (error) {
         console.error("CRITICAL: Delete Vulnerability Error:", error);
         return NextResponse.json(
-            { error: `Server error: ${error.message || "Unknown error"}` },
+            { error: `Server error: ${error instanceof Error ? error.message : "Unknown error"}` },
             { status: 500 }
         );
     }

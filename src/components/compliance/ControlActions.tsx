@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { MoreVertical, Edit2, Trash2, ClipboardCheck, Loader2 } from "lucide-react";
+import { MoreVertical, Trash2, ClipboardCheck, Loader2, FileUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ControlActionsProps {
-    control: any;
+    control: Record<string, unknown>;
     onAssess: () => void;
+    onEvidence?: () => void;
     onDelete: () => void;
     isDeleting?: boolean;
 }
@@ -14,9 +15,11 @@ interface ControlActionsProps {
 export function ControlActions({ 
     control, 
     onAssess, 
+    onEvidence,
     onDelete,
     isDeleting = false
 }: ControlActionsProps) {
+    void control;
     const [isOpen, setIsOpen] = useState(false);
     const [isConfirming, setIsConfirming] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -81,6 +84,21 @@ export function ControlActions({
                                 <ClipboardCheck size={14} className="text-blue-400" />
                                 Assess Control
                             </button>
+                            {onEvidence ? (
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        onEvidence();
+                                        setIsOpen(false);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-[var(--text-secondary)] hover:text-white hover:bg-white/5 rounded-lg transition-all duration-300 ease-in-out text-left"
+                                >
+                                    <FileUp size={14} className="text-emerald-400" />
+                                    Manage Evidence
+                                </button>
+                            ) : null}
                             <button
                                 type="button"
                                 onClick={(e) => {

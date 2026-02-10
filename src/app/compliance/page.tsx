@@ -5,8 +5,6 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ComplianceBarChart } from "@/components/charts/DashboardCharts";
 import { cn } from "@/lib/utils";
 import { Modal } from "@/components/ui/Modal";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import {
   Activity,
   AlertTriangle,
@@ -32,19 +30,22 @@ import { AddControlModal } from "@/components/compliance/AddControlModal";
 import { AssessControlModal } from "@/components/compliance/AssessControlModal";
 import { ControlActions } from "@/components/compliance/ControlActions";
 import { FrameworkActions } from "@/components/compliance/FrameworkActions";
-import { SecurityLoader } from "@/components/ui/SecurityLoader";
+import { EvidenceUploadModal } from "@/components/compliance/EvidenceUploadModal";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
 
 interface FrameworkControl {
   id: string;
   controlId: string;
   title: string;
   description?: string | null;
+  objective?: string | null;
   status:
     | "COMPLIANT"
     | "NON_COMPLIANT"
     | "PARTIALLY_COMPLIANT"
     | "NOT_ASSESSED"
     | "NOT_APPLICABLE";
+  implementationStatus?: string | null;
   maturityLevel?: number | null;
   nistCsfFunction?:
     | "GOVERN"
@@ -58,6 +59,8 @@ interface FrameworkControl {
   ownerRole?: string | null;
   category?: string | null;
   frequency?: string | null;
+  evidence?: string | null;
+  notes?: string | null;
   updatedAt?: string;
 }
 
@@ -74,6 +77,14 @@ interface ComplianceFramework {
   avgMaturityLevel: number;
   nistCsfBreakdown: Record<string, number>;
   controls: FrameworkControl[];
+}
+
+interface ComplianceTemplateOption {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  controlCount: number;
 }
 
 const statusConfig = {
@@ -166,6 +177,8 @@ export default function CompliancePage() {
   const [selectedFramework, setSelectedFramework] = useState<ComplianceFramework | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isRunningAssessment, setIsRunningAssessment] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -185,6 +198,14 @@ export default function CompliancePage() {
   const [isAddControlModalOpen, setIsAddControlModalOpen] = useState(false);
   const [isAssessModalOpen, setIsAssessModalOpen] = useState(false);
   const [selectedControl, setSelectedControl] = useState<FrameworkControl | null>(null);
+  const [isEvidenceModalOpen, setIsEvidenceModalOpen] = useState(false);
+  const [selectedEvidenceControl, setSelectedEvidenceControl] = useState<FrameworkControl | null>(null);
+
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [isTemplateLoading, setIsTemplateLoading] = useState(false);
+  const [isTemplateImporting, setIsTemplateImporting] = useState(false);
+  const [templates, setTemplates] = useState<ComplianceTemplateOption[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
 
   const fetchCompliance = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
@@ -356,6 +377,97 @@ export default function CompliancePage() {
     }
   }, [fetchCompliance]);
 
+  const runAutomatedAssessment = useCallback(async () => {
+    if (!selectedFramework) return;
+
+    try {
+      setActionError(null);
+      setIsRunningAssessment(true);
+
+      const response = await fetch("/api/compliance/assessments/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          frameworkId: selectedFramework.frameworkId,
+          reason: "manual-ui-trigger",
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json()) as { error?: string };
+        throw new Error(payload.error || "Failed to run automated assessments");
+      }
+
+      await fetchCompliance({ silent: true });
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : "Failed to run automated assessments",
+      );
+    } finally {
+      setIsRunningAssessment(false);
+    }
+  }, [fetchCompliance, selectedFramework]);
+
+  const loadTemplates = useCallback(async () => {
+    try {
+      setIsTemplateLoading(true);
+      const response = await fetch("/api/compliance/templates", {
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch templates");
+      }
+
+      const payload = (await response.json()) as { data?: ComplianceTemplateOption[] };
+      const nextTemplates = Array.isArray(payload.data) ? payload.data : [];
+      setTemplates(nextTemplates);
+      if (nextTemplates.length > 0) {
+        setSelectedTemplateId((prev) => prev || nextTemplates[0].id);
+      }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to fetch templates");
+    } finally {
+      setIsTemplateLoading(false);
+    }
+  }, []);
+
+  const openTemplateModal = useCallback(() => {
+    setIsTemplateModalOpen(true);
+    if (templates.length === 0) {
+      void loadTemplates();
+    }
+  }, [loadTemplates, templates.length]);
+
+  const importTemplate = useCallback(async () => {
+    if (!selectedTemplateId) return;
+
+    try {
+      setActionError(null);
+      setIsTemplateImporting(true);
+
+      const response = await fetch("/api/compliance/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          templateId: selectedTemplateId,
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json()) as { error?: string };
+        throw new Error(payload.error || "Failed to import template");
+      }
+
+      setIsTemplateModalOpen(false);
+      await fetchCompliance({ silent: true });
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to import template");
+    } finally {
+      setIsTemplateImporting(false);
+    }
+  }, [fetchCompliance, selectedTemplateId]);
+
   const exportToCsv = useCallback(() => {
     if (!selectedFramework) return;
 
@@ -394,110 +506,37 @@ export default function CompliancePage() {
     window.URL.revokeObjectURL(url);
   }, [selectedFramework]);
 
-  const exportToPDF = useCallback(() => {
+  const exportToPDF = useCallback(async () => {
     if (!selectedFramework) return;
 
-    const doc = new jsPDF();
-    const frameworkName = selectedFramework.frameworkName;
-    const date = new Date().toLocaleDateString();
+    try {
+      setActionError(null);
+      setIsExportingPdf(true);
 
-    doc.setFontSize(22);
-    doc.setTextColor(56, 189, 248);
-    doc.text("SECYOURFLOW", 14, 22);
-
-    doc.setFontSize(10);
-    doc.setTextColor(125, 125, 125);
-    doc.text("Enterprise Security GRC Platform", 14, 28);
-
-    doc.setFontSize(18);
-    doc.setTextColor(40, 40, 40);
-    doc.text(`${frameworkName} Compliance Report`, 14, 45);
-
-    doc.setFontSize(11);
-    doc.setTextColor(90, 90, 90);
-    doc.text(`Generated on: ${date}`, 14, 52);
-
-    doc.setFontSize(14);
-    doc.setTextColor(60, 60, 60);
-    doc.text("Executive Summary", 14, 65);
-
-    const stats = [
-      ["Total Controls", selectedFramework.totalControls.toString()],
-      ["Compliant Controls", selectedFramework.compliant.toString()],
-      ["Non-Compliant Controls", selectedFramework.nonCompliant.toString()],
-      ["Partially Compliant Controls", selectedFramework.partiallyCompliant.toString()],
-      [
-        "Aggregated Compliance Score",
-        `${selectedFramework.compliancePercentage.toFixed(1)}%`,
-      ],
-      [
-        "Capability Maturity Level (Avg)",
-        `Level ${(selectedFramework.avgMaturityLevel || 0).toFixed(1)}`,
-      ],
-    ];
-
-    autoTable(doc, {
-      startY: 70,
-      head: [["Compliance Governance Metric", "Current Assessment"]],
-      body: stats,
-      theme: "striped",
-      headStyles: { fillColor: [56, 189, 248], textColor: 255 },
-      styles: { cellPadding: 5 },
-    });
-
-    const finalY = (doc as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY || 70;
-    doc.setFontSize(14);
-    doc.text("NIST CSF 2.0 Mapping Breakdown", 14, finalY + 15);
-
-    const nistData = Object.entries(nistCsfConfig).map(([key, config]) => [
-      config.label,
-      String(selectedFramework.nistCsfBreakdown[key] || 0),
-    ]);
-
-    autoTable(doc, {
-      startY: finalY + 20,
-      head: [["NIST Function", "Control Count"]],
-      body: nistData,
-      theme: "grid",
-      headStyles: { fillColor: [88, 88, 88] },
-    });
-
-    doc.addPage();
-    doc.setFontSize(14);
-    doc.setTextColor(40, 40, 40);
-    doc.text("Detailed Control Assessment List", 14, 22);
-
-    const tableData = selectedFramework.controls.map((control) => [
-      control.controlId,
-      control.title,
-      control.status.replace(/_/g, " "),
-      `L${control.maturityLevel ?? 0}`,
-      control.ownerRole || "N/A",
-    ]);
-
-    autoTable(doc, {
-      startY: 30,
-      head: [["ID", "Control Description", "Compliance Status", "Maturity", "Owner"]],
-      body: tableData,
-      theme: "grid",
-      headStyles: { fillColor: [56, 189, 248] },
-      styles: { fontSize: 8, cellPadding: 3 },
-      columnStyles: { 1: { cellWidth: 80 } },
-    });
-
-    const pageCount = doc.getNumberOfPages();
-    for (let page = 1; page <= pageCount; page += 1) {
-      doc.setPage(page);
-      doc.setFontSize(8);
-      doc.setTextColor(150, 150, 150);
-      doc.text(
-        `Confidential - SECYOURFLOW GRC Platform - Page ${page} of ${pageCount}`,
-        14,
-        285,
+      const response = await fetch(
+        `/api/compliance/reports/${selectedFramework.frameworkId}/pdf`,
+        { cache: "no-store" },
       );
-    }
 
-    doc.save(`${frameworkName}_Board_Report_${new Date().toISOString().split("T")[0]}.pdf`);
+      if (!response.ok) {
+        const payload = (await response.json()) as { error?: string };
+        throw new Error(payload.error || "Failed to generate compliance PDF");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${selectedFramework.frameworkName}_Compliance_Report_${new Date().toISOString().split("T")[0]}.pdf`;
+      anchor.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : "Failed to export compliance PDF",
+      );
+    } finally {
+      setIsExportingPdf(false);
+    }
   }, [selectedFramework]);
 
   const filteredControls = useMemo(() => {
@@ -572,12 +611,7 @@ export default function CompliancePage() {
     return (
       <DashboardLayout>
         <div className="flex min-h-[60vh] items-center justify-center">
-          <SecurityLoader
-            size="xl"
-            icon="shield"
-            variant="cyber"
-            text="Gathering compliance posture..."
-          />
+          <ShieldLoader size="lg" variant="cyber" />
         </div>
       </DashboardLayout>
     );
@@ -631,6 +665,23 @@ export default function CompliancePage() {
               </button>
               <button
                 type="button"
+                onClick={() => void runAutomatedAssessment()}
+                disabled={!selectedFramework || isRunningAssessment}
+                className="inline-flex items-center gap-2 rounded-xl border border-emerald-300/30 bg-emerald-300/10 px-4 py-2 text-sm font-medium text-emerald-100 transition-all duration-200 hover:bg-emerald-300/20 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+              >
+                <Shield size={14} className={isRunningAssessment ? "animate-pulse" : ""} />
+                {isRunningAssessment ? "Assessing..." : "Auto Assess"}
+              </button>
+              <button
+                type="button"
+                onClick={openTemplateModal}
+                className="inline-flex items-center gap-2 rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-2 text-sm font-medium text-cyan-100 transition-all duration-200 hover:bg-cyan-300/20 hover:scale-105 active:scale-95"
+              >
+                <Layers size={14} />
+                Import Template
+              </button>
+              <button
+                type="button"
                 onClick={exportToCsv}
                 disabled={!selectedFramework}
                 className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
@@ -640,12 +691,12 @@ export default function CompliancePage() {
               </button>
               <button
                 type="button"
-                onClick={exportToPDF}
-                disabled={!selectedFramework}
+                onClick={() => void exportToPDF()}
+                disabled={!selectedFramework || isExportingPdf}
                 className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
               >
                 <FileCheck size={14} />
-                Board PDF
+                {isExportingPdf ? "Generating PDF..." : "Board PDF"}
               </button>
               <button
                 type="button"
@@ -782,7 +833,7 @@ export default function CompliancePage() {
                         </p>
                       </div>
                       <FrameworkActions
-                        framework={framework}
+                        framework={framework as unknown as Record<string, unknown>}
                         onEdit={() => {
                           setSelectedFramework(framework);
                           setIsEditFrameworkModalOpen(true);
@@ -1104,10 +1155,14 @@ export default function CompliancePage() {
                             </div>
 
                             <ControlActions
-                              control={control}
+                              control={control as unknown as Record<string, unknown>}
                               onAssess={() => {
                                 setSelectedControl(control);
                                 setIsAssessModalOpen(true);
+                              }}
+                              onEvidence={() => {
+                                setSelectedEvidenceControl(control);
+                                setIsEvidenceModalOpen(true);
                               }}
                               onDelete={() => void handleDeleteControl(control.id)}
                               isDeleting={deletingControlId === control.id}
@@ -1282,7 +1337,7 @@ export default function CompliancePage() {
               disabled={isSubmitting || !newFramework.name}
             >
               {isSubmitting ? (
-                <SecurityLoader size="xs" icon="shield" variant="cyber" className="mr-2" />
+                <ShieldLoader size="sm" variant="cyber" className="mr-2" />
               ) : (
                 <Plus size={16} className="mr-2" />
               )}
@@ -1348,13 +1403,90 @@ export default function CompliancePage() {
             </button>
             <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
               {isSubmitting ? (
-                <SecurityLoader size="xs" icon="shield" variant="cyber" className="mr-2" />
+                <ShieldLoader size="sm" variant="cyber" className="mr-2" />
               ) : null}
               {isSubmitting ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </form>
       </Modal>
+
+      <Modal
+        isOpen={isTemplateModalOpen}
+        onClose={() => setIsTemplateModalOpen(false)}
+        title="Import Framework Template"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
+              Template
+            </label>
+            <select
+              className="input w-full"
+              value={selectedTemplateId}
+              onChange={(event) => setSelectedTemplateId(event.target.value)}
+              disabled={isTemplateLoading}
+            >
+              {templates.length === 0 ? (
+                <option value="">No templates loaded</option>
+              ) : (
+                templates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name} {template.version} ({template.controlCount} controls)
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+
+          {selectedTemplateId ? (
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-slate-300">
+              {templates.find((template) => template.id === selectedTemplateId)?.description}
+            </div>
+          ) : null}
+
+          <div className="flex justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => void loadTemplates()}
+              className="btn btn-secondary"
+              disabled={isTemplateLoading}
+            >
+              {isTemplateLoading ? "Loading..." : "Refresh Templates"}
+            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setIsTemplateModalOpen(false)}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void importTemplate()}
+                className="btn btn-primary"
+                disabled={!selectedTemplateId || isTemplateImporting}
+              >
+                {isTemplateImporting ? "Importing..." : "Import"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {selectedEvidenceControl ? (
+        <EvidenceUploadModal
+          isOpen={isEvidenceModalOpen}
+          onClose={() => {
+            setIsEvidenceModalOpen(false);
+            setSelectedEvidenceControl(null);
+          }}
+          onSuccess={() => void fetchCompliance({ silent: true })}
+          controlId={selectedEvidenceControl.id}
+          controlLabel={selectedEvidenceControl.controlId}
+        />
+      ) : null}
 
       {selectedFramework ? (
         <AddControlModal
@@ -1373,7 +1505,18 @@ export default function CompliancePage() {
             setSelectedControl(null);
           }}
           onSuccess={() => void fetchCompliance({ silent: true })}
-          control={selectedControl}
+          control={selectedControl as unknown as {
+            id: string;
+            controlId: string;
+            title: string;
+            description?: string;
+            status?: string;
+            implementationStatus?: string;
+            maturityLevel?: number;
+            evidence?: string;
+            notes?: string;
+            [key: string]: unknown;
+          }}
         />
       ) : null}
     </DashboardLayout>

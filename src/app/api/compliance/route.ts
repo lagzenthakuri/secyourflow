@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
     const frameworkId = searchParams.get("frameworkId");
 
     try {
-        const where: any = {};
+        const where: Record<string, string> = {};
         if (frameworkId) where.id = frameworkId;
 
         const frameworks = await prisma.complianceFramework.findMany({

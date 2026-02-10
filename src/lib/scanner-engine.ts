@@ -1,8 +1,7 @@
-
 import { prisma } from "@/lib/prisma";
-import { logActivity } from "@/lib/logger";
 import { processRiskAssessment } from "@/lib/risk-engine";
-import { Severity, VulnSource, VulnStatus, ScanStatus } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
+import { Severity } from "@prisma/client";
 import { TenableService } from "./scanners/tenable";
 
 interface FoundVulnerability {
@@ -15,6 +14,11 @@ interface FoundVulnerability {
     solution?: string;
     isExploited?: boolean;
     cisaKev?: boolean;
+}
+
+interface AiFindingDetails {
+    description?: string;
+    remediation?: string;
 }
 
 // Removed runAIScan as requested. AI is only used for detailing results, not for scanning.
@@ -108,7 +112,7 @@ export async function runTenableScan(assetId: string, scannerId: string) {
                     cvssVector: finding.cvssVector,
                     cveId: finding.cveId,
                     solution: aiDetails.remediation || "Follow Tenable recommendations",
-                    source: "TENABLE" as any,
+                    source: "TENABLE",
                     status: "OPEN",
                     organizationId: org.id,
                     metadata: { ai_enhanced: true, original_description: finding.description },
@@ -136,7 +140,7 @@ export async function runTenableScan(assetId: string, scannerId: string) {
                 status: "COMPLETED",
                 endTime: new Date(),
                 totalVulns: tenableFindings.length,
-                rawData: { findings: tenableFindings } as any
+                rawData: { findings: tenableFindings } as Prisma.InputJsonValue
             }
         });
 
@@ -154,7 +158,10 @@ export async function runTenableScan(assetId: string, scannerId: string) {
 /**
  * Uses AI to provide deep insights and context for a specific scan finding.
  */
-async function getAIDetailsForResult(finding: any, asset: any) {
+async function getAIDetailsForResult(
+    finding: Pick<FoundVulnerability, "title" | "description" | "cveId">,
+    asset: { name: string; type: string; operatingSystem?: string | null; environment?: string | null }
+) {
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) return { description: finding.description, remediation: "" };
 
@@ -192,8 +199,14 @@ async function getAIDetailsForResult(finding: any, asset: any) {
             })
         });
         const data = await response.json();
-        return JSON.parse(data.choices[0].message.content);
-    } catch (e) {
+        const content = data?.choices?.[0]?.message?.content;
+        if (typeof content !== "string") {
+            return { description: finding.description, remediation: "" };
+        }
+
+        return JSON.parse(content) as AiFindingDetails;
+    } catch (error) {
+        console.error("[ScannerEngine] Failed to enrich finding with AI:", error);
         return { description: finding.description, remediation: "" };
     }
 }

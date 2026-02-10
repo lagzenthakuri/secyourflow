@@ -1,24 +1,31 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Mail, MessageSquare, Phone, MapPin } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Send, ArrowRight } from "lucide-react";
 import { useState } from "react";
 
 export default function Contact() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    subject: "",
     message: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Handle form submission
+    setIsSubmitting(true);
+    
+    // Simulate form submission
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    setIsSubmitting(false);
     console.log("Form submitted:", formData);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -26,177 +33,200 @@ export default function Contact() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
-      <div className="max-w-5xl mx-auto px-6 py-12">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-sm text-sky-400 hover:text-sky-300 transition-colors mb-8"
-        >
-          <ArrowLeft size={16} />
-          Back to Home
-        </Link>
+    <div className="relative min-h-screen overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)]">
+      {/* Background Effects */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 bg-grid opacity-30" />
+        <div className="absolute -top-56 left-1/2 h-[680px] w-[980px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.15),rgba(10,10,15,0)_64%)]" />
+      </div>
 
-        <h1 className="text-4xl font-bold text-white mb-4">Contact Us</h1>
-        <p className="text-slate-400 mb-12">
-          Have questions? We&apos;d love to hear from you. Send us a message and we&apos;ll respond as soon as possible.
-        </p>
+      {/* Navigation */}
+      <nav className="fixed top-0 z-50 w-full border-b border-white/10 bg-[rgba(10,10,15,0.84)] backdrop-blur-xl" role="navigation" aria-label="Main navigation">
+        <div className="mx-auto flex h-20 w-full max-w-6xl items-center justify-between px-6">
+          <Link href="/" className="inline-flex items-center gap-3" aria-label="SecYourFlow home">
+            <Image
+              src="/logo1.png"
+              alt="SecYourFlow logo"
+              width={40}
+              height={40}
+            />
+            <span className="text-xs font-semibold tracking-[0.25em] text-white sm:text-sm">
+              SECYOUR<span className="text-sky-300">FLOW</span>
+            </span>
+          </Link>
 
-        <div className="grid gap-8 lg:grid-cols-[1fr_1.5fr]">
-          {/* Contact Information */}
-          <div className="space-y-6">
-            <div className="p-6 rounded-xl border border-slate-800 bg-slate-900/30">
-              <div className="flex items-start gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-400/10 border border-sky-400/30">
-                  <Mail size={20} className="text-sky-400" />
-                </div>
-                <div>
-                  <h3 className="text-white font-semibold mb-1">Email</h3>
-                  <p className="text-sm text-slate-400">support@secyourall.com</p>
-                  <p className="text-sm text-slate-400">sales@secyourall.com</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 rounded-xl border border-slate-800 bg-slate-900/30">
-              <div className="flex items-start gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-400/10 border border-sky-400/30">
-                  <Phone size={20} className="text-sky-400" />
-                </div>
-                <div>
-                  <h3 className="text-white font-semibold mb-1">Phone</h3>
-                  <p className="text-sm text-slate-400">+1 (555) 123-4567</p>
-                  <p className="text-xs text-slate-500 mt-1">Mon-Fri 9am-6pm EST</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 rounded-xl border border-slate-800 bg-slate-900/30">
-              <div className="flex items-start gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-400/10 border border-sky-400/30">
-                  <MessageSquare size={20} className="text-sky-400" />
-                </div>
-                <div>
-                  <h3 className="text-white font-semibold mb-1">Live Chat</h3>
-                  <p className="text-sm text-slate-400">Available 24/7</p>
-                  <button className="mt-2 text-xs text-sky-400 hover:text-sky-300 transition-colors">
-                    Start a conversation →
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 rounded-xl border border-slate-800 bg-slate-900/30">
-              <div className="flex items-start gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-400/10 border border-sky-400/30">
-                  <MapPin size={20} className="text-sky-400" />
-                </div>
-                <div>
-                  <h3 className="text-white font-semibold mb-1">Office</h3>
-                  <p className="text-sm text-slate-400">
-                    123 Security Boulevard<br />
-                    Cyber City, CC 12345<br />
-                    United States
-                  </p>
-                </div>
-              </div>
-            </div>
+          <div className="hidden items-center gap-8 md:flex">
+            <Link href="/#features" className="text-sm text-slate-300 transition hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
+              Platform
+            </Link>
+            <Link href="/#workflow" className="text-sm text-slate-300 transition hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
+              Workflow
+            </Link>
+            <Link href="/#use-cases" className="text-sm text-slate-300 transition hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
+              Use Cases
+            </Link>
+            <Link href="/#outcomes" className="text-sm text-slate-300 transition hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
+              Outcomes
+            </Link>
+            <Link href="/contact" className="text-sm text-sky-300 transition hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
+              Contact
+            </Link>
           </div>
 
-          {/* Contact Form */}
-          <div className="p-8 rounded-xl border border-slate-800 bg-slate-900/30">
-            <h2 className="text-2xl font-semibold text-white mb-6">Send us a message</h2>
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-slate-300 mb-2">
-                  Name
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-400/50 focus:border-sky-400 transition-colors"
-                  placeholder="Your name"
-                />
-              </div>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 shadow-[0_10px_28px_-16px_rgba(56,189,248,0.9)] transition hover:bg-sky-200 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950"
+            >
+              Dashboard
+              <ArrowRight size={16} />
+            </Link>
+          </div>
+        </div>
+      </nav>
 
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-400/50 focus:border-sky-400 transition-colors"
-                  placeholder="your.email@example.com"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="subject" className="block text-sm font-medium text-slate-300 mb-2">
-                  Subject
-                </label>
-                <select
-                  id="subject"
-                  name="subject"
-                  value={formData.subject}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-sky-400/50 focus:border-sky-400 transition-colors"
-                >
-                  <option value="">Select a subject</option>
-                  <option value="general">General Inquiry</option>
-                  <option value="support">Technical Support</option>
-                  <option value="sales">Sales</option>
-                  <option value="partnership">Partnership</option>
-                  <option value="feedback">Feedback</option>
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="message" className="block text-sm font-medium text-slate-300 mb-2">
-                  Message
-                </label>
-                <textarea
-                  id="message"
-                  name="message"
-                  value={formData.message}
-                  onChange={handleChange}
-                  required
-                  rows={6}
-                  className="w-full px-4 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-400/50 focus:border-sky-400 transition-colors resize-none"
-                  placeholder="Tell us how we can help..."
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full px-6 py-3 rounded-lg bg-sky-400 text-slate-950 font-semibold hover:bg-sky-300 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+      {/* Main Content */}
+      <div className="relative z-10 pt-20">
+        <div className="min-h-screen flex items-center justify-center px-6 py-12">
+          <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-16 items-center">
+            
+            {/* Left Side - Contact Info */}
+            <div className="space-y-12">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors group"
               >
-                Send Message
-              </button>
-            </form>
+                <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                BACK TO HOME
+              </Link>
+
+              <div>
+                <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6">
+                  Contact <span className="text-blue-400">Us</span>
+                </h1>
+                <p className="text-lg text-slate-400 leading-relaxed">
+                  Get in touch with us. We would love to hear from you!
+                </p>
+              </div>
+
+              <div className="space-y-8">
+                <h2 className="text-sm font-semibold text-blue-400 uppercase tracking-wider">
+                  GET IN TOUCH
+                </h2>
+
+                <div className="space-y-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-5 h-5 flex items-center justify-center">
+                      <Mail size={20} className="text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-300 uppercase tracking-wide mb-1">EMAIL</p>
+                      <p className="text-white font-medium">thakurizen2@gmail.com</p>
+                      <p className="text-white font-medium">support@secyourall.com</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="w-5 h-5 flex items-center justify-center">
+                      <Phone size={20} className="text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-300 uppercase tracking-wide mb-1">PHONE</p>
+                      <p className="text-white font-medium">+977 9849291185</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="w-5 h-5 flex items-center justify-center">
+                      <MapPin size={20} className="text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-300 uppercase tracking-wide mb-1">ADDRESS</p>
+                      <p className="text-white font-medium">123 Security Boulevard</p>
+                      <p className="text-white font-medium">Cyber City, CC 12345</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Side - Contact Form */}
+            <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800/50 rounded-2xl p-8">
+              <h2 className="text-2xl font-bold text-white mb-8 uppercase tracking-wide">
+                SEND US A MESSAGE
+              </h2>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-medium text-slate-300 uppercase tracking-wide mb-3">
+                      NAME
+                    </label>
+                    <input
+                      type="text"
+                      id="name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-4 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/50 transition-all duration-300"
+                      placeholder="Your name"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-slate-300 uppercase tracking-wide mb-3">
+                      EMAIL
+                    </label>
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-4 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/50 transition-all duration-300"
+                      placeholder="your@email.com"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="message" className="block text-sm font-medium text-slate-300 uppercase tracking-wide mb-3">
+                    MESSAGE
+                  </label>
+                  <textarea
+                    id="message"
+                    name="message"
+                    value={formData.message}
+                    onChange={handleChange}
+                    required
+                    rows={6}
+                    className="w-full px-4 py-4 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/50 transition-all duration-300 resize-none"
+                    placeholder="Your message here..."
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full px-6 py-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group uppercase tracking-wide"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      SENDING...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={18} className="group-hover:translate-x-1 transition-transform" />
+                      SEND MESSAGE
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
           </div>
-        </div>
-
-        <div className="mt-12 p-6 bg-slate-800/50 rounded-lg border border-slate-700">
-          <h2 className="text-xl font-semibold text-white mb-3">Maintained by SHYENA</h2>
-          <p className="text-sm text-slate-400">
-            For technical inquiries or platform maintenance questions, please reach out to our
-            dedicated maintenance team at: maintenance@secyourall.com
-          </p>
-        </div>
-
-        <div className="mt-12 pt-8 border-t border-slate-800">
-          <p className="text-sm text-slate-500 text-center">
-            © 2026 SECYOURALL. ALL RIGHTS RESERVED.
-          </p>
         </div>
       </div>
     </div>

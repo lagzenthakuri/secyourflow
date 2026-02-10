@@ -4,14 +4,13 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { SecurityLoader } from "@/components/ui/SecurityLoader";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { getTimeAgo } from "@/lib/utils";
 import {
   Activity,
   AlertTriangle,
   ArrowRight,
   ChevronRight,
-  CircleAlert,
   FileCheck2,
   Gauge,
   RefreshCw,
@@ -112,6 +111,16 @@ interface ActivityItem {
   timestamp: string;
 }
 
+interface ActivityLogResponse {
+  logs?: Array<{
+    id: string;
+    action: string;
+    entityType: string;
+    entityId: string;
+    createdAt: string;
+  }>;
+}
+
 interface ExploitedVulnerability {
   id: string;
   cveId?: string | null;
@@ -161,6 +170,41 @@ const defaultStats: DashboardStats = {
 const severityOrder: Severity[] = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
 
 const numberFormatter = new Intl.NumberFormat("en-US");
+
+function buildFallbackDashboardResponse(): DashboardResponse {
+  const now = new Date();
+  const riskTrends = Array.from({ length: 6 }, (_, index) => {
+    const pointDate = new Date(now);
+    pointDate.setDate(pointDate.getDate() - (5 - index) * 7);
+
+    return {
+      date: pointDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      riskScore: 0,
+      criticalVulns: 0,
+      highVulns: 0,
+    };
+  });
+
+  return {
+    stats: { ...defaultStats },
+    riskTrends,
+    severityDistribution: severityOrder.map((severity) => ({
+      severity,
+      count: 0,
+      percentage: 0,
+    })),
+    topRiskyAssets: [],
+    complianceOverview: [],
+    recentActivities: [],
+    exploitedVulnerabilities: [],
+    remediationTrends: riskTrends.map((point) => ({
+      month: point.date.split(" ")[0] ?? point.date,
+      opened: 0,
+      closed: 0,
+    })),
+    lastUpdated: now.toISOString(),
+  };
+}
 
 function getRiskBand(score: number) {
   if (score >= 80) return { label: "Critical", color: "text-red-300", rail: "bg-red-400" };
@@ -395,6 +439,7 @@ function formatAssetType(type: string) {
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardResponse | null>(null);
+  const [recentActivityLogs, setRecentActivityLogs] = useState<ActivityItem[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -417,6 +462,7 @@ export default function DashboardPage() {
         setData(payload);
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
+        setData((previous) => previous ?? buildFallbackDashboardResponse());
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
         if (silent) {
@@ -429,11 +475,46 @@ export default function DashboardPage() {
     [],
   );
 
+  const fetchRecentActivity = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const response = await fetch("/api/activity?limit=6", {
+        signal,
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        return;
+      }
+
+      const payload = (await response.json()) as ActivityLogResponse;
+      const mappedLogs = (payload.logs ?? []).map((log) => ({
+        id: log.id,
+        action: log.action,
+        entityType: log.entityType,
+        entityName: log.entityId,
+        timestamp: log.createdAt,
+      }));
+
+      setRecentActivityLogs(mappedLogs);
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      setRecentActivityLogs((previous) => previous ?? []);
+    }
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
     void fetchDashboardData({ signal: controller.signal });
-    return () => controller.abort();
-  }, [fetchDashboardData]);
+    void fetchRecentActivity(controller.signal);
+
+    const interval = setInterval(() => {
+      void fetchRecentActivity();
+    }, 30000);
+
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+    };
+  }, [fetchDashboardData, fetchRecentActivity]);
 
   const stats = data?.stats ?? defaultStats;
   const riskBand = useMemo(() => getRiskBand(stats.overallRiskScore), [stats.overallRiskScore]);
@@ -475,47 +556,18 @@ export default function DashboardPage() {
   );
 
   const activityRows = useMemo(
-    () => (data?.recentActivities ?? []).slice(0, 6),
-    [data?.recentActivities],
+    () => (recentActivityLogs ?? data?.recentActivities ?? []).slice(0, 6),
+    [data?.recentActivities, recentActivityLogs],
   );
 
   const remediationTrends = data?.remediationTrends ?? [];
   const riskTrends = data?.riskTrends ?? [];
 
-  if (isLoading) {
+  if (isLoading && !data) {
     return (
       <DashboardLayout>
         <div className="flex min-h-[60vh] items-center justify-center">
-          <SecurityLoader
-            size="xl"
-            icon="shield"
-            variant="cyber"
-            text="Loading SOC dashboard context..."
-          />
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (error || !data) {
-    return (
-      <DashboardLayout>
-        <div className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center rounded-2xl border border-red-400/25 bg-red-500/5 p-8 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full border border-red-400/25 bg-red-500/10">
-            <CircleAlert className="h-7 w-7 text-red-300" />
-          </div>
-          <h2 className="mt-5 text-xl font-semibold text-white">Unable to Load Dashboard</h2>
-          <p className="mt-2 text-sm text-slate-300">
-            {error || "We could not fetch your dashboard data right now."}
-          </p>
-          <button
-            type="button"
-            onClick={() => void fetchDashboardData()}
-            className="mt-5 inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-white/30 hover:bg-white/10"
-          >
-            Retry
-            <RefreshCw size={14} />
-          </button>
+          <ShieldLoader size="lg" variant="cyber" />
         </div>
       </DashboardLayout>
     );
@@ -557,7 +609,10 @@ export default function DashboardPage() {
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <button
                 type="button"
-                onClick={() => void fetchDashboardData({ silent: true })}
+                onClick={() => {
+                  void fetchDashboardData({ silent: true });
+                  void fetchRecentActivity();
+                }}
                 className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105"
               >
                 <RefreshCw size={15} className={isRefreshing ? "animate-spin" : ""} />
@@ -580,6 +635,12 @@ export default function DashboardPage() {
             </div>
           </div>
         </section>
+
+        {error ? (
+          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-sm text-red-200">
+            {error}
+          </section>
+        ) : null}
 
         {/* HIGH PRIORITY SECTION */}
         {activeThreats > 0 ? (

@@ -241,7 +241,7 @@ body {
 }
 
 .btn-primary {
-  background: var(--gradient-cyber);
+  background: var(--color-primary-600);
   color: white;
   box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
 }
@@ -782,4 +782,143 @@ select:focus + .dropdown-arrow {
 
 .dropdown-arrow {
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Shield Loader Animations */
+@keyframes shield-fill {
+  0% {
+    transform: scale(2) translateY(-50%);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 0.3;
+  }
+}
+
+@keyframes shield-stroke {
+  0% {
+    stroke-dashoffset: 100;
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0.8;
+  }
+}
+
+@keyframes shield-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.15;
+    transform: scale(1.2);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(1.4);
+  }
+}
+
+.animate-shield-fill {
+  animation: shield-fill 2s ease-in-out infinite;
+}
+
+.animate-shield-stroke {
+  animation: shield-stroke 2s ease-in-out infinite;
+}
+
+.animate-shield-pulse {
+  animation: shield-pulse 2s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* --- SecYourFlow minimal loader motion --- */
+@media (prefers-reduced-motion: reduce) {
+  .syf-shield-stroke,
+  .syf-shield-wipe,
+  .syf-shield-fill {
+    animation: none !important;
+  }
+  /* reveal full fill when reduced motion */
+  .syf-shield-wipe {
+    transform: scale(0) !important;
+  }
+}
+
+.syf-shield {
+  display: block;
+}
+
+/* Outside -> inside wipe:
+   The circle is a "hole" in the mask. Big hole hides center -> edges visible first.
+   Shrinking hole reveals inward. */
+.syf-shield-wipe {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: syfShieldWipe 1.15s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes syfShieldWipe {
+  0% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(0.0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.0);
+    opacity: 1;
+  }
+}
+
+/* Subtle fill breathing (very light) */
+.syf-shield-fill {
+  animation: syfShieldFill 1.15s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes syfShieldFill {
+  0% { opacity: 0.16; }
+  60% { opacity: 0.26; }
+  100% { opacity: 0.16; }
+}
+
+/* Quiet outline draw */
+.syf-shield-stroke {
+  animation: syfShieldStroke 1.15s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes syfShieldStroke {
+  0% {
+    stroke-dashoffset: 96;
+    opacity: 0.5;
+  }
+  60% {
+    stroke-dashoffset: 0;
+    opacity: 0.9;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0.5;
+  }
 }

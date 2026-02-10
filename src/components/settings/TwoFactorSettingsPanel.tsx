@@ -100,7 +100,6 @@ export function TwoFactorSettingsPanel() {
     const [notice, setNotice] = useState<string | null>(null);
     const [enrollment, setEnrollment] = useState<EnrollmentResponse | null>(null);
     const [verifyCode, setVerifyCode] = useState("");
-    const [challengeCode, setChallengeCode] = useState("");
     const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
 
     const refreshStatus = async () => {
@@ -192,47 +191,6 @@ export function TwoFactorSettingsPanel() {
         } catch (requestError) {
             console.error("TOTP verify failed:", requestError);
             setError("Unable to verify enrollment.");
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const handleDisable = async () => {
-        if (!challengeCode.trim()) {
-            setError("Enter a current authenticator or recovery code to disable 2FA.");
-            return;
-        }
-
-        setError(null);
-        setNotice(null);
-        setIsSubmitting(true);
-
-        try {
-            const response = await fetch("/api/2fa/totp/disable", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ code: challengeCode }),
-            });
-
-            const payload = await response.json();
-            if (!response.ok) {
-                setError(payload?.error || "Unable to disable 2FA.");
-                return;
-            }
-
-            setChallengeCode("");
-            setEnrollment(null);
-            setRecoveryCodes(null);
-            setNotice("Two-factor authentication has been disabled.");
-            await update({
-                twoFactorVerified: true,
-                twoFactorVerifiedAt: Date.now(),
-                user: { totpEnabled: false },
-            });
-            await refreshStatus();
-        } catch (requestError) {
-            console.error("TOTP disable failed:", requestError);
-            setError("Unable to disable two-factor authentication.");
         } finally {
             setIsSubmitting(false);
         }
@@ -404,21 +362,9 @@ export function TwoFactorSettingsPanel() {
 
                     {isTwoFactorEnabled && (
                         <div className="space-y-4">
-                            <div className="space-y-2">
-                                <label className="block text-sm text-white font-medium">
-                                    Disable 2FA (requires current code)
-                                </label>
-                                <input
-                                    type="text"
-                                    className="input"
-                                    placeholder="123456 or ABCDE-FGHIJ"
-                                    value={challengeCode}
-                                    onChange={(event) => setChallengeCode(event.target.value)}
-                                />
-                                <button className="btn btn-secondary" onClick={handleDisable} disabled={isSubmitting}>
-                                    {isSubmitting ? "Disabling..." : "Disable 2FA"}
-                                </button>
-                            </div>
+                            <p className="text-xs text-[var(--text-muted)]">
+                                Two-factor authentication is mandatory and cannot be disabled.
+                            </p>
 
                             <div className="flex flex-wrap items-center gap-2">
                                 <button className="btn btn-ghost" onClick={handleRegenerateRecovery} disabled={isSubmitting}>

@@ -78,8 +78,8 @@ export function AssetMap({ assets }: AssetMapProps) {
             >
                 <ZoomableGroup>
                     <Geographies geography={geoUrl}>
-                        {({ geographies }: { geographies: any[] }) =>
-                            geographies.map((geo: any) => {
+                        {({ geographies }: { geographies: Array<{ rsmKey: string; properties: { name: string }; [key: string]: unknown }> }) =>
+                            geographies.map((geo) => {
                                 const countryName = geo.properties.name;
                                 const hasAssets = Object.keys(countryStats).some(c =>
                                     c.toLowerCase() === countryName.toLowerCase() ||

@@ -5,6 +5,7 @@ import { consumeRateLimit, resetRateLimit } from "@/lib/security/rate-limit";
 import { prismaTotpStore } from "@/lib/security/prisma-totp-store";
 import { TotpServiceError, challengeTotp } from "@/lib/security/totp-service";
 import { handleTotpError, jsonNoStore } from "@/lib/security/totp-http";
+import { buildTrustedTwoFactorSessionUpdate } from "@/lib/security/two-factor-session";
 
 const CHALLENGE_RATE_LIMIT_ATTEMPTS = 8;
 const CHALLENGE_RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
@@ -20,13 +21,21 @@ export async function POST(request: NextRequest) {
     }
 
     if (!session.user.totpEnabled) {
-        await unstable_update({
-            twoFactorVerified: true,
-            twoFactorVerifiedAt: Date.now(),
-            user: { totpEnabled: false },
-        });
+        await unstable_update(
+            buildTrustedTwoFactorSessionUpdate({
+                twoFactorVerified: false,
+                twoFactorVerifiedAt: null,
+                user: { totpEnabled: false },
+            }),
+        );
 
-        return jsonNoStore({ success: true, twoFactorVerified: true });
+        return jsonNoStore(
+            {
+                error: "Two-factor enrollment is required before verification.",
+                code: "enrollment_required",
+            },
+            { status: 403 },
+        );
     }
 
     const rateLimit = consumeRateLimit(
@@ -61,14 +70,17 @@ export async function POST(request: NextRequest) {
             store: prismaTotpStore,
             userId: session.user.id,
             code: body.code,
+            allowSameStepReplay: true,
         });
 
         resetRateLimit(`totp:challenge:${session.user.id}`);
-        await unstable_update({
-            twoFactorVerified: true,
-            twoFactorVerifiedAt: Date.now(),
-            user: { totpEnabled: true },
-        });
+        await unstable_update(
+            buildTrustedTwoFactorSessionUpdate({
+                twoFactorVerified: true,
+                twoFactorVerifiedAt: Date.now(),
+                user: { totpEnabled: true },
+            }),
+        );
 
         return jsonNoStore({
             success: true,
@@ -78,13 +90,21 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         if (error instanceof TotpServiceError && error.code === "not_enabled") {
-            await unstable_update({
-                twoFactorVerified: true,
-                twoFactorVerifiedAt: Date.now(),
-                user: { totpEnabled: false },
-            });
+            await unstable_update(
+                buildTrustedTwoFactorSessionUpdate({
+                    twoFactorVerified: false,
+                    twoFactorVerifiedAt: null,
+                    user: { totpEnabled: false },
+                }),
+            );
 
-            return jsonNoStore({ success: true, twoFactorVerified: true });
+            return jsonNoStore(
+                {
+                    error: "Two-factor enrollment is required before verification.",
+                    code: "enrollment_required",
+                },
+                { status: 403 },
+            );
         }
 
         return handleTotpError(error, "Failed to verify the second authentication factor.");

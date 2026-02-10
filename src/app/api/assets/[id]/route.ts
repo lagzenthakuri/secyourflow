@@ -24,9 +24,9 @@ export async function GET(
             ...asset,
             vulnerabilityCount: asset._count.vulnerabilities
         });
-    } catch (error: any) {
+    } catch (error) {
         console.error("Get Asset Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
     }
 }
 
@@ -45,9 +45,9 @@ export async function PATCH(
         });
 
         return NextResponse.json(updatedAsset);
-    } catch (error: any) {
+    } catch (error) {
         console.error("Update Asset Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 400 });
+        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 400 });
     }
 }
 
@@ -92,8 +92,8 @@ export async function DELETE(
         }
 
         return NextResponse.json({ message: "Asset and associated data deleted successfully" });
-    } catch (error: any) {
+    } catch (error) {
         console.error("Delete Asset Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 400 });
+        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 400 });
     }
 }

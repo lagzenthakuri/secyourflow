@@ -139,7 +139,7 @@ export async function verifyTotpEnrollment(
 }
 
 export async function challengeTotp(
-    context: TotpContext & { code: string; nowMs?: number },
+    context: TotpContext & { code: string; nowMs?: number; allowSameStepReplay?: boolean },
 ): Promise<{ usedRecoveryCode: boolean; recoveryCodesRemaining: number }> {
     const user = await requireUser(context);
     if (!user.totpEnabled || !user.totpSecretEnc) {
@@ -162,6 +162,14 @@ export async function challengeTotp(
     }
 
     if (verification.reason === "replay") {
+        if (context.allowSameStepReplay && user.totpLastUsedStep !== null && verification.matchedStep === user.totpLastUsedStep) {
+            const recoveryHashes = getRecoveryHashes(user.totpRecoveryCodesHash);
+            return {
+                usedRecoveryCode: false,
+                recoveryCodesRemaining: recoveryHashes.length,
+            };
+        }
+
         throw new TotpServiceError("That code was already used. Wait for the next code.", 409, "replay_detected");
     }
 

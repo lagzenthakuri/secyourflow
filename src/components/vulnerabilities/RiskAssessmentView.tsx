@@ -1,11 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { Shield, AlertTriangle, CheckCircle, Clock, Info, Zap, AlertCircle } from "lucide-react";
+import { Shield, Clock, Zap, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface RiskAssessmentViewProps {
-    riskEntry: any;
+    riskEntry: {
+        status?: string;
+        riskScore?: number;
+        impactScore?: number;
+        likelihoodScore?: number;
+        aiAnalysis?: Record<string, unknown>;
+        [key: string]: unknown;
+    } | null | undefined;
     vulnerabilityId: string;
     onRefresh?: () => void;
 }
@@ -31,9 +38,9 @@ export function RiskAssessmentView({ riskEntry, vulnerabilityId, onRefresh }: Ri
             if (onRefresh) {
                 await onRefresh();
             }
-        } catch (err: any) {
+        } catch (err) {
             console.error("Analysis error:", err);
-            setError(err.message);
+            setError(err instanceof Error ? err.message : 'Unknown error');
         } finally {
             setIsAnalyzing(false);
         }
@@ -87,8 +94,21 @@ export function RiskAssessmentView({ riskEntry, vulnerabilityId, onRefresh }: Ri
         );
     }
 
-    const analysis = riskEntry.aiAnalysis;
-    const score = riskEntry.riskScore;
+    const analysis = (riskEntry.aiAnalysis || {}) as {
+        confidentiality_impact?: number;
+        integrity_impact?: number;
+        availability_impact?: number;
+        threat?: string;
+        rationale_for_risk_rating?: string;
+        risk_category?: string;
+        treatment_option?: string;
+        current_controls?: string;
+        selected_controls?: string[];
+        controls_violated_iso27001?: string[];
+        confidence?: number;
+        [key: string]: unknown;
+    };
+    const score = riskEntry.riskScore ?? 0;
 
     const getScoreColor = (s: number) => {
         if (s >= 20) return "text-red-500";
@@ -149,7 +169,7 @@ export function RiskAssessmentView({ riskEntry, vulnerabilityId, onRefresh }: Ri
 
             <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[10px] text-[var(--text-muted)]">
                 <span>Treatment: {analysis.treatment_option}</span>
-                <span>Confidence: {(analysis.confidence * 100).toFixed(0)}%</span>
+                <span>Confidence: {((analysis.confidence ?? 0) * 100).toFixed(0)}%</span>
             </div>
         </div>
     );

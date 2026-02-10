@@ -6,7 +6,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AddVulnerabilityModal } from "@/components/vulnerabilities/AddVulnerabilityModal";
 import { EditVulnerabilityModal } from "@/components/vulnerabilities/EditVulnerabilityModal";
 import { VulnerabilityActions } from "@/components/vulnerabilities/VulnerabilityActions";
-import { SecurityLoader } from "@/components/ui/SecurityLoader";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { cn } from "@/lib/utils";
 import { Vulnerability } from "@/types";
 import {
@@ -372,6 +372,16 @@ export default function VulnerabilitiesPage() {
     [sourceDistribution],
   );
 
+  if (isLoading && vulns.length === 0) {
+    return (
+      <DashboardLayout>
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <ShieldLoader size="lg" variant="cyber" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-5">
@@ -622,16 +632,7 @@ export default function VulnerabilitiesPage() {
               <div className="text-xs text-slate-500">Page {pagination.page}</div>
             </header>
 
-            {isLoading ? (
-              <div className="flex min-h-[360px] items-center justify-center">
-                <SecurityLoader
-                  size="lg"
-                  icon="shield"
-                  variant="cyber"
-                  text="Fetching vulnerabilities"
-                />
-              </div>
-            ) : vulns.length === 0 ? (
+            {vulns.length === 0 ? (
               <div className="p-16 text-center">
                 <Shield className="mx-auto h-12 w-12 text-slate-600" />
                 <p className="mt-4 text-sm text-slate-400">No vulnerabilities match current filters.</p>
@@ -746,7 +747,14 @@ export default function VulnerabilitiesPage() {
                       {isExpanded ? (
                         <div className="mt-4 border-t border-white/10 pt-4 pl-14">
                           <RiskAssessmentView
-                            riskEntry={vuln.riskEntries?.[0]}
+                            riskEntry={vuln.riskEntries?.[0] as {
+                              status?: string;
+                              riskScore?: number;
+                              impactScore?: number;
+                              likelihoodScore?: number;
+                              aiAnalysis?: Record<string, unknown>;
+                              [key: string]: unknown;
+                            } | null | undefined}
                             vulnerabilityId={vuln.id}
                             onRefresh={() => {
                               void fetchVulnerabilities({ silent: true });

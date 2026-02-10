@@ -3,21 +3,18 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/Cards";
 import {
-    Users,
     Plus,
     Search,
     MoreVertical,
     Shield,
     Mail,
-    Calendar,
-    ChevronDown
 } from "lucide-react";
 import { cn, getTimeAgo } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { SecurityLoader } from "@/components/ui/SecurityLoader";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
 
 const roleColors = {
     MAIN_OFFICER: "#ef4444",
@@ -28,8 +25,8 @@ const roleColors = {
 
 export default function UsersPage() {
     const { data: session, status } = useSession();
-    const [users, setUsers] = useState<any[]>([]);
-    const [logs, setLogs] = useState<any[]>([]);
+    const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; role: string; lastActive: string; status: string; department?: string }>>([]);
+    const [logs, setLogs] = useState<Array<{ id: string; action: string; createdAt: string | Date; user?: { name?: string }; [key: string]: unknown }>>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [editingUser, setEditingUser] = useState<string | null>(null);
     const router = useRouter();
@@ -89,7 +86,7 @@ export default function UsersPage() {
         return (
             <DashboardLayout>
                 <div className="flex items-center justify-center min-h-[60vh]">
-                    <SecurityLoader size="lg" icon="shield" variant="cyber" />
+                    <ShieldLoader size="lg" variant="cyber" />
                 </div>
             </DashboardLayout>
         );

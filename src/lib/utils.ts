@@ -67,12 +67,12 @@ export function calculateRiskScore(
         INFORMATIONAL: 0.5,
     };
 
-    let baseScore = cvssScore * 10; // CVSS is 0-10, normalize to 0-100
-    let epssMultiplier = 1 + epssScore; // EPSS is 0-1
-    let assetMultiplier = criticalityMultiplier[assetCriticality] || 1.0;
-    let exploitMultiplier = isExploited ? 1.5 : 1.0;
+    const baseScore = cvssScore * 10; // CVSS is 0-10, normalize to 0-100
+    const epssMultiplier = 1 + epssScore; // EPSS is 0-1
+    const assetMultiplier = criticalityMultiplier[assetCriticality] || 1.0;
+    const exploitMultiplier = isExploited ? 1.5 : 1.0;
 
-    let riskScore = baseScore * epssMultiplier * assetMultiplier * exploitMultiplier;
+    const riskScore = baseScore * epssMultiplier * assetMultiplier * exploitMultiplier;
 
     return Math.min(100, Math.round(riskScore * 10) / 10);
 }

@@ -5,6 +5,7 @@ import { consumeRateLimit, resetRateLimit } from "@/lib/security/rate-limit";
 import { prismaTotpStore } from "@/lib/security/prisma-totp-store";
 import { verifyTotpEnrollment } from "@/lib/security/totp-service";
 import { handleTotpError, jsonNoStore } from "@/lib/security/totp-http";
+import { buildTrustedTwoFactorSessionUpdate } from "@/lib/security/two-factor-session";
 
 const VERIFY_RATE_LIMIT_ATTEMPTS = 6;
 const VERIFY_RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
@@ -54,11 +55,13 @@ export async function POST(request: NextRequest) {
         });
 
         resetRateLimit(`totp:verify:${session.user.id}`);
-        await unstable_update({
-            twoFactorVerified: true,
-            twoFactorVerifiedAt: Date.now(),
-            user: { totpEnabled: true },
-        });
+        await unstable_update(
+            buildTrustedTwoFactorSessionUpdate({
+                twoFactorVerified: true,
+                twoFactorVerifiedAt: Date.now(),
+                user: { totpEnabled: true },
+            }),
+        );
 
         return jsonNoStore({
             recoveryCodes: result.recoveryCodes,

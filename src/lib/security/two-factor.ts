@@ -6,7 +6,7 @@ export function isTwoFactorSatisfied(session: Session | null | undefined): boole
     }
 
     if (!session.user.totpEnabled) {
-        return true;
+        return false;
     }
 
     return session.twoFactorVerified === true;
@@ -17,7 +17,7 @@ export function isRecentTwoFactorVerification(
     maxAgeMs: number,
 ): boolean {
     if (!session?.user?.totpEnabled) {
-        return true;
+        return false;
     }
 
     if (session.twoFactorVerified !== true || typeof session.twoFactorVerifiedAt !== "number") {

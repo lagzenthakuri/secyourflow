@@ -2,29 +2,56 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logActivity } from "@/lib/logger";
+import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
+import {
+    clearDatabaseUnavailable,
+    isDatabaseUnavailableError,
+    isDatabaseUnavailableInCooldown,
+    markDatabaseUnavailable,
+} from "@/lib/database-availability";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
     try {
         const session = await auth();
         if (!session || !session.user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
+        if (!isTwoFactorSatisfied(session)) {
+            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
+        }
+
+        if (isDatabaseUnavailableInCooldown()) {
+            return NextResponse.json({ notifications: [], unreadCount: 0, degraded: true });
+        }
 
         const notifications = await prisma.notification.findMany({
             where: { userId: session.user.id },
-            orderBy: { createdAt: 'desc' },
-            take: 20
+            orderBy: { createdAt: "desc" },
+            take: 20,
         });
 
         const unreadCount = await prisma.notification.count({
             where: {
                 userId: session.user.id,
-                isRead: false
-            }
+                isRead: false,
+            },
         });
 
-        return NextResponse.json({ notifications, unreadCount });
+        const normalizedNotifications = notifications.map((notification) => ({
+            ...notification,
+            read: notification.isRead,
+        }));
+
+        clearDatabaseUnavailable();
+        return NextResponse.json({ notifications: normalizedNotifications, unreadCount });
     } catch (error) {
+        if (isDatabaseUnavailableError(error)) {
+            if (markDatabaseUnavailable()) {
+                console.warn("Notifications API: Database unavailable, serving empty notification list.");
+            }
+            return NextResponse.json({ notifications: [], unreadCount: 0, degraded: true });
+        }
+
         console.error("Notifications API Error:", error);
         return NextResponse.json({ error: "Failed to fetch notifications" }, { status: 500 });
     }
@@ -35,6 +62,9 @@ export async function POST(request: NextRequest) {
         const session = await auth();
         if (!session || !session.user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        if (!isTwoFactorSatisfied(session)) {
+            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
         }
 
         const body = await request.json();
@@ -48,8 +78,8 @@ export async function POST(request: NextRequest) {
                 title,
                 message,
                 type: type || "INFO",
-                link
-            }
+                link,
+            },
         });
 
         await logActivity(
@@ -76,24 +106,57 @@ export async function PATCH(request: NextRequest) {
         if (!session || !session.user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
+        if (!isTwoFactorSatisfied(session)) {
+            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
+        }
 
         const body = await request.json();
-        const { id, isRead, markAllRead } = body;
+        const { id, isRead, markAllRead } = body as {
+            id?: string;
+            isRead?: boolean;
+            markAllRead?: boolean;
+        };
 
         if (id) {
-            const notification = await prisma.notification.update({
-                where: { id },
-                data: { isRead: isRead !== undefined ? isRead : true }
+            const readState = isRead !== undefined ? Boolean(isRead) : true;
+
+            const existingNotification = await prisma.notification.findFirst({
+                where: {
+                    id,
+                    userId: session.user.id,
+                },
             });
-            return NextResponse.json(notification);
+
+            if (!existingNotification) {
+                return NextResponse.json({ error: "Notification not found" }, { status: 404 });
+            }
+
+            let updatedNotification = existingNotification;
+            const changedToRead = readState && !existingNotification.isRead;
+
+            if (existingNotification.isRead !== readState) {
+                updatedNotification = await prisma.notification.update({
+                    where: { id: existingNotification.id },
+                    data: { isRead: readState },
+                });
+            }
+
+            return NextResponse.json({
+                notification: {
+                    ...updatedNotification,
+                    read: updatedNotification.isRead,
+                },
+                changedToRead,
+            });
         }
 
         if (markAllRead) {
-            await prisma.notification.updateMany({
+            const updateResult = await prisma.notification.updateMany({
                 where: { userId: session.user.id, isRead: false },
-                data: { isRead: true }
+                data: { isRead: true },
             });
-            return NextResponse.json({ success: true });
+
+            return NextResponse.json({ success: true, updated: updateResult.count });
         }
 
         return NextResponse.json({ error: "Invalid request" }, { status: 400 });

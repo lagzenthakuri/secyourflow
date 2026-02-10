@@ -115,7 +115,7 @@ export interface Vulnerability {
     affectedAssets?: number;
     firstDetected: Date;
     lastSeen: Date;
-    riskEntries?: any[];
+    riskEntries?: Array<Record<string, unknown>>;
 }
 
 export interface ComplianceFramework {
