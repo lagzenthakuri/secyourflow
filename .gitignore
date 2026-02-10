@@ -50,3 +50,6 @@ TODO.md
 # uploads and logs
 /public/uploads/
 *.log
+
+
+.kiro

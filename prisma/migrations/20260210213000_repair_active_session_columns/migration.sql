@@ -1,0 +1,3 @@
+ALTER TABLE "User"
+ADD COLUMN IF NOT EXISTS "activeSessionId" TEXT,
+ADD COLUMN IF NOT EXISTS "activeSessionIp" TEXT;
