@@ -171,6 +171,41 @@ const severityOrder: Severity[] = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
 
 const numberFormatter = new Intl.NumberFormat("en-US");
 
+function buildFallbackDashboardResponse(): DashboardResponse {
+  const now = new Date();
+  const riskTrends = Array.from({ length: 6 }, (_, index) => {
+    const pointDate = new Date(now);
+    pointDate.setDate(pointDate.getDate() - (5 - index) * 7);
+
+    return {
+      date: pointDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      riskScore: 0,
+      criticalVulns: 0,
+      highVulns: 0,
+    };
+  });
+
+  return {
+    stats: { ...defaultStats },
+    riskTrends,
+    severityDistribution: severityOrder.map((severity) => ({
+      severity,
+      count: 0,
+      percentage: 0,
+    })),
+    topRiskyAssets: [],
+    complianceOverview: [],
+    recentActivities: [],
+    exploitedVulnerabilities: [],
+    remediationTrends: riskTrends.map((point) => ({
+      month: point.date.split(" ")[0] ?? point.date,
+      opened: 0,
+      closed: 0,
+    })),
+    lastUpdated: now.toISOString(),
+  };
+}
+
 function getRiskBand(score: number) {
   if (score >= 80) return { label: "Critical", color: "text-red-300", rail: "bg-red-400" };
   if (score >= 60) return { label: "High", color: "text-orange-300", rail: "bg-orange-400" };
@@ -427,6 +462,7 @@ export default function DashboardPage() {
         setData(payload);
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
+        setData((previous) => previous ?? buildFallbackDashboardResponse());
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
         if (silent) {
@@ -446,7 +482,7 @@ export default function DashboardPage() {
         cache: "no-store",
       });
       if (!response.ok) {
-        throw new Error("Failed to fetch recent activity");
+        return;
       }
 
       const payload = (await response.json()) as ActivityLogResponse;
@@ -461,7 +497,7 @@ export default function DashboardPage() {
       setRecentActivityLogs(mappedLogs);
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
-      console.error("Failed to fetch recent activity", err);
+      setRecentActivityLogs((previous) => previous ?? []);
     }
   }, []);
 
@@ -527,7 +563,7 @@ export default function DashboardPage() {
   const remediationTrends = data?.remediationTrends ?? [];
   const riskTrends = data?.riskTrends ?? [];
 
-  if (isLoading || !data) {
+  if (isLoading && !data) {
     return (
       <DashboardLayout>
         <div className="flex min-h-[60vh] items-center justify-center">

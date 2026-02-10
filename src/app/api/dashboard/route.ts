@@ -1,5 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { cachedJsonResponse, errorResponse, CACHE_STRATEGIES } from '@/lib/api-response';
+import {
+  clearDatabaseUnavailable,
+  isDatabaseUnavailableError,
+  isDatabaseUnavailableInCooldown,
+  markDatabaseUnavailable,
+} from "@/lib/database-availability";
 
 // ISR: revalidate every 5 minutes
 export const revalidate = 300;
@@ -18,8 +24,67 @@ interface DashboardStats {
   threat_indicators: bigint;
 }
 
+function buildFallbackDashboardData() {
+  const now = new Date();
+  const riskTrends = Array.from({ length: 6 }, (_, index) => {
+    const pointDate = new Date(now);
+    pointDate.setDate(pointDate.getDate() - (5 - index) * 7);
+
+    return {
+      date: pointDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      riskScore: 0,
+      criticalVulns: 0,
+      highVulns: 0,
+    };
+  });
+
+  return {
+    stats: {
+      totalAssets: 0,
+      criticalAssets: 0,
+      totalVulnerabilities: 0,
+      criticalVulnerabilities: 0,
+      highVulnerabilities: 0,
+      mediumVulnerabilities: 0,
+      lowVulnerabilities: 0,
+      exploitedVulnerabilities: 0,
+      cisaKevCount: 0,
+      openVulnerabilities: 0,
+      threatIndicatorCount: 0,
+      overallRiskScore: 0,
+      complianceScore: 0,
+      fixedThisMonth: 0,
+      meanTimeToRemediate: 0,
+    },
+    riskTrends,
+    severityDistribution: [
+      { severity: "CRITICAL", count: 0, percentage: 0 },
+      { severity: "HIGH", count: 0, percentage: 0 },
+      { severity: "MEDIUM", count: 0, percentage: 0 },
+      { severity: "LOW", count: 0, percentage: 0 },
+    ],
+    topRiskyAssets: [],
+    recentActivities: [],
+    exploitedVulnerabilities: [],
+    complianceOverview: [],
+    remediationTrends: riskTrends.map((point) => ({
+      month: point.date.split(" ")[0] ?? point.date,
+      opened: 0,
+      closed: 0,
+      net: 0,
+    })),
+    assetTypeDistribution: [],
+    degraded: true,
+    lastUpdated: now.toISOString(),
+  };
+}
+
 export async function GET() {
     try {
+        if (isDatabaseUnavailableInCooldown()) {
+            return cachedJsonResponse(buildFallbackDashboardData(), CACHE_STRATEGIES.DASHBOARD);
+        }
+
         // OPTIMIZATION 1: Single query for all counts (replaces 11 queries)
         const [stats] = await prisma.$queryRaw<DashboardStats[]>`
             SELECT 
@@ -203,8 +268,16 @@ export async function GET() {
         };
 
         // OPTIMIZATION 4: Add caching headers
+        clearDatabaseUnavailable();
         return cachedJsonResponse(dashboardData, CACHE_STRATEGIES.DASHBOARD);
     } catch (error) {
+        if (isDatabaseUnavailableError(error)) {
+            if (markDatabaseUnavailable()) {
+                console.warn("Dashboard API: Database unavailable, serving fallback data.");
+            }
+            return cachedJsonResponse(buildFallbackDashboardData(), CACHE_STRATEGIES.DASHBOARD);
+        }
+
         console.error('Dashboard API Error:', error);
         return errorResponse('Failed to fetch dashboard data', {
             status: 500,

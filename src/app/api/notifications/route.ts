@@ -3,6 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logActivity } from "@/lib/logger";
 import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
+import {
+    clearDatabaseUnavailable,
+    isDatabaseUnavailableError,
+    isDatabaseUnavailableInCooldown,
+    markDatabaseUnavailable,
+} from "@/lib/database-availability";
 
 export async function GET() {
     try {
@@ -12,6 +18,10 @@ export async function GET() {
         }
         if (!isTwoFactorSatisfied(session)) {
             return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
+        }
+
+        if (isDatabaseUnavailableInCooldown()) {
+            return NextResponse.json({ notifications: [], unreadCount: 0, degraded: true });
         }
 
         const notifications = await prisma.notification.findMany({
@@ -32,8 +42,16 @@ export async function GET() {
             read: notification.isRead,
         }));
 
+        clearDatabaseUnavailable();
         return NextResponse.json({ notifications: normalizedNotifications, unreadCount });
     } catch (error) {
+        if (isDatabaseUnavailableError(error)) {
+            if (markDatabaseUnavailable()) {
+                console.warn("Notifications API: Database unavailable, serving empty notification list.");
+            }
+            return NextResponse.json({ notifications: [], unreadCount: 0, degraded: true });
+        }
+
         console.error("Notifications API Error:", error);
         return NextResponse.json({ error: "Failed to fetch notifications" }, { status: 500 });
     }
