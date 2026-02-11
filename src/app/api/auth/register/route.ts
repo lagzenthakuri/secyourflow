@@ -52,9 +52,16 @@ export async function POST(req: Request) {
             );
         }
 
-        console.error("Registration error:", error);
+        console.error("Registration error [DETAILED]:", {
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+        });
+
         return NextResponse.json(
-            { error: "Something went wrong" },
+            {
+                error: "Registration failed",
+                message: error instanceof Error ? error.message : "An internal error occurred"
+            },
             { status: 500 }
         );
     }
