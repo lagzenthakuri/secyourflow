@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: secyourflow-web
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/secyourflow
+      - REDIS_URL=redis://redis:6379
+      - NEXTAUTH_URL=http://localhost:3000
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - secyourflow-network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: secyourflow-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: secyourflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - secyourflow-network
+
+  redis:
+    image: redis:alpine
+    container_name: secyourflow-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - secyourflow-network
+
+networks:
+  secyourflow-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

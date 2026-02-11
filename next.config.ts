@@ -5,25 +5,28 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
-  
+
   // Enable React strict mode
   reactStrictMode: true,
-  
+
   // Remove console logs in production
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? {
       exclude: ['error', 'warn'],
     } : false,
   },
-  
+
   // Optimize package imports
   experimental: {
     optimizePackageImports: ['lucide-react', 'recharts', '@tanstack/react-query'],
   },
-  
+
   // Enable compression
   compress: true,
-  
+
+  // Standalone output for Docker
+  output: "standalone",
+
   // Security and performance headers
   async headers() {
     return [

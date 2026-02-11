@@ -221,11 +221,43 @@ npm run build
 npx prisma migrate deploy
 ```
 
+
 ### Start Production Server
 
 ```bash
 npm start
 ```
+
+### Docker Deployment
+
+1. **Prerequisites**: Ensure Docker and Docker Compose are installed.
+
+2. **Configuration**: 
+   - Ensure your `.env` file is configured.
+   - The `docker-compose.yml` uses your `.env` file but overrides `DATABASE_URL` and `REDIS_URL` to point to the containerized services.
+
+3. **Build and Run**:
+   ```bash
+   docker-compose up --build -d
+   ```
+
+4. **Initialize Database**:
+   Run these commands to apply migrations and seed the database:
+   ```bash
+   # Apply migrations
+   docker-compose run --rm web npx prisma migrate deploy
+
+   # Seed database (optional)
+   docker-compose run --rm web npx prisma db seed
+   ```
+
+5. **Access**:
+   The application will be available at [http://localhost:3000](http://localhost:3000).
+
+6. **Stop**:
+   ```bash
+   docker-compose down
+   ```
 
 ### Maintained By SHYENA
 
