@@ -255,7 +255,7 @@ export default function TwoFactorChallengePage() {
     }, [code, isSubmitting, isTotpEnabled, submitChallengeCode]);
 
     return (
-        <div className="min-h-screen bg-[var(--bg-primary)] bg-grid bg-gradient-radial flex items-center justify-center px-4 py-8">
+        <div className="min-h-screen bg-[var(--bg-primary)] bg-grid flex items-center justify-center px-4 py-8">
             <div className="w-full max-w-md">
                 {/* Logo */}
                 <div className="text-center mb-8">
@@ -377,7 +377,7 @@ export default function TwoFactorChallengePage() {
                 {!isTotpEnabled && enrollment ? (
                     <button
                         onClick={startEnrollment}
-                        className="btn btn-ghost w-full mt-3 text-[var(--text-secondary)]"
+                        className="btn btn-ghost w-full mt-3"
                         type="button"
                         disabled={isSubmitting}
                     >
@@ -387,7 +387,7 @@ export default function TwoFactorChallengePage() {
 
                 <button
                     onClick={() => signOut({ callbackUrl: "/login" })}
-                    className="btn btn-ghost w-full mt-3 text-[var(--text-secondary)]"
+                    className="btn btn-ghost w-full mt-3"
                     type="button"
                 >
                     <LogOut size={16} />

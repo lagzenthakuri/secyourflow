@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logActivity } from "@/lib/logger";
 import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
+import { extractRequestContext } from "@/lib/request-utils";
 import {
     clearDatabaseUnavailable,
     isDatabaseUnavailableError,
@@ -67,6 +68,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
         }
 
+        const ctx = extractRequestContext(request);
+
         const body = await request.json();
         const { title, message, type, link, userId } = body;
 
@@ -89,7 +92,8 @@ export async function POST(request: NextRequest) {
             null,
             notification,
             `Notification sent to user ${targetUserId}: ${title}`,
-            session.user.id
+            session.user.id,
+            ctx,
         );
 
         return NextResponse.json(notification);

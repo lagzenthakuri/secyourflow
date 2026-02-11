@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AddVulnerabilityModal } from "@/components/vulnerabilities/AddVulnerabilityModal";
@@ -99,6 +100,16 @@ const statusOptions = [
   "FALSE_POSITIVE",
 ] as const;
 
+const workflowOptions = ["NEW", "TRIAGED", "IN_PROGRESS", "RESOLVED", "CLOSED"] as const;
+
+const workflowTransitions: Record<(typeof workflowOptions)[number], (typeof workflowOptions)[number][]> = {
+  NEW: ["TRIAGED", "IN_PROGRESS", "CLOSED"],
+  TRIAGED: ["IN_PROGRESS", "RESOLVED", "CLOSED"],
+  IN_PROGRESS: ["RESOLVED", "TRIAGED", "CLOSED"],
+  RESOLVED: ["CLOSED", "IN_PROGRESS"],
+  CLOSED: [],
+};
+
 const numberFormatter = new Intl.NumberFormat("en-US");
 
 const severityColor: Record<string, string> = {
@@ -125,20 +136,44 @@ function formatLabel(value: string) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function escapeCsv(value: unknown): string {
-  const str = String(value ?? "");
-  if (!str.includes(",") && !str.includes("\"") && !str.includes("\n")) {
-    return str;
-  }
-  return `"${str.replace(/"/g, '""')}"`;
-}
-
 function toChartSeverityData(data: SeverityDistributionItem[]) {
   const total = data.reduce((sum, item) => sum + item.count, 0);
   return data.map((item) => ({
     ...item,
     percentage: total > 0 ? Number(((item.count / total) * 100).toFixed(1)) : 0,
   }));
+}
+
+function getSlaBadge(slaDueAt?: string | Date | null) {
+  if (!slaDueAt) {
+    return {
+      label: "No SLA",
+      tone: "border-slate-400/35 bg-slate-500/10 text-slate-300",
+    };
+  }
+
+  const due = new Date(slaDueAt);
+  const remainingMs = due.getTime() - Date.now();
+  const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24));
+
+  if (remainingMs < 0) {
+    return {
+      label: `SLA Breached ${Math.abs(remainingDays)}d`,
+      tone: "border-red-400/35 bg-red-500/10 text-red-200",
+    };
+  }
+
+  if (remainingDays <= 3) {
+    return {
+      label: `SLA ${remainingDays}d left`,
+      tone: "border-yellow-400/35 bg-yellow-500/10 text-yellow-200",
+    };
+  }
+
+  return {
+    label: `SLA ${remainingDays}d left`,
+    tone: "border-emerald-400/35 bg-emerald-500/10 text-emerald-200",
+  };
 }
 
 export default function VulnerabilitiesPage() {
@@ -151,6 +186,7 @@ export default function VulnerabilitiesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSeverity, setSelectedSeverity] = useState<string>("ALL");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
+  const [selectedWorkflow, setSelectedWorkflow] = useState<string>("ALL");
   const [selectedSource, setSelectedSource] = useState<string>("ALL");
   const [showExploited, setShowExploited] = useState(false);
   const [showKevOnly, setShowKevOnly] = useState(false);
@@ -165,6 +201,7 @@ export default function VulnerabilitiesPage() {
   const [summary, setSummary] = useState<VulnerabilitiesSummary | null>(null);
   const [activeVulnId, setActiveVulnId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [workflowUpdatingId, setWorkflowUpdatingId] = useState<string | null>(null);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingVuln, setEditingVuln] = useState<Vulnerability | null>(null);
@@ -188,6 +225,7 @@ export default function VulnerabilitiesPage() {
         if (searchQuery.trim()) params.set("search", searchQuery.trim());
         if (selectedSeverity !== "ALL") params.set("severity", selectedSeverity);
         if (selectedStatus !== "ALL") params.set("status", selectedStatus);
+        if (selectedWorkflow !== "ALL") params.set("workflowState", selectedWorkflow);
         if (selectedSource !== "ALL") params.set("source", selectedSource);
         if (showExploited) params.set("exploited", "true");
         if (showKevOnly) params.set("kev", "true");
@@ -227,6 +265,7 @@ export default function VulnerabilitiesPage() {
       searchQuery,
       selectedSeverity,
       selectedStatus,
+      selectedWorkflow,
       selectedSource,
       showExploited,
       showKevOnly,
@@ -268,48 +307,61 @@ export default function VulnerabilitiesPage() {
     [fetchVulnerabilities],
   );
 
-  const exportCsv = () => {
-    if (!vulns.length) return;
+  const exportData = async (format: "csv" | "xlsx") => {
+    try {
+      const response = await fetch(`/api/exports/vulnerabilities?format=${format}`);
+      if (!response.ok) {
+        throw new Error("Failed to export vulnerabilities");
+      }
 
-    const rows = [
-      [
-        "CVE ID",
-        "Title",
-        "Severity",
-        "CVSS",
-        "EPSS",
-        "Status",
-        "Source",
-        "Exploited",
-        "CISA KEV",
-      ],
-      ...vulns.map((item) => [
-        item.cveId || "",
-        item.title,
-        item.severity,
-        item.cvssScore ?? "",
-        item.epssScore ?? "",
-        item.status,
-        item.source,
-        item.isExploited ? "Yes" : "No",
-        item.cisaKev ? "Yes" : "No",
-      ]),
-    ];
-
-    const csv = rows.map((row) => row.map(escapeCsv).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "vulnerabilities.csv";
-    link.click();
-    window.URL.revokeObjectURL(url);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `vulnerabilities.${format}`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to export");
+    }
   };
+
+  const transitionWorkflow = useCallback(
+    async (vuln: Vulnerability, toState: (typeof workflowOptions)[number]) => {
+      try {
+        setActionError(null);
+        setWorkflowUpdatingId(vuln.id);
+
+        const response = await fetch(`/api/vulnerabilities/${vuln.id}/workflow`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            toState,
+            assignedUserId: vuln.assignedUserId ?? undefined,
+            assignedTeam: vuln.assignedTeam ?? undefined,
+          }),
+        });
+
+        const result = (await response.json()) as { error?: string };
+        if (!response.ok) {
+          throw new Error(result.error || "Failed to update workflow state");
+        }
+
+        await fetchVulnerabilities({ silent: true });
+      } catch (err) {
+        setActionError(err instanceof Error ? err.message : "Failed to update workflow");
+      } finally {
+        setWorkflowUpdatingId(null);
+      }
+    },
+    [fetchVulnerabilities],
+  );
 
   const resetFilters = () => {
     setSearchQuery("");
     setSelectedSeverity("ALL");
     setSelectedStatus("ALL");
+    setSelectedWorkflow("ALL");
     setSelectedSource("ALL");
     setShowExploited(false);
     setShowKevOnly(false);
@@ -416,12 +468,19 @@ export default function VulnerabilitiesPage() {
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <button
                 type="button"
-                onClick={exportCsv}
-                disabled={!vulns.length}
+                onClick={() => void exportData("csv")}
                 className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Download size={14} />
                 Export CSV
+              </button>
+              <button
+                type="button"
+                onClick={() => void exportData("xlsx")}
+                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/15"
+              >
+                <Download size={14} />
+                Export XLSX
               </button>
               <button
                 type="button"
@@ -430,6 +489,13 @@ export default function VulnerabilitiesPage() {
                 <TrendingUp size={14} />
                 Import Scan
               </button>
+              <Link
+                href="/vulnerabilities/remediation"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/15"
+              >
+                <TrendingUp size={14} />
+                Remediation Plans
+              </Link>
               <button
                 type="button"
                 onClick={() => setIsAddModalOpen(true)}
@@ -495,7 +561,7 @@ export default function VulnerabilitiesPage() {
         </section>
 
         <section className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-4">
-          <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr_auto]">
+          <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr_0.8fr_auto]">
             <label className="relative block">
               <Search
                 size={15}
@@ -557,6 +623,22 @@ export default function VulnerabilitiesPage() {
               {sourceOptions.map((source) => (
                 <option key={source} value={source}>
                   {source}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={selectedWorkflow}
+              onChange={(event) => {
+                setSelectedWorkflow(event.target.value);
+                setPagination((prev) => ({ ...prev, page: 1 }));
+              }}
+              className="input h-10 w-full appearance-none text-sm"
+            >
+              <option value="ALL">All Workflow</option>
+              {workflowOptions.map((workflow) => (
+                <option key={workflow} value={workflow}>
+                  {formatLabel(workflow)}
                 </option>
               ))}
             </select>
@@ -644,6 +726,9 @@ export default function VulnerabilitiesPage() {
                     severityColor[vuln.severity] || severityColor.INFORMATIONAL;
                   const statusTone = statusColor[vuln.status] || statusColor.OPEN;
                   const isExpanded = activeVulnId === vuln.id;
+                  const workflowState = (vuln.workflowState || "NEW") as (typeof workflowOptions)[number];
+                  const nextWorkflowStates = workflowTransitions[workflowState] || [];
+                  const slaBadge = getSlaBadge(vuln.slaDueAt);
 
                   return (
                     <div
@@ -686,6 +771,12 @@ export default function VulnerabilitiesPage() {
                               {formatLabel(vuln.status)}
                             </span>
 
+                            {vuln.workflowState ? (
+                              <span className="rounded-full border border-sky-400/35 bg-sky-500/10 px-2 py-0.5 text-[11px] text-sky-200">
+                                {formatLabel(vuln.workflowState)}
+                              </span>
+                            ) : null}
+
                             {vuln.isExploited ? (
                               <span className="rounded-full border border-red-400/35 bg-red-500/10 px-2 py-0.5 text-[11px] text-red-200">
                                 EXPLOITED
@@ -712,7 +803,22 @@ export default function VulnerabilitiesPage() {
                               EPSS {typeof vuln.epssScore === "number" ? `${(vuln.epssScore * 100).toFixed(1)}%` : "N/A"}
                             </span>
                             <span>Source {vuln.source}</span>
+                            {vuln.assignedUser?.name || vuln.assignedUser?.email ? (
+                              <span>
+                                Assignee {vuln.assignedUser?.name || vuln.assignedUser?.email}
+                              </span>
+                            ) : null}
+                            {vuln.assignedTeam ? <span>Team {vuln.assignedTeam}</span> : null}
+                            <span
+                              className={cn(
+                                "rounded-full border px-2 py-0.5 text-[11px]",
+                                slaBadge.tone,
+                              )}
+                            >
+                              {slaBadge.label}
+                            </span>
                           </div>
+
                         </div>
 
                         <div className="hidden text-right md:block">
@@ -746,6 +852,25 @@ export default function VulnerabilitiesPage() {
 
                       {isExpanded ? (
                         <div className="mt-4 border-t border-white/10 pt-4 pl-14">
+                          <div className="mb-4 flex flex-wrap items-center gap-2">
+                            <span className="text-xs text-slate-400">
+                              Workflow: {formatLabel(workflowState)}
+                            </span>
+                            {nextWorkflowStates.map((state) => (
+                              <button
+                                key={`${vuln.id}-${state}`}
+                                type="button"
+                                disabled={workflowUpdatingId === vuln.id}
+                                onClick={() => void transitionWorkflow(vuln, state)}
+                                className="inline-flex items-center gap-1 rounded-md border border-sky-400/35 bg-sky-500/10 px-2.5 py-1 text-[11px] text-sky-200 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {workflowUpdatingId === vuln.id ? "Updating..." : `Move to ${formatLabel(state)}`}
+                              </button>
+                            ))}
+                            {!nextWorkflowStates.length ? (
+                              <span className="text-xs text-slate-500">No further transitions.</span>
+                            ) : null}
+                          </div>
                           <RiskAssessmentView
                             riskEntry={vuln.riskEntries?.[0] as {
                               status?: string;

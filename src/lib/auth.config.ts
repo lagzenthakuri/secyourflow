@@ -1,6 +1,7 @@
 import type { NextAuthConfig } from "next-auth";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
+import { hasRecentTwoFactorVerification, TWO_FACTOR_REVERIFY_INTERVAL_MS } from "@/lib/security/two-factor";
 
 const PROTECTED_PREFIXES = [
     "/dashboard",
@@ -45,10 +46,16 @@ export const authConfig = {
                 token.twoFactorVerified = false;
             }
 
-            if (token.twoFactorVerified !== true) {
+            if (
+                token.twoFactorVerified !== true ||
+                !hasRecentTwoFactorVerification(
+                    true,
+                    typeof token.twoFactorVerifiedAt === "number" ? token.twoFactorVerifiedAt : null,
+                    TWO_FACTOR_REVERIFY_INTERVAL_MS,
+                )
+            ) {
+                token.twoFactorVerified = false;
                 token.twoFactorVerifiedAt = null;
-            } else if (typeof token.twoFactorVerifiedAt !== "number") {
-                token.twoFactorVerifiedAt = Date.now();
             }
 
             return token;
@@ -81,9 +88,17 @@ export const authConfig = {
 
             const user = auth?.user as { totpEnabled?: boolean } | undefined;
             const hasTotpEnabled = Boolean(user?.totpEnabled);
-            const twoFactorVerified = (auth as { twoFactorVerified?: boolean } | null)?.twoFactorVerified === true;
+            const twoFactorState = auth as {
+                twoFactorVerified?: boolean;
+                twoFactorVerifiedAt?: number | null;
+            } | null;
+            const hasFreshTwoFactor = hasRecentTwoFactorVerification(
+                twoFactorState?.twoFactorVerified === true,
+                twoFactorState?.twoFactorVerifiedAt,
+                TWO_FACTOR_REVERIFY_INTERVAL_MS,
+            );
 
-            if (!hasTotpEnabled || !twoFactorVerified) {
+            if (!hasTotpEnabled || !hasFreshTwoFactor) {
                 if (isTwoFactorPage) {
                     return true;
                 }
@@ -93,7 +108,7 @@ export const authConfig = {
                 }
             }
 
-            if (isTwoFactorPage && twoFactorVerified) {
+            if (isTwoFactorPage && hasFreshTwoFactor) {
                 return Response.redirect(new URL("/dashboard", nextUrl));
             }
 

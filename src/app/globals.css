@@ -234,42 +234,49 @@ body {
   border-radius: 10px;
   font-weight: 500;
   font-size: 14px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   cursor: pointer;
   outline: none;
-  border: none;
+  border: 1px solid transparent;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .btn-primary {
-  background: var(--color-primary-600);
+  background: #2563eb;
+  border-color: #2563eb;
   color: white;
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
 }
 
 .btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+  background: #1d4ed8;
+  border-color: #1d4ed8;
 }
 
 .btn-secondary {
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
+  background: rgba(37, 99, 235, 0.12);
+  color: #dbeafe;
+  border: 1px solid rgba(59, 130, 246, 0.5);
 }
 
 .btn-secondary:hover {
-  background: var(--bg-tertiary);
-  border-color: var(--border-hover);
+  background: rgba(37, 99, 235, 0.2);
+  border-color: rgba(96, 165, 250, 0.72);
 }
 
 .btn-ghost {
-  background: transparent;
-  color: var(--text-secondary);
+  background: rgba(37, 99, 235, 0.08);
+  color: #bfdbfe;
+  border: 1px solid rgba(59, 130, 246, 0.38);
 }
 
 .btn-ghost:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary);
+  background: rgba(37, 99, 235, 0.16);
+  border-color: rgba(96, 165, 250, 0.55);
+  color: #dbeafe;
 }
 
 /* Input Styles */
@@ -490,6 +497,11 @@ body {
   justify-content: center;
 }
 
+/* Slightly compact dashboard desktop UI */
+.dashboard-scale {
+  zoom: 0.96;
+}
+
 /* Exploited/KEV Badge */
 .kev-badge {
   display: inline-flex;
@@ -521,6 +533,10 @@ body {
 
 /* Mobile Responsive */
 @media (max-width: 1024px) {
+  .dashboard-scale {
+    zoom: 1;
+  }
+
   .sidebar {
     transform: translateX(-100%);
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);

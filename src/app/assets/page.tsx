@@ -6,6 +6,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AddAssetModal } from "@/components/assets/AddAssetModal";
 import { EditAssetModal } from "@/components/assets/EditAssetModal";
 import { AssetActions } from "@/components/assets/AssetActions";
+import { Modal } from "@/components/ui/Modal";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { cn } from "@/lib/utils";
 import { Asset } from "@/types";
@@ -24,11 +25,15 @@ import {
   Loader2,
   MapPin,
   Monitor,
+  Network,
   Plus,
   Router,
   Search,
   Server,
   Sparkles,
+  Square,
+  CheckSquare,
+  UploadCloud,
   XCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -79,6 +84,34 @@ interface AssetsResponse {
   summary: {
     typeDistribution: TypeDistributionItem[];
     environmentBreakdown: EnvironmentBreakdownItem[];
+  };
+}
+
+interface AssetGroupRecord {
+  id: string;
+  name: string;
+  color?: string | null;
+}
+
+interface AssetRelationshipRecord {
+  id: string;
+  relationshipType: string;
+  parentAsset: {
+    id: string;
+    name: string;
+  };
+  childAsset: {
+    id: string;
+    name: string;
+  };
+}
+
+interface AssetImpactResponse {
+  summary: {
+    relationships: number;
+    connectedAssets: number;
+    criticalDependencies: number;
+    connectedOpenVulns: number;
   };
 }
 
@@ -157,14 +190,6 @@ function formatLabel(value: string) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function escapeCsv(value: unknown): string {
-  const str = String(value ?? "");
-  if (!str.includes(",") && !str.includes("\"") && !str.includes("\n")) {
-    return str;
-  }
-  return `"${str.replace(/"/g, '""')}"`;
-}
-
 export default function AssetsPage() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -175,6 +200,8 @@ export default function AssetsPage() {
   const [selectedType, setSelectedType] = useState<string>("ALL");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
   const [selectedCriticality, setSelectedCriticality] = useState<string>("ALL");
+  const [selectedTag, setSelectedTag] = useState("");
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("ALL");
 
   const [pagination, setPagination] = useState<PaginationState>({
     page: 1,
@@ -184,10 +211,31 @@ export default function AssetsPage() {
   });
 
   const [summary, setSummary] = useState<AssetsResponse["summary"] | null>(null);
+  const [groups, setGroups] = useState<AssetGroupRecord[]>([]);
+  const [relationships, setRelationships] = useState<AssetRelationshipRecord[]>([]);
+  const [impact, setImpact] = useState<AssetImpactResponse | null>(null);
+  const [impactAssetId, setImpactAssetId] = useState<string | null>(null);
+  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
+  const [bulkOperation, setBulkOperation] = useState<"set_status" | "set_owner" | "set_tags">(
+    "set_status",
+  );
+  const [bulkValue, setBulkValue] = useState("");
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [isDiscoveryModalOpen, setIsDiscoveryModalOpen] = useState(false);
+  const [discoveryMode, setDiscoveryMode] = useState<"nmap" | "json">("nmap");
+  const [discoverySource, setDiscoverySource] = useState("manual-import");
+  const [discoveryPayload, setDiscoveryPayload] = useState("");
+  const [isLifecycleModalOpen, setIsLifecycleModalOpen] = useState(false);
+  const [lifecycleAsset, setLifecycleAsset] = useState<Asset | null>(null);
+  const [lifecycleAction, setLifecycleAction] = useState<
+    "transfer" | "decommission" | "ownership_change" | "reactivate"
+  >("transfer");
+  const [lifecycleToEnvironment, setLifecycleToEnvironment] = useState("PRODUCTION");
+  const [lifecycleToOwner, setLifecycleToOwner] = useState("");
+  const [lifecycleNotes, setLifecycleNotes] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
@@ -212,6 +260,8 @@ export default function AssetsPage() {
         if (selectedType !== "ALL") params.set("type", selectedType);
         if (selectedStatus !== "ALL") params.set("status", selectedStatus);
         if (selectedCriticality !== "ALL") params.set("criticality", selectedCriticality);
+        if (selectedTag.trim()) params.set("tag", selectedTag.trim());
+        if (selectedGroupId !== "ALL") params.set("groupId", selectedGroupId);
 
         const response = await fetch(`/api/assets?${params.toString()}`, {
           cache: "no-store",
@@ -249,12 +299,48 @@ export default function AssetsPage() {
       selectedType,
       selectedStatus,
       selectedCriticality,
+      selectedTag,
+      selectedGroupId,
     ],
   );
 
   const refreshAssets = useCallback(async () => {
     await fetchAssets({ silent: true });
   }, [fetchAssets]);
+
+  const fetchGroups = useCallback(async () => {
+    try {
+      const response = await fetch("/api/assets/groups", { cache: "no-store" });
+      if (!response.ok) return;
+      const payload = (await response.json()) as { data?: AssetGroupRecord[] };
+      setGroups(payload.data || []);
+    } catch {
+      // Non-blocking UI helper
+    }
+  }, []);
+
+  const fetchRelationships = useCallback(async () => {
+    try {
+      const response = await fetch("/api/assets/relationships", { cache: "no-store" });
+      if (!response.ok) return;
+      const payload = (await response.json()) as { data?: AssetRelationshipRecord[] };
+      setRelationships(payload.data || []);
+    } catch {
+      // Non-blocking UI helper
+    }
+  }, []);
+
+  const fetchImpact = useCallback(async (assetId: string) => {
+    try {
+      const response = await fetch(`/api/assets/${assetId}/impact`, { cache: "no-store" });
+      if (!response.ok) return;
+      const payload = (await response.json()) as AssetImpactResponse;
+      setImpact(payload);
+      setImpactAssetId(assetId);
+    } catch {
+      // Non-blocking UI helper
+    }
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -263,6 +349,11 @@ export default function AssetsPage() {
 
     return () => clearTimeout(timer);
   }, [fetchAssets]);
+
+  useEffect(() => {
+    void fetchGroups();
+    void fetchRelationships();
+  }, [fetchGroups, fetchRelationships]);
 
   const handleDelete = useCallback(
     async (id: string) => {
@@ -295,46 +386,159 @@ export default function AssetsPage() {
     setSelectedType("ALL");
     setSelectedStatus("ALL");
     setSelectedCriticality("ALL");
+    setSelectedTag("");
+    setSelectedGroupId("ALL");
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
-  const exportCsv = () => {
-    if (!assets.length) return;
+  const exportData = useCallback(
+    async (format: "csv" | "xlsx") => {
+      try {
+        setActionError(null);
+        const response = await fetch(`/api/exports/assets?format=${format}`);
+        if (!response.ok) {
+          throw new Error("Failed to export assets");
+        }
 
-    const rows = [
-      [
-        "Name",
-        "Type",
-        "Status",
-        "Criticality",
-        "IP Address",
-        "Hostname",
-        "Environment",
-        "Location",
-        "Cloud Region",
-      ],
-      ...assets.map((asset) => [
-        asset.name,
-        asset.type,
-        asset.status,
-        asset.criticality,
-        asset.ipAddress || "",
-        asset.hostname || "",
-        asset.environment,
-        asset.location || "",
-        asset.cloudRegion || "",
-      ]),
-    ];
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `assets.${format}`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+      } catch (err) {
+        setActionError(err instanceof Error ? err.message : "Failed to export assets");
+      }
+    },
+    [],
+  );
 
-    const csv = rows.map((row) => row.map(escapeCsv).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "assets.csv";
-    link.click();
-    window.URL.revokeObjectURL(url);
-  };
+  const toggleAssetSelection = useCallback((assetId: string) => {
+    setSelectedAssetIds((prev) =>
+      prev.includes(assetId) ? prev.filter((id) => id !== assetId) : [...prev, assetId],
+    );
+  }, []);
+
+  const runBulkOperation = useCallback(async () => {
+    if (!selectedAssetIds.length) return;
+
+    try {
+      setActionError(null);
+      const response = await fetch("/api/assets/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assetIds: selectedAssetIds,
+          operation: bulkOperation,
+          status: bulkOperation === "set_status" ? bulkValue : undefined,
+          owner: bulkOperation === "set_owner" ? bulkValue : undefined,
+          tags:
+            bulkOperation === "set_tags"
+              ? bulkValue
+                  .split(",")
+                  .map((item) => item.trim())
+                  .filter(Boolean)
+              : undefined,
+        }),
+      });
+
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to apply bulk operation");
+      }
+
+      setSelectedAssetIds([]);
+      setBulkValue("");
+      await fetchAssets({ silent: true });
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to apply bulk operation");
+    }
+  }, [bulkOperation, bulkValue, fetchAssets, selectedAssetIds]);
+
+  const submitDiscoveryImport = useCallback(async () => {
+    try {
+      setActionError(null);
+
+      if (discoveryMode === "nmap") {
+        const response = await fetch("/api/assets/discovery/nmap", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ xml: discoveryPayload }),
+        });
+        const payload = (await response.json()) as { error?: string };
+        if (!response.ok) {
+          throw new Error(payload.error || "Failed to import Nmap XML");
+        }
+      } else {
+        const parsed = JSON.parse(discoveryPayload) as unknown;
+        const assetsPayload = Array.isArray(parsed)
+          ? parsed
+          : typeof parsed === "object" && parsed && "assets" in parsed
+            ? (parsed as { assets: unknown }).assets
+            : parsed;
+
+        const response = await fetch("/api/assets/discovery/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            source: discoverySource || "manual-import",
+            assets: assetsPayload,
+            rawInput: { importedAt: new Date().toISOString() },
+          }),
+        });
+        const payload = (await response.json()) as { error?: string };
+        if (!response.ok) {
+          throw new Error(payload.error || "Failed to import discovery payload");
+        }
+      }
+
+      setIsDiscoveryModalOpen(false);
+      setDiscoveryPayload("");
+      await fetchAssets({ silent: true });
+      await fetchRelationships();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to import discovery payload");
+    }
+  }, [discoveryMode, discoveryPayload, discoverySource, fetchAssets, fetchRelationships]);
+
+  const submitLifecycleAction = useCallback(async () => {
+    if (!lifecycleAsset) return;
+
+    try {
+      setActionError(null);
+      const response = await fetch(`/api/assets/${lifecycleAsset.id}/lifecycle`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: lifecycleAction,
+          toEnvironment: lifecycleAction === "transfer" ? lifecycleToEnvironment : undefined,
+          toOwner: lifecycleAction === "ownership_change" ? lifecycleToOwner : undefined,
+          notes: lifecycleNotes || undefined,
+        }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to apply lifecycle action");
+      }
+
+      setIsLifecycleModalOpen(false);
+      setLifecycleAsset(null);
+      setLifecycleNotes("");
+      await fetchAssets({ silent: true });
+      await fetchImpact(lifecycleAsset.id);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to apply lifecycle action");
+    }
+  }, [
+    fetchAssets,
+    fetchImpact,
+    lifecycleAction,
+    lifecycleAsset,
+    lifecycleNotes,
+    lifecycleToEnvironment,
+    lifecycleToOwner,
+  ]);
 
   const activeOnPage = useMemo(
     () => assets.filter((asset) => asset.status === "ACTIVE").length,
@@ -398,12 +602,29 @@ export default function AssetsPage() {
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <button
                 type="button"
-                onClick={exportCsv}
+                onClick={() => void exportData("csv")}
                 disabled={!assets.length}
                 className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Download size={14} />
                 Export CSV
+              </button>
+              <button
+                type="button"
+                onClick={() => void exportData("xlsx")}
+                disabled={!assets.length}
+                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Download size={14} />
+                Export XLSX
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsDiscoveryModalOpen(true)}
+                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95"
+              >
+                <UploadCloud size={14} />
+                Discovery Import
               </button>
               <button
                 type="button"
@@ -420,6 +641,48 @@ export default function AssetsPage() {
         {actionError ? (
           <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-3 text-sm text-red-200">
             {actionError}
+          </section>
+        ) : null}
+
+        {selectedAssetIds.length > 0 ? (
+          <section className="rounded-2xl border border-sky-300/30 bg-sky-500/10 p-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <p className="text-sm text-sky-100">
+                {selectedAssetIds.length} asset{selectedAssetIds.length > 1 ? "s" : ""} selected
+              </p>
+              <div className="grid gap-2 sm:grid-cols-[150px_1fr_auto]">
+                <select
+                  value={bulkOperation}
+                  onChange={(event) =>
+                    setBulkOperation(event.target.value as "set_status" | "set_owner" | "set_tags")
+                  }
+                  className="input h-10 text-sm"
+                >
+                  <option value="set_status">Set Status</option>
+                  <option value="set_owner">Set Owner</option>
+                  <option value="set_tags">Set Tags</option>
+                </select>
+                <input
+                  className="input h-10 text-sm"
+                  value={bulkValue}
+                  onChange={(event) => setBulkValue(event.target.value)}
+                  placeholder={
+                    bulkOperation === "set_status"
+                      ? "ACTIVE | INACTIVE | MAINTENANCE | DECOMMISSIONED"
+                      : bulkOperation === "set_owner"
+                        ? "new owner"
+                        : "comma,separated,tags"
+                  }
+                />
+                <button
+                  type="button"
+                  onClick={() => void runBulkOperation()}
+                  className="inline-flex h-10 items-center justify-center rounded-xl bg-sky-300 px-4 text-sm font-semibold text-slate-950 transition hover:bg-sky-200"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
           </section>
         ) : null}
 
@@ -471,7 +734,7 @@ export default function AssetsPage() {
         </section>
 
         <section className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-4 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '200ms', animationFillMode: 'backwards' }}>
-          <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr_auto]">
+          <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr_0.9fr_0.9fr_auto]">
             <label className="relative block">
               <Search
                 size={15}
@@ -545,6 +808,33 @@ export default function AssetsPage() {
               {criticalityOptions.map((criticality) => (
                 <option key={criticality} value={criticality}>
                   {formatLabel(criticality)}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="text"
+              value={selectedTag}
+              onChange={(event) => {
+                setSelectedTag(event.target.value);
+                setPagination((prev) => ({ ...prev, page: 1 }));
+              }}
+              placeholder="Filter tag"
+              className="input h-10 w-full text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30"
+            />
+
+            <select
+              value={selectedGroupId}
+              onChange={(event) => {
+                setSelectedGroupId(event.target.value);
+                setPagination((prev) => ({ ...prev, page: 1 }));
+              }}
+              className="input h-10 w-full appearance-none text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30"
+            >
+              <option value="ALL">All Groups</option>
+              {groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
                 </option>
               ))}
             </select>
@@ -685,6 +975,18 @@ export default function AssetsPage() {
                         style={{ animationDelay: `${index * 30}ms`, animationFillMode: 'backwards' }}
                       >
                         <div className="flex items-start gap-3">
+                          <button
+                            type="button"
+                            onClick={() => toggleAssetSelection(asset.id)}
+                            className="mt-1 inline-flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-slate-400 transition hover:bg-white/10 hover:text-slate-200"
+                          >
+                            {selectedAssetIds.includes(asset.id) ? (
+                              <CheckSquare size={14} className="text-sky-200" />
+                            ) : (
+                              <Square size={14} />
+                            )}
+                          </button>
+
                           <div className="rounded-lg border border-white/10 bg-white/[0.04] p-2.5 transition-all duration-200 group-hover:border-sky-300/30 group-hover:bg-sky-300/10 group-hover:scale-110">
                             <Icon size={18} className="text-sky-300 transition-transform duration-200 group-hover:rotate-12" />
                           </div>
@@ -722,6 +1024,14 @@ export default function AssetsPage() {
                                 </span>
                               ) : null}
                               {asset.cloudRegion ? <span>{asset.cloudRegion}</span> : null}
+                              <button
+                                type="button"
+                                onClick={() => void fetchImpact(asset.id)}
+                                className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] text-slate-300 transition hover:bg-white/[0.08]"
+                              >
+                                <Network size={11} />
+                                Impact
+                              </button>
                             </div>
 
                             {asset.tags?.length ? (
@@ -761,6 +1071,20 @@ export default function AssetsPage() {
                             }}
                             isDeleting={deletingId === asset.id}
                           />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLifecycleAsset(asset);
+                              setLifecycleAction("transfer");
+                              setLifecycleToEnvironment(asset.environment);
+                              setLifecycleToOwner(asset.owner || "");
+                              setLifecycleNotes("");
+                              setIsLifecycleModalOpen(true);
+                            }}
+                            className="inline-flex items-center rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-[11px] text-slate-300 transition hover:bg-white/[0.08]"
+                          >
+                            Lifecycle
+                          </button>
                         </div>
                       </div>
                     );
@@ -877,10 +1201,192 @@ export default function AssetsPage() {
                   ) : null}
                 </div>
               </article>
+
+              <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '600ms', animationFillMode: 'backwards' }}>
+                <h2 className="text-lg font-semibold text-white">Relationships</h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Dependency mapping and impact summary.
+                </p>
+                <div className="mt-3 space-y-2">
+                  {relationships.slice(0, 6).map((relationship) => (
+                    <div
+                      key={relationship.id}
+                      className="rounded-lg border border-white/10 bg-white/[0.03] p-2 text-xs text-slate-300"
+                    >
+                      <p className="font-medium">
+                        {relationship.parentAsset.name} {formatLabel(relationship.relationshipType)}{" "}
+                        {relationship.childAsset.name}
+                      </p>
+                    </div>
+                  ))}
+                  {relationships.length === 0 ? (
+                    <p className="rounded-lg border border-dashed border-white/15 p-3 text-xs text-slate-500">
+                      No relationships created yet.
+                    </p>
+                  ) : null}
+                </div>
+
+                {impact ? (
+                  <div className="mt-4 rounded-xl border border-sky-300/25 bg-sky-300/10 p-3">
+                    <p className="text-xs text-sky-100">
+                      Impact Summary {impactAssetId ? `(Asset ${impactAssetId.slice(0, 8)}...)` : ""}
+                    </p>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-200">
+                      <span>Relationships: {impact.summary.relationships}</span>
+                      <span>Connected: {impact.summary.connectedAssets}</span>
+                      <span>Critical deps: {impact.summary.criticalDependencies}</span>
+                      <span>Open vulns: {impact.summary.connectedOpenVulns}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-3 text-xs text-slate-500">
+                    Click `Impact` on an asset row to view blast-radius metrics.
+                  </p>
+                )}
+              </article>
             </div>
           </section>
         )}
       </div>
+
+      <Modal
+        isOpen={isDiscoveryModalOpen}
+        onClose={() => setIsDiscoveryModalOpen(false)}
+        title="Discovery Import"
+        maxWidth="lg"
+        footer={
+          <div className="flex justify-end gap-2">
+            <button className="btn btn-secondary" onClick={() => setIsDiscoveryModalOpen(false)}>
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={() => void submitDiscoveryImport()}
+              disabled={!discoveryPayload.trim()}
+            >
+              Import
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm text-white">Mode</label>
+              <select
+                className="input"
+                value={discoveryMode}
+                onChange={(event) => setDiscoveryMode(event.target.value as "nmap" | "json")}
+              >
+                <option value="nmap">Nmap XML</option>
+                <option value="json">Normalized JSON</option>
+              </select>
+            </div>
+            {discoveryMode === "json" ? (
+              <div>
+                <label className="mb-1 block text-sm text-white">Source</label>
+                <input
+                  className="input"
+                  value={discoverySource}
+                  onChange={(event) => setDiscoverySource(event.target.value)}
+                />
+              </div>
+            ) : null}
+          </div>
+          <div>
+            <label className="mb-1 block text-sm text-white">
+              {discoveryMode === "nmap" ? "Nmap XML" : "JSON payload"}
+            </label>
+            <textarea
+              className="input min-h-[260px] font-mono text-xs"
+              placeholder={
+                discoveryMode === "nmap"
+                  ? "<nmaprun>...</nmaprun>"
+                  : '{"assets":[{"name":"host-1","type":"SERVER"}]}'
+              }
+              value={discoveryPayload}
+              onChange={(event) => setDiscoveryPayload(event.target.value)}
+            />
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isLifecycleModalOpen}
+        onClose={() => setIsLifecycleModalOpen(false)}
+        title="Asset Lifecycle Action"
+        footer={
+          <div className="flex justify-end gap-2">
+            <button className="btn btn-secondary" onClick={() => setIsLifecycleModalOpen(false)}>
+              Cancel
+            </button>
+            <button className="btn btn-primary" onClick={() => void submitLifecycleAction()}>
+              Apply
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-xs text-slate-400">
+            Asset: {lifecycleAsset?.name || "N/A"} ({lifecycleAsset?.id || "N/A"})
+          </p>
+          <div>
+            <label className="mb-1 block text-sm text-white">Action</label>
+            <select
+              className="input"
+              value={lifecycleAction}
+              onChange={(event) =>
+                setLifecycleAction(
+                  event.target.value as
+                    | "transfer"
+                    | "decommission"
+                    | "ownership_change"
+                    | "reactivate",
+                )
+              }
+            >
+              <option value="transfer">Transfer Environment</option>
+              <option value="ownership_change">Change Ownership</option>
+              <option value="decommission">Decommission</option>
+              <option value="reactivate">Reactivate</option>
+            </select>
+          </div>
+          {lifecycleAction === "transfer" ? (
+            <div>
+              <label className="mb-1 block text-sm text-white">Target Environment</label>
+              <select
+                className="input"
+                value={lifecycleToEnvironment}
+                onChange={(event) => setLifecycleToEnvironment(event.target.value)}
+              >
+                <option value="PRODUCTION">PRODUCTION</option>
+                <option value="STAGING">STAGING</option>
+                <option value="DEVELOPMENT">DEVELOPMENT</option>
+                <option value="TESTING">TESTING</option>
+                <option value="DR">DR</option>
+              </select>
+            </div>
+          ) : null}
+          {lifecycleAction === "ownership_change" ? (
+            <div>
+              <label className="mb-1 block text-sm text-white">New Owner</label>
+              <input
+                className="input"
+                value={lifecycleToOwner}
+                onChange={(event) => setLifecycleToOwner(event.target.value)}
+              />
+            </div>
+          ) : null}
+          <div>
+            <label className="mb-1 block text-sm text-white">Notes</label>
+            <textarea
+              className="input min-h-[100px]"
+              value={lifecycleNotes}
+              onChange={(event) => setLifecycleNotes(event.target.value)}
+            />
+          </div>
+        </div>
+      </Modal>
 
       <AddAssetModal
         isOpen={isAddModalOpen}

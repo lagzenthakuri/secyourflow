@@ -160,7 +160,7 @@ export default function UsersPage() {
                                     >
                                         <div className="flex items-center gap-4">
                                             <div className="relative">
-                                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-medium">
+                                                <div className="w-10 h-10 rounded-xl border border-blue-400/50 bg-blue-600 flex items-center justify-center text-white font-medium">
                                                     {user.name
                                                         .split(" ")
                                                         .map((n: string) => n[0])

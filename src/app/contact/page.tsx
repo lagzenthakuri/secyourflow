@@ -13,16 +13,55 @@ export default function Contact() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<{
+    type: "success" | "error" | null;
+    message: string;
+  }>({ type: null, message: "" });
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setIsSubmitting(false);
-    console.log("Form submitted:", formData);
+    setSubmitStatus({ type: null, message: "" });
+
+    try {
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          access_key: process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY,
+          name: formData.name,
+          email: formData.email,
+          message: formData.message,
+          subject: "New Contact Form Submission from SecYourFlow",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSubmitStatus({
+          type: "success",
+          message: "Thank you! Your message has been sent successfully.",
+        });
+        setFormData({ name: "", email: "", message: "" });
+      } else {
+        setSubmitStatus({
+          type: "error",
+          message: "Something went wrong. Please try again.",
+        });
+      }
+    } catch (error) {
+      setSubmitStatus({
+        type: "error",
+        message: "Failed to send message. Please try again later.",
+      });
+      console.error("Form submission error:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -122,7 +161,6 @@ export default function Contact() {
                     <div>
                       <p className="text-sm font-medium text-slate-300 uppercase tracking-wide mb-1">EMAIL</p>
                       <p className="text-white font-medium">thakurizen2@gmail.com</p>
-                      <p className="text-white font-medium">support@secyourall.com</p>
                     </div>
                   </div>
 
@@ -142,8 +180,7 @@ export default function Contact() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-slate-300 uppercase tracking-wide mb-1">ADDRESS</p>
-                      <p className="text-white font-medium">123 Security Boulevard</p>
-                      <p className="text-white font-medium">Cyber City, CC 12345</p>
+                      <p className="text-white font-medium">Kathmandu 44600</p>
                     </div>
                   </div>
                 </div>
@@ -157,6 +194,18 @@ export default function Contact() {
               </h2>
 
               <form onSubmit={handleSubmit} className="space-y-6">
+                {submitStatus.type && (
+                  <div
+                    className={`p-4 rounded-lg border ${
+                      submitStatus.type === "success"
+                        ? "bg-green-500/10 border-green-500/50 text-green-400"
+                        : "bg-red-500/10 border-red-500/50 text-red-400"
+                    }`}
+                  >
+                    {submitStatus.message}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label htmlFor="name" className="block text-sm font-medium text-slate-300 uppercase tracking-wide mb-3">

@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 model User {
@@ -19,6 +20,8 @@ model User {
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
   lastLogin             DateTime?
+  activeSessionId       String?
+  activeSessionIp       String?
   organizationId        String?
   totpEnabled           Boolean        @default(false)
   totpSecretEnc         String?
@@ -27,10 +30,23 @@ model User {
   totpLastUsedStep      Int?
   accounts              Account[]
   auditLogs             AuditLog[]
+  assetChangeLogs       AssetChangeLog[]               @relation("AssetChangeActor")
+  assetLifecycleEvents  AssetLifecycleEvent[]          @relation("AssetLifecycleActor")
+  assignedVulnerabilities Vulnerability[]              @relation("VulnerabilityAssignee")
   comments              Comment[]
   notifications         Notification[]
+  notificationRules     NotificationRule[]
+  dashboardViewSharesReceived DashboardViewShare[]     @relation("DashboardViewSharedWith")
+  dashboardViews        DashboardView[]
+  createdAssetGroups    AssetGroup[]                   @relation("AssetGroupCreatedBy")
+  externalTickets       ExternalTicket[]
+  remediationNotesAuthored RemediationNote[]           @relation("RemediationNoteAuthor")
+  remediationEvidenceUploaded RemediationEvidence[]    @relation("RemediationEvidenceUploadedBy")
+  remediationPlansOwned RemediationPlan[]              @relation("RemediationPlanOwner")
   reports               Report[]
+  reportSchedules       ReportSchedule[]
   sessions              Session[]
+  vulnerabilityTransitionsChanged VulnerabilityWorkflowTransition[] @relation("WorkflowChangedBy")
   complianceEvidenceUploaded         ComplianceEvidence[]        @relation("EvidenceUploadedBy")
   complianceEvidenceVersionsUploaded ComplianceEvidenceVersion[] @relation("EvidenceVersionUploadedBy")
   organization          Organization?  @relation(fields: [organizationId], references: [id])
@@ -88,16 +104,32 @@ model Organization {
   complianceFrameworks ComplianceFramework[]
   complianceEvidence   ComplianceEvidence[]
   complianceTrendSnapshots ComplianceTrendSnapshot[]
+  dashboardViewShares  DashboardViewShare[]
+  dashboardViews       DashboardView[]
+  discoveryRuns        AssetDiscoveryRun[]
+  externalTickets      ExternalTicket[]
+  notificationRules    NotificationRule[]
   threatFeeds          ThreatFeed[]
   threatIndicators     ThreatIndicator[]
   threatFeedRuns       ThreatFeedRun[]
   threatIndicatorMatch ThreatIndicatorMatch[]
   policies             Policy[]
+  reportArtifacts      ReportArtifact[]
+  reportRuns           ReportRun[]
+  reportSchedules      ReportSchedule[]
   reports              Report[]
+  remediationEvidence  RemediationEvidence[]
+  remediationNotes     RemediationNote[]
+  remediationPlans     RemediationPlan[]
   riskEntries          RiskRegister[]
   settings             Setting?
+  vulnerabilityTransitions VulnerabilityWorkflowTransition[]
   users                User[]
   vulnerabilities      Vulnerability[]
+  assetRelationships   AssetRelationship[]
+  assetGroups          AssetGroup[]
+  assetLifecycleEvents AssetLifecycleEvent[]
+  assetChangeLogs      AssetChangeLog[]
 
   @@index([name])
 }
@@ -127,8 +159,14 @@ model Asset {
   updatedAt          DateTime                 @updatedAt
   organizationId     String
   organization       Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  childRelationships AssetRelationship[]      @relation("AssetParent")
+  parentRelationships AssetRelationship[]     @relation("AssetChild")
+  changeLogs         AssetChangeLog[]
   complianceControls AssetComplianceControl[]
   complianceEvidence ComplianceEvidence[]
+  discoveryLinks     AssetDiscoveryRunAsset[]
+  groupMembers       AssetGroupMember[]
+  lifecycleEvents    AssetLifecycleEvent[]
   vulnerabilities    AssetVulnerability[]
   indicatorMatches   ThreatIndicatorMatch[]
   riskEntries        RiskRegister[]
@@ -167,6 +205,13 @@ model Vulnerability {
   firstDetected      DateTime                         @default(now())
   lastSeen           DateTime                         @default(now())
   status             VulnStatus                       @default(OPEN)
+  workflowState      WorkflowState                    @default(NEW)
+  assignedUserId     String?
+  assignedTeam       String?
+  slaDueAt           DateTime?
+  triagedAt          DateTime?
+  resolvedAt         DateTime?
+  closedAt           DateTime?
   solution           String?
   references         String[]
   patchAvailable     Boolean                          @default(false)
@@ -178,13 +223,19 @@ model Vulnerability {
   createdAt          DateTime                         @default(now())
   updatedAt          DateTime                         @updatedAt
   organizationId     String
+  assignedUser       User?                            @relation("VulnerabilityAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
   assets             AssetVulnerability[]
   comments           Comment[]
+  externalTickets    ExternalTicket[]
+  remediationEvidence RemediationEvidence[]
+  remediationNotes   RemediationNote[]
+  remediationPlans   RemediationPlanVulnerability[]
   riskEntries        RiskRegister[]
   organization       Organization                     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   complianceControls VulnerabilityComplianceControl[]
   attackTechniques   VulnerabilityAttackTechnique[]
   threatActors       VulnerabilityThreatActor[]
+  workflowTransitions VulnerabilityWorkflowTransition[]
 
   @@index([cveId])
   @@index([severity])
@@ -196,6 +247,11 @@ model Vulnerability {
   @@index([organizationId, status])
   @@index([organizationId, isExploited])
   @@index([organizationId, cisaKev])
+  @@index([workflowState])
+  @@index([slaDueAt])
+  @@index([assignedUserId])
+  @@index([organizationId, workflowState])
+  @@index([organizationId, slaDueAt])
   @@index([createdAt(sort: Desc)])
   @@index([severity, status])
   @@index([epssScore(sort: Desc)])
@@ -622,6 +678,7 @@ model AuditLog {
   @@index([createdAt(sort: Desc)])
   @@index([entityType, createdAt(sort: Desc)])
   @@index([userId, createdAt(sort: Desc)])
+  @@index([ipAddress])
 }
 
 model Comment {
@@ -718,21 +775,27 @@ model Report {
   id             String       @id @default(cuid())
   name           String
   type           String
+  templateKey    ReportTemplateKey?
   description    String?
   format         String       @default("PDF")
+  outputFormat   ReportOutputFormat?
   frequency      String?
   status         String       @default("PENDING")
   url            String?
   size           String?
+  scheduleId     String?
   organizationId String
   userId         String
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  schedule       ReportSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  runs           ReportRun[]
 
   @@index([organizationId])
   @@index([userId])
+  @@index([scheduleId])
 }
 
 model Notification {
@@ -785,6 +848,378 @@ model RiskRegister {
   @@index([organizationId, riskScore(sort: Desc)])
   @@index([createdAt(sort: Desc)])
   @@index([assetId, vulnerabilityId])
+}
+
+model VulnerabilityWorkflowTransition {
+  id              String        @id @default(cuid())
+  vulnerabilityId String
+  organizationId  String
+  fromState       WorkflowState?
+  toState         WorkflowState
+  changedById     String?
+  note            String?
+  changedAt       DateTime      @default(now())
+  createdAt       DateTime      @default(now())
+  changedBy       User?         @relation("WorkflowChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vulnerability   Vulnerability @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+
+  @@index([vulnerabilityId, changedAt(sort: Desc)])
+  @@index([organizationId, changedAt(sort: Desc)])
+  @@index([changedById])
+}
+
+model RemediationPlan {
+  id             String                 @id @default(cuid())
+  organizationId String
+  ownerId        String?
+  name           String
+  description    String?
+  status         RemediationPlanStatus  @default(DRAFT)
+  dueDate        DateTime?
+  completedAt    DateTime?
+  metadata       Json?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner          User?                  @relation("RemediationPlanOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  vulnerabilities RemediationPlanVulnerability[]
+  notes          RemediationNote[]
+  evidence       RemediationEvidence[]
+  tickets        ExternalTicket[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, dueDate])
+  @@index([ownerId])
+}
+
+model RemediationPlanVulnerability {
+  id              String        @id @default(cuid())
+  planId          String
+  vulnerabilityId String
+  progress        Int           @default(0)
+  createdAt       DateTime      @default(now())
+  plan            RemediationPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  vulnerability   Vulnerability @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, vulnerabilityId])
+  @@index([vulnerabilityId])
+}
+
+model RemediationNote {
+  id              String          @id @default(cuid())
+  organizationId  String
+  planId          String?
+  vulnerabilityId String?
+  authorId        String?
+  content         String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  author          User?           @relation("RemediationNoteAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan            RemediationPlan? @relation(fields: [planId], references: [id], onDelete: Cascade)
+  vulnerability   Vulnerability?  @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([planId])
+  @@index([vulnerabilityId])
+  @@index([authorId])
+}
+
+model RemediationEvidence {
+  id              String          @id @default(cuid())
+  organizationId  String
+  planId          String?
+  vulnerabilityId String?
+  uploadedById    String?
+  title           String
+  fileName        String
+  mimeType        String
+  sizeBytes       Int
+  storagePath     String
+  checksum        String?
+  notes           String?
+  createdAt       DateTime        @default(now())
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan            RemediationPlan? @relation(fields: [planId], references: [id], onDelete: Cascade)
+  uploadedBy      User?           @relation("RemediationEvidenceUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+  vulnerability   Vulnerability?  @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([planId])
+  @@index([vulnerabilityId])
+  @@index([uploadedById])
+}
+
+model ExternalTicket {
+  id              String         @id @default(cuid())
+  organizationId  String
+  provider        TicketProvider
+  syncStatus      TicketSyncStatus @default(LINKED)
+  externalId      String
+  externalKey     String?
+  externalUrl     String?
+  externalStatus  String?
+  title           String?
+  payload         Json?
+  vulnerabilityId String?
+  planId          String?
+  userId          String?
+  lastSyncedAt    DateTime?
+  lastSyncError   String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan            RemediationPlan? @relation(fields: [planId], references: [id], onDelete: Cascade)
+  user            User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  vulnerability   Vulnerability? @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, externalId])
+  @@index([organizationId, provider])
+  @@index([syncStatus, lastSyncedAt])
+  @@index([vulnerabilityId])
+  @@index([planId])
+}
+
+model ReportSchedule {
+  id             String            @id @default(cuid())
+  organizationId String
+  userId         String
+  name           String
+  templateKey    ReportTemplateKey
+  frequency      ReportFrequency
+  outputFormat   ReportOutputFormat @default(PDF)
+  recipients     String[]          @default([])
+  filters        Json?
+  isActive       Boolean           @default(true)
+  nextRunAt      DateTime
+  lastRunAt      DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reports        Report[]
+  runs           ReportRun[]
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, isActive])
+  @@index([nextRunAt, isActive])
+  @@index([userId])
+}
+
+model ReportRun {
+  id             String       @id @default(cuid())
+  organizationId String
+  scheduleId     String?
+  reportId       String?
+  status         String       @default("PENDING")
+  startedAt      DateTime     @default(now())
+  completedAt    DateTime?
+  errorMessage   String?
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  artifacts      ReportArtifact[]
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  report         Report?      @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  schedule       ReportSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([scheduleId, createdAt(sort: Desc)])
+  @@index([status])
+}
+
+model ReportArtifact {
+  id             String             @id @default(cuid())
+  organizationId String
+  reportRunId    String
+  format         ReportOutputFormat
+  fileName       String
+  mimeType       String
+  sizeBytes      Int
+  data           Bytes
+  checksum       String?
+  createdAt      DateTime           @default(now())
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reportRun      ReportRun          @relation(fields: [reportRunId], references: [id], onDelete: Cascade)
+
+  @@index([reportRunId])
+  @@index([organizationId, createdAt(sort: Desc)])
+}
+
+model DashboardView {
+  id             String               @id @default(cuid())
+  organizationId String
+  userId         String
+  name           String
+  layout         Json
+  isDefault      Boolean              @default(false)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  shares         DashboardViewShare[]
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, userId])
+  @@index([organizationId, isDefault])
+}
+
+model DashboardViewShare {
+  id               String        @id @default(cuid())
+  dashboardViewId  String
+  organizationId   String
+  sharedWithUserId String?
+  sharedWithRole   Role?
+  canEdit          Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  dashboardView    DashboardView @relation(fields: [dashboardViewId], references: [id], onDelete: Cascade)
+  organization     Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sharedWithUser   User?         @relation("DashboardViewSharedWith", fields: [sharedWithUserId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, sharedWithRole])
+  @@index([sharedWithUserId])
+  @@unique([dashboardViewId, sharedWithUserId, sharedWithRole])
+}
+
+model AssetRelationship {
+  id               String                @id @default(cuid())
+  organizationId   String
+  parentAssetId    String
+  childAssetId     String
+  relationshipType AssetRelationshipType
+  notes            String?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  childAsset       Asset                 @relation("AssetChild", fields: [childAssetId], references: [id], onDelete: Cascade)
+  organization     Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parentAsset      Asset                 @relation("AssetParent", fields: [parentAssetId], references: [id], onDelete: Cascade)
+
+  @@unique([parentAssetId, childAssetId, relationshipType])
+  @@index([organizationId, parentAssetId])
+  @@index([organizationId, childAssetId])
+}
+
+model AssetGroup {
+  id             String            @id @default(cuid())
+  organizationId String
+  createdById    String?
+  name           String
+  description    String?
+  color          String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  createdBy      User?             @relation("AssetGroupCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  members        AssetGroupMember[]
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model AssetGroupMember {
+  id      String     @id @default(cuid())
+  groupId String
+  assetId String
+  addedAt DateTime   @default(now())
+  asset   Asset      @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  group   AssetGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, assetId])
+  @@index([assetId])
+}
+
+model AssetLifecycleEvent {
+  id              String             @id @default(cuid())
+  organizationId  String
+  assetId         String
+  actorId         String?
+  eventType       LifecycleEventType
+  fromEnvironment Environment?
+  toEnvironment   Environment?
+  fromOwner       String?
+  toOwner         String?
+  notes           String?
+  occurredAt      DateTime           @default(now())
+  createdAt       DateTime           @default(now())
+  actor           User?              @relation("AssetLifecycleActor", fields: [actorId], references: [id], onDelete: SetNull)
+  asset           Asset              @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, occurredAt(sort: Desc)])
+  @@index([organizationId, occurredAt(sort: Desc)])
+}
+
+model AssetChangeLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  assetId        String
+  changedById    String?
+  field          String
+  oldValue       Json?
+  newValue       Json?
+  changedAt      DateTime     @default(now())
+  asset          Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  changedBy      User?        @relation("AssetChangeActor", fields: [changedById], references: [id], onDelete: SetNull)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, changedAt(sort: Desc)])
+  @@index([organizationId, changedAt(sort: Desc)])
+}
+
+model AssetDiscoveryRun {
+  id             String                 @id @default(cuid())
+  organizationId String
+  source         String
+  status         String                 @default("PENDING")
+  startedAt      DateTime               @default(now())
+  finishedAt     DateTime?
+  discoveredCount Int                   @default(0)
+  createdCount   Int                    @default(0)
+  updatedCount   Int                    @default(0)
+  rawInput       Json?
+  errorMessage   String?
+  metadata       Json?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  assets         AssetDiscoveryRunAsset[]
+  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, startedAt(sort: Desc)])
+  @@index([source, status])
+}
+
+model AssetDiscoveryRunAsset {
+  id             String            @id @default(cuid())
+  discoveryRunId String
+  assetId        String
+  action         String
+  asset          Asset             @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  discoveryRun   AssetDiscoveryRun @relation(fields: [discoveryRunId], references: [id], onDelete: Cascade)
+
+  @@unique([discoveryRunId, assetId])
+  @@index([assetId])
+}
+
+model NotificationRule {
+  id               String              @id @default(cuid())
+  organizationId   String
+  userId           String
+  name             String
+  isActive         Boolean             @default(true)
+  channel          NotificationChannel @default(IN_APP)
+  eventType        String
+  minimumSeverity  Severity?
+  includeExploited Boolean             @default(false)
+  includeKev       Boolean             @default(false)
+  recipients       String[]            @default([])
+  webhookUrl       String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  organization     Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, isActive])
+  @@index([userId, isActive])
+  @@index([eventType])
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -1136,6 +1571,80 @@ enum NistCsfFunction {
   DETECT
   RESPOND
   RECOVER
+}
+
+enum WorkflowState {
+  NEW
+  TRIAGED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum RemediationPlanStatus {
+  DRAFT
+  ACTIVE
+  BLOCKED
+  COMPLETED
+  ARCHIVED
+}
+
+enum TicketProvider {
+  GITHUB
+  JIRA
+}
+
+enum TicketSyncStatus {
+  LINKED
+  OUT_OF_SYNC
+  ERROR
+  DISCONNECTED
+}
+
+enum ReportTemplateKey {
+  EXECUTIVE_POSTURE
+  RISK_TREND
+  TOP_RISKS
+  COMPLIANCE_SUMMARY
+  VULN_ASSESSMENT
+  PENTEST_FINDINGS
+  ASSET_INVENTORY
+  REMEDIATION_TRACKING
+}
+
+enum ReportOutputFormat {
+  PDF
+  CSV
+  XLSX
+}
+
+enum ReportFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum AssetRelationshipType {
+  HOSTS
+  RUNS_ON
+  DEPENDS_ON
+  CONNECTS_TO
+  CONTAINS
+}
+
+enum LifecycleEventType {
+  CREATED
+  TRANSFERRED
+  OWNERSHIP_CHANGED
+  DECOMMISSION_REQUESTED
+  DECOMMISSIONED
+  REACTIVATED
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  WEBHOOK
 }
 
 enum PolicyStatus {

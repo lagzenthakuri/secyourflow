@@ -190,10 +190,10 @@ export default function Home() {
             <Image
               src="/logo1.png"
               alt="SecYourFlow logo"
-              width={40}
-              height={40}
+              width={48}
+              height={48}
             />
-            <span className="text-xs font-semibold tracking-[0.25em] text-white sm:text-sm">
+            <span className="text-sm font-semibold tracking-[0.25em] text-white sm:text-base">
               SECYOUR<span className="text-sky-300">FLOW</span>
             </span>
           </Link>
@@ -211,6 +211,9 @@ export default function Home() {
             <a href="#outcomes" className="text-sm text-slate-300 transition hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
               Outcomes
             </a>
+            <Link href="/contact" className="text-sm text-slate-300 transition hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
+              Contact
+            </Link>
           </div>
 
           <div className="flex items-center gap-3">
