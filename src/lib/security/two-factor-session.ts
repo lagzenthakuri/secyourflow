@@ -12,6 +12,7 @@ interface TwoFactorSessionUpdatePayload {
 function getTwoFactorSessionUpdateKey(): string | null {
     const key =
         process.env.TWO_FACTOR_SESSION_UPDATE_KEY ||
+        process.env.AUTH_SECRET ||
         process.env.NEXTAUTH_SECRET ||
         process.env.TOTP_ENCRYPTION_KEY;
 
@@ -25,7 +26,7 @@ function getTwoFactorSessionUpdateKey(): string | null {
 export function assertTwoFactorSessionUpdateKeyConfigured(): void {
     if (!getTwoFactorSessionUpdateKey()) {
         throw new Error(
-            "Missing two-factor session update key. Set TWO_FACTOR_SESSION_UPDATE_KEY, NEXTAUTH_SECRET, or TOTP_ENCRYPTION_KEY.",
+            "Missing two-factor session update key. Set TWO_FACTOR_SESSION_UPDATE_KEY, AUTH_SECRET, NEXTAUTH_SECRET, or TOTP_ENCRYPTION_KEY.",
         );
     }
 }
@@ -36,7 +37,7 @@ export function buildTrustedTwoFactorSessionUpdate(
     const updateKey = getTwoFactorSessionUpdateKey();
     if (!updateKey) {
         throw new Error(
-            "Cannot build trusted two-factor session update without TWO_FACTOR_SESSION_UPDATE_KEY, NEXTAUTH_SECRET, or TOTP_ENCRYPTION_KEY.",
+            "Cannot build trusted two-factor session update without TWO_FACTOR_SESSION_UPDATE_KEY, AUTH_SECRET, NEXTAUTH_SECRET, or TOTP_ENCRYPTION_KEY.",
         );
     }
 

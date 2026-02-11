@@ -150,11 +150,6 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
     callbacks: {
         ...authConfig.callbacks,
         async jwt({ token, user, trigger, session }) {
-            if (process.env.NODE_ENV === "production") {
-                assertTotpEncryptionKeyConfigured();
-                assertTwoFactorSessionUpdateKeyConfigured();
-            }
-
             if (user) {
                 const signInUser = user as typeof user & {
                     role?: string;
@@ -185,6 +180,12 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 void import("./logger").then(({ logActivity }) => {
                     return logActivity("User login", "auth", user.email || "unknown", null, null, "User logged in", user.id);
                 }).catch(() => undefined);
+            }
+
+            // Validate 2FA-related secrets only when this session can actually use 2FA.
+            if (process.env.NODE_ENV === "production" && token.totpEnabled === true) {
+                assertTotpEncryptionKeyConfigured();
+                assertTwoFactorSessionUpdateKeyConfigured();
             }
 
             if (trigger === "update" && session) {
