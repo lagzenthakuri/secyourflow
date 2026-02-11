@@ -21,27 +21,44 @@ function startsWithAny(pathname: string, prefixes: string[]): boolean {
     return prefixes.some((prefix) => pathname.startsWith(prefix));
 }
 
+function pickEnv(...keys: string[]): string | undefined {
+    for (const key of keys) {
+        const value = process.env[key];
+        if (typeof value === "string" && value.trim().length > 0) {
+            return value.trim();
+        }
+    }
+
+    return undefined;
+}
+
+const githubClientId = pickEnv("AUTH_GITHUB_ID", "GITHUB_CLIENT_ID");
+const githubClientSecret = pickEnv("AUTH_GITHUB_SECRET", "GITHUB_CLIENT_SECRET");
+const googleClientId = pickEnv("AUTH_GOOGLE_ID", "GOOGLE_CLIENT_ID");
+const googleClientSecret = pickEnv("AUTH_GOOGLE_SECRET", "GOOGLE_CLIENT_SECRET");
+
+const oauthProviders = [];
+
+if (githubClientId && githubClientSecret) {
+    oauthProviders.push(
+        GitHub({
+            clientId: githubClientId,
+            clientSecret: githubClientSecret,
+        }),
+    );
+}
+
+if (googleClientId && googleClientSecret) {
+    oauthProviders.push(
+        Google({
+            clientId: googleClientId,
+            clientSecret: googleClientSecret,
+        }),
+    );
+}
+
 export const authConfig = {
-    providers: [
-        ...(process.env.AUTH_GITHUB_ID || process.env.GITHUB_CLIENT_ID)
-            && (process.env.AUTH_GITHUB_SECRET || process.env.GITHUB_CLIENT_SECRET)
-            ? [
-                GitHub({
-                    clientId: process.env.AUTH_GITHUB_ID || process.env.GITHUB_CLIENT_ID || "",
-                    clientSecret: process.env.AUTH_GITHUB_SECRET || process.env.GITHUB_CLIENT_SECRET || "",
-                }),
-            ]
-            : [],
-        ...(process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID)
-            && (process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET)
-            ? [
-                Google({
-                    clientId: process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID || "",
-                    clientSecret: process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET || "",
-                }),
-            ]
-            : [],
-    ],
+    providers: oauthProviders,
     pages: {
         signIn: "/login",
         error: "/login",

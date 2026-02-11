@@ -13,6 +13,11 @@ import {
 } from "@/lib/security/two-factor-session";
 import { hasRecentTwoFactorVerification, TWO_FACTOR_REVERIFY_INTERVAL_MS } from "@/lib/security/two-factor";
 
+const authSecret =
+    process.env.AUTH_SECRET ||
+    process.env.NEXTAUTH_SECRET ||
+    (process.env.NODE_ENV !== "production" ? "local-dev-auth-secret" : undefined);
+
 class OAuthOnlyCredentialsSigninError extends CredentialsSignin {
     code = "oauth_only";
 }
@@ -75,6 +80,7 @@ function extractLoginIpFromRequest(request?: Request): string | null {
 
 export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
     ...authConfig,
+    secret: authSecret,
     adapter: PrismaAdapter(prisma),
     session: {
         strategy: "jwt",
