@@ -1,83 +1,61 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
-function getAuthErrorMessage(error: string | null, code: string | null): string | null {
-    if (!error) {
-        return null;
-    }
-
-    if (error === "CredentialsSignin") {
-        if (code === "oauth_only") {
-            return "This account is configured for social login. Use Google to continue.";
-        }
-
-        return "Invalid email or password.";
-    }
-
-    switch (error) {
-        case "Configuration":
-            return "There is a problem with the server configuration.";
-        case "AccessDenied":
-            return "Access denied. You do not have permission to sign in.";
-        case "Verification":
-            return "Verification failed. The link may have expired.";
-        case "OAuthAccountNotLinked":
-            return "That email is already linked to another sign-in method. Use your original provider.";
-        default:
-            return "An authentication error occurred. Please try again.";
-    }
-}
-
-export default function LoginPage() {
-    const [showPassword, setShowPassword] = useState(false);
+export default function SignUpPage() {
+    const router = useRouter();
+    const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [authError, setAuthError] = useState<string | null>(null);
-
-    useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const error = urlParams.get("error");
-        const code = urlParams.get("code");
-        const message = getAuthErrorMessage(error, code);
-        if (message) {
-            setAuthError(message);
-        }
-    }, []);
+    const [error, setError] = useState<string | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        setAuthError(null);
+        setError(null);
 
         try {
-            const result = await signIn("credentials", {
-                email,
-                password,
-                redirect: false,
-                callbackUrl: "/dashboard",
+            const res = await fetch("/api/auth/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, email, password }),
             });
 
-            if (!result || result.error) {
-                setAuthError(getAuthErrorMessage(result?.error ?? "CredentialsSignin", result?.code ?? null));
-                return;
-            }
+            if (res.ok) {
+                // Login immediately after signup
+                const result = await signIn("credentials", {
+                    email,
+                    password,
+                    redirect: false,
+                    callbackUrl: "/dashboard",
+                });
 
-            window.location.href = result.url || "/dashboard";
-        } catch (error) {
-            console.error("Login failed:", error);
-            setAuthError("Unable to sign in right now.");
+                if (result?.error) {
+                    setError("Account created, but automatic login failed. Please sign in.");
+                    setTimeout(() => router.push("/login"), 2000);
+                } else {
+                    router.push("/dashboard");
+                }
+            } else {
+                const data = await res.json();
+                setError(data.error || "Registration failed");
+            }
+        } catch (err) {
+            console.error("Signup error:", err);
+            setError("Something went wrong. Please try again.");
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleOAuthSignIn = (provider: string) => {
+    const handleOAuthSignUp = (provider: string) => {
         signIn(provider, { callbackUrl: "/dashboard" });
     };
 
@@ -98,18 +76,39 @@ export default function LoginPage() {
                         </span>
                     </Link>
                     <p className="text-[var(--text-secondary)] mt-4">
-                        Sign in to your account
+                        Create your account
                     </p>
                 </div>
 
-                {/* Login Form */}
+                {/* Signup Form */}
                 <div className="card p-8">
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {authError && (
+                        {error && (
                             <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
-                                {authError}
+                                {error}
                             </div>
                         )}
+
+                        {/* Name */}
+                        <div>
+                            <label className="block text-sm font-medium text-white mb-2">
+                                Full Name
+                            </label>
+                            <div className="relative">
+                                <User
+                                    size={18}
+                                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+                                />
+                                <input
+                                    type="text"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="John Doe"
+                                    className="input !pl-10"
+                                    required
+                                />
+                            </div>
+                        </div>
 
                         {/* Email */}
                         <div>
@@ -134,17 +133,9 @@ export default function LoginPage() {
 
                         {/* Password */}
                         <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <label className="block text-sm font-medium text-white">
-                                    Password
-                                </label>
-                                <a
-                                    href="#"
-                                    className="text-xs text-blue-400 hover:text-blue-300"
-                                >
-                                    Forgot password?
-                                </a>
-                            </div>
+                            <label className="block text-sm font-medium text-white mb-2">
+                                Password
+                            </label>
                             <div className="relative">
                                 <Lock
                                     size={18}
@@ -157,6 +148,7 @@ export default function LoginPage() {
                                     placeholder="••••••••"
                                     className="input !pl-10 !pr-10"
                                     required
+                                    minLength={8}
                                 />
                                 <button
                                     type="button"
@@ -166,21 +158,6 @@ export default function LoginPage() {
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
                             </div>
-                        </div>
-
-                        {/* Remember Me */}
-                        <div className="flex items-center">
-                            <input
-                                type="checkbox"
-                                id="remember"
-                                className="w-4 h-4 rounded border-[var(--border-color)] bg-[var(--bg-tertiary)] text-blue-500 focus:ring-blue-500"
-                            />
-                            <label
-                                htmlFor="remember"
-                                className="ml-2 text-sm text-[var(--text-secondary)]"
-                            >
-                                Remember me for 30 days
-                            </label>
                         </div>
 
                         {/* Submit Button */}
@@ -193,7 +170,7 @@ export default function LoginPage() {
                                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                             ) : (
                                 <>
-                                    Sign In
+                                    Create Account
                                     <ArrowRight size={18} />
                                 </>
                             )}
@@ -207,7 +184,7 @@ export default function LoginPage() {
                         </div>
                         <div className="relative flex justify-center text-sm">
                             <span className="px-4 bg-[var(--bg-card)] text-[var(--text-muted)]">
-                                or continue with
+                                or sign up with
                             </span>
                         </div>
                     </div>
@@ -215,7 +192,7 @@ export default function LoginPage() {
                     {/* Social Login */}
                     <button
                         type="button"
-                        onClick={() => handleOAuthSignIn("google")}
+                        onClick={() => handleOAuthSignUp("google")}
                         className="btn btn-secondary w-full"
                     >
                         <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -236,15 +213,15 @@ export default function LoginPage() {
                                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                             />
                         </svg>
-                        Continue with Google
+                        Sign up with Google
                     </button>
                 </div>
 
                 {/* Footer */}
                 <p className="text-center text-sm text-[var(--text-muted)] mt-6">
-                    Don&apos;t have an account?{" "}
-                    <Link href="/signup" className="text-blue-400 hover:text-blue-300">
-                        Sign up
+                    Already have an account?{" "}
+                    <Link href="/login" className="text-blue-400 hover:text-blue-300">
+                        Sign in
                     </Link>
                 </p>
             </div>
