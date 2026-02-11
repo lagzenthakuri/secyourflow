@@ -71,7 +71,7 @@ function getSystemHealth() {
         nvdApiKeyConfigured: !!process.env.NVD_API_KEY,
         githubTokenConfigured: !!process.env.GITHUB_TOKEN,
         openrouterConfigured: !!process.env.OPENROUTER_API_KEY,
-        nextauthSecretConfigured: !!process.env.NEXTAUTH_SECRET,
+        nextauthSecretConfigured: !!(process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET),
         databaseUrlConfigured: !!process.env.DATABASE_URL,
     };
 }
