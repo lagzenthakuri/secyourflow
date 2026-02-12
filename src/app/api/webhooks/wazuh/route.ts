@@ -8,74 +8,102 @@ function makeAlertId(alert: any) {
     return crypto.createHash("sha256").update(base).digest("hex");
 }
 
-export async function POST(req: Request) {
-    const url = new URL(req.url);
+function transformToInternalFormat(alert: any) {
+    return {
+        event_type: "security_alert",
+        severity: Number(alert?.rule?.level ?? 0),
+        rule_id: String(alert?.rule?.id ?? "unknown"),
+        description: alert?.rule?.description ?? "No description",
+        agent_name: alert?.agent?.name ?? "unknown",
+        agent_ip: alert?.agent?.ip ?? "unknown",
+        timestamp: new Date(alert?.timestamp ?? alert?.["@timestamp"] ?? Date.now()).toISOString(),
+        raw_log: alert?.full_log ?? alert?.log ?? JSON.stringify(alert)
+    };
+}
 
+export async function POST(req: Request) {
     try {
+        // Robust JSON parsing
+        let body: any;
+        try {
+            const rawBody = await req.text();
+            if (!rawBody) {
+                console.log("Empty body received");
+                return new NextResponse("Handled", { status: 200 });
+            }
+            body = JSON.parse(rawBody);
+        } catch (e) {
+            console.error("Failed to parse Wazuh payload as JSON");
+            return new NextResponse("Handled", { status: 200 });
+        }
+
+        console.log("Wazuh raw alert received:");
+        console.log(JSON.stringify(body, null, 2));
+
+        const alert = body?.alert ?? body;
+
+        // Transform to internal format as requested
+        const internalAlert = transformToInternalFormat(alert);
+        console.log("Transformed to internal format:");
+        console.log(JSON.stringify(internalAlert, null, 2));
+
+        const url = new URL(req.url);
         const orgId = url.searchParams.get("orgId") || req.headers.get("X-SecYourFlow-Org-Id");
 
-        const body = await req.json();
-        const alert = body?.alert ?? body; // support both shapes
-        const level = Number(alert?.rule?.level ?? 0);
+        const level = internalAlert.severity;
 
-        // Server-side filter (don’t rely only on Wazuh)
+        // Server-side filter
         if (level < 10) {
-            return NextResponse.json({ ok: true, skipped: true });
+            return NextResponse.json({ status: "received", skipped: true });
         }
 
         const alertId = makeAlertId(alert);
-        const ruleId = String(alert?.rule?.id ?? "unknown");
+        const ruleId = internalAlert.rule_id;
         const agentId = String(alert?.agent?.id ?? "unknown");
-        const timestamp = new Date(alert?.timestamp ?? alert?.["@timestamp"] ?? Date.now());
+        const timestamp = new Date(internalAlert.timestamp);
 
         // Multi-tenant identification
         let organizationId: string;
-
         if (orgId) {
             const org = await prisma.organization.findUnique({
                 where: { id: orgId },
                 select: { id: true }
             });
-            if (!org) {
-                return NextResponse.json({ ok: false, error: "Invalid organization ID" }, { status: 400 });
-            }
-            organizationId = org.id;
+            organizationId = org?.id || "";
         } else {
-            // Fallback for setups with only one organization or where header is missing
             const fallbackOrg = await prisma.organization.findFirst({
                 select: { id: true }
             });
-
-            if (!fallbackOrg) {
-                return NextResponse.json({ ok: false, error: "No organization found" }, { status: 500 });
-            }
-            organizationId = fallbackOrg.id;
+            organizationId = fallbackOrg?.id || "";
         }
 
-        await prisma.wazuhAlert.upsert({
-            where: { id: alertId },
-            create: {
-                id: alertId,
-                level,
-                ruleId,
-                agentId,
-                timestamp,
-                raw: alert as any,
-                organizationId: organizationId
-            },
-            update: {
-                level,
-                ruleId,
-                agentId,
-                timestamp,
-                raw: alert as any,
-                organizationId: organizationId
-            }
-        });
+        if (organizationId) {
+            await prisma.wazuhAlert.upsert({
+                where: { id: alertId },
+                create: {
+                    id: alertId,
+                    level,
+                    ruleId,
+                    agentId,
+                    timestamp,
+                    raw: alert as any,
+                    organizationId
+                },
+                update: {
+                    level,
+                    ruleId,
+                    agentId,
+                    timestamp,
+                    raw: alert as any,
+                    organizationId
+                }
+            });
+        }
 
-        return NextResponse.json({ ok: true, alertId });
+        return NextResponse.json({ status: "received" });
     } catch (error) {
-        console.error("Wazuh webhook error:", error);
-        return NextResponse.json({ ok: false, error: "Internal Server Error" }, { status: 500 });
+        console.error("Top-level webhook error:", error);
+        // Always return 200 to Wazuh to satisfy the webhook manager and prevent 500 retries
+        return new NextResponse("Handled", { status: 200 });
     }
 }
