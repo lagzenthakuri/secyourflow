@@ -130,6 +130,7 @@ model Organization {
   assetGroups          AssetGroup[]
   assetLifecycleEvents AssetLifecycleEvent[]
   assetChangeLogs      AssetChangeLog[]
+  wazuhAlerts          WazuhAlert[]
 
   @@index([name])
 }
@@ -1666,4 +1667,22 @@ enum AuditStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+}
+
+model WazuhAlert {
+  id             String       @id
+  level          Int
+  ruleId         String
+  agentId        String
+  timestamp      DateTime
+  raw            Json
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([level])
+  @@index([ruleId])
+  @@index([agentId])
+  @@index([timestamp])
 }
