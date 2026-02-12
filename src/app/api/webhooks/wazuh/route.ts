@@ -11,13 +11,16 @@ function makeAlertId(alert: any) {
 }
 
 export async function POST(req: Request) {
-    const token = req.headers.get("X-SecYourFlow-Token");
+    const url = new URL(req.url);
+    const token = req.headers.get("X-SecYourFlow-Token") || url.searchParams.get("token");
 
     if (!token || token !== TOKEN) {
         return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
     try {
+        const orgId = url.searchParams.get("orgId") || req.headers.get("X-SecYourFlow-Org-Id");
+
         const body = await req.json();
         const alert = body?.alert ?? body; // support both shapes
         const level = Number(alert?.rule?.level ?? 0);
@@ -32,13 +35,28 @@ export async function POST(req: Request) {
         const agentId = String(alert?.agent?.id ?? "unknown");
         const timestamp = new Date(alert?.timestamp ?? alert?.["@timestamp"] ?? Date.now());
 
-        // For multi-tenant, we need a way to link to an organization.
-        // In this implementation, we take the first organization as a default.
-        // In a real multi-tenant setup, the organization would be identified by a parameter or another header.
-        const organization = await prisma.organization.findFirst();
+        // Multi-tenant identification
+        let organizationId: string;
 
-        if (!organization) {
-            return NextResponse.json({ ok: false, error: "No organization found" }, { status: 500 });
+        if (orgId) {
+            const org = await prisma.organization.findUnique({
+                where: { id: orgId },
+                select: { id: true }
+            });
+            if (!org) {
+                return NextResponse.json({ ok: false, error: "Invalid organization ID" }, { status: 400 });
+            }
+            organizationId = org.id;
+        } else {
+            // Fallback for setups with only one organization or where header is missing
+            const fallbackOrg = await prisma.organization.findFirst({
+                select: { id: true }
+            });
+
+            if (!fallbackOrg) {
+                return NextResponse.json({ ok: false, error: "No organization found" }, { status: 500 });
+            }
+            organizationId = fallbackOrg.id;
         }
 
         await prisma.wazuhAlert.upsert({
@@ -50,7 +68,7 @@ export async function POST(req: Request) {
                 agentId,
                 timestamp,
                 raw: alert as any,
-                organizationId: organization.id
+                organizationId: organizationId
             },
             update: {
                 level,
@@ -58,7 +76,7 @@ export async function POST(req: Request) {
                 agentId,
                 timestamp,
                 raw: alert as any,
-                organizationId: organization.id
+                organizationId: organizationId
             }
         });
 
