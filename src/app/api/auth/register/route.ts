@@ -28,12 +28,25 @@ export async function POST(req: Request) {
 
         const hashedPassword = await hash(password, 12);
 
+        let organizationId: string;
+        const firstOrg = await prisma.organization.findFirst();
+
+        if (firstOrg) {
+            organizationId = firstOrg.id;
+        } else {
+            const newOrg = await prisma.organization.create({
+                data: { name: "My Organization" },
+            });
+            organizationId = newOrg.id;
+        }
+
         const user = await prisma.user.create({
             data: {
                 name,
                 email,
                 password: hashedPassword,
                 role: "ANALYST", // Default role
+                organizationId,
             },
         });
 

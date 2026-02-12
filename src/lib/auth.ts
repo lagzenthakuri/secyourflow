@@ -174,12 +174,31 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 token.twoFactorVerifiedAt = null;
                 token.authenticatedAt = Date.now();
 
+                const dbUser = await prisma.user.findUnique({
+                    where: { id: user.id },
+                    select: { organizationId: true }
+                });
+
+                let organizationId = dbUser?.organizationId;
+                if (!organizationId) {
+                    const firstOrg = await prisma.organization.findFirst();
+                    if (firstOrg) {
+                        organizationId = firstOrg.id;
+                    } else {
+                        const newOrg = await prisma.organization.create({
+                            data: { name: "My Organization" }
+                        });
+                        organizationId = newOrg.id;
+                    }
+                }
+
                 await prisma.user.update({
                     where: { id: user.id },
                     data: {
                         lastLogin: new Date(),
                         activeSessionId,
                         activeSessionIp,
+                        organizationId,
                     },
                 });
 

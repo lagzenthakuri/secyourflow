@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 
-const TOKEN = process.env.SECYOURFLOW_WAZUH_TOKEN!;
-
 function makeAlertId(alert: any) {
     // Stable dedupe id
     const base = `${alert?.agent?.id ?? ""}|${alert?.rule?.id ?? ""}|${alert?.timestamp ?? alert?.["@timestamp"] ?? ""}|${alert?.location ?? ""}`;
@@ -12,11 +10,6 @@ function makeAlertId(alert: any) {
 
 export async function POST(req: Request) {
     const url = new URL(req.url);
-    const token = req.headers.get("X-SecYourFlow-Token") || url.searchParams.get("token");
-
-    if (!token || token !== TOKEN) {
-        return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-    }
 
     try {
         const orgId = url.searchParams.get("orgId") || req.headers.get("X-SecYourFlow-Org-Id");
