@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
-import { Clock3, RefreshCw, Search, X, User, Globe, Monitor, Calendar, FileText, Activity as ActivityIcon } from "lucide-react";
+import { Clock3, RefreshCw, Search, X, XCircle, User, Globe, Monitor, Calendar, FileText, Activity as ActivityIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatIpAddress, normalizeIpAddress, parseUserAgent } from "@/lib/request-utils";
 
@@ -51,6 +52,8 @@ export default function ReportsActivityPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { data: session, status } = useSession();
+  const isMainOfficer = session?.user?.role === "MAIN_OFFICER";
 
   const fetchData = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
     if (silent) {
@@ -65,11 +68,11 @@ export default function ReportsActivityPage() {
       if (!response.ok) {
         throw new Error("Failed to load activity logs");
       }
-      const payload = (await response.json()) as { 
+      const payload = (await response.json()) as {
         logs?: ActivityLog[];
         error?: string;
       };
-      
+
       setActivities(payload.logs ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load activity logs");
@@ -83,8 +86,10 @@ export default function ReportsActivityPage() {
   }, []);
 
   useEffect(() => {
-    void fetchData();
-  }, [fetchData]);
+    if (isMainOfficer) {
+      void fetchData();
+    }
+  }, [fetchData, isMainOfficer]);
 
   const filteredActivities = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -110,11 +115,33 @@ export default function ReportsActivityPage() {
     return activityDate >= weekAgo;
   }).length;
 
-  if (isLoading && activities.length === 0) {
+  if (isLoading && activities.length === 0 && isMainOfficer) {
     return (
       <DashboardLayout>
         <div className="flex min-h-[60vh] items-center justify-center">
           <ShieldLoader size="lg" variant="cyber" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (status !== "loading" && !isMainOfficer) {
+    return (
+      <DashboardLayout>
+        <div className="flex min-h-[60vh] flex-col items-center justify-center p-6 text-center">
+          <div className="rounded-2xl border border-red-400/20 bg-red-500/5 p-8 max-w-md">
+            <XCircle size={48} className="mx-auto text-red-400 mb-4" />
+            <h1 className="text-xl font-semibold text-white mb-2">Access Denied</h1>
+            <p className="text-sm text-slate-400 mb-6">
+              The Activity Log is only accessible by Main Officers. Please contact your administrator if you believe this is an error.
+            </p>
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-6 py-2.5 text-sm font-semibold text-slate-950 transition-all hover:bg-sky-200"
+            >
+              Back to Dashboard
+            </Link>
+          </div>
         </div>
       </DashboardLayout>
     );
@@ -209,10 +236,10 @@ export default function ReportsActivityPage() {
                 const userAgentInfo = parseUserAgent(activity.userAgent);
                 const activityDate = new Date(activity.createdAt);
                 const displayIpAddress = formatIpAddress(activity.ipAddress);
-                
+
                 return (
-                  <div 
-                    key={activity.id} 
+                  <div
+                    key={activity.id}
                     className="px-5 py-4 cursor-pointer transition-colors hover:bg-white/[0.03]"
                     onClick={() => setSelectedActivity(activity)}
                   >
@@ -278,11 +305,11 @@ export default function ReportsActivityPage() {
 
       {/* Detail Modal */}
       {selectedActivity && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
           onClick={() => setSelectedActivity(null)}
         >
-          <div 
+          <div
             className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.98)] shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >

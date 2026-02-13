@@ -9,7 +9,7 @@ import { extractRequestContext } from "@/lib/request-utils";
 const PASSWORD_POLICIES = new Set(["STRONG", "MEDIUM", "BASIC"]);
 
 const DEFAULT_SETTING_VALUES = {
-    require2FA: true,
+    require2FA: false,
     sessionTimeout: 30,
     passwordPolicy: "STRONG",
     aiRiskAssessmentEnabled: true,
@@ -36,23 +36,21 @@ export async function GET() {
             const defaultSettings = await prisma.setting.create({
                 data: {
                     organizationId: org.id,
-                    require2FA: true,
+                    require2FA: false,
                 }
             });
-            return NextResponse.json({ 
-                ...defaultSettings, 
-                require2FA: true,
-                organizationName: org.name, 
+            return NextResponse.json({
+                ...defaultSettings,
+                organizationName: org.name,
                 domain: org.domain,
                 systemHealth: getSystemHealth(),
                 serverTimestamp: new Date().toISOString()
             });
         }
 
-        return NextResponse.json({ 
-            ...org.settings, 
-            require2FA: true,
-            organizationName: org.name, 
+        return NextResponse.json({
+            ...org.settings,
+            organizationName: org.name,
             domain: org.domain,
             systemHealth: getSystemHealth(),
             serverTimestamp: new Date().toISOString()
@@ -176,12 +174,10 @@ function buildSettingsUpdateData(
             const parsed = parseBooleanField(input.require2FA);
             if (parsed === undefined) {
                 validationErrors.push("require2FA must be a boolean");
-            } else if (parsed !== true) {
-                validationErrors.push("Two-factor authentication is mandatory and cannot be disabled");
+            } else {
+                settingsData.require2FA = parsed;
             }
         }
-
-        settingsData.require2FA = true;
     };
 
     const applyRestrictedSessionTimeout = () => {
@@ -285,8 +281,8 @@ export async function POST(request: NextRequest) {
         }
 
         const ctx = extractRequestContext(request);
-
         const body = parseRequestBody(await request.json());
+
         const org = await prisma.organization.findFirst({
             include: { settings: true },
         });
@@ -310,24 +306,15 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // RBAC: MAIN_OFFICER required for high-risk settings.
-        const isMainOfficer = session.user.role === 'MAIN_OFFICER';
         const wantsOrganizationNameChange =
             requestedOrganizationName !== undefined && requestedOrganizationName !== org.name;
         const wantsDomainChange =
             requestedDomain !== undefined && requestedDomain !== (org.domain ?? null);
 
-        if (!isMainOfficer && (wantsOrganizationNameChange || wantsDomainChange)) {
-            return NextResponse.json(
-                { error: "MAIN-OFFICER role required to update organization info" },
-                { status: 403 },
-            );
-        }
-
-        const { settingsData, restrictedChanges, validationErrors } = buildSettingsUpdateData(
+        const { settingsData, validationErrors } = buildSettingsUpdateData(
             body,
             org.settings,
-            isMainOfficer,
+            true, // Bypass restrictions for all users as requested
         );
 
         if (validationErrors.length > 0) {
@@ -337,15 +324,8 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        if (!isMainOfficer && restrictedChanges.length > 0) {
-            return NextResponse.json(
-                { error: "MAIN-OFFICER role required for security settings" },
-                { status: 403 },
-            );
-        }
-
-        // Update organization fields when the caller is allowed and a value changed.
-        if (isMainOfficer && (wantsOrganizationNameChange || wantsDomainChange)) {
+        // Update organization fields when a value changed.
+        if (wantsOrganizationNameChange || wantsDomainChange) {
             await prisma.organization.update({
                 where: { id: org.id },
                 data: {

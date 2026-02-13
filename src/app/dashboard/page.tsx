@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { getTimeAgo } from "@/lib/utils";
@@ -443,6 +444,8 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { data: session } = useSession();
+  const isMainOfficer = session?.user?.role === "MAIN_OFFICER";
 
   const fetchDashboardData = useCallback(
     async ({ signal, silent }: { signal?: AbortSignal; silent?: boolean } = {}) => {
@@ -504,10 +507,14 @@ export default function DashboardPage() {
   useEffect(() => {
     const controller = new AbortController();
     void fetchDashboardData({ signal: controller.signal });
-    void fetchRecentActivity(controller.signal);
+    if (isMainOfficer) {
+      void fetchRecentActivity(controller.signal);
+    }
 
     const interval = setInterval(() => {
-      void fetchRecentActivity();
+      if (isMainOfficer) {
+        void fetchRecentActivity();
+      }
     }, 30000);
 
     return () => {
@@ -965,7 +972,7 @@ export default function DashboardPage() {
           </article>
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <section className={`grid gap-4 ${isMainOfficer ? 'xl:grid-cols-[1.15fr_0.85fr]' : 'xl:grid-cols-1'}`}>
           <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
             <h2 className="text-lg font-semibold text-white">Risk and Remediation Trends</h2>
             <p className="mt-1 text-sm text-slate-400">
@@ -991,57 +998,59 @@ export default function DashboardPage() {
             </div>
           </article>
 
-          <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Recent Activity</h2>
-                <p className="mt-1 text-sm text-slate-400">Latest high-signal events and updates.</p>
+          {isMainOfficer && (
+            <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-white">Recent Activity</h2>
+                  <p className="mt-1 text-sm text-slate-400">Latest high-signal events and updates.</p>
+                </div>
+                <Link
+                  href="/reports/activity"
+                  className="text-sm text-sky-300 transition hover:text-sky-200"
+                >
+                  Full log
+                </Link>
               </div>
-              <Link
-                href="/reports/activity"
-                className="text-sm text-sky-300 transition hover:text-sky-200"
-              >
-                Full log
-              </Link>
-            </div>
 
-            <div className="mt-5 space-y-3">
-              {activityRows.length > 0 ? (
-                activityRows.map((activity) => {
-                  const activityTone = getActivityTone(activity.entityType, activity.action);
-                  const Icon = activityTone.icon;
+              <div className="mt-5 space-y-3">
+                {activityRows.length > 0 ? (
+                  activityRows.map((activity) => {
+                    const activityTone = getActivityTone(activity.entityType, activity.action);
+                    const Icon = activityTone.icon;
 
-                  return (
-                    <div
-                      key={activity.id}
-                      className="group rounded-xl border border-white/10 bg-white/[0.03] p-3 transition-all duration-300 hover:border-sky-300/20 hover:bg-white/[0.06]"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-300 group-hover:scale-110 ${activityTone.shell}`}
-                        >
-                          <Icon size={14} className={`${activityTone.iconColor} transition-all duration-300`} />
+                    return (
+                      <div
+                        key={activity.id}
+                        className="group rounded-xl border border-white/10 bg-white/[0.03] p-3 transition-all duration-300 hover:border-sky-300/20 hover:bg-white/[0.06]"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-300 group-hover:scale-110 ${activityTone.shell}`}
+                          >
+                            <Icon size={14} className={`${activityTone.iconColor} transition-all duration-300`} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm text-slate-200 transition-colors duration-200 group-hover:text-white">{activity.action}</p>
+                            <p className="mt-0.5 truncate text-xs text-slate-400">{activity.entityName}</p>
+                          </div>
+                          <p className="text-xs text-slate-500">
+                            {getTimeAgo(activity.timestamp)}
+                          </p>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm text-slate-200 transition-colors duration-200 group-hover:text-white">{activity.action}</p>
-                          <p className="mt-0.5 truncate text-xs text-slate-400">{activity.entityName}</p>
-                        </div>
-                        <p className="text-xs text-slate-500">
-                          {getTimeAgo(activity.timestamp)}
-                        </p>
                       </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
-                  No recent activities were recorded.
-                </p>
-              )}
-            </div>
-          </article>
+                    );
+                  })
+                ) : (
+                  <p className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+                    No recent activities were recorded.
+                  </p>
+                )}
+              </div>
+            </article>
+          )}
         </section>
       </div>
-    </DashboardLayout>
+    </DashboardLayout >
   );
 }

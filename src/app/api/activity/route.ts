@@ -19,6 +19,10 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
         }
 
+        if (session.user.role !== "MAIN_OFFICER") {
+            return NextResponse.json({ error: "Forbidden: MAIN_OFFICER role required" }, { status: 403 });
+        }
+
         const searchParams = request.nextUrl.searchParams;
         const limit = parseInt(searchParams.get("limit") || "20");
         const page = parseInt(searchParams.get("page") || "1");

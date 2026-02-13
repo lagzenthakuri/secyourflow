@@ -130,15 +130,15 @@ interface SettingsSectionItem {
 
 const settingsSections: SettingsSectionItem[] = [
     { id: "general", label: "General", description: "Organization profile and baseline preferences", icon: Settings },
-    { id: "governance", label: "Governance", description: "Change control, retention, and audit guardrails", icon: FileText, mainOfficerOnly: true },
+    { id: "governance", label: "Governance", description: "Change control, retention, and audit guardrails", icon: FileText },
     { id: "notifications", label: "Notifications", description: "Alert channels and summary signals", icon: Bell },
-    { id: "soc-notifications", label: "SOC Routing", description: "Quiet hours and incident-routing thresholds", icon: Activity, mainOfficerOnly: true },
+    { id: "soc-notifications", label: "SOC Routing", description: "Quiet hours and incident-routing thresholds", icon: Activity },
     { id: "security", label: "Security", description: "Identity, sessions, password and 2FA controls", icon: Shield },
-    { id: "ai-assist", label: "AI Assist", description: "Model governance and human-review policies", icon: Zap, mainOfficerOnly: true },
+    { id: "ai-assist", label: "AI Assist", description: "Model governance and human-review policies", icon: Zap },
     { id: "system-health", label: "System Health", description: "Runtime configuration and dependency checks", icon: Activity },
     { id: "integrations", label: "Integrations", description: "Third-party connectors and workflow links", icon: Database },
     { id: "api", label: "API Access", description: "API keys and service access governance", icon: Key },
-    { id: "users", label: "Users & Roles", description: "Role assignment and access administration", icon: UsersIcon, mainOfficerOnly: true },
+    { id: "users", label: "Users & Roles", description: "Role assignment and access administration", icon: UsersIcon },
 ];
 
 const MAIN_OFFICER_ROLE = "MAIN_OFFICER";
@@ -341,8 +341,8 @@ export default function SettingsPage() {
     };
 
     const accessibleSections = useMemo(
-        () => settingsSections.filter((section) => !section.mainOfficerOnly || isMainOfficer),
-        [isMainOfficer],
+        () => settingsSections,
+        [],
     );
 
     const filteredSections = useMemo(
@@ -494,7 +494,7 @@ export default function SettingsPage() {
                         },
                         {
                             label: "2FA Requirement",
-                            value: "Required",
+                            value: settings?.require2FA ? "Required" : "Optional",
                             hint: "Global multi-factor enforcement state",
                             icon: ShieldCheck,
                         },
@@ -605,7 +605,6 @@ export default function SettingsPage() {
                                     handleSave={handleSave}
                                     fetchSettings={fetchSettings}
                                     isSaving={isSaving}
-                                    isMainOfficer={isMainOfficer}
                                 />
                             )}
 
@@ -614,7 +613,6 @@ export default function SettingsPage() {
                                     featureFlags={featureFlags}
                                     updateFeatureFlags={updateFeatureFlags}
                                     handleSaveFeatureFlags={handleSaveFeatureFlags}
-                                    isMainOfficer={isMainOfficer}
                                 />
                             )}
 
@@ -632,7 +630,6 @@ export default function SettingsPage() {
                                     featureFlags={featureFlags}
                                     updateFeatureFlags={updateFeatureFlags}
                                     handleSaveFeatureFlags={handleSaveFeatureFlags}
-                                    isMainOfficer={isMainOfficer}
                                 />
                             )}
 
@@ -642,7 +639,6 @@ export default function SettingsPage() {
                                     updateSettings={updateSettings}
                                     handleSave={handleSave}
                                     isSaving={isSaving}
-                                    isMainOfficer={isMainOfficer}
                                 />
                             )}
 
@@ -651,7 +647,6 @@ export default function SettingsPage() {
                                     featureFlags={featureFlags}
                                     updateFeatureFlags={updateFeatureFlags}
                                     handleSaveFeatureFlags={handleSaveFeatureFlags}
-                                    isMainOfficer={isMainOfficer}
                                 />
                             )}
 
@@ -710,18 +705,6 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
 
 // Restricted field wrapper
 function RestrictedField({ isMainOfficer, children }: { isMainOfficer: boolean; children: React.ReactNode }) {
-    if (!isMainOfficer) {
-        return (
-            <div className="relative">
-                <div className="opacity-50 pointer-events-none">{children}</div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400 text-xs font-medium animate-in fade-in zoom-in-95 duration-300">
-                        MAIN-OFFICER only
-                    </div>
-                </div>
-            </div>
-        );
-    }
     return <>{children}</>;
 }
 
@@ -733,14 +716,12 @@ interface GeneralSectionProps {
     handleSave: () => Promise<void>;
     fetchSettings: () => Promise<void>;
     isSaving: boolean;
-    isMainOfficer: boolean;
 }
 
 interface FeatureFlagSectionProps {
     featureFlags: FeatureFlags;
     updateFeatureFlags: (updates: Partial<FeatureFlags>) => void;
     handleSaveFeatureFlags: () => void;
-    isMainOfficer: boolean;
 }
 
 interface NotificationSectionProps {
@@ -755,7 +736,6 @@ interface SecuritySectionProps {
     updateSettings: (updates: Partial<PlatformSettings>) => void;
     handleSave: () => Promise<void>;
     isSaving: boolean;
-    isMainOfficer: boolean;
 }
 
 interface SystemHealthSectionProps {
@@ -764,38 +744,34 @@ interface SystemHealthSectionProps {
 }
 
 // General Section
-function GeneralSection({ settings, updateSettings, isEditingGeneral, setIsEditingGeneral, handleSave, fetchSettings, isSaving, isMainOfficer }: GeneralSectionProps) {
+function GeneralSection({ settings, updateSettings, isEditingGeneral, setIsEditingGeneral, handleSave, fetchSettings, isSaving }: GeneralSectionProps) {
     return (
         <Card title="General Settings" subtitle="Basic platform configuration">
             <div className="space-y-6">
-                <RestrictedField isMainOfficer={isMainOfficer}>
-                    <div>
-                        <label className="block text-sm font-medium text-white mb-2">
-                            Organization Name
-                        </label>
-                        <input
-                            type="text"
-                            value={settings?.organizationName || ""}
-                            onChange={(e) => updateSettings({ organizationName: e.target.value })}
-                            className="input"
-                            disabled={!isEditingGeneral || !isMainOfficer}
-                        />
-                    </div>
-                </RestrictedField>
-                <RestrictedField isMainOfficer={isMainOfficer}>
-                    <div>
-                        <label className="block text-sm font-medium text-white mb-2">
-                            Primary Domain
-                        </label>
-                        <input
-                            type="text"
-                            value={settings?.domain || ""}
-                            onChange={(e) => updateSettings({ domain: e.target.value })}
-                            className="input"
-                            disabled={!isEditingGeneral || !isMainOfficer}
-                        />
-                    </div>
-                </RestrictedField>
+                <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                        Organization Name
+                    </label>
+                    <input
+                        type="text"
+                        value={settings?.organizationName || ""}
+                        onChange={(e) => updateSettings({ organizationName: e.target.value })}
+                        className="input"
+                        disabled={!isEditingGeneral}
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                        Primary Domain
+                    </label>
+                    <input
+                        type="text"
+                        value={settings?.domain || ""}
+                        onChange={(e) => updateSettings({ domain: e.target.value })}
+                        className="input"
+                        disabled={!isEditingGeneral}
+                    />
+                </div>
                 <div>
                     <label className="block text-sm font-medium text-white mb-2">
                         Timezone
@@ -827,49 +803,38 @@ function GeneralSection({ settings, updateSettings, isEditingGeneral, setIsEditi
                     </select>
                 </div>
                 <div className="pt-4 border-t border-[var(--border-color)] flex gap-3">
-                    {isMainOfficer ? (
-                        !isEditingGeneral ? (
-                            <button
-                                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95"
-                                onClick={() => setIsEditingGeneral(true)}
-                            >
-                                <Settings size={16} />
-                                Edit Organization Info
-                            </button>
-                        ) : (
-                            <>
-                                <button
-                                    onClick={async () => {
-                                        await handleSave();
-                                        setIsEditingGeneral(false);
-                                    }}
-                                    disabled={isSaving}
-                                    className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                                >
-                                    <Save size={16} />
-                                    {isSaving ? "Saving..." : "Save Changes"}
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setIsEditingGeneral(false);
-                                        void fetchSettings();
-                                    }}
-                                    disabled={isSaving}
-                                    className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    Cancel
-                                </button>
-                            </>
-                        )
-                    ) : (
-                        <button 
-                            onClick={handleSave} 
-                            disabled={isSaving}
-                            className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    {!isEditingGeneral ? (
+                        <button
+                            className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95"
+                            onClick={() => setIsEditingGeneral(true)}
                         >
-                            <Save size={16} />
-                            {isSaving ? "Saving..." : "Save Changes"}
+                            <Settings size={16} />
+                            Edit Organization Info
                         </button>
+                    ) : (
+                        <>
+                            <button
+                                onClick={async () => {
+                                    await handleSave();
+                                    setIsEditingGeneral(false);
+                                }}
+                                disabled={isSaving}
+                                className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                            >
+                                <Save size={16} />
+                                {isSaving ? "Saving..." : "Save Changes"}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setIsEditingGeneral(false);
+                                    void fetchSettings();
+                                }}
+                                disabled={isSaving}
+                                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Cancel
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
@@ -878,86 +843,73 @@ function GeneralSection({ settings, updateSettings, isEditingGeneral, setIsEditi
 }
 
 // Governance Section
-function GovernanceSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFlags, isMainOfficer }: FeatureFlagSectionProps) {
+function GovernanceSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFlags }: FeatureFlagSectionProps) {
     return (
         <Card title="Governance & Compliance" subtitle="Bank-grade change control, audit, and retention">
             <div className="space-y-6">
-                <RestrictedField isMainOfficer={isMainOfficer}>
-                    <div>
-                        <label className="block text-sm font-medium text-white mb-2">
-                            Change Control
-                        </label>
-                        <select
-                            className="input"
-                            value={featureFlags.changeControlMode || "SINGLE_APPROVER"}
-                            onChange={(e) => updateFeatureFlags({ changeControlMode: e.target.value })}
-                            disabled={!isMainOfficer}
-                        >
-                            <option value="SINGLE_APPROVER">Single approver</option>
-                            <option value="TWO_PERSON_RULE">Two-person rule (recommended for banks)</option>
-                        </select>
-                    </div>
-                </RestrictedField>
+                <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                        Change Control
+                    </label>
+                    <select
+                        className="input"
+                        value={featureFlags.changeControlMode || "SINGLE_APPROVER"}
+                        onChange={(e) => updateFeatureFlags({ changeControlMode: e.target.value })}
+                    >
+                        <option value="SINGLE_APPROVER">Single approver</option>
+                        <option value="TWO_PERSON_RULE">Two-person rule (recommended for banks)</option>
+                    </select>
+                </div>
 
-                <RestrictedField isMainOfficer={isMainOfficer}>
-                    <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
-                        <div>
-                            <h4 className="text-sm font-medium text-white">
-                                Require reason for settings changes
-                            </h4>
-                            <p className="text-xs text-[var(--text-muted)]">
-                                Enforce change justification for audit trail
-                            </p>
-                        </div>
-                        <Toggle
-                            checked={featureFlags.settingsChangeReasonRequired ?? true}
-                            onChange={(checked) => updateFeatureFlags({ settingsChangeReasonRequired: checked })}
-                            disabled={!isMainOfficer}
-                        />
-                    </div>
-                </RestrictedField>
-
-                <RestrictedField isMainOfficer={isMainOfficer}>
+                <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
                     <div>
-                        <label className="block text-sm font-medium text-white mb-2">
-                            Audit Log Retention (days)
-                        </label>
-                        <input
-                            type="number"
-                            min="30"
-                            max="3650"
-                            value={featureFlags.auditLogRetentionDays || 365}
-                            onChange={(e) => updateFeatureFlags({ auditLogRetentionDays: parseInt(e.target.value) })}
-                            className="input w-32"
-                            disabled={!isMainOfficer}
-                        />
-                        <p className="text-xs text-[var(--text-muted)] mt-1">Min: 30 days, Max: 3650 days</p>
+                        <h4 className="text-sm font-medium text-white">
+                            Require reason for settings changes
+                        </h4>
+                        <p className="text-xs text-[var(--text-muted)]">
+                            Enforce change justification for audit trail
+                        </p>
                     </div>
-                </RestrictedField>
+                    <Toggle
+                        checked={featureFlags.settingsChangeReasonRequired ?? true}
+                        onChange={(checked) => updateFeatureFlags({ settingsChangeReasonRequired: checked })}
+                    />
+                </div>
 
-                <RestrictedField isMainOfficer={isMainOfficer}>
-                    <div>
-                        <label className="block text-sm font-medium text-white mb-2">
-                            Vulnerability Data Retention (days)
-                        </label>
-                        <input
-                            type="number"
-                            min="30"
-                            max="3650"
-                            value={featureFlags.dataRetentionDays || 730}
-                            onChange={(e) => updateFeatureFlags({ dataRetentionDays: parseInt(e.target.value) })}
-                            className="input w-32"
-                            disabled={!isMainOfficer}
-                        />
-                        <p className="text-xs text-[var(--text-muted)] mt-1">Min: 30 days, Max: 3650 days</p>
-                    </div>
-                </RestrictedField>
+                <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                        Audit Log Retention (days)
+                    </label>
+                    <input
+                        type="number"
+                        min="30"
+                        max="3650"
+                        value={featureFlags.auditLogRetentionDays || 365}
+                        onChange={(e) => updateFeatureFlags({ auditLogRetentionDays: parseInt(e.target.value) })}
+                        className="input w-32"
+                    />
+                    <p className="text-xs text-[var(--text-muted)] mt-1">Min: 30 days, Max: 3650 days</p>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                        Vulnerability Data Retention (days)
+                    </label>
+                    <input
+                        type="number"
+                        min="30"
+                        max="3650"
+                        value={featureFlags.dataRetentionDays || 730}
+                        onChange={(e) => updateFeatureFlags({ dataRetentionDays: parseInt(e.target.value) })}
+                        className="input w-32"
+                    />
+                    <p className="text-xs text-[var(--text-muted)] mt-1">Min: 30 days, Max: 3650 days</p>
+                </div>
 
                 <div className="pt-4 border-t border-[var(--border-color)]">
                     <button
                         className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         onClick={handleSaveFeatureFlags}
-                        disabled={!isMainOfficer}
                     >
                         <Save size={16} />
                         Save (Feature Flags)
@@ -972,101 +924,87 @@ function GovernanceSection({ featureFlags, updateFeatureFlags, handleSaveFeature
 }
 
 // SOC Routing Section
-function SOCRoutingSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFlags, isMainOfficer }: FeatureFlagSectionProps) {
+function SOCRoutingSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFlags }: FeatureFlagSectionProps) {
     return (
         <Card title="SOC Routing" subtitle="Alert thresholds, quiet hours, and escalation">
             <div className="space-y-6">
-                <RestrictedField isMainOfficer={isMainOfficer}>
-                    <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
-                        <div>
-                            <h4 className="text-sm font-medium text-white">Quiet Hours</h4>
-                            <p className="text-xs text-[var(--text-muted)]">
-                                Suppress non-critical alerts during specified hours
-                            </p>
-                        </div>
-                        <Toggle
-                            checked={featureFlags.quietHoursEnabled || false}
-                            onChange={(checked) => updateFeatureFlags({ quietHoursEnabled: checked })}
-                            disabled={!isMainOfficer}
-                        />
-                    </div>
-                </RestrictedField>
-
-                {featureFlags.quietHoursEnabled && (
-                    <RestrictedField isMainOfficer={isMainOfficer}>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-white mb-2">
-                                    Quiet Hours Start
-                                </label>
-                                <input
-                                    type="time"
-                                    value={featureFlags.quietHoursStart || "22:00"}
-                                    onChange={(e) => updateFeatureFlags({ quietHoursStart: e.target.value })}
-                                    className="input"
-                                    disabled={!isMainOfficer}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-white mb-2">
-                                    Quiet Hours End
-                                </label>
-                                <input
-                                    type="time"
-                                    value={featureFlags.quietHoursEnd || "06:00"}
-                                    onChange={(e) => updateFeatureFlags({ quietHoursEnd: e.target.value })}
-                                    className="input"
-                                    disabled={!isMainOfficer}
-                                />
-                            </div>
-                        </div>
-                    </RestrictedField>
-                )}
-
-                <RestrictedField isMainOfficer={isMainOfficer}>
-                    <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
-                        <div>
-                            <h4 className="text-sm font-medium text-white">
-                                Only alert on KEV when enabled
-                            </h4>
-                            <p className="text-xs text-[var(--text-muted)]">
-                                Limit alerts to CISA Known Exploited Vulnerabilities
-                            </p>
-                        </div>
-                        <Toggle
-                            checked={featureFlags.notifyKevOnly || false}
-                            onChange={(checked) => updateFeatureFlags({ notifyKevOnly: checked })}
-                            disabled={!isMainOfficer}
-                        />
-                    </div>
-                </RestrictedField>
-
-                <RestrictedField isMainOfficer={isMainOfficer}>
+                <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
                     <div>
-                        <label className="block text-sm font-medium text-white mb-2">
-                            EPSS Alert Threshold (0.0–1.0)
-                        </label>
-                        <input
-                            type="number"
-                            min="0"
-                            max="1"
-                            step="0.01"
-                            value={featureFlags.epssAlertThreshold || 0.5}
-                            onChange={(e) => updateFeatureFlags({ epssAlertThreshold: parseFloat(e.target.value) })}
-                            className="input w-32"
-                            disabled={!isMainOfficer}
-                        />
-                        <p className="text-xs text-[var(--text-muted)] mt-1">
-                            Alert when EPSS score exceeds this threshold
+                        <h4 className="text-sm font-medium text-white">Quiet Hours</h4>
+                        <p className="text-xs text-[var(--text-muted)]">
+                            Suppress non-critical alerts during specified hours
                         </p>
                     </div>
-                </RestrictedField>
+                    <Toggle
+                        checked={featureFlags.quietHoursEnabled || false}
+                        onChange={(checked) => updateFeatureFlags({ quietHoursEnabled: checked })}
+                    />
+                </div>
+
+                {featureFlags.quietHoursEnabled && (
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-white mb-2">
+                                Quiet Hours Start
+                            </label>
+                            <input
+                                type="time"
+                                value={featureFlags.quietHoursStart || "22:00"}
+                                onChange={(e) => updateFeatureFlags({ quietHoursStart: e.target.value })}
+                                className="input"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-white mb-2">
+                                Quiet Hours End
+                            </label>
+                            <input
+                                type="time"
+                                value={featureFlags.quietHoursEnd || "06:00"}
+                                onChange={(e) => updateFeatureFlags({ quietHoursEnd: e.target.value })}
+                                className="input"
+                            />
+                        </div>
+                    </div>
+                )}
+
+                <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
+                    <div>
+                        <h4 className="text-sm font-medium text-white">
+                            Only alert on KEV when enabled
+                        </h4>
+                        <p className="text-xs text-[var(--text-muted)]">
+                            Limit alerts to CISA Known Exploited Vulnerabilities
+                        </p>
+                    </div>
+                    <Toggle
+                        checked={featureFlags.notifyKevOnly || false}
+                        onChange={(checked) => updateFeatureFlags({ notifyKevOnly: checked })}
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                        EPSS Alert Threshold (0.0–1.0)
+                    </label>
+                    <input
+                        type="number"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={featureFlags.epssAlertThreshold || 0.5}
+                        onChange={(e) => updateFeatureFlags({ epssAlertThreshold: parseFloat(e.target.value) })}
+                        className="input w-32"
+                    />
+                    <p className="text-xs text-[var(--text-muted)] mt-1">
+                        Alert when EPSS score exceeds this threshold
+                    </p>
+                </div>
 
                 <div className="pt-4 border-t border-[var(--border-color)]">
                     <button
                         className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         onClick={handleSaveFeatureFlags}
-                        disabled={!isMainOfficer}
                     >
                         <Save size={16} />
                         Save (Feature Flags)
@@ -1087,32 +1025,32 @@ function NotificationsSection({ settings, updateSettings, handleSave, isSaving }
         title: string;
         description: string;
     }> = [
-        {
-            id: "notifyCritical",
-            title: "Critical Vulnerability Alerts",
-            description: "Get notified when critical vulnerabilities are detected",
-        },
-        {
-            id: "notifyExploited",
-            title: "Exploitation Alerts",
-            description: "Alert when a vulnerability in your environment is being exploited",
-        },
-        {
-            id: "notifyCompliance",
-            title: "Compliance Drift",
-            description: "Notify when compliance status changes",
-        },
-        {
-            id: "notifyScan",
-            title: "Scan Completion",
-            description: "Alert when vulnerability scans complete",
-        },
-        {
-            id: "notifyWeekly",
-            title: "Weekly Summary",
-            description: "Receive weekly risk summary via email",
-        },
-    ];
+            {
+                id: "notifyCritical",
+                title: "Critical Vulnerability Alerts",
+                description: "Get notified when critical vulnerabilities are detected",
+            },
+            {
+                id: "notifyExploited",
+                title: "Exploitation Alerts",
+                description: "Alert when a vulnerability in your environment is being exploited",
+            },
+            {
+                id: "notifyCompliance",
+                title: "Compliance Drift",
+                description: "Notify when compliance status changes",
+            },
+            {
+                id: "notifyScan",
+                title: "Scan Completion",
+                description: "Alert when vulnerability scans complete",
+            },
+            {
+                id: "notifyWeekly",
+                title: "Weekly Summary",
+                description: "Receive weekly risk summary via email",
+            },
+        ];
 
     const [rules, setRules] = useState<NotificationRuleRecord[]>([]);
     const [isLoadingRules, setIsLoadingRules] = useState(false);
@@ -1360,7 +1298,7 @@ function NotificationsSection({ settings, updateSettings, handleSave, isSaving }
 }
 
 // Security Section
-function SecuritySection({ settings, updateSettings, handleSave, isSaving, isMainOfficer }: SecuritySectionProps) {
+function SecuritySection({ settings, updateSettings, handleSave, isSaving }: SecuritySectionProps) {
     return (
         <Card title="Security Settings" subtitle="Authentication and access control">
             <div className="space-y-6">
@@ -1368,92 +1306,77 @@ function SecuritySection({ settings, updateSettings, handleSave, isSaving, isMai
                     Bank-grade defaults: require2FA=true, sessionTimeout=15–30 min, passwordPolicy=STRONG
                 </p>
 
-                <RestrictedField isMainOfficer={isMainOfficer}>
-                    <div className="p-4 rounded-lg bg-[var(--bg-tertiary)]">
-                        <div className="flex items-center justify-between mb-3">
-                            <div>
-                                <h4 className="text-sm font-medium text-white">
-                                    AI Risk Intelligence
-                                </h4>
-                                <p className="text-xs text-[var(--text-muted)]">
-                                    Automatically analyze new vulnerabilities with AI
-                                </p>
-                            </div>
-                            <Toggle
-                                checked={settings?.aiRiskAssessmentEnabled !== false}
-                                onChange={(checked) => updateSettings({ aiRiskAssessmentEnabled: checked })}
-                                disabled={!isMainOfficer}
-                            />
+                <div className="p-4 rounded-lg bg-[var(--bg-tertiary)]">
+                    <div className="flex items-center justify-between mb-3">
+                        <div>
+                            <h4 className="text-sm font-medium text-white">
+                                AI Risk Intelligence
+                            </h4>
+                            <p className="text-xs text-[var(--text-muted)]">
+                                Automatically analyze new vulnerabilities with AI
+                            </p>
                         </div>
+                        <Toggle
+                            checked={settings?.aiRiskAssessmentEnabled !== false}
+                            onChange={(checked) => updateSettings({ aiRiskAssessmentEnabled: checked })}
+                        />
                     </div>
-                </RestrictedField>
+                </div>
 
-                <RestrictedField isMainOfficer={isMainOfficer}>
-                    <div className="p-4 rounded-lg bg-[var(--bg-tertiary)]">
-                        <div className="flex items-center justify-between mb-3">
-                            <div>
-                                <h4 className="text-sm font-medium text-white">
-                                    Two-Factor Authentication
-                                </h4>
-                                <p className="text-xs text-[var(--text-muted)]">
-                                    Mandatory for all users
-                                </p>
-                            </div>
-                            <Toggle
-                                checked
-                                onChange={() => undefined}
-                                disabled
-                            />
+                <div className="p-4 rounded-lg bg-[var(--bg-tertiary)]">
+                    <div className="flex items-center justify-between mb-3">
+                        <div>
+                            <h4 className="text-sm font-medium text-white">
+                                Enforce 2FA Organization-wide
+                            </h4>
+                            <p className="text-xs text-[var(--text-muted)]">
+                                When disabled, users can choose whether to use 2FA
+                            </p>
                         </div>
-                        <p className="text-xs text-[var(--text-muted)] mt-2">
-                            Two-factor authentication is enforced platform-wide and cannot be disabled.
-                        </p>
+                        <Toggle
+                            checked={settings?.require2FA === true}
+                            onChange={(checked) => updateSettings({ require2FA: checked })}
+                        />
                     </div>
-                </RestrictedField>
+                </div>
 
                 <TwoFactorSettingsPanel />
 
-                <RestrictedField isMainOfficer={isMainOfficer}>
-                    <div>
-                        <label className="block text-sm font-medium text-white mb-2">
-                            Session Timeout (minutes)
-                        </label>
-                        <input
-                            type="number"
-                            value={settings?.sessionTimeout || 30}
-                            onChange={(e) => updateSettings({ sessionTimeout: parseInt(e.target.value) })}
-                            className="input w-32"
-                            disabled={!isMainOfficer}
-                        />
-                        <p className="text-xs text-[var(--text-muted)] mt-1">
-                            Recommended: 15–30 minutes for banking environments
-                        </p>
-                    </div>
-                </RestrictedField>
+                <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                        Session Timeout (minutes)
+                    </label>
+                    <input
+                        type="number"
+                        value={settings?.sessionTimeout || 30}
+                        onChange={(e) => updateSettings({ sessionTimeout: parseInt(e.target.value) })}
+                        className="input w-32"
+                    />
+                    <p className="text-xs text-[var(--text-muted)] mt-1">
+                        Recommended: 15–30 minutes for banking environments
+                    </p>
+                </div>
 
-                <RestrictedField isMainOfficer={isMainOfficer}>
-                    <div>
-                        <label className="block text-sm font-medium text-white mb-2">
-                            Password Policy
-                        </label>
-                        <select
-                            className="input"
-                            value={settings?.passwordPolicy || "STRONG"}
-                            onChange={(e) => updateSettings({ passwordPolicy: e.target.value })}
-                            disabled={!isMainOfficer}
-                        >
-                            <option value="STRONG">Strong (12+ chars, mixed case, numbers, symbols)</option>
-                            <option value="MEDIUM">Medium (8+ chars, mixed case, numbers)</option>
-                            <option value="BASIC">Basic (8+ chars)</option>
-                        </select>
-                    </div>
-                </RestrictedField>
+                <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                        Password Policy
+                    </label>
+                    <select
+                        className="input"
+                        value={settings?.passwordPolicy || "STRONG"}
+                        onChange={(e) => updateSettings({ passwordPolicy: e.target.value })}
+                    >
+                        <option value="STRONG">Strong (12+ chars, mixed case, numbers, symbols)</option>
+                        <option value="MEDIUM">Medium (8+ chars, mixed case, numbers)</option>
+                        <option value="BASIC">Basic (8+ chars)</option>
+                    </select>
+                </div>
 
                 <div className="pt-4 border-t border-[var(--border-color)]">
                     <button
                         className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         onClick={handleSave}
-                        disabled={isSaving || !isMainOfficer}
+                        disabled={isSaving}
                     >
                         <Save size={16} />
                         {isSaving ? "Saving..." : "Save Changes"}
@@ -1465,112 +1388,96 @@ function SecuritySection({ settings, updateSettings, handleSave, isSaving, isMai
 }
 
 // AI Assist Section
-function AIAssistSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFlags, isMainOfficer }: FeatureFlagSectionProps) {
+function AIAssistSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFlags }: FeatureFlagSectionProps) {
     return (
         <Card title="AI Assist" subtitle="Guardrails for OpenRouter and risk autofill">
             <div className="space-y-6">
-                <RestrictedField isMainOfficer={isMainOfficer}>
-                    <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
-                        <div>
-                            <h4 className="text-sm font-medium text-white">Enable AI Assist</h4>
-                            <p className="text-xs text-[var(--text-muted)]">
-                                Master switch for all AI-powered features
-                            </p>
-                        </div>
-                        <Toggle
-                            checked={featureFlags.aiAssistEnabled || false}
-                            onChange={(checked) => updateFeatureFlags({ aiAssistEnabled: checked })}
-                            disabled={!isMainOfficer}
-                        />
-                    </div>
-                </RestrictedField>
-
-                <RestrictedField isMainOfficer={isMainOfficer}>
-                    <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
-                        <div>
-                            <h4 className="text-sm font-medium text-white">
-                                Risk Register Autofill
-                            </h4>
-                            <p className="text-xs text-[var(--text-muted)]">
-                                When users enter Threat + CIA impacts, AI suggests remaining fields
-                            </p>
-                        </div>
-                        <Toggle
-                            checked={featureFlags.aiRiskAutofillEnabled || false}
-                            onChange={(checked) => updateFeatureFlags({ aiRiskAutofillEnabled: checked })}
-                            disabled={!isMainOfficer}
-                        />
-                    </div>
-                </RestrictedField>
-
-                <RestrictedField isMainOfficer={isMainOfficer}>
-                    <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
-                        <div>
-                            <h4 className="text-sm font-medium text-white">
-                                Require human review before saving AI suggestions
-                            </h4>
-                            <p className="text-xs text-[var(--text-muted)]">
-                                Prevent automatic acceptance of AI-generated content
-                            </p>
-                        </div>
-                        <Toggle
-                            checked={featureFlags.aiHumanReviewRequired ?? true}
-                            onChange={(checked) => updateFeatureFlags({ aiHumanReviewRequired: checked })}
-                            disabled={!isMainOfficer}
-                        />
-                    </div>
-                </RestrictedField>
-
-                <RestrictedField isMainOfficer={isMainOfficer}>
+                <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
                     <div>
-                        <label className="block text-sm font-medium text-white mb-2">
-                            Data Redaction
-                        </label>
-                        <select
-                            className="input"
-                            value={featureFlags.aiDataRedactionMode || "STRICT"}
-                            onChange={(e) => updateFeatureFlags({ aiDataRedactionMode: e.target.value })}
-                            disabled={!isMainOfficer}
-                        >
-                            <option value="STRICT">Strict (no PII, no internal hostnames)</option>
-                            <option value="STANDARD">Standard</option>
-                        </select>
+                        <h4 className="text-sm font-medium text-white">Enable AI Assist</h4>
+                        <p className="text-xs text-[var(--text-muted)]">
+                            Master switch for all AI-powered features
+                        </p>
                     </div>
-                </RestrictedField>
+                    <Toggle
+                        checked={featureFlags.aiAssistEnabled || false}
+                        onChange={(checked) => updateFeatureFlags({ aiAssistEnabled: checked })}
+                    />
+                </div>
 
-                <RestrictedField isMainOfficer={isMainOfficer}>
+                <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
                     <div>
-                        <label className="block text-sm font-medium text-white mb-2">
-                            Allowed Models (allowlist)
-                        </label>
-                        <div className="space-y-2">
-                            {["openai/gpt-4o-mini", "openai/gpt-4.1-mini", "anthropic/claude-3.5-sonnet", "google/gemini-1.5-pro"].map((model) => (
-                                <label key={model} className="flex items-center gap-2 p-2 rounded bg-[var(--bg-tertiary)]">
-                                    <input
-                                        type="checkbox"
-                                        checked={(featureFlags.aiModelAllowlist || []).includes(model)}
-                                        onChange={(e) => {
-                                            const current = featureFlags.aiModelAllowlist || [];
-                                            const updated = e.target.checked
-                                                ? [...current, model]
-                                                : current.filter((m) => m !== model);
-                                            updateFeatureFlags({ aiModelAllowlist: updated });
-                                        }}
-                                        disabled={!isMainOfficer}
-                                        className="rounded"
-                                    />
-                                    <span className="text-sm text-white">{model}</span>
-                                </label>
-                            ))}
-                        </div>
+                        <h4 className="text-sm font-medium text-white">
+                            Risk Register Autofill
+                        </h4>
+                        <p className="text-xs text-[var(--text-muted)]">
+                            When users enter Threat + CIA impacts, AI suggests remaining fields
+                        </p>
                     </div>
-                </RestrictedField>
+                    <Toggle
+                        checked={featureFlags.aiRiskAutofillEnabled || false}
+                        onChange={(checked) => updateFeatureFlags({ aiRiskAutofillEnabled: checked })}
+                    />
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
+                    <div>
+                        <h4 className="text-sm font-medium text-white">
+                            Require human review
+                        </h4>
+                        <p className="text-xs text-[var(--text-muted)]">
+                            Prevent automatic acceptance of AI-generated content
+                        </p>
+                    </div>
+                    <Toggle
+                        checked={featureFlags.aiHumanReviewRequired ?? true}
+                        onChange={(checked) => updateFeatureFlags({ aiHumanReviewRequired: checked })}
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                        Data Redaction
+                    </label>
+                    <select
+                        className="input"
+                        value={featureFlags.aiDataRedactionMode || "STRICT"}
+                        onChange={(e) => updateFeatureFlags({ aiDataRedactionMode: e.target.value })}
+                    >
+                        <option value="STRICT">Strict (no PII, no internal hostnames)</option>
+                        <option value="STANDARD">Standard</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                        Allowed Models
+                    </label>
+                    <div className="space-y-2">
+                        {["openai/gpt-4o-mini", "openai/gpt-4.1-mini", "anthropic/claude-3.5-sonnet", "google/gemini-1.5-pro"].map((model) => (
+                            <label key={model} className="flex items-center gap-2 p-2 rounded bg-[var(--bg-tertiary)] cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={(featureFlags.aiModelAllowlist || []).includes(model)}
+                                    onChange={(e) => {
+                                        const current = featureFlags.aiModelAllowlist || [];
+                                        const updated = e.target.checked
+                                            ? [...current, model]
+                                            : current.filter((m) => m !== model);
+                                        updateFeatureFlags({ aiModelAllowlist: updated });
+                                    }}
+                                    className="rounded"
+                                />
+                                <span className="text-sm text-white">{model}</span>
+                            </label>
+                        ))}
+                    </div>
+                </div>
 
                 <div className="pt-4 border-t border-[var(--border-color)]">
                     <button
                         className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         onClick={handleSaveFeatureFlags}
-                        disabled={!isMainOfficer}
                     >
                         <Save size={16} />
                         Save (Feature Flags)

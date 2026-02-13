@@ -2,7 +2,7 @@ import { authenticator } from "otplib";
 
 export const TOTP_DIGITS = 6;
 export const TOTP_STEP_SECONDS = 30;
-export const TOTP_WINDOW: [number, number] = [1, 1];
+export const TOTP_WINDOW = 1;
 
 function getAuthenticator() {
     authenticator.options = {
@@ -27,17 +27,17 @@ export function buildTotpOtpAuthUrl(secret: string, accountEmail: string, issuer
     return getAuthenticator().keyuri(accountEmail, issuer, secret);
 }
 
-export function generateTotpToken(secret: string, epochMs = Date.now()): string {
+export function generateTotpToken(secret: string): string {
     const currentOptions = authenticator.options;
     authenticator.options = {
         ...currentOptions,
         digits: TOTP_DIGITS,
         step: TOTP_STEP_SECONDS,
-        window: TOTP_WINDOW,
-        epoch: epochMs,
+        window: TOTP_WINDOW, // Symmetric window for compatibility
     };
 
     const token = authenticator.generate(secret);
+
     authenticator.options = currentOptions;
     return token;
 }
@@ -47,7 +47,7 @@ export function verifyTotpToken(
     code: string,
     lastUsedStep: number | null,
     epochMs = Date.now(),
-): 
+):
     | { valid: true; matchedStep: number }
     | { valid: false; reason: "invalid_code" }
     | { valid: false; reason: "replay"; matchedStep: number } {
@@ -61,11 +61,11 @@ export function verifyTotpToken(
         ...currentOptions,
         digits: TOTP_DIGITS,
         step: TOTP_STEP_SECONDS,
-        window: TOTP_WINDOW,
-        epoch: epochMs,
+        window: TOTP_WINDOW, // Symmetric window
     };
 
     const delta = authenticator.checkDelta(normalized, secret);
+
     authenticator.options = currentOptions;
 
     if (delta === null) {

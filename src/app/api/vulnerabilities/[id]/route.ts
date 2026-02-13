@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSessionWithOrg } from "@/lib/api-auth";
 import { calculateSlaDueAt } from "@/lib/workflow/sla";
+import { createNotification, notifyMainOfficers } from "@/lib/notifications/service";
 
 const updateSchema = z.object({
   title: z.string().min(3).max(300).optional(),
@@ -63,7 +64,50 @@ export async function PATCH(
   const updated = await prisma.vulnerability.update({
     where: { id: existing.id },
     data,
+    include: {
+      assignedUser: { select: { name: true, email: true } }
+    }
   });
+
+  // Handle Notifications
+  const promises: Promise<any>[] = [];
+
+  // 1. If assignedUserId changed and is set, notify the new assignee
+  if (payload.assignedUserId && payload.assignedUserId !== existing.assignedUserId) {
+    promises.push(createNotification({
+      userId: payload.assignedUserId,
+      title: "Vulnerability Assigned",
+      message: `You have been assigned to vulnerability: ${updated.title}`,
+      type: "INFO",
+      link: `/vulnerabilities?search=${updated.id}`
+    }));
+  }
+
+  // 2. If status changed to FIXED
+  if (payload.status === "FIXED" && existing.status !== "FIXED") {
+    const message = `Vulnerability fixed: ${updated.title} (ID: ${updated.id})`;
+    const link = `/vulnerabilities?search=${updated.id}`;
+
+    // Notify the assigner (creator of the vulnerability)
+    // In this schema, we don't track creator directly on Vulnerability, but we can notify the current main officers
+    // Or if there was a previous assignee who isn't the one who fixed it? 
+    // Usually "assigner" means the person who gave the task.
+
+    promises.push(notifyMainOfficers("Vulnerability Fixed", message, link));
+
+    // If the vulnerability was assigned to someone else, notify them too
+    if (updated.assignedUserId && updated.assignedUserId !== authResult.context.userId) {
+      promises.push(createNotification({
+        userId: updated.assignedUserId,
+        title: "Vulnerability Fixed",
+        message,
+        type: "SUCCESS",
+        link
+      }));
+    }
+  }
+
+  await Promise.allSettled(promises);
 
   return NextResponse.json(updated);
 }
