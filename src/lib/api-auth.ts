@@ -9,9 +9,33 @@ export interface SessionOrgContext {
   role: string;
 }
 
-export async function requireSessionWithOrg(): Promise<
+type RequireSessionOptions = {
+  allowedRoles?: readonly string[];
+};
+
+function hasValidAuthorizationHeader(request: Request): boolean {
+  const authorizationHeader = request.headers.get("authorization");
+  if (!authorizationHeader) {
+    return false;
+  }
+
+  const [scheme, token] = authorizationHeader.split(/\s+/, 2);
+  return scheme === "Bearer" && typeof token === "string" && token.trim().length > 0;
+}
+
+export async function requireSessionWithOrg(
+  request: Request,
+  options: RequireSessionOptions = {},
+): Promise<
   { ok: true; context: SessionOrgContext } | { ok: false; response: NextResponse }
 > {
+  if (!hasValidAuthorizationHeader(request)) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Authorization header required" }, { status: 401 }),
+    };
+  }
+
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -37,6 +61,13 @@ export async function requireSessionWithOrg(): Promise<
     return {
       ok: false,
       response: NextResponse.json({ error: "Organization context required" }, { status: 403 }),
+    };
+  }
+
+  if (options.allowedRoles && options.allowedRoles.length > 0 && !options.allowedRoles.includes(user.role)) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Forbidden: insufficient role permissions" }, { status: 403 }),
     };
   }
 

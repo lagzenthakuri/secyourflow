@@ -18,7 +18,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const authResult = await requireSessionWithOrg();
+  const authResult = await requireSessionWithOrg(request);
   if (!authResult.ok) return authResult.response;
 
   const parsed = workflowSchema.safeParse(await request.json());

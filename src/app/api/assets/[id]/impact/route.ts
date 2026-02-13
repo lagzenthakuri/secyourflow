@@ -3,10 +3,10 @@ import { requireSessionWithOrg } from "@/lib/api-auth";
 import { buildAssetImpactAnalysis } from "@/lib/assets/impact";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const authResult = await requireSessionWithOrg();
+  const authResult = await requireSessionWithOrg(request);
   if (!authResult.ok) return authResult.response;
 
   const { id } = await params;
