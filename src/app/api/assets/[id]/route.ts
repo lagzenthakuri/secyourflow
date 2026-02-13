@@ -4,10 +4,10 @@ import { requireSessionWithOrg } from "@/lib/api-auth";
 import { logAssetChange } from "@/lib/assets/lifecycle";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const authResult = await requireSessionWithOrg();
+  const authResult = await requireSessionWithOrg(request);
   if (!authResult.ok) return authResult.response;
 
   try {
@@ -43,7 +43,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const authResult = await requireSessionWithOrg();
+  const authResult = await requireSessionWithOrg(request);
   if (!authResult.ok) return authResult.response;
 
   try {
@@ -85,10 +85,10 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const authResult = await requireSessionWithOrg();
+  const authResult = await requireSessionWithOrg(request);
   if (!authResult.ok) return authResult.response;
 
   try {

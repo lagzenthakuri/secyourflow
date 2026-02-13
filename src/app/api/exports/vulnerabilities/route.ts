@@ -4,7 +4,7 @@ import { requireSessionWithOrg } from "@/lib/api-auth";
 import { exportResponse, renderTabularExport } from "@/lib/reporting/export-utils";
 
 export async function GET(request: NextRequest) {
-  const authResult = await requireSessionWithOrg();
+  const authResult = await requireSessionWithOrg(request);
   if (!authResult.ok) return authResult.response;
 
   const format = (request.nextUrl.searchParams.get("format") || "csv").toLowerCase();

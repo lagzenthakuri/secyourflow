@@ -22,7 +22,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const authResult = await requireSessionWithOrg();
+  const authResult = await requireSessionWithOrg(request);
   if (!authResult.ok) return authResult.response;
 
   const parsed = updateSchema.safeParse(await request.json());
@@ -113,10 +113,10 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const authResult = await requireSessionWithOrg();
+  const authResult = await requireSessionWithOrg(request);
   if (!authResult.ok) return authResult.response;
 
   const { id } = await params;

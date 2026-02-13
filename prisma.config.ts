@@ -7,6 +7,7 @@ const databaseUrl = process.env["DATABASE_URL"];
 if (!databaseUrl) {
   throw new Error("DATABASE_URL must be set");
 }
+const shadowDatabaseUrl = process.env["SHADOW_DATABASE_URL"];
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -16,5 +17,6 @@ export default defineConfig({
   },
   datasource: {
     url: databaseUrl,
+    shadowDatabaseUrl,
   },
 });

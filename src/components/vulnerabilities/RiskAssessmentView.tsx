@@ -122,32 +122,32 @@ export function RiskAssessmentView({ riskEntry, vulnerabilityId, onRefresh }: Ri
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <Shield size={18} className="text-purple-400" />
-                    <h4 className="font-semibold text-white">AI Risk Analysis</h4>
+                    <h4 className="font-semibold text-[var(--text-primary)]">AI Risk Analysis</h4>
                 </div>
-                <div className={cn("px-2 py-1 rounded text-xs font-bold bg-white/5", getScoreColor(score))}>
+                <div className={cn("px-2 py-1 rounded text-xs font-bold bg-[var(--bg-tertiary)]", getScoreColor(score))}>
                     RISK SCORE: {score.toFixed(1)}/25
                 </div>
             </div>
 
             <div className="grid grid-cols-3 gap-2">
-                <div className="p-2 rounded bg-white/5 border border-white/10 text-center">
+                <div className="p-2 rounded bg-[var(--bg-tertiary)] border border-[var(--border-color)] text-center">
                     <p className="text-[10px] text-[var(--text-muted)] uppercase">Confidentiality</p>
-                    <p className="text-lg font-bold text-white">{analysis.confidentiality_impact}/5</p>
+                    <p className="text-lg font-bold text-[var(--text-primary)]">{analysis.confidentiality_impact}/5</p>
                 </div>
-                <div className="p-2 rounded bg-white/5 border border-white/10 text-center">
+                <div className="p-2 rounded bg-[var(--bg-tertiary)] border border-[var(--border-color)] text-center">
                     <p className="text-[10px] text-[var(--text-muted)] uppercase">Integrity</p>
-                    <p className="text-lg font-bold text-white">{analysis.integrity_impact}/5</p>
+                    <p className="text-lg font-bold text-[var(--text-primary)]">{analysis.integrity_impact}/5</p>
                 </div>
-                <div className="p-2 rounded bg-white/5 border border-white/10 text-center">
+                <div className="p-2 rounded bg-[var(--bg-tertiary)] border border-[var(--border-color)] text-center">
                     <p className="text-[10px] text-[var(--text-muted)] uppercase">Availability</p>
-                    <p className="text-lg font-bold text-white">{analysis.availability_impact}/5</p>
+                    <p className="text-lg font-bold text-[var(--text-primary)]">{analysis.availability_impact}/5</p>
                 </div>
             </div>
 
             <div className="space-y-2">
                 <div>
                     <p className="text-xs font-medium text-[var(--text-secondary)] mb-1">Threat Statement</p>
-                    <p className="text-sm text-white bg-white/5 p-2 rounded border border-white/5">
+                    <p className="text-sm text-[var(--text-primary)] bg-[var(--bg-tertiary)] p-2 rounded border border-[var(--border-color)]">
                         {analysis.threat}
                     </p>
                 </div>
@@ -167,7 +167,7 @@ export function RiskAssessmentView({ riskEntry, vulnerabilityId, onRefresh }: Ri
                 ))}
             </div>
 
-            <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[10px] text-[var(--text-muted)]">
+            <div className="pt-2 border-t border-[var(--border-color)] flex items-center justify-between text-[10px] text-[var(--text-muted)]">
                 <span>Treatment: {analysis.treatment_option}</span>
                 <span>Confidence: {((analysis.confidence ?? 0) * 100).toFixed(0)}%</span>
             </div>

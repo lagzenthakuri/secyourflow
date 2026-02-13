@@ -63,7 +63,7 @@ export function Modal({
                 )}
             >
                 <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-color)]">
-                    <h2 className="text-xl font-semibold text-white">{title}</h2>
+                    <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
                     <button
                         onClick={onClose}
                         className="p-1 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] transition-all duration-300 ease-in-out"

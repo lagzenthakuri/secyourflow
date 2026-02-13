@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { WidgetBuilder } from "@/components/dashboard/WidgetBuilder";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle,
@@ -263,7 +264,7 @@ function getReportStatusTone(status?: string | null) {
   if (normalized === "FAILED") {
     return "border-red-400/35 bg-red-500/10 text-red-200";
   }
-  return "border-slate-400/35 bg-slate-500/10 text-slate-200";
+  return "border-slate-400/35 bg-slate-500/10 text-[var(--text-secondary)]";
 }
 
 export default function ReportsPage() {
@@ -497,37 +498,21 @@ export default function ReportsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-5">
-        <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(132deg,rgba(56,189,248,0.2),rgba(18,18,26,0.9)_44%,rgba(18,18,26,0.96))] p-6 sm:p-8 animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-sky-300/20 blur-3xl animate-pulse" />
-          <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-sky-300/35 bg-sky-300/10 px-3 py-1 text-xs font-medium text-sky-200">
-                <FileText size={13} />
-                Reporting Workspace
-              </div>
-              <h1 className="mt-4 text-2xl font-semibold text-white sm:text-3xl">Reports</h1>
-              <p className="mt-3 text-sm leading-relaxed text-slate-200 sm:text-base">
-                Generate decision-ready reporting for SOC leadership, auditors, and operational teams
-                with clear trends, compliance posture, and remediation outcomes.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-100">
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
-                  {numberFormatter.format(reportsList.length)} generated reports
-                </span>
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
-                  {numberFormatter.format(queueStats.pending)} in queue
-                </span>
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
-                  Top framework: {topComplianceName}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <PageHeader
+          title="Reports"
+          description="Generate decision-ready reporting for SOC leadership, auditors, and operational teams with clear trends, compliance posture, and remediation outcomes."
+          badge={
+            <>
+              <FileText size={13} />
+              Reporting Workspace
+            </>
+          }
+          actions={
+            <>
               <button
                 type="button"
                 onClick={() => void fetchData({ silent: true })}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95"
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95"
               >
                 <RefreshCw
                   size={14}
@@ -538,7 +523,7 @@ export default function ReportsPage() {
               {isMainOfficer && (
                 <Link
                   href="/reports/activity"
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95"
+                  className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95"
                 >
                   <Clock3 size={14} />
                   Activity
@@ -548,104 +533,71 @@ export default function ReportsPage() {
                 type="button"
                 onClick={() => void handleGenerate(reportTemplates[0])}
                 disabled={isGenerating !== null}
-                className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-200 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
+                className="btn btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
               >
                 <Plus size={14} />
                 Generate Snapshot
               </button>
-            </div>
-          </div>
-        </section>
-
-        {pageError ? (
-          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-sm text-red-200">
-            {pageError}
-          </section>
-        ) : null}
-
-        {actionError ? (
-          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-sm text-red-200">
-            {actionError}
-          </section>
-        ) : null}
-
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          {[
+            </>
+          }
+          stats={[
             {
               label: "Risk Score",
               value: stats.overallRiskScore.toFixed(1),
-              hint: "Latest aggregate posture",
+              trend: { value: "Latest aggregate posture", neutral: true },
               icon: TrendingDown,
             },
             {
               label: "Compliance",
               value: `${stats.complianceScore.toFixed(0)}%`,
-              hint: "Current control coverage",
+              trend: { value: "Current control coverage", neutral: true },
               icon: FileCheck,
             },
             {
               label: "Fixed This Month",
               value: numberFormatter.format(stats.fixedThisMonth),
-              hint: "Resolved vulnerabilities",
+              trend: { value: "Resolved vulnerabilities", neutral: true },
               icon: Shield,
             },
             {
               label: "Open Vulnerabilities",
               value: numberFormatter.format(stats.openVulnerabilities),
-              hint: "Pending remediation",
+              trend: { value: "Pending remediation", neutral: true },
               icon: AlertTriangle,
             },
             {
               label: "MTTR",
               value: `${stats.meanTimeToRemediate} days`,
-              hint: "Mean time to remediate",
+              trend: { value: "Mean time to remediate", neutral: true },
               icon: Sparkles,
             },
-          ].map((metric, index) => {
-            const Icon = metric.icon;
-            return (
-              <article
-                key={metric.label}
-                className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-300/35 hover:shadow-lg hover:shadow-sky-300/10 animate-in fade-in slide-in-from-bottom-4"
-                style={{ animationDelay: `${index * 90}ms`, animationFillMode: "backwards" }}
-              >
-                <div className="flex items-start justify-between">
-                  <p className="text-sm text-slate-300">{metric.label}</p>
-                  <div className="rounded-lg border border-white/10 bg-white/5 p-2 transition-transform duration-200 hover:scale-110">
-                    <Icon size={15} className="text-slate-200" />
-                  </div>
-                </div>
-                <p className="mt-4 text-2xl font-semibold text-white">{metric.value}</p>
-                <p className="mt-1 text-sm text-slate-400">{metric.hint}</p>
-              </article>
-            );
-          })}
-        </section>
+          ]}
+        />
 
         <section
           className="grid gap-4 xl:grid-cols-2 animate-in fade-in slide-in-from-bottom-3 duration-500"
           style={{ animationDelay: "450ms", animationFillMode: "backwards" }}
         >
-          <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
+          <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-base font-semibold text-white">Risk Trend</h2>
-                <p className="text-sm text-slate-400">Last six snapshots</p>
+                <h2 className="text-base font-semibold text-[var(--text-primary)]">Risk Trend</h2>
+                <p className="text-sm text-[var(--text-secondary)]">Last six snapshots</p>
               </div>
-              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] text-slate-400">
+              <span className="rounded-full border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-1 text-[11px] text-[var(--text-muted)]">
                 Governance signal
               </span>
             </div>
             <RiskTrendChart data={riskTrends} />
           </article>
 
-          <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
+          <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-base font-semibold text-white">Remediation Activity</h2>
-                <p className="text-sm text-slate-400">Opened vs closed findings</p>
+                <h2 className="text-base font-semibold text-[var(--text-primary)]">Remediation Activity</h2>
+                <p className="text-sm text-[var(--text-secondary)]">Opened vs closed findings</p>
               </div>
-              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] text-slate-400">
+              <span className="rounded-full border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-1 text-[11px] text-[var(--text-muted)]">
                 Operational throughput
               </span>
             </div>
@@ -655,13 +607,13 @@ export default function ReportsPage() {
 
         <section className="grid gap-5 xl:grid-cols-12">
           <div className="xl:col-span-8 space-y-4">
-            <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
+            <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-base font-semibold text-white">Report Templates</h2>
-                  <p className="text-sm text-slate-400">Generate on-demand outputs for current posture.</p>
+                  <h2 className="text-base font-semibold text-[var(--text-primary)]">Report Templates</h2>
+                  <p className="text-sm text-[var(--text-secondary)]">Generate on-demand outputs for current posture.</p>
                 </div>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-[var(--text-muted)]">
                   {reportTemplates.length} templates available
                 </span>
               </div>
@@ -674,29 +626,29 @@ export default function ReportsPage() {
                     <article
                       key={template.id}
                       className={cn(
-                        "rounded-xl border bg-white/[0.02] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/[0.04] hover:scale-[1.02] animate-in fade-in slide-in-from-bottom-2",
+                        "rounded-xl border bg-[var(--bg-tertiary)] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:bg-[var(--bg-elevated)] hover:scale-[1.02] animate-in fade-in slide-in-from-bottom-2",
                         meta.border,
                       )}
                       style={{ animationDelay: `${index * 50}ms`, animationFillMode: "backwards" }}
                     >
                       <div className="flex items-start gap-3">
-                        <div className="rounded-lg border border-white/10 bg-white/[0.04] p-2">
+                        <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-elevated)] p-2">
                           <Icon size={15} className={meta.iconTone} />
                         </div>
                         <div className="min-w-0">
                           <h3 className={cn("text-sm font-semibold", meta.tone)}>{template.name}</h3>
-                          <p className="mt-1 text-xs leading-relaxed text-slate-400">
+                          <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">
                             {template.description}
                           </p>
                         </div>
                       </div>
 
-                      <div className="mt-4 flex items-center justify-between text-xs text-slate-400">
+                      <div className="mt-4 flex items-center justify-between text-xs text-[var(--text-muted)]">
                         <span>{template.cadence}</span>
                         <span>{template.format}</span>
                       </div>
 
-                      <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
+                      <div className="mt-3 flex items-center gap-2 border-t border-[var(--border-color)] pt-3">
                         <button
                           type="button"
                           onClick={() => void handleGenerate(template)}
@@ -717,36 +669,36 @@ export default function ReportsPage() {
               </div>
             </article>
 
-            <article className="overflow-hidden rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)]">
-              <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+            <article className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
+              <div className="flex items-center justify-between border-b border-[var(--border-color)] px-5 py-4">
                 <div>
-                  <h2 className="text-base font-semibold text-white">Recently Generated</h2>
-                  <p className="text-sm text-slate-400">Latest report outputs and status</p>
+                  <h2 className="text-base font-semibold text-[var(--text-primary)]">Recently Generated</h2>
+                  <p className="text-sm text-[var(--text-secondary)]">Latest report outputs and status</p>
                 </div>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-[var(--text-muted)]">
                   {numberFormatter.format(reportsList.length)} total
                 </span>
               </div>
 
               {reportsList.length === 0 ? (
                 <div className="p-12 text-center">
-                  <FileText className="mx-auto h-10 w-10 text-slate-500" />
-                  <p className="mt-4 text-base font-medium text-white">No Reports Yet</p>
-                  <p className="mt-2 text-sm text-slate-400">
+                  <FileText className="mx-auto h-10 w-10 text-[var(--text-muted)]" />
+                  <p className="mt-4 text-base font-medium text-[var(--text-primary)]">No Reports Yet</p>
+                  <p className="mt-2 text-sm text-[var(--text-secondary)]">
                     Generate your first report from the templates above.
                   </p>
                 </div>
               ) : (
-                <div className="divide-y divide-white/10">
+                <div className="divide-y divide-[var(--border-color)]">
                   {reportsList.map((report, index) => (
                     <div
                       key={report.id}
-                      className="flex items-center justify-between gap-3 px-5 py-4 transition-all duration-200 hover:bg-white/[0.03] animate-in fade-in slide-in-from-left-2"
+                      className="flex items-center justify-between gap-3 px-5 py-4 transition-all duration-200 hover:bg-[var(--bg-elevated)] animate-in fade-in slide-in-from-left-2"
                       style={{ animationDelay: `${index * 30}ms`, animationFillMode: "backwards" }}
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="truncate text-sm font-semibold text-white">{report.name}</p>
+                          <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{report.name}</p>
                           <span
                             className={cn(
                               "rounded-md border px-2 py-0.5 text-[11px] font-medium",
@@ -755,11 +707,11 @@ export default function ReportsPage() {
                           >
                             {formatLabel(report.status || "PENDING")}
                           </span>
-                          <span className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] text-slate-300">
+                          <span className="rounded-md border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]">
                             {formatLabel(report.type || "Report")}
                           </span>
                         </div>
-                        <p className="mt-1 text-xs text-slate-400">
+                        <p className="mt-1 text-xs text-[var(--text-muted)]">
                           {new Date(report.createdAt).toLocaleString()} • {report.size || "Calculating..."}
                         </p>
                       </div>
@@ -770,7 +722,7 @@ export default function ReportsPage() {
                             href={report.url}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/[0.03] px-3 py-2 text-xs font-medium text-slate-200 transition-all duration-200 hover:bg-white/[0.08] hover:scale-105 active:scale-95"
+                            className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-xs font-medium text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95"
                           >
                             <Download size={12} />
                             Download
@@ -779,13 +731,13 @@ export default function ReportsPage() {
                           <button
                             type="button"
                             disabled
-                            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-xs font-medium text-slate-500"
+                            className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-xs font-medium text-[var(--text-muted)]"
                           >
                             <Download size={12} />
                             Pending
                           </button>
                         )}
-                        <ChevronRight size={14} className="text-slate-500" />
+                        <ChevronRight size={14} className="text-[var(--text-muted)]" />
                       </div>
                     </div>
                   ))}
@@ -795,23 +747,23 @@ export default function ReportsPage() {
           </div>
 
           <aside className="xl:col-span-4 space-y-4">
-            <section className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
-              <h3 className="text-base font-semibold text-white">Compliance Snapshot</h3>
-              <p className="mt-1 text-sm text-slate-400">Framework score comparison</p>
+            <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+              <h3 className="text-base font-semibold text-[var(--text-primary)]">Compliance Snapshot</h3>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">Framework score comparison</p>
               <div className="mt-4">
                 {complianceOverview.length > 0 ? (
                   <ComplianceBarChart data={complianceOverview} />
                 ) : (
-                  <p className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-4 text-sm text-slate-400">
+                  <p className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-4 text-sm text-[var(--text-muted)]">
                     Compliance chart appears when frameworks are available.
                   </p>
                 )}
               </div>
             </section>
 
-            <section className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
-              <h3 className="text-base font-semibold text-white">Output Queue</h3>
-              <p className="mt-1 text-sm text-slate-400">Current report generation states</p>
+            <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+              <h3 className="text-base font-semibold text-[var(--text-primary)]">Output Queue</h3>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">Current report generation states</p>
               <div className="mt-4 space-y-3">
                 {[
                   {
@@ -855,9 +807,9 @@ export default function ReportsPage() {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
-              <h3 className="text-base font-semibold text-white">Top Frameworks</h3>
-              <p className="mt-1 text-sm text-slate-400">Highest compliance performance</p>
+            <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+              <h3 className="text-base font-semibold text-[var(--text-primary)]">Top Frameworks</h3>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">Highest compliance performance</p>
               <div className="mt-4 space-y-3">
                 {complianceOverview.length > 0 ? (
                   [...complianceOverview]
@@ -866,7 +818,7 @@ export default function ReportsPage() {
                     .map((framework) => (
                       <div key={framework.frameworkId}>
                         <div className="mb-1.5 flex items-center justify-between text-xs">
-                          <span className="text-slate-200">{framework.frameworkName}</span>
+                          <span className="text-[var(--text-secondary)]">{framework.frameworkName}</span>
                           <span
                             className={cn(
                               "font-semibold",
@@ -901,20 +853,20 @@ export default function ReportsPage() {
                       </div>
                     ))
                 ) : (
-                  <p className="text-sm text-slate-400">No framework data available yet.</p>
+                  <p className="text-sm text-[var(--text-muted)]">No framework data available yet.</p>
                 )}
               </div>
             </section>
 
-            <section className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
-              <h3 className="text-base font-semibold text-white">Custom Dashboard Views</h3>
-              <p className="mt-1 text-sm text-slate-400">
+            <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+              <h3 className="text-base font-semibold text-[var(--text-primary)]">Custom Dashboard Views</h3>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">
                 Build widget layouts, share by role, and set defaults.
               </p>
 
               <div className="mt-4 space-y-3">
                 <div>
-                  <label className="mb-1 block text-xs text-slate-400">View Name</label>
+                  <label className="mb-1 block text-xs text-[var(--text-muted)]">View Name</label>
                   <input
                     className="input"
                     value={viewName}
@@ -924,7 +876,7 @@ export default function ReportsPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <label className="rounded-lg border border-white/10 bg-white/[0.03] p-2 text-xs text-slate-300">
+                  <label className="rounded-lg border border-white/10 bg-white/[0.03] p-2 text-xs text-[var(--text-secondary)]">
                     Share Role
                     <select
                       className="input mt-1 h-9 text-xs"
@@ -937,7 +889,7 @@ export default function ReportsPage() {
                       <option value="MAIN_OFFICER">MAIN_OFFICER</option>
                     </select>
                   </label>
-                  <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-2 text-xs text-slate-300">
+                  <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-2 text-xs text-[var(--text-secondary)]">
                     <input
                       type="checkbox"
                       checked={viewDefault}
@@ -975,7 +927,7 @@ export default function ReportsPage() {
                           setViewWidgets(Array.isArray(view.layout?.widgets) ? view.layout.widgets : []);
                           setViewDefault(view.isDefault);
                         }}
-                        className="truncate text-left text-xs text-slate-200 hover:text-white"
+                        className="truncate text-left text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                       >
                         {view.name} {view.isDefault ? "• default" : ""}
                       </button>

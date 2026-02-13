@@ -21,6 +21,8 @@ import {
     LogOut,
     ClipboardList,
     Database,
+    Sun,
+    Moon,
 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -32,17 +34,20 @@ import {
     type NotificationItem,
     type NotificationsResponse,
 } from "@/lib/notification-state";
+import { useTheme } from "@/components/providers/ThemeProvider";
+
+const ALL_ROLES = ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"];
 
 const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"] },
-    { name: "Assets", href: "/assets", icon: Server, roles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"] },
-    { name: "Vulnerabilities", href: "/vulnerabilities", icon: Shield, roles: ["MAIN_OFFICER", "PENTESTER", "ANALYST"] },
-    { name: "Threats", href: "/threats", icon: AlertTriangle, roles: ["MAIN_OFFICER", "PENTESTER", "ANALYST"] },
-    { name: "Risk Register", href: "/risk-register", icon: ClipboardList, roles: ["MAIN_OFFICER", "IT_OFFICER", "ANALYST"] },
-    { name: "Compliance", href: "/compliance", icon: FileCheck, roles: ["MAIN_OFFICER", "IT_OFFICER", "ANALYST"] },
-    { name: "Reports", href: "/reports", icon: BarChart3, roles: ["MAIN_OFFICER", "ANALYST"] },
-    { name: "Scanners", href: "/scanners", icon: Scan, roles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"] },
-    { name: "CVE Search", href: "/cves", icon: Database, roles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"] },
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ALL_ROLES },
+    { name: "Assets", href: "/assets", icon: Server, roles: ALL_ROLES },
+    { name: "Vulnerabilities", href: "/vulnerabilities", icon: Shield, roles: ALL_ROLES },
+    { name: "Threats", href: "/threats", icon: AlertTriangle, roles: ALL_ROLES },
+    { name: "Risk Register", href: "/risk-register", icon: ClipboardList, roles: ALL_ROLES },
+    { name: "Compliance", href: "/compliance", icon: FileCheck, roles: ALL_ROLES },
+    { name: "Reports", href: "/reports", icon: BarChart3, roles: ALL_ROLES },
+    { name: "Scanners", href: "/scanners", icon: Scan, roles: ALL_ROLES },
+    { name: "CVE Search", href: "/cves", icon: Database, roles: ALL_ROLES },
 ];
 
 const secondaryNav = [
@@ -210,6 +215,7 @@ function getApiErrorMessage(payload: unknown): string | null {
 }
 
 export function TopBar({ onToggleSidebar }: TopBarProps) {
+    const { theme, toggleTheme } = useTheme();
     const router = useRouter();
     const [threatsCount, setThreatsCount] = useState(0);
     const [notificationsCount, setNotificationsCount] = useState(0);
@@ -393,7 +399,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
             <div className="flex items-center gap-4 flex-1 max-w-xl">
                 <button
                     onClick={onToggleSidebar}
-                    className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-white transition-all duration-300 ease-in-out"
+                    className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all duration-300 ease-in-out"
                     aria-label="Toggle Sidebar"
                 >
                     <Menu size={20} />
@@ -423,11 +429,21 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                     </div>
                 </Link>
 
+                <button
+                    type="button"
+                    onClick={toggleTheme}
+                    aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+                    title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+                    className="relative p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all duration-300 ease-in-out border border-[var(--border-color)]"
+                >
+                    {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+                </button>
+
                 {/* Notifications */}
                 <div className="relative">
                     <button
                         onClick={() => setShowNotifications(!showNotifications)}
-                        className="relative p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-white transition-all duration-300 ease-in-out"
+                        className="relative p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all duration-300 ease-in-out"
                     >
                         <Bell size={20} />
                         {notificationsCount > 0 && (

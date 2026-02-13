@@ -23,10 +23,10 @@ export default function About() {
             width={48}
             height={48}
           />
-          <h1 className="text-4xl font-bold text-white">About SECYOURALL</h1>
+          <h1 className="text-4xl font-bold text-[var(--text-primary)]">About SECYOURALL</h1>
         </div>
 
-        <div className="prose prose-invert prose-slate max-w-none space-y-8 text-slate-300">
+        <div className="prose prose-invert prose-slate max-w-none space-y-8 text-[var(--text-secondary)]">
           <section>
             <p className="text-lg leading-relaxed">
               SECYOURALL is dedicated to forging excellence in cybersecurity, one flag at a time.
@@ -41,8 +41,8 @@ export default function About() {
               <div className="inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-sky-300 mb-4">
                 <Shield size={20} />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Our Mission</h3>
-              <p className="text-sm text-slate-400">
+              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">Our Mission</h3>
+              <p className="text-sm text-[var(--text-muted)]">
                 To empower security teams with actionable intelligence and streamlined workflows
                 that prioritize what matters most.
               </p>
@@ -52,8 +52,8 @@ export default function About() {
               <div className="inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-sky-300 mb-4">
                 <Target size={20} />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Our Vision</h3>
-              <p className="text-sm text-slate-400">
+              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">Our Vision</h3>
+              <p className="text-sm text-[var(--text-muted)]">
                 A world where organizations can confidently manage cyber risk with clarity,
                 precision, and operational excellence.
               </p>
@@ -63,8 +63,8 @@ export default function About() {
               <div className="inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-sky-300 mb-4">
                 <Users size={20} />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Our Team</h3>
-              <p className="text-sm text-slate-400">
+              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">Our Team</h3>
+              <p className="text-sm text-[var(--text-muted)]">
                 Built by security professionals for security professionals, with deep expertise
                 in threat analysis and risk management.
               </p>
@@ -72,7 +72,7 @@ export default function About() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-white mb-4">What We Do</h2>
+            <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-4">What We Do</h2>
             <p>
               SecYourFlow transforms how organizations approach cybersecurity by providing:
             </p>
@@ -86,7 +86,7 @@ export default function About() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-white mb-4">Why Choose Us</h2>
+            <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-4">Why Choose Us</h2>
             <p>
               We understand that security teams are overwhelmed with data but starved for actionable
               insights. SecYourFlow cuts through the noise by:
@@ -100,8 +100,8 @@ export default function About() {
           </section>
 
           <section className="mt-12 p-6 bg-slate-800/50 rounded-lg border border-slate-700">
-            <h2 className="text-xl font-semibold text-white mb-3">Maintained by SHYENA</h2>
-            <p className="text-sm text-slate-400">
+            <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-3">Maintained by SHYENA</h2>
+            <p className="text-sm text-[var(--text-muted)]">
               Our platform is actively maintained and continuously improved to meet the evolving
               needs of modern security operations centers. We&apos;re committed to delivering excellence
               in every release.

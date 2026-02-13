@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { Vulnerability } from "@/types";
 import { cn, getTimeAgo } from "@/lib/utils";
@@ -215,7 +216,7 @@ function getSeverityTone(severity?: SeverityTone) {
   if (severity === "HIGH") return "border-orange-400/35 bg-orange-500/10 text-orange-200";
   if (severity === "MEDIUM") return "border-yellow-400/35 bg-yellow-500/10 text-yellow-200";
   if (severity === "LOW") return "border-emerald-400/35 bg-emerald-500/10 text-emerald-200";
-  return "border-slate-400/35 bg-slate-500/10 text-slate-200";
+  return "border-slate-400/35 bg-slate-500/10 text-[var(--text-secondary)]";
 }
 
 function scoreIntensity(vulnerabilityCount: number, indicatorCount: number): string {
@@ -357,13 +358,13 @@ export default function ThreatsPage() {
       const payload =
         importFormat === "JSON"
           ? {
-              format: "JSON",
-              data: JSON.parse(importPayload),
-            }
+            format: "JSON",
+            data: JSON.parse(importPayload),
+          }
           : {
-              format: "CSV",
-              data: importPayload,
-            };
+            format: "CSV",
+            data: importPayload,
+          };
 
       const response = await fetch("/api/threats/iocs/import", {
         method: "POST",
@@ -436,36 +437,21 @@ export default function ThreatsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-5">
-        <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(132deg,rgba(56,189,248,0.2),rgba(18,18,26,0.9)_44%,rgba(18,18,26,0.96))] p-6 sm:p-8">
-          <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-sky-300/20 blur-3xl animate-pulse" />
-          <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-sky-300/35 bg-sky-300/10 px-3 py-1 text-xs font-medium text-sky-200">
-                <CircleDot size={12} />
-                Threat Intelligence Console
-              </div>
-              <h1 className="mt-4 text-2xl font-semibold text-white sm:text-3xl">Live Threats</h1>
-              <p className="mt-3 text-sm text-slate-200 sm:text-base">
-                ATT&CK context, IOC correlation, and actor intelligence in one response surface.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-100">
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
-                  {numberFormatter.format(stats?.activeIndicators ?? 0)} active indicators
-                </span>
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
-                  {numberFormatter.format(stats?.matchedAssets ?? 0)} matched assets
-                </span>
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
-                  {numberFormatter.format(stats?.actorCount ?? 0)} actors
-                </span>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <PageHeader
+          title="Live Threats"
+          description="ATT&CK context, IOC correlation, and actor intelligence in one response surface."
+          badge={
+            <>
+              <CircleDot size={12} />
+              Threat Intelligence Console
+            </>
+          }
+          actions={
+            <>
               <button
                 type="button"
                 onClick={() => void fetchThreats({ silent: true })}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/15"
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
               >
                 <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
                 Refresh
@@ -473,50 +459,54 @@ export default function ThreatsPage() {
               <button
                 type="button"
                 onClick={runCorrelation}
-                className="inline-flex items-center gap-2 rounded-xl border border-red-300/35 bg-red-400/10 px-4 py-2 text-sm font-medium text-red-100 transition hover:bg-red-400/20"
+                className="inline-flex items-center gap-2 rounded-xl border border-red-300/35 bg-red-400/10 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-400/20 dark:text-red-100"
               >
                 <Target size={14} />
                 Run Correlation
               </button>
-            </div>
-          </div>
-        </section>
+            </>
+          }
+          stats={[
+            {
+              label: "Exploited Vulns",
+              value: exploitedTotal,
+              trend: { value: "Confirmed exploitation", isUp: false },
+              icon: Zap,
+            },
+            {
+              label: "CISA KEV",
+              value: kevTotal,
+              trend: { value: "Known exploited", isUp: false },
+              icon: AlertTriangle,
+            },
+            {
+              label: "Active Feeds",
+              value: stats?.activeFeeds ?? 0,
+              trend: { value: "Intelligence sources", neutral: true },
+              icon: Activity,
+            },
+            {
+              label: "Indicators",
+              value: numberFormatter.format(stats?.totalIndicators ?? 0),
+              trend: { value: "Total IOC records", neutral: true },
+              icon: Shield,
+            },
+            {
+              label: "Matched Assets",
+              value: numberFormatter.format(stats?.matchedAssets ?? 0),
+              trend: { value: "Correlation hits", neutral: true },
+              icon: Target,
+            },
+            {
+              label: "Actors",
+              value: numberFormatter.format(stats?.actorCount ?? 0),
+              trend: { value: "Tracked profiles", neutral: true },
+              icon: Users,
+            },
+          ]}
+        />
 
-        {error ? (
-          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-sm text-red-200">
-            {error}
-          </section>
-        ) : null}
-
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
-          {[
-            { label: "Exploited Vulns", value: exploitedTotal, icon: Zap, hint: "Confirmed exploitation" },
-            { label: "CISA KEV", value: kevTotal, icon: AlertTriangle, hint: "Known exploited" },
-            { label: "Active Feeds", value: stats?.activeFeeds ?? 0, icon: Activity, hint: "Intelligence sources" },
-            { label: "Indicators", value: stats?.totalIndicators ?? 0, icon: Shield, hint: "Total IOC records" },
-            { label: "Matched Assets", value: stats?.matchedAssets ?? 0, icon: Target, hint: "Correlation hits" },
-            { label: "Actors", value: stats?.actorCount ?? 0, icon: Users, hint: "Tracked profiles" },
-          ].map((metric) => {
-            const Icon = metric.icon;
-            return (
-              <article
-                key={metric.label}
-                className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 transition hover:-translate-y-0.5 hover:border-sky-300/35"
-              >
-                <div className="flex items-start justify-between">
-                  <p className="text-sm text-slate-300">{metric.label}</p>
-                  <div className="rounded-lg border border-white/10 bg-white/5 p-2">
-                    <Icon size={15} className="text-slate-200" />
-                  </div>
-                </div>
-                <p className="mt-4 text-3xl font-semibold text-white">{numberFormatter.format(metric.value)}</p>
-                <p className="mt-1 text-xs text-slate-400">{metric.hint}</p>
-              </article>
-            );
-          })}
-        </section>
-
-        <section className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-3">
+        <section className="flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-3">
           {tabItems.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.key;
@@ -528,8 +518,8 @@ export default function ThreatsPage() {
                 className={cn(
                   "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition",
                   active
-                    ? "border-sky-300/45 bg-sky-400/15 text-sky-100"
-                    : "border-white/15 bg-white/5 text-slate-300 hover:bg-white/10",
+                    ? "border-sky-300/45 bg-sky-400/15 text-sky-700 dark:text-sky-100"
+                    : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]",
                 )}
               >
                 <Icon size={14} />
@@ -541,12 +531,12 @@ export default function ThreatsPage() {
 
         {activeTab === "overview" ? (
           <section className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
-            <article className="overflow-hidden rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)]">
-              <header className="border-b border-white/10 p-4">
-                <h2 className="text-lg font-semibold text-white">Exploited Vulnerability Queue</h2>
-                <p className="text-sm text-slate-400">High-priority findings with active exploitation signals.</p>
+            <article className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
+              <header className="border-b border-[var(--border-color)] p-4">
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Exploited Vulnerability Queue</h2>
+                <p className="text-sm text-[var(--text-secondary)]">High-priority findings with active exploitation signals.</p>
               </header>
-              <div className="divide-y divide-white/10">
+              <div className="divide-y divide-[var(--border-color)]">
                 {exploitedVulns.length > 0 ? (
                   exploitedVulns.slice(0, 20).map((vulnerability) => (
                     <div key={vulnerability.id} className="p-4">
@@ -556,7 +546,7 @@ export default function ThreatsPage() {
                             href={`https://nvd.nist.gov/vuln/detail/${vulnerability.cveId}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 font-mono text-xs text-sky-300 hover:text-sky-200"
+                            className="inline-flex items-center gap-1 font-mono text-xs text-sky-700 hover:text-sky-800 dark:text-sky-300 dark:hover:text-sky-200"
                           >
                             {vulnerability.cveId}
                             <ExternalLink size={11} />
@@ -571,34 +561,34 @@ export default function ThreatsPage() {
                           </span>
                         ) : null}
                       </div>
-                      <h3 className="mt-2 text-sm font-medium text-white">{vulnerability.title}</h3>
-                      <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-400">
+                      <h3 className="mt-2 text-sm font-medium text-[var(--text-primary)]">{vulnerability.title}</h3>
+                      <div className="mt-2 flex flex-wrap gap-3 text-xs text-[var(--text-muted)]">
                         <span>EPSS: {((vulnerability.epssScore ?? 0) * 100).toFixed(1)}%</span>
                         <span>Assets: {vulnerability.affectedAssets ?? 0}</span>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="p-6 text-sm text-slate-400">No exploited vulnerabilities found.</div>
+                  <div className="p-6 text-sm text-[var(--text-muted)]">No exploited vulnerabilities found.</div>
                 )}
               </div>
-              <div className="border-t border-white/10 p-4">
-                <a href="/vulnerabilities?filter=exploited" className="inline-flex items-center gap-2 text-sm text-sky-300 hover:text-sky-200">
+              <div className="border-t border-[var(--border-color)] p-4">
+                <a href="/vulnerabilities?filter=exploited" className="inline-flex items-center gap-2 text-sm text-sky-700 hover:text-sky-800 dark:text-sky-300 dark:hover:text-sky-200">
                   Open vulnerability queue <ArrowRight size={14} />
                 </a>
               </div>
             </article>
 
-            <article className="overflow-hidden rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)]">
-              <header className="border-b border-white/10 p-4">
-                <h2 className="text-lg font-semibold text-white">Feed Activity</h2>
-                <p className="text-sm text-slate-400">Latest ingestion runs and sync outcomes.</p>
+            <article className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
+              <header className="border-b border-[var(--border-color)] p-4">
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Feed Activity</h2>
+                <p className="text-sm text-[var(--text-secondary)]">Latest ingestion runs and sync outcomes.</p>
               </header>
-              <div className="divide-y divide-white/10">
+              <div className="divide-y divide-[var(--border-color)]">
                 {(overview?.runs ?? []).slice(0, 12).map((run) => (
                   <div key={run.id} className="p-4">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm text-white">{run.feed.name}</p>
+                      <p className="text-sm text-[var(--text-primary)]">{run.feed.name}</p>
                       <span
                         className={cn(
                           "rounded-full border px-2 py-0.5 text-[11px]",
@@ -612,13 +602,13 @@ export default function ThreatsPage() {
                         {run.status}
                       </span>
                     </div>
-                    <p className="mt-1 text-xs text-slate-400">
+                    <p className="mt-1 text-xs text-[var(--text-secondary)]">
                       {run.feed.source} • fetched {run.recordsFetched} • created {run.recordsCreated} • updated {run.recordsUpdated}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">{getTimeAgo(new Date(run.startedAt))}</p>
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">{getTimeAgo(new Date(run.startedAt))}</p>
                   </div>
                 ))}
-                {(overview?.runs ?? []).length === 0 ? <div className="p-6 text-sm text-slate-400">No feed runs yet.</div> : null}
+                {(overview?.runs ?? []).length === 0 ? <div className="p-6 text-sm text-[var(--text-muted)]">No feed runs yet.</div> : null}
               </div>
             </article>
           </section>
@@ -626,12 +616,12 @@ export default function ThreatsPage() {
 
         {activeTab === "matrix" ? (
           <section className="space-y-4">
-            <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-4">
-              <h2 className="text-lg font-semibold text-white">MITRE ATT&CK Matrix</h2>
-              <p className="mt-1 text-sm text-slate-400">
+            <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">MITRE ATT&CK Matrix</h2>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">
                 Technique heat shows combined vulnerability mappings and active IOC signals.
               </p>
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-xs text-[var(--text-muted)]">
                 {matrix
                   ? `Generated ${getTimeAgo(new Date(matrix.generatedAt))} • ${matrix.summary.tacticCount} tactics • ${matrix.summary.techniqueCount} technique mappings`
                   : "Matrix not available. Run threat intel sync first."}
@@ -641,11 +631,11 @@ export default function ThreatsPage() {
             {matrix ? (
               <div className="grid gap-4 xl:grid-cols-3">
                 {matrix.tactics.map((tactic) => (
-                  <article key={tactic.tacticId} className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-4">
+                  <article key={tactic.tacticId} className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4">
                     <div className="mb-3">
                       <p className="text-xs text-sky-300">{tactic.tacticExternalId}</p>
-                      <h3 className="text-base font-semibold text-white">{tactic.tacticName}</h3>
-                      {tactic.shortName ? <p className="text-xs text-slate-500">{tactic.shortName}</p> : null}
+                      <h3 className="text-base font-semibold text-[var(--text-primary)]">{tactic.tacticName}</h3>
+                      {tactic.shortName ? <p className="text-xs text-[var(--text-muted)]">{tactic.shortName}</p> : null}
                     </div>
                     <div className="space-y-2">
                       {tactic.techniques.map((technique) => (
@@ -659,7 +649,7 @@ export default function ThreatsPage() {
                           <div className="flex items-start justify-between gap-2">
                             <div>
                               <p className="text-xs text-sky-300">{technique.techniqueExternalId}</p>
-                              <p className="text-sm text-white">{technique.techniqueName}</p>
+                              <p className="text-sm text-[var(--text-primary)]">{technique.techniqueName}</p>
                             </div>
                             {technique.maxSeverity ? (
                               <span className={cn("rounded-full border px-2 py-0.5 text-[11px]", getSeverityTone(technique.maxSeverity))}>
@@ -667,7 +657,7 @@ export default function ThreatsPage() {
                               </span>
                             ) : null}
                           </div>
-                          <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-300">
+                          <div className="mt-2 flex flex-wrap gap-3 text-xs text-[var(--text-secondary)]">
                             <span>Vulns: {technique.vulnerabilityCount}</span>
                             <span>IOCs: {technique.indicatorCount}</span>
                             {technique.lastSeen ? <span>Seen: {getTimeAgo(new Date(technique.lastSeen))}</span> : null}
@@ -684,28 +674,28 @@ export default function ThreatsPage() {
 
         {activeTab === "ioc" ? (
           <section className="space-y-4">
-            <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-4">
-              <h2 className="text-lg font-semibold text-white">IOC Workbench</h2>
-              <p className="mt-1 text-sm text-slate-400">Search, import/export, and enrich indicator coverage.</p>
+            <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">IOC Workbench</h2>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">Search, import/export, and enrich indicator coverage.</p>
 
               <div className="mt-3 grid gap-2 md:grid-cols-[1.2fr_0.8fr]">
                 <label className="relative block">
-                  <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
                   <input
                     type="text"
                     value={indicatorSearch}
                     onChange={(event) => setIndicatorSearch(event.target.value)}
                     placeholder="Search indicators"
-                    className="input h-9 w-full !pl-9 text-sm"
+                    className="input h-9 w-full !pl-9 text-sm bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                   />
                 </label>
 
                 <div className="relative">
-                  <Filter size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <Filter size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
                   <select
                     value={indicatorSeverity}
                     onChange={(event) => setIndicatorSeverity(event.target.value as SeverityFilter)}
-                    className="input h-9 w-full appearance-none !pl-9 text-sm"
+                    className="input h-9 w-full appearance-none !pl-9 text-sm bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                   >
                     {severityOptions.map((option) => (
                       <option key={option} value={option}>
@@ -720,7 +710,7 @@ export default function ThreatsPage() {
                 <button
                   type="button"
                   onClick={() => exportIocs("csv")}
-                  className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white transition hover:bg-white/15"
+                  className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
                 >
                   <Download size={14} />
                   Export CSV
@@ -728,7 +718,7 @@ export default function ThreatsPage() {
                 <button
                   type="button"
                   onClick={() => exportIocs("json")}
-                  className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white transition hover:bg-white/15"
+                  className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
                 >
                   <Download size={14} />
                   Export JSON
@@ -736,15 +726,15 @@ export default function ThreatsPage() {
               </div>
             </article>
 
-            <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-4">
-              <h3 className="text-sm font-semibold text-white">Add Manual IOC</h3>
+            <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Add Manual IOC</h3>
               <div className="mt-2 flex gap-2">
                 <input
                   type="text"
                   value={newIocValue}
                   onChange={(event) => setNewIocValue(event.target.value)}
                   placeholder="e.g. malicious.example.com or 1.2.3.4"
-                  className="input h-9 flex-1 text-sm"
+                  className="input h-9 flex-1 text-sm bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                 />
                 <button
                   type="button"
@@ -756,13 +746,13 @@ export default function ThreatsPage() {
               </div>
             </article>
 
-            <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-4">
-              <h3 className="text-sm font-semibold text-white">Import IOC Feed Data</h3>
+            <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Import IOC Feed Data</h3>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <select
                   value={importFormat}
                   onChange={(event) => setImportFormat(event.target.value as "JSON" | "CSV")}
-                  className="input h-8 w-28 text-sm"
+                  className="input h-8 w-28 text-sm bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                 >
                   <option value="JSON">JSON</option>
                   <option value="CSV">CSV</option>
@@ -784,19 +774,19 @@ export default function ThreatsPage() {
                     ? '[{"value":"bad.example.com","type":"DOMAIN"}]'
                     : "value,type,severity\nbad.example.com,DOMAIN,HIGH"
                 }
-                className="input mt-2 min-h-[150px] w-full text-xs font-mono"
+                className="input mt-2 min-h-[150px] w-full text-xs font-mono bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
               />
             </article>
 
-            <article className="overflow-hidden rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)]">
-              <header className="border-b border-white/10 p-4">
-                <h3 className="text-sm font-semibold text-white">Indicators ({filteredIndicators.length})</h3>
+            <article className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
+              <header className="border-b border-[var(--border-color)] p-4">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Indicators ({filteredIndicators.length})</h3>
               </header>
-              <div className="divide-y divide-white/10">
+              <div className="divide-y divide-[var(--border-color)]">
                 {filteredIndicators.slice(0, 60).map((indicator) => (
                   <div key={indicator.id} className="p-4">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full border border-sky-400/35 bg-sky-500/10 px-2 py-0.5 text-[11px] text-sky-200">
+                      <span className="rounded-full border border-sky-400/35 bg-sky-500/10 px-2 py-0.5 text-[11px] text-sky-700 dark:text-sky-200">
                         {indicator.type}
                       </span>
                       {indicator.severity ? (
@@ -805,19 +795,19 @@ export default function ThreatsPage() {
                         </span>
                       ) : null}
                       {typeof indicator.confidence === "number" ? (
-                        <span className="text-xs text-slate-400">Confidence: {indicator.confidence}%</span>
+                        <span className="text-xs text-[var(--text-muted)]">Confidence: {indicator.confidence}%</span>
                       ) : null}
                     </div>
-                    <p className="mt-2 font-mono text-sm text-white">{indicator.value}</p>
-                    {indicator.description ? <p className="mt-1 text-sm text-slate-300">{indicator.description}</p> : null}
-                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                    <p className="mt-2 font-mono text-sm text-[var(--text-primary)]">{indicator.value}</p>
+                    {indicator.description ? <p className="mt-1 text-sm text-[var(--text-secondary)]">{indicator.description}</p> : null}
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)]">
                       <span>Last seen: {getTimeAgo(new Date(indicator.lastSeen))}</span>
                       {indicator.source ? <span>Source: {indicator.source}</span> : null}
                       {indicator.techniqueId ? <span>Technique: {indicator.techniqueId}</span> : null}
                     </div>
                   </div>
                 ))}
-                {filteredIndicators.length === 0 ? <div className="p-6 text-sm text-slate-400">No indicators found.</div> : null}
+                {filteredIndicators.length === 0 ? <div className="p-6 text-sm text-[var(--text-muted)]">No indicators found.</div> : null}
               </div>
             </article>
           </section>
@@ -825,61 +815,61 @@ export default function ThreatsPage() {
 
         {activeTab === "actors" ? (
           <section className="grid gap-4 xl:grid-cols-2">
-            <article className="overflow-hidden rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)]">
-              <header className="border-b border-white/10 p-4">
-                <h2 className="text-lg font-semibold text-white">Threat Actors</h2>
-                <p className="text-sm text-slate-400">Profiles linked to ATT&CK TTPs and vulnerabilities.</p>
+            <article className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
+              <header className="border-b border-[var(--border-color)] p-4">
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Threat Actors</h2>
+                <p className="text-sm text-[var(--text-muted)]">Profiles linked to ATT&CK TTPs and vulnerabilities.</p>
               </header>
-              <div className="divide-y divide-white/10">
+              <div className="divide-y divide-[var(--border-color)]">
                 {actors.map((actor) => (
                   <div key={actor.id} className="p-4">
                     <div className="flex flex-wrap items-center gap-2">
                       {actor.externalId ? <span className="font-mono text-xs text-sky-300">{actor.externalId}</span> : null}
-                      <h3 className="text-sm font-medium text-white">{actor.name}</h3>
+                      <h3 className="text-sm font-medium text-[var(--text-primary)]">{actor.name}</h3>
                     </div>
-                    {actor.description ? <p className="mt-1 text-sm text-slate-300">{actor.description}</p> : null}
+                    {actor.description ? <p className="mt-1 text-sm text-[var(--text-secondary)]">{actor.description}</p> : null}
                     <div className="mt-2 flex flex-wrap gap-2">
                       {actor.techniques.slice(0, 8).map((technique) => (
-                        <span key={`${actor.id}-${technique.externalId}`} className="rounded border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] text-slate-300">
+                        <span key={`${actor.id}-${technique.externalId}`} className="rounded border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]">
                           {technique.externalId}
                         </span>
                       ))}
                     </div>
-                    <div className="mt-2 text-xs text-slate-400">
+                    <div className="mt-2 text-xs text-[var(--text-muted)]">
                       Campaigns: {actor.campaignCount} • Linked vulnerabilities: {actor.linkedVulnerabilities.length}
                     </div>
                   </div>
                 ))}
-                {actors.length === 0 ? <div className="p-6 text-sm text-slate-400">No threat actors synced yet.</div> : null}
+                {actors.length === 0 ? <div className="p-6 text-sm text-[var(--text-muted)]">No threat actors synced yet.</div> : null}
               </div>
             </article>
 
-            <article className="overflow-hidden rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)]">
-              <header className="border-b border-white/10 p-4">
-                <h2 className="text-lg font-semibold text-white">Campaigns</h2>
-                <p className="text-sm text-slate-400">Tracked campaigns and mapped technique coverage.</p>
+            <article className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
+              <header className="border-b border-[var(--border-color)] p-4">
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Campaigns</h2>
+                <p className="text-sm text-[var(--text-muted)]">Tracked campaigns and mapped technique coverage.</p>
               </header>
-              <div className="divide-y divide-white/10">
+              <div className="divide-y divide-[var(--border-color)]">
                 {campaigns.map((campaign) => (
                   <div key={campaign.id} className="p-4">
                     <div className="flex flex-wrap items-center gap-2">
                       {campaign.externalId ? <span className="font-mono text-xs text-sky-300">{campaign.externalId}</span> : null}
-                      <h3 className="text-sm font-medium text-white">{campaign.name}</h3>
+                      <h3 className="text-sm font-medium text-[var(--text-primary)]">{campaign.name}</h3>
                     </div>
-                    {campaign.description ? <p className="mt-1 text-sm text-slate-300">{campaign.description}</p> : null}
-                    <div className="mt-2 text-xs text-slate-400">
+                    {campaign.description ? <p className="mt-1 text-sm text-[var(--text-secondary)]">{campaign.description}</p> : null}
+                    <div className="mt-2 text-xs text-[var(--text-muted)]">
                       Actor: {campaign.actor?.name ?? "Unassigned"}
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {campaign.techniques.slice(0, 8).map((technique) => (
-                        <span key={`${campaign.id}-${technique.externalId}`} className="rounded border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] text-slate-300">
+                        <span key={`${campaign.id}-${technique.externalId}`} className="rounded border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]">
                           {technique.externalId}
                         </span>
                       ))}
                     </div>
                   </div>
                 ))}
-                {campaigns.length === 0 ? <div className="p-6 text-sm text-slate-400">No campaigns synced yet.</div> : null}
+                {campaigns.length === 0 ? <div className="p-6 text-sm text-[var(--text-muted)]">No campaigns synced yet.</div> : null}
               </div>
             </article>
           </section>

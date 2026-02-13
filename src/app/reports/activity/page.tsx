@@ -131,8 +131,8 @@ export default function ReportsActivityPage() {
         <div className="flex min-h-[60vh] flex-col items-center justify-center p-6 text-center">
           <div className="rounded-2xl border border-red-400/20 bg-red-500/5 p-8 max-w-md">
             <XCircle size={48} className="mx-auto text-red-400 mb-4" />
-            <h1 className="text-xl font-semibold text-white mb-2">Access Denied</h1>
-            <p className="text-sm text-slate-400 mb-6">
+            <h1 className="text-xl font-semibold text-[var(--text-primary)] mb-2">Access Denied</h1>
+            <p className="text-sm text-[var(--text-muted)] mb-6">
               The Activity Log is only accessible by Main Officers. Please contact your administrator if you believe this is an error.
             </p>
             <Link
@@ -153,15 +153,15 @@ export default function ReportsActivityPage() {
         <section className="rounded-3xl border border-white/10 bg-[linear-gradient(132deg,rgba(56,189,248,0.2),rgba(18,18,26,0.9)_44%,rgba(18,18,26,0.96))] p-6 sm:p-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-2xl font-semibold text-white sm:text-3xl">Activity Log</h1>
-              <p className="mt-2 text-sm text-slate-200">
+              <h1 className="text-2xl font-semibold text-[var(--text-primary)] sm:text-3xl">Activity Log</h1>
+              <p className="mt-2 text-sm text-[var(--text-secondary)]">
                 System activity history showing user actions, security events, and system changes.
               </p>
             </div>
             <div className="flex items-center gap-2">
               <Link
                 href="/reports"
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/15"
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
               >
                 <Clock3 size={14} />
                 Back to Reports
@@ -169,7 +169,7 @@ export default function ReportsActivityPage() {
               <button
                 type="button"
                 onClick={() => void fetchData({ silent: true })}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/15"
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
               >
                 <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
                 Refresh
@@ -209,7 +209,7 @@ export default function ReportsActivityPage() {
           ))}
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-4">
+        <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4">
           <label className="relative block">
             <Search
               size={15}
@@ -224,12 +224,12 @@ export default function ReportsActivityPage() {
           </label>
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)]">
+        <section className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
           <header className="border-b border-white/10 px-5 py-4">
-            <h2 className="text-base font-semibold text-white">Activity Log</h2>
+            <h2 className="text-base font-semibold text-[var(--text-primary)]">Activity Log</h2>
           </header>
           {filteredActivities.length === 0 ? (
-            <div className="p-8 text-sm text-slate-400">No activity logs found.</div>
+            <div className="p-8 text-sm text-[var(--text-muted)]">No activity logs found.</div>
           ) : (
             <div className="divide-y divide-white/10">
               {filteredActivities.map((activity) => {
@@ -246,7 +246,7 @@ export default function ReportsActivityPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-semibold text-white">{activity.action}</p>
+                          <p className="text-sm font-semibold text-[var(--text-primary)]">{activity.action}</p>
                           <span
                             className={cn(
                               "rounded-full border px-2 py-0.5 text-[11px]",
@@ -256,7 +256,7 @@ export default function ReportsActivityPage() {
                             {formatLabel(activity.entityType)}
                           </span>
                         </div>
-                        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
+                        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
                           {activity.user && (
                             <span className="flex items-center gap-1">
                               <User size={12} />
@@ -310,14 +310,14 @@ export default function ReportsActivityPage() {
           onClick={() => setSelectedActivity(null)}
         >
           <div
-            className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.98)] shadow-2xl"
+            className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-[var(--border-color)] bg-[var(--bg-elevated)] shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[rgba(18,18,26,0.98)] px-6 py-4">
-              <h2 className="text-xl font-semibold text-white">Activity Details</h2>
+              <h2 className="text-xl font-semibold text-[var(--text-primary)]">Activity Details</h2>
               <button
                 onClick={() => setSelectedActivity(null)}
-                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+                className="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-white/10 hover:text-[var(--text-primary)]"
               >
                 <X size={20} />
               </button>
@@ -327,23 +327,23 @@ export default function ReportsActivityPage() {
               <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <ActivityIcon size={16} className="text-sky-300" />
-                  <h3 className="text-sm font-semibold text-white">Action Information</h3>
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">Action Information</h3>
                 </div>
                 <div className="space-y-3">
                   <div>
-                    <p className="text-xs text-slate-400 mb-1">Action</p>
-                    <p className="text-sm text-white font-medium">{selectedActivity.action}</p>
+                    <p className="text-xs text-[var(--text-muted)] mb-1">Action</p>
+                    <p className="text-sm text-[var(--text-primary)] font-medium">{selectedActivity.action}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xs text-slate-400 mb-1">Entity Type</p>
+                      <p className="text-xs text-[var(--text-muted)] mb-1">Entity Type</p>
                       <span className={cn("inline-block rounded-full border px-2 py-0.5 text-[11px]", getEntityTypeColor(selectedActivity.entityType))}>
                         {formatLabel(selectedActivity.entityType)}
                       </span>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-400 mb-1">Entity ID</p>
-                      <p className="text-sm text-slate-200 font-mono break-all">{selectedActivity.entityId}</p>
+                      <p className="text-xs text-[var(--text-muted)] mb-1">Entity ID</p>
+                      <p className="text-sm text-[var(--text-secondary)] font-mono break-all">{selectedActivity.entityId}</p>
                     </div>
                   </div>
                 </div>
@@ -353,21 +353,21 @@ export default function ReportsActivityPage() {
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <User size={16} className="text-blue-300" />
-                    <h3 className="text-sm font-semibold text-white">User Information</h3>
+                    <h3 className="text-sm font-semibold text-[var(--text-primary)]">User Information</h3>
                   </div>
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-xs text-slate-400 mb-1">Name</p>
-                        <p className="text-sm text-white">{selectedActivity.user.name || "N/A"}</p>
+                        <p className="text-xs text-[var(--text-muted)] mb-1">Name</p>
+                        <p className="text-sm text-[var(--text-primary)]">{selectedActivity.user.name || "N/A"}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-400 mb-1">Email</p>
-                        <p className="text-sm text-white">{selectedActivity.user.email}</p>
+                        <p className="text-xs text-[var(--text-muted)] mb-1">Email</p>
+                        <p className="text-sm text-[var(--text-primary)]">{selectedActivity.user.email}</p>
                       </div>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-400 mb-1">Role</p>
+                      <p className="text-xs text-[var(--text-muted)] mb-1">Role</p>
                       <span className="inline-block rounded-full border border-purple-400/35 bg-purple-500/10 px-2 py-0.5 text-[11px] text-purple-200">
                         {formatLabel(selectedActivity.user.role)}
                       </span>
@@ -380,36 +380,36 @@ export default function ReportsActivityPage() {
               <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Globe size={16} className="text-green-300" />
-                  <h3 className="text-sm font-semibold text-white">Network & Device</h3>
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">Network & Device</h3>
                 </div>
                 <div className="space-y-3">
                   <div>
-                    <p className="text-xs text-slate-400 mb-1">IP Address</p>
-                    <p className="text-sm text-white font-mono">{formatIpAddress(selectedActivity.ipAddress)}</p>
+                    <p className="text-xs text-[var(--text-muted)] mb-1">IP Address</p>
+                    <p className="text-sm text-[var(--text-primary)] font-mono">{formatIpAddress(selectedActivity.ipAddress)}</p>
                   </div>
                   {selectedActivity.userAgent && (() => {
                     const info = parseUserAgent(selectedActivity.userAgent);
                     return (
                       <div className="grid grid-cols-3 gap-4">
                         <div>
-                          <p className="text-xs text-slate-400 mb-1">Operating System</p>
-                          <p className="text-sm text-white">{info.os}</p>
+                          <p className="text-xs text-[var(--text-muted)] mb-1">Operating System</p>
+                          <p className="text-sm text-[var(--text-primary)]">{info.os}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-slate-400 mb-1">Browser</p>
-                          <p className="text-sm text-white">{info.browser}</p>
+                          <p className="text-xs text-[var(--text-muted)] mb-1">Browser</p>
+                          <p className="text-sm text-[var(--text-primary)]">{info.browser}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-slate-400 mb-1">Device Type</p>
-                          <p className="text-sm text-white">{info.device}</p>
+                          <p className="text-xs text-[var(--text-muted)] mb-1">Device Type</p>
+                          <p className="text-sm text-[var(--text-primary)]">{info.device}</p>
                         </div>
                       </div>
                     );
                   })()}
                   {selectedActivity.userAgent && (
                     <div>
-                      <p className="text-xs text-slate-400 mb-1">User Agent</p>
-                      <p className="text-xs text-slate-300 font-mono break-all">{selectedActivity.userAgent}</p>
+                      <p className="text-xs text-[var(--text-muted)] mb-1">User Agent</p>
+                      <p className="text-xs text-[var(--text-secondary)] font-mono break-all">{selectedActivity.userAgent}</p>
                     </div>
                   )}
                   {!selectedActivity.userAgent && (
@@ -421,11 +421,11 @@ export default function ReportsActivityPage() {
               <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Calendar size={16} className="text-yellow-300" />
-                  <h3 className="text-sm font-semibold text-white">Timestamp</h3>
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">Timestamp</h3>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400 mb-1">Date & Time</p>
-                  <p className="text-sm text-white">
+                  <p className="text-xs text-[var(--text-muted)] mb-1">Date & Time</p>
+                  <p className="text-sm text-[var(--text-primary)]">
                     {new Date(selectedActivity.createdAt).toLocaleDateString("en-US", {
                       month: "numeric",
                       day: "numeric",
@@ -439,21 +439,21 @@ export default function ReportsActivityPage() {
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <FileText size={16} className="text-orange-300" />
-                    <h3 className="text-sm font-semibold text-white">Changes</h3>
+                    <h3 className="text-sm font-semibold text-[var(--text-primary)]">Changes</h3>
                   </div>
                   <div className="space-y-3">
                     {selectedActivity.oldValue ? (
                       <div>
-                        <p className="text-xs text-slate-400 mb-1">Previous Value</p>
-                        <pre className="text-xs text-slate-300 bg-black/20 rounded-lg p-3 overflow-x-auto">
+                        <p className="text-xs text-[var(--text-muted)] mb-1">Previous Value</p>
+                        <pre className="text-xs text-[var(--text-secondary)] bg-black/20 rounded-lg p-3 overflow-x-auto">
                           {JSON.stringify(selectedActivity.oldValue, null, 2)}
                         </pre>
                       </div>
                     ) : null}
                     {selectedActivity.newValue ? (
                       <div>
-                        <p className="text-xs text-slate-400 mb-1">New Value</p>
-                        <pre className="text-xs text-slate-300 bg-black/20 rounded-lg p-3 overflow-x-auto">
+                        <p className="text-xs text-[var(--text-muted)] mb-1">New Value</p>
+                        <pre className="text-xs text-[var(--text-secondary)] bg-black/20 rounded-lg p-3 overflow-x-auto">
                           {JSON.stringify(selectedActivity.newValue, null, 2)}
                         </pre>
                       </div>

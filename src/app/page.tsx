@@ -193,25 +193,25 @@ export default function Home() {
               width={48}
               height={48}
             />
-            <span className="text-sm font-semibold tracking-[0.25em] text-white sm:text-base">
+            <span className="text-sm font-semibold tracking-[0.25em] text-[var(--text-primary)] sm:text-base">
               SECYOUR<span className="text-sky-300">FLOW</span>
             </span>
           </Link>
 
           <div className="hidden items-center gap-8 md:flex">
-            <a href="#features" className="text-sm text-slate-300 transition hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
+            <a href="#features" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
               Platform
             </a>
-            <a href="#workflow" className="text-sm text-slate-300 transition hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
+            <a href="#workflow" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
               Workflow
             </a>
-            <a href="#use-cases" className="text-sm text-slate-300 transition hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
+            <a href="#use-cases" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
               Use Cases
             </a>
-            <a href="#outcomes" className="text-sm text-slate-300 transition hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
+            <a href="#outcomes" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
               Outcomes
             </a>
-            <Link href="/contact" className="text-sm text-slate-300 transition hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
+            <Link href="/contact" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
               Contact
             </Link>
           </div>
@@ -237,7 +237,7 @@ export default function Home() {
                 SOC-grade cyber risk command center
               </div>
 
-              <h1 className="mt-6 text-4xl font-semibold leading-tight text-white sm:text-5xl xl:text-6xl">
+              <h1 className="mt-6 text-4xl font-semibold leading-tight text-[var(--text-primary)] sm:text-5xl xl:text-6xl">
                 Operationalize cyber risk with
                 <span className="animate-gradient bg-gradient-to-r from-sky-200 via-cyan-200 to-blue-300 bg-clip-text text-transparent bg-[length:200%_auto]">
                   {" "}
@@ -246,7 +246,7 @@ export default function Home() {
                 .
               </h1>
 
-              <p className="mt-6 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
+              <p className="mt-6 max-w-2xl text-base leading-relaxed text-[var(--text-secondary)] sm:text-lg">
                 SecYourFlow unifies exposure, active threats, and compliance drift into one
                 focused workspace so your team can prioritize what matters first.
               </p>
@@ -267,7 +267,7 @@ export default function Home() {
                 </Link>
               </div>
 
-              <div className="mt-8 flex flex-wrap gap-2 text-xs text-slate-300">
+              <div className="mt-8 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
                 {["Signal-first workflows", "Analyst-ready context", "Executive-level clarity"].map((item) => (
                   <span key={item} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
                     {item}
@@ -276,12 +276,12 @@ export default function Home() {
               </div>
             </div>
 
-            <article className={`transition-all duration-700 delay-150 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"} rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.85)] p-6 shadow-[0_30px_70px_-34px_rgba(56,189,248,0.65)]`} aria-label="Live security metrics">
+            <article className={`transition-all duration-700 delay-150 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"} rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-6 shadow-[0_30px_70px_-34px_rgba(56,189,248,0.65)]`} aria-label="Live security metrics">
               <div>
-                <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">
+                <p className="text-xs font-medium uppercase tracking-[0.2em] text-[var(--text-muted)]">
                   Live SOC Snapshot
                 </p>
-                <h2 className="mt-2 text-xl font-semibold text-white">
+                <h2 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">
                   Current posture: controlled
                 </h2>
               </div>
@@ -290,8 +290,8 @@ export default function Home() {
                 {signalRows.map((signal, idx) => (
                   <div key={signal.label} className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-300">{signal.label}</span>
-                      <span className="font-medium text-white">{signal.level}%</span>
+                      <span className="text-[var(--text-secondary)]">{signal.label}</span>
+                      <span className="font-medium text-[var(--text-primary)]">{signal.level}%</span>
                     </div>
                     <div className="h-2 rounded-full bg-white/10 overflow-hidden">
                       <div
@@ -308,12 +308,12 @@ export default function Home() {
 
               <div className="mt-7 grid grid-cols-2 gap-3">
                 <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                  <p className="text-xs text-slate-400">Open High Risk</p>
-                  <p className="mt-2 text-2xl font-semibold text-white">14</p>
+                  <p className="text-xs text-[var(--text-muted)]">Open High Risk</p>
+                  <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">14</p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                  <p className="text-xs text-slate-400">Control Drift</p>
-                  <p className="mt-2 text-2xl font-semibold text-white">6</p>
+                  <p className="text-xs text-[var(--text-muted)]">Control Drift</p>
+                  <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">6</p>
                 </div>
               </div>
             </article>
@@ -334,10 +334,10 @@ export default function Home() {
                     <div className="inline-flex rounded-full border border-sky-300/30 bg-sky-300/10 p-3 text-sky-200">
                       <Icon size={24} />
                     </div>
-                    <p className="mt-4 text-4xl font-bold text-white">
+                    <p className="mt-4 text-4xl font-bold text-[var(--text-primary)]">
                       <AnimatedCounter target={stat.value} suffix={stat.suffix} />
                     </p>
-                    <p className="mt-2 text-sm text-slate-300">{stat.label}</p>
+                    <p className="mt-2 text-sm text-[var(--text-secondary)]">{stat.label}</p>
                   </div>
                 );
               })}
@@ -351,10 +351,10 @@ export default function Home() {
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-300">
                 Platform
               </p>
-              <h2 className="mt-4 text-3xl font-semibold text-white sm:text-4xl">
+              <h2 className="mt-4 text-3xl font-semibold text-[var(--text-primary)] sm:text-4xl">
                 Built for teams that need signal over noise.
               </h2>
-              <p className="mt-4 text-slate-300">
+              <p className="mt-4 text-[var(--text-secondary)]">
                 Every panel is designed to answer one question quickly: what creates the
                 most business risk right now?
               </p>
@@ -372,8 +372,8 @@ export default function Home() {
                     <div className="inline-flex rounded-lg border border-sky-300/35 bg-sky-300/10 p-2.5 text-sky-200 transition-all duration-300 group-hover:scale-110">
                       <Icon size={18} />
                     </div>
-                    <h3 className="mt-5 text-lg font-semibold text-white">{item.title}</h3>
-                    <p className="mt-3 text-sm leading-relaxed text-slate-300">
+                    <h3 className="mt-5 text-lg font-semibold text-[var(--text-primary)]">{item.title}</h3>
+                    <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">
                       {item.description}
                     </p>
                   </article>
@@ -394,7 +394,7 @@ export default function Home() {
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-300">
                   Workflow
                 </p>
-                <h2 className="mt-4 text-3xl font-semibold text-white sm:text-4xl">
+                <h2 className="mt-4 text-3xl font-semibold text-[var(--text-primary)] sm:text-4xl">
                   A practical flow from intake to remediation.
                 </h2>
               </div>
@@ -417,8 +417,8 @@ export default function Home() {
                   <div className="text-xs font-semibold tracking-[0.22em] text-sky-300">
                     STEP {item.step}
                   </div>
-                  <h3 className="mt-4 text-lg font-semibold text-white">{item.title}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-slate-300">{item.description}</p>
+                  <h3 className="mt-4 text-lg font-semibold text-[var(--text-primary)]">{item.title}</h3>
+                  <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">{item.description}</p>
                   <div className="mt-4 h-1 w-0 rounded-full bg-gradient-to-r from-sky-400 to-cyan-400 transition-all duration-500 group-hover:w-12" />
                 </article>
               ))}
@@ -432,10 +432,10 @@ export default function Home() {
               <p className="text-xs font-bold uppercase tracking-wider text-sky-400">
                 Outcomes
               </p>
-              <h2 className="mt-3 text-3xl font-bold text-white sm:text-4xl">
+              <h2 className="mt-3 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">
                 Security leadership gets clean answers, fast
               </h2>
-              <p className="mt-4 max-w-2xl text-slate-400 leading-relaxed">
+              <p className="mt-4 max-w-2xl text-[var(--text-muted)] leading-relaxed">
                 Analysts move faster, priorities stay defensible, and reporting stays ready
                 for leadership and audits.
               </p>
@@ -447,7 +447,7 @@ export default function Home() {
                     className={`rounded-xl border border-slate-800/50 bg-slate-900/30 p-5 backdrop-blur-sm transition-all duration-700 hover:border-slate-700/50 hover:bg-slate-900/50 hover:-translate-y-0.5 ${sectionsVisible.outcomes ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
                     style={{ transitionDelay: `${idx * 100}ms` }}
                   >
-                    <p className="text-2xl font-black text-white">{item.value}</p>
+                    <p className="text-2xl font-black text-[var(--text-primary)]">{item.value}</p>
                     <p className="mt-2 text-sm text-slate-500">{item.label}</p>
                   </article>
                 ))}
@@ -459,24 +459,24 @@ export default function Home() {
               <div className="relative inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-sky-300 transition-all duration-300 group-hover:scale-110">
                 <LockKeyhole size={18} />
               </div>
-              <h3 className="relative mt-5 text-xl font-bold text-white">
+              <h3 className="relative mt-5 text-xl font-bold text-[var(--text-primary)]">
                 Ready for a cleaner security command surface?
               </h3>
-              <p className="relative mt-3 text-sm leading-relaxed text-slate-300">
+              <p className="relative mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">
                 Move from scattered data to a single operational view built for
                 high-confidence decisions.
               </p>
 
-              <div className="relative mt-6 space-y-2.5 text-sm text-slate-300">
-                <div className="flex items-center gap-2.5 transition-all duration-300 hover:translate-x-1 hover:text-white">
+              <div className="relative mt-6 space-y-2.5 text-sm text-[var(--text-secondary)]">
+                <div className="flex items-center gap-2.5 transition-all duration-300 hover:translate-x-1 hover:text-[var(--text-primary)]">
                   <Gauge size={15} className="text-sky-400" />
                   Risk score clarity for every critical asset
                 </div>
-                <div className="flex items-center gap-2.5 transition-all duration-300 hover:translate-x-1 hover:text-white">
+                <div className="flex items-center gap-2.5 transition-all duration-300 hover:translate-x-1 hover:text-[var(--text-primary)]">
                   <Siren size={15} className="text-sky-400" />
                   Prioritized response queue for exploited issues
                 </div>
-                <div className="flex items-center gap-2.5 transition-all duration-300 hover:translate-x-1 hover:text-white">
+                <div className="flex items-center gap-2.5 transition-all duration-300 hover:translate-x-1 hover:text-[var(--text-primary)]">
                   <FileCheck2 size={15} className="text-sky-400" />
                   Compliance mapping tied to remediation
                 </div>
@@ -492,7 +492,7 @@ export default function Home() {
                 </Link>
                 <Link
                   href="/login"
-                  className="inline-flex items-center justify-center rounded-lg border border-slate-700 bg-slate-900/50 px-5 py-2.5 text-sm text-slate-300 backdrop-blur-sm transition-all duration-300 hover:border-slate-600 hover:bg-slate-800/50 hover:text-white"
+                  className="inline-flex items-center justify-center rounded-lg border border-slate-700 bg-slate-900/50 px-5 py-2.5 text-sm text-[var(--text-secondary)] backdrop-blur-sm transition-all duration-300 hover:border-slate-600 hover:bg-slate-800/50 hover:text-[var(--text-primary)]"
                 >
                   Sign In
                 </Link>

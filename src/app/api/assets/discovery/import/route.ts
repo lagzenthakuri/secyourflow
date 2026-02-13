@@ -43,7 +43,7 @@ const schema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const authResult = await requireSessionWithOrg();
+  const authResult = await requireSessionWithOrg(request);
   if (!authResult.ok) return authResult.response;
 
   const parsed = schema.safeParse(await request.json());

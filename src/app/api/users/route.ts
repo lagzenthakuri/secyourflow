@@ -1,23 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { logActivity } from "@/lib/logger";
-import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
 import { extractRequestContext } from "@/lib/request-utils";
+import { requireSessionWithOrg } from "@/lib/api-auth";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
     try {
-        const session = await auth();
-        if (!session || !session.user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        // Basic auth is enough to see teammates for assignment
+        const scope = request.nextUrl.searchParams.get("scope")?.toLowerCase();
+        const isBasicScope = scope === "basic";
 
-        // Ideally, we'd filter by organizationId if multi-tenant
-        const org = await prisma.organization.findFirst();
+        const authResult = await requireSessionWithOrg(
+            request,
+            isBasicScope ? {} : { allowedRoles: ["MAIN_OFFICER"] },
+        );
+        if (!authResult.ok) return authResult.response;
 
         const users = await prisma.user.findMany({
-            where: org ? { organizationId: org.id } : {},
+            where: { organizationId: authResult.context.organizationId },
             orderBy: { createdAt: 'desc' },
             select: {
                 id: true,
@@ -28,6 +27,16 @@ export async function GET() {
                 createdAt: true,
             }
         });
+
+        if (isBasicScope) {
+            return NextResponse.json(
+                users.map((user) => ({
+                    id: user.id,
+                    name: user.name || "Unknown User",
+                    role: user.role,
+                })),
+            );
+        }
 
         const formattedUsers = users.map(user => ({
             id: user.id,
@@ -48,14 +57,8 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
     try {
-        const session = await auth();
-        // Check if user is authenticated and is MAIN_OFFICER.
-        if (!session || !session.user || session.user.role !== 'MAIN_OFFICER') {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        if (!isTwoFactorSatisfied(session)) {
-            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
-        }
+        const authResult = await requireSessionWithOrg(request, { allowedRoles: ["MAIN_OFFICER"] });
+        if (!authResult.ok) return authResult.response;
 
         const ctx = extractRequestContext(request);
 
@@ -71,10 +74,17 @@ export async function PUT(request: NextRequest) {
             return NextResponse.json({ error: "Invalid role value" }, { status: 400 });
         }
 
-        const currentUser = await prisma.user.findUnique({
-            where: { id: userId },
+        const targetUser = await prisma.user.findFirst({
+            where: {
+                id: userId,
+                organizationId: authResult.context.organizationId,
+            },
             select: { role: true, email: true }
         });
+
+        if (!targetUser) {
+            return NextResponse.json({ error: "User not found in your organization" }, { status: 404 });
+        }
 
         const updatedUser = await prisma.user.update({
             where: { id: userId },
@@ -85,10 +95,10 @@ export async function PUT(request: NextRequest) {
             "Role updated",
             "user",
             updatedUser.email,
-            currentUser?.role ? { role: currentUser.role } : null,
+            targetUser.role ? { role: targetUser.role } : null,
             { role },
-            `Role changed from ${currentUser?.role} to ${role} by ${session.user.name}`,
-            session.user.id,
+            `Role changed from ${targetUser.role} to ${role} by ${authResult.context.userId}`,
+            authResult.context.userId,
             ctx,
         );
 

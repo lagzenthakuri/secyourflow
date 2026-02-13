@@ -71,7 +71,7 @@ export default function SignUpPage() {
                             width={80}
                             height={80}
                         />
-                        <span className="text-2xl font-semibold tracking-[0.25em] text-white">
+                        <span className="text-2xl font-semibold tracking-[0.25em] text-[var(--text-primary)]">
                             SECYOUR<span className="text-sky-300">FLOW</span>
                         </span>
                     </Link>
@@ -91,7 +91,7 @@ export default function SignUpPage() {
 
                         {/* Name */}
                         <div>
-                            <label className="block text-sm font-medium text-white mb-2">
+                            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                                 Full Name
                             </label>
                             <div className="relative">
@@ -112,7 +112,7 @@ export default function SignUpPage() {
 
                         {/* Email */}
                         <div>
-                            <label className="block text-sm font-medium text-white mb-2">
+                            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                                 Email Address
                             </label>
                             <div className="relative">
@@ -133,7 +133,7 @@ export default function SignUpPage() {
 
                         {/* Password */}
                         <div>
-                            <label className="block text-sm font-medium text-white mb-2">
+                            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                                 Password
                             </label>
                             <div className="relative">
@@ -153,7 +153,7 @@ export default function SignUpPage() {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-white"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                                 >
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>

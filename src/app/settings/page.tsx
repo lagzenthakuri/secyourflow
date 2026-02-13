@@ -27,6 +27,7 @@ import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { useSession } from "next-auth/react";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useRouter } from "next/navigation";
 import { TwoFactorSettingsPanel } from "@/components/settings/TwoFactorSettingsPanel";
 
@@ -414,114 +415,68 @@ export default function SettingsPage() {
         <DashboardLayout>
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
             <div className="space-y-5">
-                <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(132deg,rgba(56,189,248,0.2),rgba(18,18,26,0.9)_44%,rgba(18,18,26,0.96))] p-6 sm:p-8 animate-in fade-in slide-in-from-top-4 duration-500">
-                    <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-sky-300/20 blur-3xl animate-pulse" />
-                    <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-                        <div className="max-w-3xl">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-sky-300/35 bg-sky-300/10 px-3 py-1 text-xs font-medium text-sky-200">
-                                <Settings size={13} />
-                                Configuration Center
+                <PageHeader
+                    title="Settings"
+                    description="Configure security controls, governance policy, operational alerts, and platform integrations in one auditable workspace."
+                    badge={
+                        <>
+                            <Settings size={13} />
+                            Configuration Center
+                        </>
+                    }
+                    actions={
+                        <>
+                            <div
+                                className={cn(
+                                    "rounded-xl border px-3 py-2 text-xs font-bold uppercase tracking-wide",
+                                    isMainOfficer
+                                        ? "border-purple-400/40 bg-purple-500/10 text-purple-200"
+                                        : "border-sky-400/40 bg-sky-500/10 text-sky-100",
+                                )}
+                            >
+                                {formatRoleLabel(session?.user?.role)}
                             </div>
-                            <h1 className="mt-4 text-2xl font-semibold text-white sm:text-3xl">Settings</h1>
-                            <p className="mt-3 text-sm leading-relaxed text-slate-200 sm:text-base">
-                                Configure security controls, governance policy, operational alerts, and
-                                platform integrations in one auditable workspace.
-                            </p>
-                            <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-100">
-                                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
-                                    {filteredSections.length} sections visible
-                                </span>
-                                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
-                                    {enabledFeatureFlagCount} feature flags enabled
-                                </span>
-                                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
-                                    {configuredEnvCount}/5 system checks configured
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                            {session?.user ? (
-                                <div
-                                    className={cn(
-                                        "rounded-xl border px-3 py-2 text-xs font-bold uppercase tracking-wide",
-                                        isMainOfficer
-                                            ? "border-purple-400/40 bg-purple-500/10 text-purple-200"
-                                            : "border-sky-400/40 bg-sky-500/10 text-sky-100",
-                                    )}
-                                >
-                                    {formatRoleLabel(session.user.role)}
-                                </div>
-                            ) : null}
                             <button
                                 type="button"
                                 onClick={fetchSettings}
-                                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95"
+                                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95"
                             >
                                 <Activity size={14} />
                                 Refresh
                             </button>
-                        </div>
-                    </div>
-                </section>
-
-                {hasUnsavedChanges ? (
-                    <section className="flex items-center gap-2 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-yellow-300 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <AlertTriangle size={17} className="animate-pulse" />
-                        <span className="text-sm font-medium">You have unsaved changes.</span>
-                    </section>
-                ) : null}
-
-                <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                    {[
+                        </>
+                    }
+                    stats={[
                         {
                             label: "Alerts Enabled",
                             value: notificationsEnabledCount,
-                            hint: "Notification channels currently active",
+                            trend: { value: "Notification channels currently active", neutral: true },
                             icon: Bell,
                         },
                         {
                             label: "Session Timeout",
                             value: `${settings?.sessionTimeout ?? 30} min`,
-                            hint: "Current authentication session policy",
+                            trend: { value: "Current authentication session policy", neutral: true },
                             icon: Shield,
                         },
                         {
                             label: "Password Policy",
                             value: String(settings?.passwordPolicy ?? "STRONG"),
-                            hint: "Credential complexity baseline",
+                            trend: { value: "Credential complexity baseline", neutral: true },
                             icon: Key,
                         },
                         {
                             label: "2FA Requirement",
                             value: settings?.require2FA ? "Required" : "Optional",
-                            hint: "Global multi-factor enforcement state",
+                            trend: { value: "Global multi-factor enforcement state", neutral: true },
                             icon: ShieldCheck,
                         },
-                    ].map((metric, index) => {
-                        const Icon = metric.icon;
-                        return (
-                            <article
-                                key={metric.label}
-                                className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-300/35 hover:shadow-lg hover:shadow-sky-300/10 animate-in fade-in slide-in-from-bottom-4"
-                                style={{ animationDelay: `${index * 90}ms`, animationFillMode: "backwards" }}
-                            >
-                                <div className="flex items-start justify-between">
-                                    <p className="text-sm text-slate-300">{metric.label}</p>
-                                    <div className="rounded-lg border border-white/10 bg-white/5 p-2 transition-transform duration-200 hover:scale-110">
-                                        <Icon size={15} className="text-slate-200" />
-                                    </div>
-                                </div>
-                                <p className="mt-4 text-2xl font-semibold text-white">{metric.value}</p>
-                                <p className="mt-1 text-sm text-slate-400">{metric.hint}</p>
-                            </article>
-                        );
-                    })}
-                </section>
+                    ]}
+                />
 
                 <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
                     <aside className="lg:col-span-4 xl:col-span-3">
-                        <div className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-4 animate-in fade-in slide-in-from-left-4 duration-500" style={{ animationDelay: '350ms', animationFillMode: 'backwards' }}>
+                        <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4 animate-in fade-in slide-in-from-left-4 duration-500" style={{ animationDelay: '350ms', animationFillMode: 'backwards' }}>
                             <div className="relative mb-3">
                                 <Search
                                     className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
@@ -532,7 +487,7 @@ export default function SettingsPage() {
                                     placeholder="Search settings..."
                                     value={searchQuery}
                                     onChange={(event) => setSearchQuery(event.target.value)}
-                                    className="h-10 w-full rounded-xl border border-white/10 bg-white/[0.03] pl-9 pr-3 text-sm text-white outline-none transition-colors duration-200 placeholder:text-slate-500 focus:border-sky-300/45"
+                                    className="h-10 w-full rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] pl-9 pr-3 text-sm text-[var(--text-primary)] outline-none transition-colors duration-200 placeholder:[var(--text-muted)] focus:border-sky-300/45"
                                 />
                             </div>
 
@@ -544,8 +499,8 @@ export default function SettingsPage() {
                                         className={cn(
                                             "group w-full rounded-xl border px-3 py-3 text-left transition-all duration-200 animate-in fade-in slide-in-from-left-2",
                                             activeSection === section.id
-                                                ? "border-sky-300/30 bg-sky-300/10 shadow-lg shadow-sky-300/10"
-                                                : "border-transparent bg-white/[0.01] hover:border-white/10 hover:bg-white/[0.04] hover:scale-[1.02]",
+                                                ? "border-sky-300/30 bg-sky-500/10 shadow-lg shadow-sky-300/10"
+                                                : "border-transparent bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] hover:scale-[1.02]",
                                         )}
                                         style={{ animationDelay: `${index * 30}ms`, animationFillMode: 'backwards' }}
                                     >
@@ -553,13 +508,13 @@ export default function SettingsPage() {
                                             <section.icon
                                                 size={16}
                                                 className={cn(
-                                                    activeSection === section.id ? "text-sky-200" : "text-slate-400 group-hover:text-slate-200",
+                                                    activeSection === section.id ? "text-sky-200" : "text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]",
                                                 )}
                                             />
                                             <p
                                                 className={cn(
                                                     "text-sm font-medium",
-                                                    activeSection === section.id ? "text-sky-100" : "text-slate-200",
+                                                    activeSection === section.id ? "text-sky-100" : "text-[var(--text-secondary)]",
                                                 )}
                                             >
                                                 {section.label}
@@ -572,11 +527,11 @@ export default function SettingsPage() {
                                                 <ChevronRight size={14} className="ml-auto text-slate-500" />
                                             )}
                                         </div>
-                                        <p className="mt-1 text-xs text-slate-500">{section.description}</p>
+                                        <p className="mt-1 text-xs text-[var(--text-muted)]">{section.description}</p>
                                     </button>
                                 ))}
                                 {filteredSections.length === 0 ? (
-                                    <div className="rounded-xl border border-dashed border-white/15 px-3 py-4 text-xs text-slate-400">
+                                    <div className="rounded-xl border border-dashed border-[var(--border-color)] px-3 py-4 text-xs text-[var(--text-muted)]">
                                         No settings sections match your search.
                                     </div>
                                 ) : null}
@@ -585,12 +540,12 @@ export default function SettingsPage() {
                     </aside>
 
                     <div className="lg:col-span-8 xl:col-span-9 space-y-4">
-                        <div className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] px-5 py-4 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '350ms', animationFillMode: 'backwards' }}>
-                            <p className="text-xs uppercase tracking-wide text-slate-500">Active Section</p>
-                            <h2 className="mt-1 text-lg font-semibold text-white">
+                        <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] px-5 py-4 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '350ms', animationFillMode: 'backwards' }}>
+                            <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">Active Section</p>
+                            <h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
                                 {activeSectionInfo?.label ?? "Settings"}
                             </h2>
-                            <p className="mt-1 text-sm text-slate-400">
+                            <p className="mt-1 text-sm text-[var(--text-secondary)]">
                                 {activeSectionInfo?.description ?? "Manage platform configuration"}
                             </p>
                         </div>
@@ -749,35 +704,35 @@ function GeneralSection({ settings, updateSettings, isEditingGeneral, setIsEditi
         <Card title="General Settings" subtitle="Basic platform configuration">
             <div className="space-y-6">
                 <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                         Organization Name
                     </label>
                     <input
                         type="text"
                         value={settings?.organizationName || ""}
                         onChange={(e) => updateSettings({ organizationName: e.target.value })}
-                        className="input"
+                        className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                         disabled={!isEditingGeneral}
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                         Primary Domain
                     </label>
                     <input
                         type="text"
                         value={settings?.domain || ""}
                         onChange={(e) => updateSettings({ domain: e.target.value })}
-                        className="input"
+                        className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                         disabled={!isEditingGeneral}
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                         Timezone
                     </label>
                     <select
-                        className="input"
+                        className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                         value={settings?.timezone || "UTC"}
                         onChange={(e) => updateSettings({ timezone: e.target.value })}
                     >
@@ -789,11 +744,11 @@ function GeneralSection({ settings, updateSettings, isEditingGeneral, setIsEditi
                     </select>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                         Date Format
                     </label>
                     <select
-                        className="input"
+                        className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                         value={settings?.dateFormat || "MMM DD, YYYY"}
                         onChange={(e) => updateSettings({ dateFormat: e.target.value })}
                     >
@@ -805,7 +760,7 @@ function GeneralSection({ settings, updateSettings, isEditingGeneral, setIsEditi
                 <div className="pt-4 border-t border-[var(--border-color)] flex gap-3">
                     {!isEditingGeneral ? (
                         <button
-                            className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95"
+                            className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95"
                             onClick={() => setIsEditingGeneral(true)}
                         >
                             <Settings size={16} />
@@ -819,7 +774,7 @@ function GeneralSection({ settings, updateSettings, isEditingGeneral, setIsEditi
                                     setIsEditingGeneral(false);
                                 }}
                                 disabled={isSaving}
-                                className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                                className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                             >
                                 <Save size={16} />
                                 {isSaving ? "Saving..." : "Save Changes"}
@@ -830,7 +785,7 @@ function GeneralSection({ settings, updateSettings, isEditingGeneral, setIsEditi
                                     void fetchSettings();
                                 }}
                                 disabled={isSaving}
-                                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 Cancel
                             </button>
@@ -848,11 +803,11 @@ function GovernanceSection({ featureFlags, updateFeatureFlags, handleSaveFeature
         <Card title="Governance & Compliance" subtitle="Bank-grade change control, audit, and retention">
             <div className="space-y-6">
                 <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                         Change Control
                     </label>
                     <select
-                        className="input"
+                        className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                         value={featureFlags.changeControlMode || "SINGLE_APPROVER"}
                         onChange={(e) => updateFeatureFlags({ changeControlMode: e.target.value })}
                     >
@@ -863,7 +818,7 @@ function GovernanceSection({ featureFlags, updateFeatureFlags, handleSaveFeature
 
                 <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
                     <div>
-                        <h4 className="text-sm font-medium text-white">
+                        <h4 className="text-sm font-medium text-[var(--text-primary)]">
                             Require reason for settings changes
                         </h4>
                         <p className="text-xs text-[var(--text-muted)]">
@@ -877,7 +832,7 @@ function GovernanceSection({ featureFlags, updateFeatureFlags, handleSaveFeature
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                         Audit Log Retention (days)
                     </label>
                     <input
@@ -886,13 +841,13 @@ function GovernanceSection({ featureFlags, updateFeatureFlags, handleSaveFeature
                         max="3650"
                         value={featureFlags.auditLogRetentionDays || 365}
                         onChange={(e) => updateFeatureFlags({ auditLogRetentionDays: parseInt(e.target.value) })}
-                        className="input w-32"
+                        className="input w-32 bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                     />
                     <p className="text-xs text-[var(--text-muted)] mt-1">Min: 30 days, Max: 3650 days</p>
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                         Vulnerability Data Retention (days)
                     </label>
                     <input
@@ -901,14 +856,14 @@ function GovernanceSection({ featureFlags, updateFeatureFlags, handleSaveFeature
                         max="3650"
                         value={featureFlags.dataRetentionDays || 730}
                         onChange={(e) => updateFeatureFlags({ dataRetentionDays: parseInt(e.target.value) })}
-                        className="input w-32"
+                        className="input w-32 bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                     />
                     <p className="text-xs text-[var(--text-muted)] mt-1">Min: 30 days, Max: 3650 days</p>
                 </div>
 
                 <div className="pt-4 border-t border-[var(--border-color)]">
                     <button
-                        className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         onClick={handleSaveFeatureFlags}
                     >
                         <Save size={16} />
@@ -930,7 +885,7 @@ function SOCRoutingSection({ featureFlags, updateFeatureFlags, handleSaveFeature
             <div className="space-y-6">
                 <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
                     <div>
-                        <h4 className="text-sm font-medium text-white">Quiet Hours</h4>
+                        <h4 className="text-sm font-medium text-[var(--text-primary)]">Quiet Hours</h4>
                         <p className="text-xs text-[var(--text-muted)]">
                             Suppress non-critical alerts during specified hours
                         </p>
@@ -944,25 +899,25 @@ function SOCRoutingSection({ featureFlags, updateFeatureFlags, handleSaveFeature
                 {featureFlags.quietHoursEnabled && (
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-white mb-2">
+                            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                                 Quiet Hours Start
                             </label>
                             <input
                                 type="time"
                                 value={featureFlags.quietHoursStart || "22:00"}
                                 onChange={(e) => updateFeatureFlags({ quietHoursStart: e.target.value })}
-                                className="input"
+                                className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-white mb-2">
+                            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                                 Quiet Hours End
                             </label>
                             <input
                                 type="time"
                                 value={featureFlags.quietHoursEnd || "06:00"}
                                 onChange={(e) => updateFeatureFlags({ quietHoursEnd: e.target.value })}
-                                className="input"
+                                className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                             />
                         </div>
                     </div>
@@ -970,7 +925,7 @@ function SOCRoutingSection({ featureFlags, updateFeatureFlags, handleSaveFeature
 
                 <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
                     <div>
-                        <h4 className="text-sm font-medium text-white">
+                        <h4 className="text-sm font-medium text-[var(--text-primary)]">
                             Only alert on KEV when enabled
                         </h4>
                         <p className="text-xs text-[var(--text-muted)]">
@@ -984,7 +939,7 @@ function SOCRoutingSection({ featureFlags, updateFeatureFlags, handleSaveFeature
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                         EPSS Alert Threshold (0.0–1.0)
                     </label>
                     <input
@@ -994,7 +949,7 @@ function SOCRoutingSection({ featureFlags, updateFeatureFlags, handleSaveFeature
                         step="0.01"
                         value={featureFlags.epssAlertThreshold || 0.5}
                         onChange={(e) => updateFeatureFlags({ epssAlertThreshold: parseFloat(e.target.value) })}
-                        className="input w-32"
+                        className="input w-32 bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                     />
                     <p className="text-xs text-[var(--text-muted)] mt-1">
                         Alert when EPSS score exceeds this threshold
@@ -1003,7 +958,7 @@ function SOCRoutingSection({ featureFlags, updateFeatureFlags, handleSaveFeature
 
                 <div className="pt-4 border-t border-[var(--border-color)]">
                     <button
-                        className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         onClick={handleSaveFeatureFlags}
                     >
                         <Save size={16} />
@@ -1166,7 +1121,7 @@ function NotificationsSection({ settings, updateSettings, handleSave, isSaving }
                         className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]"
                     >
                         <div>
-                            <h4 className="text-sm font-medium text-white">
+                            <h4 className="text-sm font-medium text-[var(--text-primary)]">
                                 {notification.title}
                             </h4>
                             <p className="text-xs text-[var(--text-muted)]">
@@ -1180,8 +1135,8 @@ function NotificationsSection({ settings, updateSettings, handleSave, isSaving }
                     </div>
                 ))}
 
-                <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
-                    <h4 className="text-sm font-semibold text-white">Rule-Based Notification Routing</h4>
+                <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4">
+                    <h4 className="text-sm font-semibold text-[var(--text-primary)]">Rule-Based Notification Routing</h4>
                     <p className="mt-1 text-xs text-[var(--text-muted)]">
                         Route by event type, severity, and exploit context.
                     </p>
@@ -1193,20 +1148,20 @@ function NotificationsSection({ settings, updateSettings, handleSave, isSaving }
 
                     <div className="mt-3 grid gap-3 md:grid-cols-2">
                         <input
-                            className="input"
+                            className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                             placeholder="Rule name"
                             value={newRule.name}
                             onChange={(e) => setNewRule((prev) => ({ ...prev, name: e.target.value }))}
                         />
-                        <div className="input flex items-center text-sm text-slate-300">Channel: IN_APP</div>
+                        <div className="input flex items-center text-sm text-[var(--text-muted)] bg-[var(--bg-secondary)] border-[var(--border-color)]">Channel: IN_APP</div>
                         <input
-                            className="input"
+                            className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                             placeholder="Event type (e.g. VULNERABILITY_CREATED)"
                             value={newRule.eventType}
                             onChange={(e) => setNewRule((prev) => ({ ...prev, eventType: e.target.value }))}
                         />
                         <select
-                            className="input"
+                            className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                             value={newRule.minimumSeverity}
                             onChange={(e) => setNewRule((prev) => ({ ...prev, minimumSeverity: e.target.value }))}
                         >
@@ -1220,7 +1175,7 @@ function NotificationsSection({ settings, updateSettings, handleSave, isSaving }
                     </div>
 
                     <div className="mt-3 flex flex-wrap items-center gap-4">
-                        <label className="inline-flex items-center gap-2 text-xs text-slate-300">
+                        <label className="inline-flex items-center gap-2 text-xs text-[var(--text-secondary)]">
                             <input
                                 type="checkbox"
                                 checked={newRule.includeExploited}
@@ -1228,7 +1183,7 @@ function NotificationsSection({ settings, updateSettings, handleSave, isSaving }
                             />
                             Include exploited vulnerabilities
                         </label>
-                        <label className="inline-flex items-center gap-2 text-xs text-slate-300">
+                        <label className="inline-flex items-center gap-2 text-xs text-[var(--text-secondary)]">
                             <input
                                 type="checkbox"
                                 checked={newRule.includeKev}
@@ -1237,7 +1192,7 @@ function NotificationsSection({ settings, updateSettings, handleSave, isSaving }
                             Include CISA KEV only
                         </label>
                         <button
-                            className="inline-flex items-center gap-2 rounded-lg border border-sky-300/40 bg-sky-300/10 px-3 py-1.5 text-xs font-semibold text-sky-100 transition hover:bg-sky-300/20"
+                            className="inline-flex items-center gap-2 rounded-lg border border-sky-300/40 bg-sky-300/10 px-3 py-1.5 text-xs font-semibold text-sky-500 transition hover:bg-sky-300/20 dark:text-sky-100"
                             onClick={() => void createRule()}
                             disabled={!newRule.name.trim()}
                         >
@@ -1248,20 +1203,20 @@ function NotificationsSection({ settings, updateSettings, handleSave, isSaving }
 
                     <div className="mt-4 space-y-2">
                         {isLoadingRules ? (
-                            <p className="text-xs text-slate-400">Loading rules...</p>
+                            <p className="text-xs text-[var(--text-muted)]">Loading rules...</p>
                         ) : rules.length === 0 ? (
-                            <p className="text-xs text-slate-500">No notification rules yet.</p>
+                            <p className="text-xs text-[var(--text-muted)]">No notification rules yet.</p>
                         ) : (
                             rules.map((rule) => (
                                 <div
                                     key={rule.id}
-                                    className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2"
+                                    className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] px-3 py-2"
                                 >
                                     <div className="min-w-0">
-                                        <p className="truncate text-xs font-semibold text-white">
+                                        <p className="truncate text-xs font-semibold text-[var(--text-primary)]">
                                             {rule.name}
                                         </p>
-                                        <p className="truncate text-[11px] text-slate-400">
+                                        <p className="truncate text-[11px] text-[var(--text-secondary)]">
                                             {rule.channel} • {rule.eventType}
                                             {rule.minimumSeverity ? ` • ${rule.minimumSeverity}+` : ""}
                                         </p>
@@ -1269,7 +1224,7 @@ function NotificationsSection({ settings, updateSettings, handleSave, isSaving }
                                     <div className="flex items-center gap-2">
                                         <Toggle checked={rule.isActive} onChange={() => void toggleRule(rule)} />
                                         <button
-                                            className="inline-flex items-center gap-1 rounded-md border border-red-400/40 bg-red-500/10 px-2 py-1 text-[11px] text-red-200 transition hover:bg-red-500/20"
+                                            className="inline-flex items-center gap-1 rounded-md border border-red-400/40 bg-red-500/10 px-2 py-1 text-[11px] text-red-500 transition hover:bg-red-500/20 dark:text-red-200"
                                             onClick={() => void deleteRule(rule.id)}
                                         >
                                             <Trash2 size={12} />
@@ -1284,7 +1239,7 @@ function NotificationsSection({ settings, updateSettings, handleSave, isSaving }
 
                 <div className="pt-4 border-t border-[var(--border-color)]">
                     <button
-                        className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         onClick={handleSave}
                         disabled={isSaving}
                     >
@@ -1309,7 +1264,7 @@ function SecuritySection({ settings, updateSettings, handleSave, isSaving }: Sec
                 <div className="p-4 rounded-lg bg-[var(--bg-tertiary)]">
                     <div className="flex items-center justify-between mb-3">
                         <div>
-                            <h4 className="text-sm font-medium text-white">
+                            <h4 className="text-sm font-medium text-[var(--text-primary)]">
                                 AI Risk Intelligence
                             </h4>
                             <p className="text-xs text-[var(--text-muted)]">
@@ -1326,7 +1281,7 @@ function SecuritySection({ settings, updateSettings, handleSave, isSaving }: Sec
                 <div className="p-4 rounded-lg bg-[var(--bg-tertiary)]">
                     <div className="flex items-center justify-between mb-3">
                         <div>
-                            <h4 className="text-sm font-medium text-white">
+                            <h4 className="text-sm font-medium text-[var(--text-primary)]">
                                 Enforce 2FA Organization-wide
                             </h4>
                             <p className="text-xs text-[var(--text-muted)]">
@@ -1343,14 +1298,14 @@ function SecuritySection({ settings, updateSettings, handleSave, isSaving }: Sec
                 <TwoFactorSettingsPanel />
 
                 <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                         Session Timeout (minutes)
                     </label>
                     <input
                         type="number"
                         value={settings?.sessionTimeout || 30}
                         onChange={(e) => updateSettings({ sessionTimeout: parseInt(e.target.value) })}
-                        className="input w-32"
+                        className="input w-32 bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                     />
                     <p className="text-xs text-[var(--text-muted)] mt-1">
                         Recommended: 15–30 minutes for banking environments
@@ -1358,11 +1313,11 @@ function SecuritySection({ settings, updateSettings, handleSave, isSaving }: Sec
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                         Password Policy
                     </label>
                     <select
-                        className="input"
+                        className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                         value={settings?.passwordPolicy || "STRONG"}
                         onChange={(e) => updateSettings({ passwordPolicy: e.target.value })}
                     >
@@ -1374,7 +1329,7 @@ function SecuritySection({ settings, updateSettings, handleSave, isSaving }: Sec
 
                 <div className="pt-4 border-t border-[var(--border-color)]">
                     <button
-                        className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         onClick={handleSave}
                         disabled={isSaving}
                     >
@@ -1394,7 +1349,7 @@ function AIAssistSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFl
             <div className="space-y-6">
                 <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
                     <div>
-                        <h4 className="text-sm font-medium text-white">Enable AI Assist</h4>
+                        <h4 className="text-sm font-medium text-[var(--text-primary)]">Enable AI Assist</h4>
                         <p className="text-xs text-[var(--text-muted)]">
                             Master switch for all AI-powered features
                         </p>
@@ -1407,7 +1362,7 @@ function AIAssistSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFl
 
                 <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
                     <div>
-                        <h4 className="text-sm font-medium text-white">
+                        <h4 className="text-sm font-medium text-[var(--text-primary)]">
                             Risk Register Autofill
                         </h4>
                         <p className="text-xs text-[var(--text-muted)]">
@@ -1422,7 +1377,7 @@ function AIAssistSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFl
 
                 <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
                     <div>
-                        <h4 className="text-sm font-medium text-white">
+                        <h4 className="text-sm font-medium text-[var(--text-primary)]">
                             Require human review
                         </h4>
                         <p className="text-xs text-[var(--text-muted)]">
@@ -1436,11 +1391,11 @@ function AIAssistSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFl
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                         Data Redaction
                     </label>
                     <select
-                        className="input"
+                        className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                         value={featureFlags.aiDataRedactionMode || "STRICT"}
                         onChange={(e) => updateFeatureFlags({ aiDataRedactionMode: e.target.value })}
                     >
@@ -1450,12 +1405,12 @@ function AIAssistSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFl
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                         Allowed Models
                     </label>
                     <div className="space-y-2">
                         {["openai/gpt-4o-mini", "openai/gpt-4.1-mini", "anthropic/claude-3.5-sonnet", "google/gemini-1.5-pro"].map((model) => (
-                            <label key={model} className="flex items-center gap-2 p-2 rounded bg-[var(--bg-tertiary)] cursor-pointer">
+                            <label key={model} className="flex items-center gap-2 p-2 rounded bg-[var(--bg-tertiary)] cursor-pointer hover:bg-[var(--bg-elevated)] transition-colors">
                                 <input
                                     type="checkbox"
                                     checked={(featureFlags.aiModelAllowlist || []).includes(model)}
@@ -1466,9 +1421,9 @@ function AIAssistSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFl
                                             : current.filter((m) => m !== model);
                                         updateFeatureFlags({ aiModelAllowlist: updated });
                                     }}
-                                    className="rounded"
+                                    className="rounded border-[var(--border-color)]"
                                 />
-                                <span className="text-sm text-white">{model}</span>
+                                <span className="text-sm text-[var(--text-primary)]">{model}</span>
                             </label>
                         ))}
                     </div>
@@ -1476,7 +1431,7 @@ function AIAssistSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFl
 
                 <div className="pt-4 border-t border-[var(--border-color)]">
                     <button
-                        className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         onClick={handleSaveFeatureFlags}
                     >
                         <Save size={16} />
@@ -1512,7 +1467,7 @@ function SystemHealthSection({ settings, fetchSettings }: SystemHealthSectionPro
                             key={env.key}
                             className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-tertiary)]"
                         >
-                            <span className="text-sm text-white">{env.label}</span>
+                            <span className="text-sm text-[var(--text-primary)]">{env.label}</span>
                             {env.configured ? (
                                 <span className="flex items-center gap-1 text-xs font-medium text-green-400">
                                     <CheckCircle2 size={14} />
@@ -1535,7 +1490,7 @@ function SystemHealthSection({ settings, fetchSettings }: SystemHealthSectionPro
                 )}
 
                 <div className="pt-4 border-t border-[var(--border-color)]">
-                    <button className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95" onClick={fetchSettings}>
+                    <button className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95" onClick={fetchSettings}>
                         <Activity size={16} />
                         Refresh Status
                     </button>
@@ -1567,7 +1522,7 @@ function IntegrationsSection() {
                         <div className="flex items-center gap-3">
                             <span className="text-2xl">{integration.icon}</span>
                             <div>
-                                <h4 className="text-sm font-medium text-white">
+                                <h4 className="text-sm font-medium text-[var(--text-primary)]">
                                     {integration.name}
                                 </h4>
                                 <p className="text-xs text-[var(--text-muted)]">
@@ -1594,7 +1549,7 @@ function APIAccessSection() {
                     Configured via ENV variables. Check System Health for status.
                 </p>
                 <div className="p-4 rounded-lg bg-[var(--bg-tertiary)]">
-                    <h4 className="text-sm font-medium text-white mb-3">API Keys</h4>
+                    <h4 className="text-sm font-medium text-[var(--text-primary)] mb-3">API Keys</h4>
                     <div className="space-y-3">
                         {[
                             { name: "Production API Key", created: "Jan 1, 2024", lastUsed: "Today" },
@@ -1605,7 +1560,7 @@ function APIAccessSection() {
                                 className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-elevated)]"
                             >
                                 <div>
-                                    <p className="text-sm text-white">{key.name}</p>
+                                    <p className="text-sm text-[var(--text-primary)]">{key.name}</p>
                                     <p className="text-xs text-[var(--text-muted)]">
                                         Created: {key.created} • Last used: {key.lastUsed}
                                     </p>
@@ -1700,7 +1655,7 @@ function UsersManagementTab() {
                 <div className="flex flex-col items-center justify-center py-10 text-center">
                     <ShieldCheck size={48} className="text-red-500/50 mb-4" />
                     <p className="text-[var(--text-secondary)] max-w-md">
-                        Only users with the <span className="text-white font-bold">MAIN-OFFICER</span> role can manage user permissions and roles.
+                        Only users with the <span className="text-[var(--text-primary)] font-bold">MAIN-OFFICER</span> role can manage user permissions and roles.
                     </p>
                 </div>
             </Card>
@@ -1729,7 +1684,7 @@ function UsersManagementTab() {
                                     <tr key={user.id} className="text-sm">
                                         <td className="px-4 py-4">
                                             <div>
-                                                <p className="font-medium text-white">{user.name}</p>
+                                                <p className="font-medium text-[var(--text-primary)]">{user.name}</p>
                                                 <p className="text-xs text-[var(--text-muted)]">{user.email}</p>
                                             </div>
                                         </td>

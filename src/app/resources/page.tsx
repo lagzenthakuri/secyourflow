@@ -15,15 +15,15 @@ export default function Resources() {
           Back to Home
         </Link>
 
-        <h1 className="text-4xl font-bold text-white mb-4">Resources</h1>
-        <p className="text-slate-400 mb-12">
+        <h1 className="text-4xl font-bold text-[var(--text-primary)] mb-4">Resources</h1>
+        <p className="text-[var(--text-muted)] mb-12">
           Documentation, guides, and tools to help you get the most out of SecYourFlow.
         </p>
 
         <div className="space-y-8">
           {/* Documentation */}
           <section>
-            <h2 className="text-2xl font-semibold text-white mb-6 flex items-center gap-3">
+            <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-6 flex items-center gap-3">
               <BookOpen size={24} className="text-sky-400" />
               Documentation
             </h2>
@@ -32,11 +32,11 @@ export default function Resources() {
                 href="#"
                 className="group p-6 rounded-xl border border-slate-800 bg-slate-900/30 hover:border-slate-700 hover:bg-slate-900/50 transition-all"
               >
-                <h3 className="text-lg font-semibold text-white mb-2 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2 flex items-center justify-between">
                   Getting Started Guide
                   <ExternalLink size={16} className="text-slate-500 group-hover:text-sky-400 transition-colors" />
                 </h3>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-[var(--text-muted)]">
                   Learn the basics of SecYourFlow and set up your first security workspace.
                 </p>
               </a>
@@ -45,11 +45,11 @@ export default function Resources() {
                 href="#"
                 className="group p-6 rounded-xl border border-slate-800 bg-slate-900/30 hover:border-slate-700 hover:bg-slate-900/50 transition-all"
               >
-                <h3 className="text-lg font-semibold text-white mb-2 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2 flex items-center justify-between">
                   API Documentation
                   <ExternalLink size={16} className="text-slate-500 group-hover:text-sky-400 transition-colors" />
                 </h3>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-[var(--text-muted)]">
                   Complete API reference for integrating SecYourFlow with your tools.
                 </p>
               </a>
@@ -58,11 +58,11 @@ export default function Resources() {
                 href="#"
                 className="group p-6 rounded-xl border border-slate-800 bg-slate-900/30 hover:border-slate-700 hover:bg-slate-900/50 transition-all"
               >
-                <h3 className="text-lg font-semibold text-white mb-2 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2 flex items-center justify-between">
                   User Manual
                   <ExternalLink size={16} className="text-slate-500 group-hover:text-sky-400 transition-colors" />
                 </h3>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-[var(--text-muted)]">
                   Comprehensive guide covering all features and workflows.
                 </p>
               </a>
@@ -71,11 +71,11 @@ export default function Resources() {
                 href="#"
                 className="group p-6 rounded-xl border border-slate-800 bg-slate-900/30 hover:border-slate-700 hover:bg-slate-900/50 transition-all"
               >
-                <h3 className="text-lg font-semibold text-white mb-2 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2 flex items-center justify-between">
                   Best Practices
                   <ExternalLink size={16} className="text-slate-500 group-hover:text-sky-400 transition-colors" />
                 </h3>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-[var(--text-muted)]">
                   Security operations best practices and recommended workflows.
                 </p>
               </a>
@@ -84,7 +84,7 @@ export default function Resources() {
 
           {/* Tutorials */}
           <section>
-            <h2 className="text-2xl font-semibold text-white mb-6 flex items-center gap-3">
+            <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-6 flex items-center gap-3">
               <Video size={24} className="text-sky-400" />
               Video Tutorials
             </h2>
@@ -93,10 +93,10 @@ export default function Resources() {
                 <div className="aspect-video bg-slate-800 rounded-lg mb-4 flex items-center justify-center">
                   <Video size={32} className="text-slate-600" />
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">
+                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
                   Platform Overview
                 </h3>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-[var(--text-muted)]">
                   5-minute walkthrough of the SecYourFlow dashboard and key features.
                 </p>
               </div>
@@ -105,10 +105,10 @@ export default function Resources() {
                 <div className="aspect-video bg-slate-800 rounded-lg mb-4 flex items-center justify-center">
                   <Video size={32} className="text-slate-600" />
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">
+                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
                   Risk Prioritization
                 </h3>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-[var(--text-muted)]">
                   Learn how to use risk scoring to prioritize vulnerabilities effectively.
                 </p>
               </div>
@@ -117,7 +117,7 @@ export default function Resources() {
 
           {/* Downloads */}
           <section>
-            <h2 className="text-2xl font-semibold text-white mb-6 flex items-center gap-3">
+            <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-6 flex items-center gap-3">
               <Download size={24} className="text-sky-400" />
               Downloads
             </h2>
@@ -127,9 +127,9 @@ export default function Resources() {
                 className="flex items-center justify-between p-4 rounded-lg border border-slate-800 bg-slate-900/30 hover:border-slate-700 hover:bg-slate-900/50 transition-all"
               >
                 <div className="flex items-center gap-3">
-                  <FileText size={20} className="text-slate-400" />
+                  <FileText size={20} className="text-[var(--text-muted)]" />
                   <div>
-                    <p className="text-white font-medium">SecYourFlow Datasheet</p>
+                    <p className="text-[var(--text-primary)] font-medium">SecYourFlow Datasheet</p>
                     <p className="text-xs text-slate-500">PDF • 2.4 MB</p>
                   </div>
                 </div>
@@ -141,9 +141,9 @@ export default function Resources() {
                 className="flex items-center justify-between p-4 rounded-lg border border-slate-800 bg-slate-900/30 hover:border-slate-700 hover:bg-slate-900/50 transition-all"
               >
                 <div className="flex items-center gap-3">
-                  <Code size={20} className="text-slate-400" />
+                  <Code size={20} className="text-[var(--text-muted)]" />
                   <div>
-                    <p className="text-white font-medium">Integration Examples</p>
+                    <p className="text-[var(--text-primary)] font-medium">Integration Examples</p>
                     <p className="text-xs text-slate-500">ZIP • 1.8 MB</p>
                   </div>
                 </div>
@@ -155,9 +155,9 @@ export default function Resources() {
                 className="flex items-center justify-between p-4 rounded-lg border border-slate-800 bg-slate-900/30 hover:border-slate-700 hover:bg-slate-900/50 transition-all"
               >
                 <div className="flex items-center gap-3">
-                  <FileText size={20} className="text-slate-400" />
+                  <FileText size={20} className="text-[var(--text-muted)]" />
                   <div>
-                    <p className="text-white font-medium">Compliance Templates</p>
+                    <p className="text-[var(--text-primary)] font-medium">Compliance Templates</p>
                     <p className="text-xs text-slate-500">ZIP • 3.1 MB</p>
                   </div>
                 </div>
@@ -168,8 +168,8 @@ export default function Resources() {
 
           {/* Support */}
           <section className="mt-12 p-6 bg-slate-800/50 rounded-lg border border-slate-700">
-            <h2 className="text-xl font-semibold text-white mb-3">Need Help?</h2>
-            <p className="text-sm text-slate-400 mb-4">
+            <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-3">Need Help?</h2>
+            <p className="text-sm text-[var(--text-muted)] mb-4">
               Can&apos;t find what you&apos;re looking for? Our support team is here to help.
             </p>
             <div className="flex flex-wrap gap-3">
@@ -181,7 +181,7 @@ export default function Resources() {
               </Link>
               <a
                 href="#"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-700 text-slate-300 font-medium text-sm hover:border-slate-600 hover:bg-slate-800/50 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-700 text-[var(--text-secondary)] font-medium text-sm hover:border-slate-600 hover:bg-slate-800/50 transition-colors"
               >
                 Community Forum
               </a>

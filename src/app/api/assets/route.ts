@@ -40,7 +40,7 @@ const createAssetSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-  const authResult = await requireSessionWithOrg();
+  const authResult = await requireSessionWithOrg(request);
   if (!authResult.ok) return authResult.response;
 
   const searchParams = request.nextUrl.searchParams;
@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authResult = await requireSessionWithOrg();
+  const authResult = await requireSessionWithOrg(request);
   if (!authResult.ok) return authResult.response;
 
   const parsed = createAssetSchema.safeParse(await request.json());

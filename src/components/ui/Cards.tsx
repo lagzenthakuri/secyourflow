@@ -63,7 +63,7 @@ export function StatCard({
                     <span
                         className={cn(
                             "text-3xl font-bold",
-                            severity ? getSeverityBgClass(severity).split(" ")[1] : "text-white"
+                            severity ? getSeverityBgClass(severity).split(" ")[1] : "text-slate-900 dark:text-slate-100"
                         )}
                     >
                         {value}
@@ -125,7 +125,8 @@ export function RiskScoreCard({ score, label, className }: RiskScoreCardProps) {
                         r="60"
                         fill="none"
                         strokeWidth="12"
-                        className="risk-ring-bg"
+                        stroke="currentColor"
+                        className="text-slate-300/70 dark:text-white/10"
                     />
                     {/* Progress ring */}
                     <circle
@@ -142,7 +143,7 @@ export function RiskScoreCard({ score, label, className }: RiskScoreCardProps) {
                 </svg>
                 {/* Center text */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-4xl font-bold text-white">{score.toFixed(1)}</span>
+                    <span className="text-4xl font-bold text-slate-900 dark:text-slate-100">{score.toFixed(1)}</span>
                     <span
                         className="text-sm font-medium"
                         style={{ color: getScoreColor() }}
@@ -237,7 +238,7 @@ export function Card({
                 <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-color)]">
                     <div>
                         {title && (
-                            <h3 className="text-base font-semibold text-white">{title}</h3>
+                            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
                         )}
                         {subtitle && (
                             <p className="text-sm text-[var(--text-muted)] mt-0.5">{subtitle}</p>
@@ -266,7 +267,7 @@ export function EmptyState({ icon, title, description, action }: EmptyStateProps
                     {icon}
                 </div>
             )}
-            <h3 className="text-lg font-semibold text-white mb-1">{title}</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">{title}</h3>
             <p className="text-sm text-[var(--text-muted)] max-w-sm mb-4">
                 {description}
             </p>
@@ -304,7 +305,10 @@ export function Table({ columns, data, onRowClick }: TableProps) {
                     {data.map((row, idx) => (
                         <tr
                             key={idx}
-                            className={onRowClick ? "cursor-pointer" : ""}
+                            className={cn(
+                                "hover:bg-slate-900/[0.02] dark:hover:bg-white/[0.02]",
+                                onRowClick ? "cursor-pointer" : ""
+                            )}
                             onClick={() => onRowClick?.(row)}
                         >
                             {columns.map((col) => (

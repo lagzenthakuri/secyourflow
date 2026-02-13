@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { NavigationProgress } from "@/components/providers/NavigationProgress";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -42,10 +43,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={`${inter.variable} theme-dark`} data-scroll-behavior="smooth">
       <body className={`${inter.className} antialiased`}>
-        <NavigationProgress />
-        <AuthProvider>{children}</AuthProvider>
+        <ThemeProvider>
+          <NavigationProgress />
+          <AuthProvider>{children}</AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

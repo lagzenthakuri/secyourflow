@@ -12,8 +12,8 @@ const createSchema = z.object({
   vulnerabilityIds: z.array(z.string()).optional(),
 });
 
-export async function GET() {
-  const authResult = await requireSessionWithOrg();
+export async function GET(request: NextRequest) {
+  const authResult = await requireSessionWithOrg(request);
   if (!authResult.ok) return authResult.response;
 
   const data = await getRemediationPlans(authResult.context.organizationId);
@@ -21,7 +21,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const authResult = await requireSessionWithOrg();
+  const authResult = await requireSessionWithOrg(request);
   if (!authResult.ok) return authResult.response;
 
   const parsed = createSchema.safeParse(await request.json());

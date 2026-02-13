@@ -2,9 +2,10 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { AddVulnerabilityModal } from "@/components/vulnerabilities/AddVulnerabilityModal";
 import { EditVulnerabilityModal } from "@/components/vulnerabilities/EditVulnerabilityModal";
 import { VulnerabilityActions } from "@/components/vulnerabilities/VulnerabilityActions";
@@ -46,7 +47,7 @@ const RiskAssessmentView = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-[var(--text-muted)]">
         Loading risk assessment...
       </div>
     ),
@@ -118,7 +119,7 @@ const severityColor: Record<string, string> = {
   HIGH: "text-orange-300 border-orange-400/35 bg-orange-500/10",
   MEDIUM: "text-yellow-300 border-yellow-400/35 bg-yellow-500/10",
   LOW: "text-emerald-300 border-emerald-400/35 bg-emerald-500/10",
-  INFORMATIONAL: "text-slate-300 border-slate-400/35 bg-slate-500/10",
+  INFORMATIONAL: "text-[var(--text-secondary)] border-slate-400/35 bg-slate-500/10",
 };
 
 const statusColor: Record<string, string> = {
@@ -126,8 +127,8 @@ const statusColor: Record<string, string> = {
   IN_PROGRESS: "text-sky-300 border-sky-400/35 bg-sky-500/10",
   MITIGATED: "text-violet-300 border-violet-400/35 bg-violet-500/10",
   FIXED: "text-emerald-300 border-emerald-400/35 bg-emerald-500/10",
-  ACCEPTED: "text-slate-300 border-slate-400/35 bg-slate-500/10",
-  FALSE_POSITIVE: "text-slate-300 border-slate-400/35 bg-slate-500/10",
+  ACCEPTED: "text-[var(--text-secondary)] border-slate-400/35 bg-slate-500/10",
+  FALSE_POSITIVE: "text-[var(--text-secondary)] border-slate-400/35 bg-slate-500/10",
 };
 
 function formatLabel(value: string) {
@@ -149,7 +150,7 @@ function getSlaBadge(slaDueAt?: string | Date | null) {
   if (!slaDueAt) {
     return {
       label: "No SLA",
-      tone: "border-slate-400/35 bg-slate-500/10 text-slate-300",
+      tone: "border-slate-400/35 bg-slate-500/10 text-[var(--text-secondary)]",
     };
   }
 
@@ -177,7 +178,7 @@ function getSlaBadge(slaDueAt?: string | Date | null) {
   };
 }
 
-export default function VulnerabilitiesPage() {
+function VulnerabilitiesContent() {
   const [vulns, setVulns] = useState<Vulnerability[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -449,76 +450,84 @@ export default function VulnerabilitiesPage() {
   return (
     <DashboardLayout>
       <div className="space-y-5">
-        <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(132deg,rgba(56,189,248,0.2),rgba(18,18,26,0.9)_44%,rgba(18,18,26,0.96))] p-6 sm:p-8">
-          <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-sky-300/20 blur-3xl" />
-          <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-sky-300/35 bg-sky-300/10 px-3 py-1 text-xs font-medium text-sky-200">
-                <Sparkles size={13} />
-                Vulnerability Triage Workspace
-              </div>
-              <h1 className="mt-4 text-2xl font-semibold text-white sm:text-3xl">
-                Vulnerabilities
-              </h1>
-              <p className="mt-3 text-sm leading-relaxed text-slate-200 sm:text-base">
-                Prioritize and remediate the highest-impact findings with clearer operational
-                context for SOC and engineering teams.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-100">
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
-                  {numberFormatter.format(pagination.total)} tracked vulnerabilities
-                </span>
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
-                  {criticalCount} critical
-                </span>
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
-                  {exploitedCount} exploited
-                </span>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <PageHeader
+          title="Vulnerabilities"
+          description="Prioritize and remediate the highest-impact findings with clearer operational context for SOC and engineering teams."
+          badge={
+            <>
+              <Sparkles size={13} className="mr-2" />
+              Vulnerability Triage Workspace
+            </>
+          }
+          actions={
+            <div className="flex flex-wrap gap-2 sm:gap-3">
               <button
                 type="button"
                 onClick={() => void exportData("csv")}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn btn-secondary !px-4 !py-2.5"
               >
-                <Download size={14} />
-                Export CSV
+                <Download size={14} className="mr-2" />
+                CSV
               </button>
               <button
                 type="button"
                 onClick={() => void exportData("xlsx")}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/15"
+                className="btn btn-secondary !px-4 !py-2.5"
               >
-                <Download size={14} />
-                Export XLSX
+                <Download size={14} className="mr-2" />
+                XLSX
               </button>
               <button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/15"
+                className="btn btn-secondary !px-4 !py-2.5"
               >
-                <TrendingUp size={14} />
+                <TrendingUp size={14} className="mr-2" />
                 Import Scan
               </button>
               <Link
                 href="/vulnerabilities/remediation"
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/15"
+                className="btn btn-secondary !px-4 !py-2.5"
               >
-                <TrendingUp size={14} />
-                Remediation Plans
+                <TrendingUp size={14} className="mr-2" />
+                Remediation
               </Link>
               <button
                 type="button"
                 onClick={() => setIsAddModalOpen(true)}
-                className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-200"
+                className="btn btn-primary !px-5 !py-2.5 bg-gradient-to-r from-sky-500 to-sky-400 border-none shadow-lg shadow-sky-500/20"
               >
-                <Plus size={14} />
+                <Plus size={14} className="mr-2" />
                 Add Vulnerability
               </button>
             </div>
-          </div>
-        </section>
+          }
+          stats={[
+            {
+              label: "Total tracked",
+              value: numberFormatter.format(pagination.total),
+              icon: Shield,
+              trend: { value: `${pagination.totalPages} pages`, neutral: true }
+            },
+            {
+              label: "Critical Findings",
+              value: numberFormatter.format(criticalCount),
+              icon: AlertTriangle,
+              trend: { value: "Priority", isUp: false }
+            },
+            {
+              label: "Exploited Risks",
+              value: numberFormatter.format(exploitedCount),
+              icon: Zap,
+              trend: { value: "Live threats", isUp: false }
+            },
+            {
+              label: "Open on Page",
+              value: numberFormatter.format(openOnPage),
+              icon: Filter,
+              trend: { value: "Active triage", neutral: true }
+            }
+          ]}
+        />
 
         {actionError ? (
           <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-3 text-sm text-red-200">
@@ -526,58 +535,14 @@ export default function VulnerabilitiesPage() {
           </section>
         ) : null}
 
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            {
-              label: "Total Vulnerabilities",
-              value: numberFormatter.format(pagination.total),
-              hint: `${pagination.totalPages} pages`,
-              icon: Shield,
-            },
-            {
-              label: "Critical",
-              value: numberFormatter.format(criticalCount),
-              hint: "Highest remediation priority",
-              icon: AlertTriangle,
-            },
-            {
-              label: "Actively Exploited",
-              value: numberFormatter.format(exploitedCount),
-              hint: "Live threat relevance",
-              icon: Zap,
-            },
-            {
-              label: "Open on page",
-              value: numberFormatter.format(openOnPage),
-              hint: "OPEN or IN_PROGRESS",
-              icon: Filter,
-            },
-          ].map((metric) => {
-            const Icon = metric.icon;
-            return (
-              <article
-                key={metric.label}
-                className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 transition duration-200 hover:-translate-y-0.5 hover:border-sky-300/35"
-              >
-                <div className="flex items-start justify-between">
-                  <p className="text-sm text-slate-300">{metric.label}</p>
-                  <div className="rounded-lg border border-white/10 bg-white/5 p-2">
-                    <Icon size={15} className="text-slate-200" />
-                  </div>
-                </div>
-                <p className="mt-4 text-3xl font-semibold text-white">{metric.value}</p>
-                <p className="mt-1 text-sm text-slate-400">{metric.hint}</p>
-              </article>
-            );
-          })}
-        </section>
 
-        <section className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-4">
+
+        <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4">
           <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr_0.8fr_auto]">
             <label className="relative block">
               <Search
                 size={15}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
               />
               <input
                 type="text"
@@ -587,7 +552,7 @@ export default function VulnerabilitiesPage() {
                   setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
                 placeholder="Search by CVE ID, title, or description"
-                className="input h-10 w-full !pl-9 text-sm"
+                className="input h-10 w-full !pl-9 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] border-[var(--border-color)] bg-[var(--bg-secondary)]"
               />
             </label>
 
@@ -597,7 +562,7 @@ export default function VulnerabilitiesPage() {
                 setSelectedSeverity(event.target.value);
                 setPagination((prev) => ({ ...prev, page: 1 }));
               }}
-              className="input h-10 w-full appearance-none text-sm"
+              className="input h-10 w-full appearance-none text-sm text-[var(--text-primary)] border-[var(--border-color)] bg-[var(--bg-secondary)]"
             >
               <option value="ALL">All Severities</option>
               {severityOptions.map((severity) => (
@@ -613,7 +578,7 @@ export default function VulnerabilitiesPage() {
                 setSelectedStatus(event.target.value);
                 setPagination((prev) => ({ ...prev, page: 1 }));
               }}
-              className="input h-10 w-full appearance-none text-sm"
+              className="input h-10 w-full appearance-none text-sm text-[var(--text-primary)] border-[var(--border-color)] bg-[var(--bg-secondary)]"
             >
               <option value="ALL">All Statuses</option>
               {statusOptions.map((status) => (
@@ -629,7 +594,7 @@ export default function VulnerabilitiesPage() {
                 setSelectedSource(event.target.value);
                 setPagination((prev) => ({ ...prev, page: 1 }));
               }}
-              className="input h-10 w-full appearance-none text-sm"
+              className="input h-10 w-full appearance-none text-sm text-[var(--text-primary)] border-[var(--border-color)] bg-[var(--bg-secondary)]"
             >
               <option value="ALL">All Sources</option>
               {sourceOptions.map((source) => (
@@ -645,7 +610,7 @@ export default function VulnerabilitiesPage() {
                 setSelectedWorkflow(event.target.value);
                 setPagination((prev) => ({ ...prev, page: 1 }));
               }}
-              className="input h-10 w-full appearance-none text-sm"
+              className="input h-10 w-full appearance-none text-sm text-[var(--text-primary)] border-[var(--border-color)] bg-[var(--bg-secondary)]"
             >
               <option value="ALL">All Workflow</option>
               {workflowOptions.map((workflow) => (
@@ -659,14 +624,14 @@ export default function VulnerabilitiesPage() {
               <button
                 type="button"
                 onClick={resetFilters}
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-white/15 bg-white/5 px-4 text-sm text-slate-200 transition hover:bg-white/10"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 text-sm text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
               >
                 Reset
               </button>
               <button
                 type="button"
                 onClick={() => void fetchVulnerabilities({ silent: true })}
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-white/15 bg-white/5 px-4 text-sm text-slate-200 transition hover:bg-white/10"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 text-sm text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
               >
                 {isRefreshing ? "Refreshing" : "Refresh"}
               </button>
@@ -683,8 +648,8 @@ export default function VulnerabilitiesPage() {
               className={cn(
                 "inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition",
                 showExploited
-                  ? "border-red-400/35 bg-red-500/10 text-red-200"
-                  : "border-white/15 bg-white/5 text-slate-300 hover:bg-white/10",
+                  ? "border-red-400/35 bg-red-500/10 text-red-500 theme-dark:text-red-200"
+                  : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]",
               )}
             >
               <Zap size={13} />
@@ -699,8 +664,8 @@ export default function VulnerabilitiesPage() {
               className={cn(
                 "inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition",
                 showKevOnly
-                  ? "border-orange-400/35 bg-orange-500/10 text-orange-200"
-                  : "border-white/15 bg-white/5 text-slate-300 hover:bg-white/10",
+                  ? "border-orange-400/35 bg-orange-500/10 text-orange-500 theme-dark:text-orange-200"
+                  : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]",
               )}
             >
               CISA KEV Only
@@ -715,24 +680,24 @@ export default function VulnerabilitiesPage() {
         ) : null}
 
         <section className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
-          <article className="overflow-hidden rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)]">
-            <header className="flex flex-col gap-3 border-b border-white/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <article className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
+            <header className="flex flex-col gap-3 border-b border-[var(--border-color)] p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-white">Vulnerability Queue</h2>
-                <p className="text-sm text-slate-400">
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Vulnerability Queue</h2>
+                <p className="text-sm text-[var(--text-secondary)]">
                   Showing {vulns.length} of {numberFormatter.format(pagination.total)} vulnerabilities
                 </p>
               </div>
-              <div className="text-xs text-slate-500">Page {pagination.page}</div>
+              <div className="text-xs text-[var(--text-muted)]">Page {pagination.page}</div>
             </header>
 
             {vulns.length === 0 ? (
               <div className="p-16 text-center">
-                <Shield className="mx-auto h-12 w-12 text-slate-600" />
-                <p className="mt-4 text-sm text-slate-400">No vulnerabilities match current filters.</p>
+                <Shield className="mx-auto h-12 w-12 text-[var(--text-muted)]" />
+                <p className="mt-4 text-sm text-[var(--text-secondary)]">No vulnerabilities match current filters.</p>
               </div>
             ) : (
-              <div className="divide-y divide-white/10">
+              <div className="divide-y divide-[var(--border-color)]">
                 {vulns.map((vuln) => {
                   const severityTone =
                     severityColor[vuln.severity] || severityColor.INFORMATIONAL;
@@ -746,16 +711,16 @@ export default function VulnerabilitiesPage() {
                     <div
                       key={vuln.id}
                       className={cn(
-                        "group p-4 transition hover:bg-white/[0.03]",
-                        isExpanded && "bg-white/[0.03]",
+                        "group p-4 transition hover:bg-[var(--bg-elevated)]",
+                        isExpanded && "bg-[var(--bg-elevated)]",
                       )}
                     >
                       <div
                         className="flex cursor-pointer items-start gap-3"
                         onClick={() => setActiveVulnId(isExpanded ? null : vuln.id)}
                       >
-                        <div className="rounded-lg border border-white/10 bg-white/[0.04] p-2.5">
-                          <Shield size={18} className="text-sky-300" />
+                        <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2.5">
+                          <Shield size={18} className="text-sky-500 theme-dark:text-sky-300" />
                         </div>
 
                         <div className="min-w-0 flex-1">
@@ -765,14 +730,14 @@ export default function VulnerabilitiesPage() {
                                 href={`https://nvd.nist.gov/vuln/detail/${vuln.cveId}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 font-mono text-xs text-sky-300 hover:text-sky-200"
+                                className="inline-flex items-center gap-1 font-mono text-xs text-sky-500 theme-dark:text-sky-300 hover:text-sky-600 theme-dark:hover:text-sky-200"
                                 onClick={(event) => event.stopPropagation()}
                               >
                                 {vuln.cveId}
                                 <ExternalLink size={11} />
                               </a>
                             ) : (
-                              <span className="font-mono text-xs text-slate-500">No CVE ID</span>
+                              <span className="font-mono text-xs text-[var(--text-muted)]">No CVE ID</span>
                             )}
 
                             <span className={cn("rounded-full border px-2 py-0.5 text-[11px]", severityTone)}>
@@ -802,12 +767,12 @@ export default function VulnerabilitiesPage() {
                             ) : null}
                           </div>
 
-                          <h3 className="mt-2 truncate text-sm font-medium text-white">{vuln.title}</h3>
-                          <p className="mt-1 line-clamp-2 text-sm text-slate-400">
+                          <h3 className="mt-2 truncate text-sm font-medium text-[var(--text-primary)]">{vuln.title}</h3>
+                          <p className="mt-1 line-clamp-2 text-sm text-[var(--text-secondary)]">
                             {vuln.description || "No description available."}
                           </p>
 
-                          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
+                          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
                             <span>
                               CVSS {typeof vuln.cvssScore === "number" ? vuln.cvssScore.toFixed(1) : "N/A"}
                             </span>
@@ -834,17 +799,17 @@ export default function VulnerabilitiesPage() {
                         </div>
 
                         <div className="hidden text-right md:block">
-                          <p className="text-sm font-semibold text-orange-300">
+                          <p className="text-sm font-semibold text-orange-500 theme-dark:text-orange-300">
                             {vuln.affectedAssets || 0}
                           </p>
-                          <p className="text-xs text-slate-500">Affected Assets</p>
+                          <p className="text-xs text-[var(--text-muted)]">Affected Assets</p>
                         </div>
 
                         <div className="flex items-start gap-2">
                           <button
                             type="button"
                             onClick={() => setActiveVulnId(isExpanded ? null : vuln.id)}
-                            className="mt-1 inline-flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-slate-400 transition hover:bg-white/10 hover:text-slate-200"
+                            className="mt-1 inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-muted)] transition hover:bg-[var(--bg-elevated)] hover:text-[var(--text-secondary)]"
                           >
                             <ChevronDown
                               size={14}
@@ -863,9 +828,9 @@ export default function VulnerabilitiesPage() {
                       </div>
 
                       {isExpanded ? (
-                        <div className="mt-4 border-t border-white/10 pt-4 pl-14">
+                        <div className="mt-4 border-t border-[var(--border-color)] pt-4 pl-14">
                           <div className="mb-4 flex flex-wrap items-center gap-2">
-                            <span className="text-xs text-slate-400">
+                            <span className="text-xs text-[var(--text-muted)]">
                               Workflow: {formatLabel(workflowState)}
                             </span>
                             {nextWorkflowStates.map((state) => (
@@ -874,13 +839,13 @@ export default function VulnerabilitiesPage() {
                                 type="button"
                                 disabled={workflowUpdatingId === vuln.id}
                                 onClick={() => void transitionWorkflow(vuln, state)}
-                                className="inline-flex items-center gap-1 rounded-md border border-sky-400/35 bg-sky-500/10 px-2.5 py-1 text-[11px] text-sky-200 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="inline-flex items-center gap-1 rounded-md border border-sky-400/35 bg-sky-500/10 px-2.5 py-1 text-[11px] text-sky-500 theme-dark:text-sky-200 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 {workflowUpdatingId === vuln.id ? "Updating..." : `Move to ${formatLabel(state)}`}
                               </button>
                             ))}
                             {!nextWorkflowStates.length ? (
-                              <span className="text-xs text-slate-500">No further transitions.</span>
+                              <span className="text-xs text-[var(--text-muted)]">No further transitions.</span>
                             ) : null}
                           </div>
                           <RiskAssessmentView
@@ -905,8 +870,8 @@ export default function VulnerabilitiesPage() {
               </div>
             )}
 
-            <footer className="flex items-center justify-between border-t border-white/10 p-4">
-              <p className="text-xs text-slate-500">
+            <footer className="flex items-center justify-between border-t border-[var(--border-color)] p-4">
+              <p className="text-xs text-[var(--text-muted)]">
                 Page {pagination.page} of {pagination.totalPages}
               </p>
               <div className="flex items-center gap-2">
@@ -916,7 +881,7 @@ export default function VulnerabilitiesPage() {
                   onClick={() =>
                     setPagination((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))
                   }
-                  className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-sm text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <ChevronLeft size={14} />
                   Prev
@@ -930,7 +895,7 @@ export default function VulnerabilitiesPage() {
                       page: Math.min(prev.totalPages, prev.page + 1),
                     }))
                   }
-                  className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-sm text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Next
                   <ChevronRight size={14} />
@@ -940,8 +905,8 @@ export default function VulnerabilitiesPage() {
           </article>
 
           <div className="space-y-4">
-            <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
-              <h2 className="text-lg font-semibold text-white">Severity Distribution</h2>
+            <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">Severity Distribution</h2>
               <div className="mt-4">
                 {severityDistribution.length > 0 ? (
                   <>
@@ -949,31 +914,31 @@ export default function VulnerabilitiesPage() {
                     <div className="mt-4 space-y-2">
                       {severityDistribution.map((item) => (
                         <div key={item.severity} className="flex items-center justify-between text-sm">
-                          <span className="text-slate-300">{item.severity}</span>
-                          <span className="text-white">{item.count}</span>
+                          <span className="text-[var(--text-secondary)]">{item.severity}</span>
+                          <span className="text-[var(--text-primary)]">{item.count}</span>
                         </div>
                       ))}
                     </div>
                   </>
                 ) : (
-                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+                  <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
                     No severity distribution data available.
                   </div>
                 )}
               </div>
             </article>
 
-            <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
-              <h2 className="text-lg font-semibold text-white">Source Distribution</h2>
+            <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">Source Distribution</h2>
               <div className="mt-4 space-y-3">
                 {sourceDistribution.length > 0 ? (
                   sourceDistribution.map((item) => (
                     <div key={item.source}>
                       <div className="mb-1.5 flex items-center justify-between text-xs">
-                        <span className="text-slate-300 font-mono">{item.source}</span>
-                        <span className="text-slate-400">{item.count}</span>
+                        <span className="text-[var(--text-secondary)] font-mono">{item.source}</span>
+                        <span className="text-[var(--text-muted)]">{item.count}</span>
                       </div>
-                      <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                      <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
                         <div
                           className="h-full rounded-full bg-cyan-300"
                           style={{
@@ -984,36 +949,36 @@ export default function VulnerabilitiesPage() {
                     </div>
                   ))
                 ) : (
-                  <p className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+                  <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
                     No source distribution data available.
                   </p>
                 )}
               </div>
             </article>
 
-            <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
-              <h2 className="text-lg font-semibold text-white">EPSS Ranges</h2>
+            <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">EPSS Ranges</h2>
               <div className="mt-4 space-y-2">
                 {[
                   {
                     label: "High (>70%)",
                     value: epssDistribution.high,
-                    tone: "text-red-200 border-red-400/35 bg-red-500/10",
+                    tone: "text-red-500 theme-dark:text-red-200 border-red-400/35 bg-red-500/10",
                   },
                   {
                     label: "Medium (30-70%)",
                     value: epssDistribution.medium,
-                    tone: "text-orange-200 border-orange-400/35 bg-orange-500/10",
+                    tone: "text-orange-500 theme-dark:text-orange-200 border-orange-400/35 bg-orange-500/10",
                   },
                   {
                     label: "Low (10-30%)",
                     value: epssDistribution.low,
-                    tone: "text-yellow-200 border-yellow-400/35 bg-yellow-500/10",
+                    tone: "text-yellow-500 theme-dark:text-yellow-200 border-yellow-400/35 bg-yellow-500/10",
                   },
                   {
                     label: "Minimal (<10%)",
                     value: epssDistribution.minimal,
-                    tone: "text-emerald-200 border-emerald-400/35 bg-emerald-500/10",
+                    tone: "text-emerald-500 theme-dark:text-emerald-200 border-emerald-400/35 bg-emerald-500/10",
                   },
                 ].map((item) => (
                   <div
@@ -1052,5 +1017,19 @@ export default function VulnerabilitiesPage() {
         />
       ) : null}
     </DashboardLayout>
+  );
+}
+
+export default function VulnerabilitiesPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <ShieldLoader size="lg" variant="cyber" />
+        </div>
+      </DashboardLayout>
+    }>
+      <VulnerabilitiesContent />
+    </Suspense>
   );
 }

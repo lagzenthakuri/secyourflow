@@ -46,7 +46,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
                             style={{ background: entry.color }}
                         />
                         <span className="text-[var(--text-secondary)]">{entry.name}:</span>
-                        <span className="font-medium text-white">{entry.value}</span>
+                        <span className="font-medium text-[var(--text-primary)]">{entry.value}</span>
                     </div>
                 ))}
             </div>
@@ -73,17 +73,17 @@ export function RiskTrendChart({ data }: RiskTrendChartProps) {
                         <stop offset="95%" stopColor={COLORS.CRITICAL} stopOpacity={0} />
                     </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                 <XAxis
                     dataKey="date"
-                    tick={{ fill: "#64748b", fontSize: 11 }}
+                    tick={{ fill: "var(--text-muted)", fontSize: 11 }}
                     tickLine={false}
-                    axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
+                    axisLine={{ stroke: "var(--border-color)" }}
                 />
                 <YAxis
-                    tick={{ fill: "#64748b", fontSize: 11 }}
+                    tick={{ fill: "var(--text-muted)", fontSize: 11 }}
                     tickLine={false}
-                    axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
+                    axisLine={{ stroke: "var(--border-color)" }}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Area
@@ -131,7 +131,7 @@ export function SeverityDistributionChart({ data }: SeverityDistributionChartPro
                             const data = payload[0].payload;
                             return (
                                 <div className="custom-tooltip">
-                                    <p className="font-medium text-white">{data.severity}</p>
+                                    <p className="font-medium text-[var(--text-primary)]">{data.severity}</p>
                                     <p className="text-sm text-[var(--text-secondary)]">
                                         {data.count} vulnerabilities ({data.percentage}%)
                                     </p>
@@ -163,21 +163,21 @@ export function ComplianceBarChart({ data }: ComplianceBarChartProps) {
                 layout="vertical"
                 margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
             >
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" horizontal={false} />
                 <XAxis
                     type="number"
                     domain={[0, 100]}
-                    tick={{ fill: "#64748b", fontSize: 11 }}
+                    tick={{ fill: "var(--text-muted)", fontSize: 11 }}
                     tickLine={false}
-                    axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
+                    axisLine={{ stroke: "var(--border-color)" }}
                 />
                 <YAxis
                     type="category"
                     dataKey="frameworkName"
                     width={100}
-                    tick={{ fill: "#94a3b8", fontSize: 11 }}
+                    tick={{ fill: "var(--text-secondary)", fontSize: 11 }}
                     tickLine={false}
-                    axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
+                    axisLine={{ stroke: "var(--border-color)" }}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar
@@ -204,17 +204,17 @@ export function VulnStatusChart({ data }: VulnStatusChartProps) {
     return (
         <ResponsiveContainer width="100%" height={240}>
             <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                 <XAxis
                     dataKey="month"
-                    tick={{ fill: "#64748b", fontSize: 11 }}
+                    tick={{ fill: "var(--text-muted)", fontSize: 11 }}
                     tickLine={false}
-                    axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
+                    axisLine={{ stroke: "var(--border-color)" }}
                 />
                 <YAxis
-                    tick={{ fill: "#64748b", fontSize: 11 }}
+                    tick={{ fill: "var(--text-muted)", fontSize: 11 }}
                     tickLine={false}
-                    axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
+                    axisLine={{ stroke: "var(--border-color)" }}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend
@@ -252,18 +252,18 @@ export function AssetTypeChart({ data }: AssetTypeChartProps) {
                 data={data.slice(0, 6)}
                 margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
             >
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                 <XAxis
                     dataKey="type"
-                    tick={{ fill: "#64748b", fontSize: 10 }}
+                    tick={{ fill: "var(--text-muted)", fontSize: 10 }}
                     tickLine={false}
-                    axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
+                    axisLine={{ stroke: "var(--border-color)" }}
                     tickFormatter={(v) => formatLabel(v).substring(0, 8)}
                 />
                 <YAxis
-                    tick={{ fill: "#64748b", fontSize: 11 }}
+                    tick={{ fill: "var(--text-muted)", fontSize: 11 }}
                     tickLine={false}
-                    axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
+                    axisLine={{ stroke: "var(--border-color)" }}
                 />
                 <Tooltip
                     content={({ active, payload }) => {
@@ -271,7 +271,7 @@ export function AssetTypeChart({ data }: AssetTypeChartProps) {
                             const data = payload[0].payload;
                             return (
                                 <div className="custom-tooltip">
-                                    <p className="font-medium text-white">{formatLabel(data.type)}</p>
+                                    <p className="font-medium text-[var(--text-primary)]">{formatLabel(data.type)}</p>
                                     <p className="text-sm text-[var(--text-secondary)]">
                                         {data.count} assets ({data.percentage}%)
                                     </p>
@@ -315,21 +315,21 @@ export function EPSSChart({ data }: EPSSChartProps) {
                         <stop offset="100%" stopColor={COLORS.CRITICAL} />
                     </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" horizontal={false} />
                 <XAxis
                     type="number"
                     domain={[0, 1]}
-                    tick={{ fill: "#64748b", fontSize: 11 }}
+                    tick={{ fill: "var(--text-muted)", fontSize: 11 }}
                     tickLine={false}
                     tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
-                    axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
+                    axisLine={{ stroke: "var(--border-color)" }}
                 />
                 <YAxis
                     type="category"
                     dataKey="cveId"
-                    tick={{ fill: "#94a3b8", fontSize: 11 }}
+                    tick={{ fill: "var(--text-secondary)", fontSize: 11 }}
                     tickLine={false}
-                    axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
+                    axisLine={{ stroke: "var(--border-color)" }}
                 />
                 <Tooltip
                     content={({ active, payload }) => {
@@ -337,7 +337,7 @@ export function EPSSChart({ data }: EPSSChartProps) {
                             const data = payload[0].payload;
                             return (
                                 <div className="custom-tooltip">
-                                    <p className="font-medium text-white">{data.cveId}</p>
+                                    <p className="font-medium text-[var(--text-primary)]">{data.cveId}</p>
                                     <p className="text-xs text-[var(--text-muted)] mb-1 max-w-xs truncate">
                                         {data.title}
                                     </p>
