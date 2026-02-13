@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { getTimeAgo } from "@/lib/utils";
 import {
@@ -225,7 +226,7 @@ function getSeverityBadgeTone(severity: Severity) {
   if (severity === "HIGH") return "border-orange-400/35 bg-orange-500/10 text-orange-200";
   if (severity === "MEDIUM") return "border-yellow-400/35 bg-yellow-500/10 text-yellow-200";
   if (severity === "LOW") return "border-emerald-400/35 bg-emerald-500/10 text-emerald-200";
-  return "border-slate-400/35 bg-slate-500/10 text-slate-200";
+  return "border-slate-400/35 bg-slate-500/10 text-[var(--text-secondary)]";
 }
 
 function getSeverityRailTone(severity: Severity) {
@@ -281,7 +282,7 @@ function getActivityTone(entityType: string, action: string) {
   if (action.toLowerCase().includes("settings") || action.toLowerCase().includes("config")) {
     return {
       icon: Settings,
-      iconColor: "text-slate-300",
+      iconColor: "text-[var(--text-secondary)]",
       shell: "border-slate-400/20 bg-slate-500/10",
     };
   }
@@ -521,7 +522,7 @@ export default function DashboardPage() {
       controller.abort();
       clearInterval(interval);
     };
-  }, [fetchDashboardData, fetchRecentActivity]);
+  }, [fetchDashboardData, fetchRecentActivity, isMainOfficer]);
 
   const stats = data?.stats ?? defaultStats;
   const riskBand = useMemo(() => getRiskBand(stats.overallRiskScore), [stats.overallRiskScore]);
@@ -584,67 +585,74 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-5 animate-fade-in">
-        <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(132deg,rgba(56,189,248,0.22),rgba(18,18,26,0.86)_42%,rgba(18,18,26,0.96))] p-6 sm:p-8 transition-all duration-300 hover:border-sky-300/30">
-          <div className="pointer-events-none absolute right-[-60px] top-[-120px] h-56 w-56 rounded-full bg-sky-300/20 blur-3xl" />
-          <div className="relative flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-sky-300/35 bg-sky-300/10 px-3 py-1 text-xs font-medium text-sky-200">
-                <Siren size={13} />
-                SOC Command Surface
-              </div>
-              <h1 className="mt-4 text-2xl font-semibold leading-tight text-white sm:text-3xl">
-                Security Dashboard
-              </h1>
-              <p className="mt-3 text-sm leading-relaxed text-slate-200 sm:text-base">
-                Centralized view for risk, threat activity, and remediation progress. Built to
-                keep triage and action fast for SOC teams.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-100">
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 transition-all duration-200 hover:bg-white/15">
-                  Last updated {lastUpdatedLabel}
-                </span>
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 transition-all duration-200 hover:bg-white/15">
-                  {stats.openVulnerabilities} open vulnerabilities
-                </span>
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 transition-all duration-200 hover:bg-white/15">
-                  {activeThreats} active threat signals
-                </span>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+      <div className="space-y-6 animate-fade-in">
+        <PageHeader
+          title="Security Dashboard"
+          description="Centralized view for risk, threat activity, and remediation progress. Built to keep triage and action fast for SOC teams."
+          badge={
+            <>
+              <Siren size={13} className="mr-2" />
+              SOC Command Surface
+            </>
+          }
+          actions={
+            <>
               <button
                 type="button"
                 onClick={() => {
                   void fetchDashboardData({ silent: true });
                   void fetchRecentActivity();
                 }}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105"
+                className="btn btn-secondary !px-4 !py-2.5"
               >
-                <RefreshCw size={15} className={isRefreshing ? "animate-spin" : ""} />
-                Refresh
+                <RefreshCw size={15} className={isRefreshing ? "animate-spin mr-2" : "mr-2"} />
+                <span className="text-[var(--text-primary)]">Refresh</span>
               </button>
               <Link
                 href="/risk-register"
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105"
+                className="btn btn-secondary !px-4 !py-2.5"
               >
-                Risk Register
-                <ArrowRight size={14} />
+                <span className="text-[var(--text-primary)]">Risk Register</span>
+                <ArrowRight size={14} className="ml-2 text-[var(--text-primary)]" />
               </Link>
               <Link
                 href="/threats"
-                className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-200 hover:scale-105"
+                className="btn btn-primary !px-5 !py-2.5 bg-gradient-to-r from-sky-500 to-sky-400 hover:from-sky-400 hover:to-sky-300 border-none shadow-lg shadow-sky-500/20"
               >
                 Threat Queue
-                <ChevronRight size={14} />
+                <ChevronRight size={14} className="ml-2" />
               </Link>
-            </div>
-          </div>
-        </section>
+            </>
+          }
+          stats={[
+            {
+              label: "Last updated",
+              value: lastUpdatedLabel,
+              icon: Activity
+            },
+            {
+              label: "Open Vulnerabilities",
+              value: stats.openVulnerabilities,
+              icon: ShieldAlert,
+              trend: { value: `${stats.criticalVulnerabilities} critical`, isUp: false }
+            },
+            {
+              label: "Active Threats",
+              value: activeThreats,
+              icon: Siren,
+              trend: { value: "Live signals", neutral: true }
+            },
+            {
+              label: "Overall Risk",
+              value: `${stats.overallRiskScore.toFixed(1)}/100`,
+              icon: Gauge,
+              trend: { value: riskBand.label, neutral: true }
+            }
+          ]}
+        />
 
         {error ? (
-          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-sm text-red-200">
+          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-sm text-red-500 theme-dark:text-red-200">
             {error}
           </section>
         ) : null}
@@ -655,14 +663,14 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 rounded-lg border border-red-400/25 bg-red-500/10 p-2 animate-pulse-subtle">
-                  <AlertTriangle size={16} className="text-red-300" />
+                  <AlertTriangle size={16} className="text-red-500 theme-dark:text-red-300" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-semibold text-red-100">Active Exploitation Signals</h2>
-                    <span className="rounded-full bg-red-400 px-2 py-0.5 text-[10px] font-bold text-white">HIGH PRIORITY</span>
+                    <h2 className="text-sm font-semibold text-red-600 theme-dark:text-red-100">Active Exploitation Signals</h2>
+                    <span className="rounded-full bg-red-400 px-2 py-0.5 text-[10px] font-bold text-[var(--text-primary)]">HIGH PRIORITY</span>
                   </div>
-                  <p className="mt-1 text-sm text-red-100/80">
+                  <p className="mt-1 text-sm text-red-600/80 theme-dark:text-red-100/80">
                     {stats.exploitedVulnerabilities} exploited vulnerabilities and{" "}
                     {stats.cisaKevCount} KEV-listed issues require attention.
                   </p>
@@ -670,7 +678,7 @@ export default function DashboardPage() {
               </div>
               <Link
                 href="/vulnerabilities?filter=exploited"
-                className="inline-flex items-center gap-2 self-start rounded-lg border border-red-300/35 bg-red-400/10 px-3 py-1.5 text-sm text-red-100 transition-all duration-200 hover:bg-red-400/20 hover:scale-105 sm:self-auto"
+                className="inline-flex items-center gap-2 self-start rounded-lg border border-red-300/35 bg-red-400/10 px-3 py-1.5 text-sm text-red-600 theme-dark:text-red-100 transition-all duration-200 hover:bg-red-400/20 hover:scale-105 sm:self-auto"
               >
                 Review now
                 <ArrowRight size={14} />
@@ -722,27 +730,27 @@ export default function DashboardPage() {
             return (
               <article
                 key={metric.label}
-                className="group rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-300/35 hover:shadow-lg hover:shadow-sky-500/10 animate-fade-in"
+                className="group rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-300/35 hover:shadow-lg hover:shadow-sky-500/10 animate-fade-in"
                 style={{ animationDelay: `${idx * 100}ms` }}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-sm text-slate-300">{metric.label}</p>
+                    <p className="text-sm text-[var(--text-secondary)]">{metric.label}</p>
                     {metric.priority === "high" && (
-                      <span className="mt-1 inline-block rounded-full bg-orange-400/10 px-2 py-0.5 text-[10px] font-semibold text-orange-300">
+                      <span className="mt-1 inline-block rounded-full bg-orange-400/10 px-2 py-0.5 text-[10px] font-semibold text-orange-500 theme-dark:text-orange-300">
                         NEEDS ATTENTION
                       </span>
                     )}
                   </div>
-                  <div className="rounded-lg border border-white/10 bg-white/5 p-2 transition-all duration-300 group-hover:scale-110 group-hover:bg-sky-300/10">
-                    <Icon size={15} className="text-slate-200 transition-colors group-hover:text-sky-300" />
+                  <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2 transition-all duration-300 group-hover:scale-110 group-hover:bg-sky-300/10">
+                    <Icon size={15} className="text-[var(--text-muted)] transition-colors group-hover:text-sky-500 theme-dark:group-hover:text-sky-300" />
                   </div>
                 </div>
-                <p className="mt-4 text-3xl font-semibold text-white transition-all duration-300 group-hover:text-sky-300">{metric.value}</p>
-                <p className="mt-1 text-sm text-slate-400">{metric.hint}</p>
-                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
+                <p className="mt-4 text-3xl font-semibold text-[var(--text-primary)] transition-all duration-300 group-hover:text-sky-500 theme-dark:group-hover:text-sky-300">{metric.value}</p>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">{metric.hint}</p>
+                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
                   <div
-                    className="h-full rounded-full bg-sky-300 transition-all duration-700 ease-out"
+                    className="h-full rounded-full bg-sky-400 transition-all duration-700 ease-out"
                     style={{ width: `${Math.min(Math.max(metric.bar, 0), 100)}%` }}
                   />
                 </div>
@@ -753,22 +761,22 @@ export default function DashboardPage() {
 
         {/* TOP PRIORITY SECTION */}
         <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-          <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 transition-all duration-300 hover:border-orange-300/30 animate-slide-in-left">
+          <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:border-orange-300/30 animate-slide-in-left">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-white">Priority Queue</h2>
-                  <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white animate-pulse-subtle">
+                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">Priority Queue</h2>
+                  <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-[var(--text-primary)] animate-pulse-subtle">
                     TOP PRIORITY
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-slate-400">
+                <p className="mt-1 text-sm text-[var(--text-secondary)]">
                   Exploited vulnerabilities ranked for immediate SOC action.
                 </p>
               </div>
               <Link
                 href="/vulnerabilities?filter=exploited"
-                className="text-sm text-sky-300 transition-all duration-200 hover:text-sky-200 hover:scale-105"
+                className="text-sm text-sky-500 theme-dark:text-sky-300 transition-all duration-200 hover:text-sky-600 theme-dark:hover:text-sky-200 hover:scale-105"
               >
                 View all
               </Link>
@@ -779,16 +787,16 @@ export default function DashboardPage() {
                 {priorityQueue.map((vuln, index) => (
                   <div
                     key={vuln.id}
-                    className="group rounded-xl border border-white/10 bg-white/[0.03] p-3 transition-all duration-300 hover:border-orange-300/40 hover:bg-white/[0.08] hover:-translate-y-0.5 hover:shadow-lg animate-fade-in"
+                    className="group rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 transition-all duration-300 hover:border-orange-300/40 hover:bg-[var(--bg-elevated)] hover:-translate-y-0.5 hover:shadow-lg animate-fade-in"
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-md bg-orange-400/20 px-2 py-0.5 text-xs font-semibold text-orange-300 transition-all duration-200 group-hover:bg-orange-400/30">
+                          <span className="rounded-md bg-orange-400/20 px-2 py-0.5 text-xs font-semibold text-orange-500 theme-dark:text-orange-300 transition-all duration-200 group-hover:bg-orange-400/30">
                             #{index + 1}
                           </span>
-                          <span className="font-mono text-xs text-sky-300 transition-all duration-200 group-hover:text-sky-200">
+                          <span className="font-mono text-xs text-sky-500 theme-dark:text-sky-300 transition-all duration-200 group-hover:text-sky-600 theme-dark:group-hover:text-sky-200">
                             {vuln.cveId || "No CVE ID"}
                           </span>
                           <span
@@ -797,24 +805,24 @@ export default function DashboardPage() {
                             {vuln.severity}
                           </span>
                           {vuln.cisaKev ? (
-                            <span className="rounded-full border border-red-400/35 bg-red-500/10 px-2 py-0.5 text-[11px] text-red-200 animate-pulse-subtle">
+                            <span className="rounded-full border border-red-400/35 bg-red-500/10 px-2 py-0.5 text-[11px] text-red-500 theme-dark:text-red-200 animate-pulse-subtle">
                               KEV
                             </span>
                           ) : null}
                         </div>
-                        <p className="mt-2 truncate text-sm text-slate-200 transition-colors duration-200 group-hover:text-white">{vuln.title}</p>
+                        <p className="mt-2 truncate text-sm text-[var(--text-secondary)] transition-colors duration-200 group-hover:text-[var(--text-primary)]">{vuln.title}</p>
                       </div>
 
                       <div className="flex items-center gap-5 text-right">
                         <div>
-                          <p className="text-sm font-medium text-white transition-all duration-200 group-hover:text-orange-300">
+                          <p className="text-sm font-medium text-[var(--text-primary)] transition-all duration-200 group-hover:text-orange-500 theme-dark:group-hover:text-orange-300">
                             {((vuln.epssScore || 0) * 100).toFixed(1)}%
                           </p>
-                          <p className="text-xs text-slate-400">EPSS</p>
+                          <p className="text-xs text-[var(--text-muted)]">EPSS</p>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-white transition-all duration-200 group-hover:text-orange-300">{vuln.affectedAssets || 0}</p>
-                          <p className="text-xs text-slate-400">Assets</p>
+                          <p className="text-sm font-medium text-[var(--text-primary)] transition-all duration-200 group-hover:text-orange-500 theme-dark:group-hover:text-orange-300">{vuln.affectedAssets || 0}</p>
+                          <p className="text-xs text-[var(--text-muted)]">Assets</p>
                         </div>
                       </div>
                     </div>
@@ -822,15 +830,15 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.03] p-5 text-sm text-slate-400">
+              <div className="mt-5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-5 text-sm text-[var(--text-muted)]">
                 No exploited vulnerabilities are currently tracked.
               </div>
             )}
           </article>
 
-          <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 transition-all duration-300 hover:border-sky-300/30 animate-slide-in-right">
-            <h2 className="text-lg font-semibold text-white">SOC Risk Snapshot</h2>
-            <p className="mt-1 text-sm text-slate-400">
+          <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:border-sky-300/30 animate-slide-in-right">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">SOC Risk Snapshot</h2>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
               Distribution of vulnerability severity and current risk pressure.
             </p>
 
@@ -838,11 +846,11 @@ export default function DashboardPage() {
               <div
                 className="h-32 w-32 rounded-full p-[10px]"
                 style={{
-                  background: `conic-gradient(rgba(125,211,252,1) ${riskMeter}%, rgba(255,255,255,0.12) ${riskMeter}% 100%)`,
+                  background: `conic-gradient(rgba(125,211,252,1) ${riskMeter}%, rgba(125,125,125,0.12) ${riskMeter}% 100%)`,
                 }}
               >
-                <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-[var(--bg-secondary)]">
-                  <p className="text-2xl font-semibold text-white">{stats.overallRiskScore.toFixed(1)}</p>
+                <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-[var(--bg-card)]">
+                  <p className="text-2xl font-semibold text-[var(--text-primary)]">{stats.overallRiskScore.toFixed(1)}</p>
                   <p className={`text-xs ${riskBand.color}`}>{riskBand.label}</p>
                 </div>
               </div>
@@ -852,12 +860,12 @@ export default function DashboardPage() {
               {severityRows.map((entry) => (
                 <div key={entry.severity}>
                   <div className="mb-1.5 flex items-center justify-between text-xs">
-                    <span className="text-slate-300">{entry.severity}</span>
-                    <span className="text-slate-400">
+                    <span className="text-[var(--text-secondary)]">{entry.severity}</span>
+                    <span className="text-[var(--text-muted)]">
                       {entry.count} ({entry.percentage.toFixed(1)}%)
                     </span>
                   </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
                     <div
                       className={`h-full rounded-full ${getSeverityRailTone(entry.severity)}`}
                       style={{ width: `${Math.min(Math.max(entry.percentage, 0), 100)}%` }}
@@ -871,20 +879,20 @@ export default function DashboardPage() {
 
         {/* LOWER PRIORITY SECTION */}
         <section className="grid gap-4 xl:grid-cols-2">
-          <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 transition-all duration-300 hover:border-sky-300/30 animate-fade-in" style={{ animationDelay: "200ms" }}>
+          <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:border-sky-300/30 animate-fade-in" style={{ animationDelay: "200ms" }}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-white">Compliance Overview</h2>
-                  <span className="rounded-full bg-slate-500/20 px-2 py-0.5 text-[10px] font-semibold text-slate-400">
+                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">Compliance Overview</h2>
+                  <span className="rounded-full bg-slate-500/20 px-2 py-0.5 text-[10px] font-semibold text-[var(--text-muted)]">
                     MONITOR
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-slate-400">Framework posture by control status.</p>
+                <p className="mt-1 text-sm text-[var(--text-secondary)]">Framework posture by control status.</p>
               </div>
               <Link
                 href="/compliance"
-                className="text-sm text-sky-300 transition-all duration-200 hover:text-sky-200 hover:scale-105"
+                className="text-sm text-sky-500 theme-dark:text-sky-300 transition-all duration-200 hover:text-sky-600 theme-dark:hover:text-sky-200 hover:scale-105"
               >
                 Open module
               </Link>
@@ -895,12 +903,12 @@ export default function DashboardPage() {
                 complianceRows.map((framework) => (
                   <div key={framework.frameworkId}>
                     <div className="mb-1.5 flex items-center justify-between">
-                      <p className="text-sm text-slate-200">{framework.frameworkName}</p>
-                      <p className="text-sm font-medium text-white">
+                      <p className="text-sm text-[var(--text-secondary)]">{framework.frameworkName}</p>
+                      <p className="text-sm font-medium text-[var(--text-primary)]">
                         {framework.compliancePercentage.toFixed(0)}%
                       </p>
                     </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                    <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
                       <div
                         className={`h-full rounded-full ${getComplianceTone(framework.compliancePercentage)}`}
                         style={{
@@ -908,31 +916,31 @@ export default function DashboardPage() {
                         }}
                       />
                     </div>
-                    <p className="mt-1.5 text-xs text-slate-400">
+                    <p className="mt-1.5 text-xs text-[var(--text-muted)]">
                       {framework.compliant} compliant · {framework.nonCompliant} non-compliant
                     </p>
                   </div>
                 ))
               ) : (
-                <p className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+                <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
                   Compliance frameworks are not configured yet.
                 </p>
               )}
             </div>
           </article>
 
-          <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 transition-all duration-300 hover:border-sky-300/30 animate-fade-in" style={{ animationDelay: "300ms" }}>
+          <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:border-sky-300/30 animate-fade-in" style={{ animationDelay: "300ms" }}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-white">Top Risky Assets</h2>
-                  <span className="rounded-full bg-yellow-400/20 px-2 py-0.5 text-[10px] font-semibold text-yellow-300">
+                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">Top Risky Assets</h2>
+                  <span className="rounded-full bg-yellow-400/20 px-2 py-0.5 text-[10px] font-semibold text-yellow-500 theme-dark:text-yellow-300">
                     REVIEW
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-slate-400">Assets with highest security exposure.</p>
+                <p className="mt-1 text-sm text-[var(--text-secondary)]">Assets with highest security exposure.</p>
               </div>
-              <Link href="/assets" className="text-sm text-sky-300 transition-all duration-200 hover:text-sky-200 hover:scale-105">
+              <Link href="/assets" className="text-sm text-sky-500 theme-dark:text-sky-300 transition-all duration-200 hover:text-sky-600 theme-dark:hover:text-sky-200 hover:scale-105">
                 View assets
               </Link>
             </div>
@@ -942,29 +950,29 @@ export default function DashboardPage() {
                 riskyAssets.map((asset, idx) => (
                   <div
                     key={asset.id}
-                    className="group rounded-xl border border-white/10 bg-white/[0.03] p-3 transition-all duration-300 hover:border-sky-300/30 hover:bg-white/[0.06] hover:-translate-y-0.5 animate-fade-in"
+                    className="group rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 transition-all duration-300 hover:border-sky-300/30 hover:bg-[var(--bg-elevated)] hover:-translate-y-0.5 animate-fade-in"
                     style={{ animationDelay: `${idx * 50}ms` }}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-slate-100 transition-colors duration-200 group-hover:text-white">{asset.name}</p>
-                        <p className="mt-0.5 text-xs text-slate-400">{formatAssetType(asset.type)}</p>
+                        <p className="truncate text-sm font-medium text-[var(--text-secondary)] transition-colors duration-200 group-hover:text-[var(--text-primary)]">{asset.name}</p>
+                        <p className="mt-0.5 text-xs text-[var(--text-muted)]">{formatAssetType(asset.type)}</p>
                       </div>
-                      <p className="text-sm font-medium text-white transition-all duration-200 group-hover:text-sky-300">{asset.riskScore.toFixed(1)}</p>
+                      <p className="text-sm font-medium text-[var(--text-primary)] transition-all duration-200 group-hover:text-sky-500 theme-dark:group-hover:text-sky-300">{asset.riskScore.toFixed(1)}</p>
                     </div>
-                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]/50">
                       <div
                         className={`h-full rounded-full transition-all duration-700 ease-out ${getRiskBand(asset.riskScore).rail}`}
                         style={{ width: `${Math.min(Math.max(asset.riskScore, 0), 100)}%` }}
                       />
                     </div>
-                    <p className="mt-1.5 text-xs text-slate-400">
+                    <p className="mt-1.5 text-xs text-[var(--text-muted)]">
                       {asset.vulnerabilityCount} vulnerabilities · {asset.criticalVulnCount} critical
                     </p>
                   </div>
                 ))
               ) : (
-                <p className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+                <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
                   No asset risk data is available yet.
                 </p>
               )}
@@ -973,14 +981,14 @@ export default function DashboardPage() {
         </section>
 
         <section className={`grid gap-4 ${isMainOfficer ? 'xl:grid-cols-[1.15fr_0.85fr]' : 'xl:grid-cols-1'}`}>
-          <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
-            <h2 className="text-lg font-semibold text-white">Risk and Remediation Trends</h2>
-            <p className="mt-1 text-sm text-slate-400">
+          <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Risk and Remediation Trends</h2>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
               Weekly risk evolution and monthly fix velocity.
             </p>
 
             <div className="mt-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
                 Risk Trend
               </p>
               <div className="mt-2">
@@ -988,8 +996,8 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="mt-6 border-t border-white/10 pt-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+            <div className="mt-6 border-t border-[var(--border-color)] pt-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
                 Remediation Velocity
               </p>
               <div className="mt-2">
@@ -999,15 +1007,15 @@ export default function DashboardPage() {
           </article>
 
           {isMainOfficer && (
-            <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
+            <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-white">Recent Activity</h2>
-                  <p className="mt-1 text-sm text-slate-400">Latest high-signal events and updates.</p>
+                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">Recent Activity</h2>
+                  <p className="mt-1 text-sm text-[var(--text-secondary)]">Latest high-signal events and updates.</p>
                 </div>
                 <Link
                   href="/reports/activity"
-                  className="text-sm text-sky-300 transition hover:text-sky-200"
+                  className="text-sm text-sky-500 theme-dark:text-sky-300 transition hover:text-sky-600 theme-dark:hover:text-sky-200"
                 >
                   Full log
                 </Link>
@@ -1022,7 +1030,7 @@ export default function DashboardPage() {
                     return (
                       <div
                         key={activity.id}
-                        className="group rounded-xl border border-white/10 bg-white/[0.03] p-3 transition-all duration-300 hover:border-sky-300/20 hover:bg-white/[0.06]"
+                        className="group rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 transition-all duration-300 hover:border-sky-300/20 hover:bg-[var(--bg-elevated)]"
                       >
                         <div className="flex items-start gap-3">
                           <div
@@ -1031,10 +1039,10 @@ export default function DashboardPage() {
                             <Icon size={14} className={`${activityTone.iconColor} transition-all duration-300`} />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm text-slate-200 transition-colors duration-200 group-hover:text-white">{activity.action}</p>
-                            <p className="mt-0.5 truncate text-xs text-slate-400">{activity.entityName}</p>
+                            <p className="text-sm text-[var(--text-secondary)] transition-colors duration-200 group-hover:text-[var(--text-primary)]">{activity.action}</p>
+                            <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{activity.entityName}</p>
                           </div>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-[var(--text-muted)]">
                             {getTimeAgo(activity.timestamp)}
                           </p>
                         </div>
@@ -1042,7 +1050,7 @@ export default function DashboardPage() {
                     );
                   })
                 ) : (
-                  <p className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+                  <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
                     No recent activities were recorded.
                   </p>
                 )}

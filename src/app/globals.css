@@ -60,6 +60,56 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
   --shadow-glow: 0 0 40px rgba(59, 130, 246, 0.15);
   --shadow-glow-cyan: 0 0 40px rgba(6, 182, 212, 0.1);
+
+  /* Semantic UI Colors (Dark Mode Defaults) */
+  --btn-secondary-bg: rgba(37, 99, 235, 0.12);
+  --btn-secondary-text: #dbeafe;
+  --btn-secondary-border: rgba(59, 130, 246, 0.5);
+  --btn-secondary-hover-bg: rgba(37, 99, 235, 0.2);
+  --btn-secondary-hover-border: rgba(96, 165, 250, 0.72);
+
+  --btn-ghost-bg: rgba(37, 99, 235, 0.08);
+  --btn-ghost-text: #bfdbfe;
+  --btn-ghost-border: rgba(59, 130, 246, 0.38);
+  --btn-ghost-hover-bg: rgba(37, 99, 235, 0.16);
+  --btn-ghost-hover-border: rgba(96, 165, 250, 0.55);
+  --btn-ghost-hover-text: #dbeafe;
+
+  --badge-critical-bg: rgba(239, 68, 68, 0.15);
+  --badge-critical-text: #ef4444;
+  --badge-critical-border: rgba(239, 68, 68, 0.25);
+
+  --badge-high-bg: rgba(249, 115, 22, 0.15);
+  --badge-high-text: #f97316;
+  --badge-high-border: rgba(249, 115, 22, 0.25);
+
+  --badge-medium-bg: rgba(234, 179, 8, 0.15);
+  --badge-medium-text: #eab308;
+  --badge-medium-border: rgba(234, 179, 8, 0.25);
+
+  --badge-low-bg: rgba(34, 197, 94, 0.15);
+  --badge-low-text: #22c55e;
+  --badge-low-border: rgba(34, 197, 94, 0.25);
+
+  --badge-info-bg: rgba(107, 114, 128, 0.15);
+  --badge-info-text: #9ca3af;
+  --badge-info-border: rgba(107, 114, 128, 0.25);
+
+  /* Compliance action button tones */
+  --compliance-info-bg: rgba(14, 165, 233, 0.14);
+  --compliance-info-border: rgba(56, 189, 248, 0.4);
+  --compliance-info-text: #dbeafe;
+  --compliance-info-hover-bg: rgba(14, 165, 233, 0.22);
+
+  --compliance-success-bg: rgba(16, 185, 129, 0.14);
+  --compliance-success-border: rgba(52, 211, 153, 0.4);
+  --compliance-success-text: #d1fae5;
+  --compliance-success-hover-bg: rgba(16, 185, 129, 0.22);
+
+  --compliance-cyan-bg: rgba(6, 182, 212, 0.14);
+  --compliance-cyan-border: rgba(34, 211, 238, 0.4);
+  --compliance-cyan-text: #cffafe;
+  --compliance-cyan-hover-bg: rgba(6, 182, 212, 0.22);
 }
 
 html.theme-dark {
@@ -91,6 +141,55 @@ html.theme-light {
   --shadow-lg: 0 10px 25px -5px rgba(15, 23, 42, 0.14);
   --shadow-glow: 0 0 30px rgba(37, 99, 235, 0.12);
   --shadow-glow-cyan: 0 0 30px rgba(8, 145, 178, 0.1);
+
+  /* Semantic UI Colors (Light Mode Overrides) */
+  --btn-secondary-bg: #eff6ff;
+  --btn-secondary-text: #1e40af;
+  --btn-secondary-border: #93c5fd;
+  --btn-secondary-hover-bg: #dbeafe;
+  --btn-secondary-hover-border: #60a5fa;
+
+  --btn-ghost-bg: #f8fafc;
+  --btn-ghost-text: #334155;
+  --btn-ghost-border: #e2e8f0;
+  --btn-ghost-hover-bg: #f1f5f9;
+  --btn-ghost-hover-border: #cbd5e1;
+  --btn-ghost-hover-text: #1e293b;
+
+  --badge-critical-bg: #fef2f2;
+  --badge-critical-text: #dc2626;
+  --badge-critical-border: #fecaca;
+
+  --badge-high-bg: #fff7ed;
+  --badge-high-text: #ea580c;
+  --badge-high-border: #fed7aa;
+
+  --badge-medium-bg: #fefce8;
+  --badge-medium-text: #ca8a04;
+  --badge-medium-border: #fef08a;
+
+  --badge-low-bg: #f0fdf4;
+  --badge-low-text: #16a34a;
+  --badge-low-border: #bbf7d0;
+
+  --badge-info-bg: #f1f5f9;
+  --badge-info-text: #475569;
+  --badge-info-border: #cbd5e1;
+
+  --compliance-info-bg: #e0f2fe;
+  --compliance-info-border: #7dd3fc;
+  --compliance-info-text: #0c4a6e;
+  --compliance-info-hover-bg: #bae6fd;
+
+  --compliance-success-bg: #dcfce7;
+  --compliance-success-border: #86efac;
+  --compliance-success-text: #14532d;
+  --compliance-success-hover-bg: #bbf7d0;
+
+  --compliance-cyan-bg: #cffafe;
+  --compliance-cyan-border: #67e8f9;
+  --compliance-cyan-text: #164e63;
+  --compliance-cyan-hover-bg: #a5f3fc;
 }
 
 /* Base Styles */
@@ -117,35 +216,6 @@ html.theme-light .bg-gradient-radial {
     radial-gradient(ellipse 80% 50% at 50% -20%, rgba(37, 99, 235, 0.14), transparent),
     radial-gradient(ellipse 60% 40% at 80% 50%, rgba(6, 182, 212, 0.1), transparent),
     radial-gradient(ellipse 50% 30% at 20% 80%, rgba(14, 165, 233, 0.1), transparent);
-}
-
-/* Light-mode utility overrides for text-heavy pages using static color classes */
-html.theme-light .text-white,
-html.theme-light .text-slate-50,
-html.theme-light .text-slate-100,
-html.theme-light .text-slate-200,
-html.theme-light .text-gray-100,
-html.theme-light .text-gray-200 {
-  color: #0f172a !important;
-}
-
-html.theme-light .text-slate-300,
-html.theme-light .text-slate-400,
-html.theme-light .text-gray-300,
-html.theme-light .text-gray-400,
-html.theme-light .text-zinc-300,
-html.theme-light .text-zinc-400 {
-  color: #334155 !important;
-}
-
-html.theme-light .border-white\/10,
-html.theme-light .border-white\/20,
-html.theme-light .border-white\/30 {
-  border-color: rgba(15, 23, 42, 0.16) !important;
-}
-
-html.theme-light .bg-black\/50 {
-  background-color: rgba(15, 23, 42, 0.28) !important;
 }
 
 /* Animated Background Grid */
@@ -232,10 +302,6 @@ html.theme-light .bg-black\/50 {
   transform: rotate(-90deg);
 }
 
-.risk-ring-bg {
-  stroke: rgba(255, 255, 255, 0.05);
-}
-
 .risk-ring-progress {
   stroke-linecap: round;
   transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1);
@@ -254,27 +320,27 @@ html.theme-light .bg-black\/50 {
 }
 
 .severity-critical {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: var(--badge-critical-bg);
+  color: var(--badge-critical-text);
+  border: 1px solid var(--badge-critical-border);
 }
 
 .severity-high {
-  background: rgba(249, 115, 22, 0.15);
-  color: #f97316;
-  border: 1px solid rgba(249, 115, 22, 0.25);
+  background: var(--badge-high-bg);
+  color: var(--badge-high-text);
+  border: 1px solid var(--badge-high-border);
 }
 
 .severity-medium {
-  background: rgba(234, 179, 8, 0.15);
-  color: #eab308;
-  border: 1px solid rgba(234, 179, 8, 0.25);
+  background: var(--badge-medium-bg);
+  color: var(--badge-medium-text);
+  border: 1px solid var(--badge-medium-border);
 }
 
 .severity-low {
-  background: rgba(34, 197, 94, 0.15);
-  color: #22c55e;
-  border: 1px solid rgba(34, 197, 94, 0.25);
+  background: var(--badge-low-bg);
+  color: var(--badge-low-text);
+  border: 1px solid var(--badge-low-border);
 }
 
 /* Status Indicator */
@@ -324,32 +390,43 @@ html.theme-light .bg-black\/50 {
   color: white;
 }
 
+html.theme-light .btn-primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: white;
+}
+
 .btn-primary:hover {
   background: #1d4ed8;
   border-color: #1d4ed8;
 }
 
+html.theme-light .btn-primary:hover {
+  background: #1e40af;
+  border-color: #1e40af;
+}
+
 .btn-secondary {
-  background: rgba(37, 99, 235, 0.12);
-  color: #dbeafe;
-  border: 1px solid rgba(59, 130, 246, 0.5);
+  background: var(--btn-secondary-bg);
+  color: var(--btn-secondary-text);
+  border: 1px solid var(--btn-secondary-border);
 }
 
 .btn-secondary:hover {
-  background: rgba(37, 99, 235, 0.2);
-  border-color: rgba(96, 165, 250, 0.72);
+  background: var(--btn-secondary-hover-bg);
+  border-color: var(--btn-secondary-hover-border);
 }
 
 .btn-ghost {
-  background: rgba(37, 99, 235, 0.08);
-  color: #bfdbfe;
-  border: 1px solid rgba(59, 130, 246, 0.38);
+  background: var(--btn-ghost-bg);
+  color: var(--btn-ghost-text);
+  border: 1px solid var(--btn-ghost-border);
 }
 
 .btn-ghost:hover {
-  background: rgba(37, 99, 235, 0.16);
-  border-color: rgba(96, 165, 250, 0.55);
-  color: #dbeafe;
+  background: var(--btn-ghost-hover-bg);
+  border-color: var(--btn-ghost-hover-border);
+  color: var(--btn-ghost-hover-text);
 }
 
 /* Input Styles */
@@ -412,10 +489,6 @@ html.theme-light .bg-black\/50 {
   transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.02);
-}
-
 /* Sidebar */
 .sidebar {
   width: 260px;
@@ -445,7 +518,7 @@ html.theme-light .bg-black\/50 {
 }
 
 .sidebar-link:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-tertiary);
   color: var(--text-primary);
 }
 
@@ -454,8 +527,13 @@ html.theme-light .bg-black\/50 {
   color: var(--color-primary-400);
 }
 
+html.theme-light .sidebar-link.active {
+  background: #e0e7ff;
+  color: var(--color-primary-600);
+}
+
 .sidebar-link.active svg {
-  color: var(--color-primary-400);
+  color: currentColor;
 }
 
 /* Scrollbar */
@@ -672,6 +750,7 @@ html.theme-light .bg-black\/50 {
 }
 
 @keyframes security-loader-icon {
+
   0%,
   100% {
     opacity: 1;
@@ -799,9 +878,11 @@ html.theme-light .bg-black\/50 {
   0% {
     background-position: 0% 50%;
   }
+
   50% {
     background-position: 100% 50%;
   }
+
   100% {
     background-position: 0% 50%;
   }
@@ -817,6 +898,7 @@ html.theme-light .bg-black\/50 {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -828,6 +910,7 @@ html.theme-light .bg-black\/50 {
     opacity: 0;
     transform: translateX(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -835,9 +918,12 @@ html.theme-light .bg-black\/50 {
 }
 
 @keyframes pulse-subtle {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.85;
   }
@@ -865,7 +951,7 @@ select:focus {
 }
 
 /* Custom dropdown arrow animation */
-select:focus + .dropdown-arrow {
+select:focus+.dropdown-arrow {
   transform: translateY(-50%) rotate(180deg);
 }
 
@@ -879,9 +965,11 @@ select:focus + .dropdown-arrow {
     transform: scale(2) translateY(-50%);
     opacity: 0;
   }
+
   50% {
     opacity: 0.4;
   }
+
   100% {
     transform: scale(1) translateY(0);
     opacity: 0.3;
@@ -893,9 +981,11 @@ select:focus + .dropdown-arrow {
     stroke-dashoffset: 100;
     opacity: 0.3;
   }
+
   50% {
     opacity: 1;
   }
+
   100% {
     stroke-dashoffset: 0;
     opacity: 0.8;
@@ -903,10 +993,13 @@ select:focus + .dropdown-arrow {
 }
 
 @keyframes shield-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
+
   50% {
     transform: scale(1.05);
     opacity: 0.9;
@@ -914,10 +1007,13 @@ select:focus + .dropdown-arrow {
 }
 
 @keyframes pulse-glow {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.15;
     transform: scale(1.2);
   }
+
   50% {
     opacity: 0.3;
     transform: scale(1.4);
@@ -942,11 +1038,13 @@ select:focus + .dropdown-arrow {
 
 /* --- SecYourFlow minimal loader motion --- */
 @media (prefers-reduced-motion: reduce) {
+
   .syf-shield-stroke,
   .syf-shield-wipe,
   .syf-shield-fill {
     animation: none !important;
   }
+
   /* reveal full fill when reduced motion */
   .syf-shield-wipe {
     transform: scale(0) !important;
@@ -971,10 +1069,12 @@ select:focus + .dropdown-arrow {
     transform: scale(1.08);
     opacity: 1;
   }
+
   70% {
     transform: scale(0.0);
     opacity: 1;
   }
+
   100% {
     transform: scale(0.0);
     opacity: 1;
@@ -987,9 +1087,17 @@ select:focus + .dropdown-arrow {
 }
 
 @keyframes syfShieldFill {
-  0% { opacity: 0.16; }
-  60% { opacity: 0.26; }
-  100% { opacity: 0.16; }
+  0% {
+    opacity: 0.16;
+  }
+
+  60% {
+    opacity: 0.26;
+  }
+
+  100% {
+    opacity: 0.16;
+  }
 }
 
 /* Quiet outline draw */
@@ -1002,10 +1110,12 @@ select:focus + .dropdown-arrow {
     stroke-dashoffset: 96;
     opacity: 0.5;
   }
+
   60% {
     stroke-dashoffset: 0;
     opacity: 0.9;
   }
+
   100% {
     stroke-dashoffset: 0;
     opacity: 0.5;

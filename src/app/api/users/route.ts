@@ -6,10 +6,15 @@ import { requireSessionWithOrg } from "@/lib/api-auth";
 
 export async function GET(request: NextRequest) {
     try {
-        const authResult = await requireSessionWithOrg(request, { allowedRoles: ["MAIN_OFFICER"] });
+        const scope = request.nextUrl.searchParams.get("scope")?.toLowerCase();
+        const isBasicScope = scope === "basic";
+
+        const authResult = await requireSessionWithOrg(
+            request,
+            isBasicScope ? {} : { allowedRoles: ["MAIN_OFFICER"] },
+        );
         if (!authResult.ok) return authResult.response;
 
-        // Ideally, we'd filter by organizationId if multi-tenant
         const users = await prisma.user.findMany({
             where: { organizationId: authResult.context.organizationId },
             orderBy: { createdAt: 'desc' },
@@ -22,6 +27,16 @@ export async function GET(request: NextRequest) {
                 createdAt: true,
             }
         });
+
+        if (isBasicScope) {
+            return NextResponse.json(
+                users.map((user) => ({
+                    id: user.id,
+                    name: user.name || "Unknown User",
+                    role: user.role,
+                })),
+            );
+        }
 
         const formattedUsers = users.map(user => ({
             id: user.id,

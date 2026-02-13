@@ -13,29 +13,12 @@ type RequireSessionOptions = {
   allowedRoles?: readonly string[];
 };
 
-function hasValidAuthorizationHeader(request: Request): boolean {
-  const authorizationHeader = request.headers.get("authorization");
-  if (!authorizationHeader) {
-    return false;
-  }
-
-  const [scheme, token] = authorizationHeader.split(/\s+/, 2);
-  return scheme === "Bearer" && typeof token === "string" && token.trim().length > 0;
-}
-
 export async function requireSessionWithOrg(
-  request: Request,
+  _request: Request,
   options: RequireSessionOptions = {},
 ): Promise<
   { ok: true; context: SessionOrgContext } | { ok: false; response: NextResponse }
 > {
-  if (!hasValidAuthorizationHeader(request)) {
-    return {
-      ok: false,
-      response: NextResponse.json({ error: "Authorization header required" }, { status: 401 }),
-    };
-  }
-
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -52,10 +35,39 @@ export async function requireSessionWithOrg(
     };
   }
 
-  const user = await prisma.user.findUnique({
+  let user = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: { id: true, organizationId: true, role: true },
   });
+
+  if (!user) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    };
+  }
+
+  if (!user.organizationId) {
+    const firstOrg = await prisma.organization.findFirst({
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    });
+
+    const organizationId =
+      firstOrg?.id ??
+      (
+        await prisma.organization.create({
+          data: { name: "My Organization" },
+          select: { id: true },
+        })
+      ).id;
+
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: { organizationId },
+      select: { id: true, organizationId: true, role: true },
+    });
+  }
 
   if (!user?.organizationId) {
     return {

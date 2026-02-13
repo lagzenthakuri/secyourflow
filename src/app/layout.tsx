@@ -43,7 +43,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} theme-dark`}>
+    <html lang="en" className={`${inter.variable} theme-dark`} data-scroll-behavior="smooth">
       <body className={`${inter.className} antialiased`}>
         <ThemeProvider>
           <NavigationProgress />

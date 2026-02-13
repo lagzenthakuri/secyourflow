@@ -39,8 +39,8 @@ function MetricButton({ label, value, currentValue, onClick }: MetricButtonProps
             type="button"
             onClick={onClick}
             className={`px-3 py-1.5 text-xs rounded-md border transition-all ${currentValue === value
-                ? "bg-primary/20 border-primary text-primary"
-                : "bg-white/5 border-white/10 text-[var(--text-secondary)] hover:bg-white/10"
+                ? "bg-sky-500/20 border-sky-500 text-sky-600 theme-dark:text-sky-400"
+                : "bg-[var(--bg-tertiary)] border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]"
                 }`}
         >
             <div className="font-medium">{label}</div>
@@ -112,18 +112,18 @@ export function CVSSCalculator({ onScoreChange, onVectorChange }: CVSSCalculator
     }, [metrics, onScoreChange, onVectorChange]);
 
     return (
-        <div className="border border-white/10 rounded-lg overflow-hidden bg-white/5">
+        <div className="border border-[var(--border-color)] rounded-lg overflow-hidden bg-[var(--bg-tertiary)]">
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-all duration-300 ease-in-out"
+                className="w-full flex items-center justify-between p-3 hover:bg-[var(--bg-elevated)] transition-all duration-300 ease-in-out"
             >
                 <span className="text-sm font-medium">CVSS v3.1 Calculator</span>
                 {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </button>
 
             {isOpen && (
-                <div className="p-4 space-y-4 border-t border-white/10">
+                <div className="p-4 space-y-4 border-t border-[var(--border-color)]">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {/* Attack Vector */}
                         <div className="space-y-2">
@@ -204,7 +204,7 @@ export function CVSSCalculator({ onScoreChange, onVectorChange }: CVSSCalculator
                         </div>
                     </div>
 
-                    <div className="pt-4 border-t border-white/10 flex items-center justify-between">
+                    <div className="pt-4 border-t border-[var(--border-color)] flex items-center justify-between">
                         <div className="text-xs text-[var(--text-muted)]">
                             CVSS v3.1 Base Score
                         </div>

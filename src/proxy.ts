@@ -24,9 +24,12 @@ export default auth((request) => {
     const pathname = request.nextUrl.pathname;
 
     if (pathname.startsWith("/api/") && !isPublicApiPath(pathname) && request.method !== "OPTIONS") {
-        if (!hasValidAuthorizationHeader(request)) {
+        const hasApiToken = hasValidAuthorizationHeader(request);
+        const hasSession = Boolean(request.auth?.user);
+
+        if (!hasApiToken && !hasSession) {
             return NextResponse.json(
-                { error: "Authorization header required. Use Authorization: Bearer <token>." },
+                { error: "Unauthorized. Sign in or use Authorization: Bearer <token>." },
                 { status: 401 },
             );
         }

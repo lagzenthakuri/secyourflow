@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { ComplianceBarChart } from "@/components/charts/DashboardCharts";
 import { cn } from "@/lib/utils";
 import { Modal } from "@/components/ui/Modal";
@@ -40,21 +41,21 @@ interface FrameworkControl {
   description?: string | null;
   objective?: string | null;
   status:
-    | "COMPLIANT"
-    | "NON_COMPLIANT"
-    | "PARTIALLY_COMPLIANT"
-    | "NOT_ASSESSED"
-    | "NOT_APPLICABLE";
+  | "COMPLIANT"
+  | "NON_COMPLIANT"
+  | "PARTIALLY_COMPLIANT"
+  | "NOT_ASSESSED"
+  | "NOT_APPLICABLE";
   implementationStatus?: string | null;
   maturityLevel?: number | null;
   nistCsfFunction?:
-    | "GOVERN"
-    | "IDENTIFY"
-    | "PROTECT"
-    | "DETECT"
-    | "RESPOND"
-    | "RECOVER"
-    | null;
+  | "GOVERN"
+  | "IDENTIFY"
+  | "PROTECT"
+  | "DETECT"
+  | "RESPOND"
+  | "RECOVER"
+  | null;
   controlType?: "PREVENTIVE" | "DETECTIVE" | "CORRECTIVE" | null;
   ownerRole?: string | null;
   category?: string | null;
@@ -109,14 +110,14 @@ const statusConfig = {
   NOT_ASSESSED: {
     label: "Not Assessed",
     icon: HelpCircle,
-    tone: "border-slate-400/35 bg-slate-500/10 text-slate-200",
-    softTone: "bg-slate-500/15 text-slate-300",
+    tone: "border-slate-400/35 bg-slate-500/10 text-[var(--text-secondary)]",
+    softTone: "bg-slate-500/15 text-[var(--text-secondary)]",
   },
   NOT_APPLICABLE: {
     label: "N/A",
     icon: HelpCircle,
-    tone: "border-slate-400/35 bg-slate-500/10 text-slate-200",
-    softTone: "bg-slate-500/15 text-slate-300",
+    tone: "border-slate-400/35 bg-slate-500/10 text-[var(--text-secondary)]",
+    softTone: "bg-slate-500/15 text-[var(--text-secondary)]",
   },
 } as const;
 
@@ -567,7 +568,7 @@ export default function CompliancePage() {
     const averageCompliance =
       totalFrameworks > 0
         ? frameworks.reduce((sum, item) => sum + item.compliancePercentage, 0) /
-          totalFrameworks
+        totalFrameworks
         : 0;
 
     return {
@@ -620,37 +621,21 @@ export default function CompliancePage() {
   return (
     <DashboardLayout>
       <div className="space-y-5">
-        <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(132deg,rgba(56,189,248,0.2),rgba(18,18,26,0.9)_44%,rgba(18,18,26,0.96))] p-6 sm:p-8 animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-sky-300/20 blur-3xl animate-pulse" />
-          <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-sky-300/35 bg-sky-300/10 px-3 py-1 text-xs font-medium text-sky-200">
-                <FileCheck size={13} />
-                Compliance Operations
-              </div>
-              <h1 className="mt-4 text-2xl font-semibold text-white sm:text-3xl">Compliance</h1>
-              <p className="mt-3 text-sm leading-relaxed text-slate-200 sm:text-base">
-                Keep every framework, control owner, and evidence trail aligned in a single
-                operating surface for your SOC and governance teams.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-100">
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
-                  {numberFormatter.format(frameworkStats.totalFrameworks)} frameworks
-                </span>
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
-                  {numberFormatter.format(frameworkStats.totalControls)} controls
-                </span>
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
-                  {frameworkStats.averageCompliance.toFixed(0)}% avg compliance
-                </span>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <PageHeader
+          title="Compliance"
+          description="Track frameworks, controls, and evidence in one unified workspace."
+          badge={
+            <>
+              <FileCheck size={13} className="mr-2" />
+              Compliance Operations
+            </>
+          }
+          actions={
+            <div className="flex w-full flex-wrap items-center gap-2 sm:gap-3 xl:w-auto xl:justify-end">
               <button
                 type="button"
                 onClick={() => void fetchCompliance({ silent: true })}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95"
+                className="inline-flex flex-none items-center gap-2 whitespace-nowrap rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:-translate-y-px hover:bg-[var(--bg-elevated)] active:translate-y-0"
               >
                 <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
                 Refresh
@@ -658,7 +643,7 @@ export default function CompliancePage() {
               <button
                 type="button"
                 onClick={() => void startMonitoring()}
-                className="inline-flex items-center gap-2 rounded-xl border border-sky-300/30 bg-sky-300/10 px-4 py-2 text-sm font-medium text-sky-100 transition-all duration-200 hover:bg-sky-300/20 hover:scale-105 active:scale-95"
+                className="inline-flex flex-none items-center gap-2 whitespace-nowrap rounded-xl border border-[var(--compliance-info-border)] bg-[var(--compliance-info-bg)] px-4 py-2 text-sm font-medium text-[var(--compliance-info-text)] transition-all duration-200 hover:-translate-y-px hover:bg-[var(--compliance-info-hover-bg)] active:translate-y-0"
               >
                 <Activity size={14} />
                 Monitor Evidence
@@ -667,7 +652,7 @@ export default function CompliancePage() {
                 type="button"
                 onClick={() => void runAutomatedAssessment()}
                 disabled={!selectedFramework || isRunningAssessment}
-                className="inline-flex items-center gap-2 rounded-xl border border-emerald-300/30 bg-emerald-300/10 px-4 py-2 text-sm font-medium text-emerald-100 transition-all duration-200 hover:bg-emerald-300/20 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+                className="inline-flex flex-none items-center gap-2 whitespace-nowrap rounded-xl border border-[var(--compliance-success-border)] bg-[var(--compliance-success-bg)] px-4 py-2 text-sm font-medium text-[var(--compliance-success-text)] transition-all duration-200 hover:-translate-y-px hover:bg-[var(--compliance-success-hover-bg)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-65 disabled:hover:translate-y-0"
               >
                 <Shield size={14} className={isRunningAssessment ? "animate-pulse" : ""} />
                 {isRunningAssessment ? "Assessing..." : "Auto Assess"}
@@ -675,7 +660,7 @@ export default function CompliancePage() {
               <button
                 type="button"
                 onClick={openTemplateModal}
-                className="inline-flex items-center gap-2 rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-2 text-sm font-medium text-cyan-100 transition-all duration-200 hover:bg-cyan-300/20 hover:scale-105 active:scale-95"
+                className="inline-flex flex-none items-center gap-2 whitespace-nowrap rounded-xl border border-[var(--compliance-cyan-border)] bg-[var(--compliance-cyan-bg)] px-4 py-2 text-sm font-medium text-[var(--compliance-cyan-text)] transition-all duration-200 hover:-translate-y-px hover:bg-[var(--compliance-cyan-hover-bg)] active:translate-y-0"
               >
                 <Layers size={14} />
                 Import Template
@@ -684,7 +669,7 @@ export default function CompliancePage() {
                 type="button"
                 onClick={exportToCsv}
                 disabled={!selectedFramework}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+                className="inline-flex flex-none items-center gap-2 whitespace-nowrap rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:-translate-y-px hover:bg-[var(--bg-elevated)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-65 disabled:hover:translate-y-0"
               >
                 <Download size={14} />
                 Export CSV
@@ -693,7 +678,7 @@ export default function CompliancePage() {
                 type="button"
                 onClick={() => void exportToPDF()}
                 disabled={!selectedFramework || isExportingPdf}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+                className="inline-flex flex-none items-center gap-2 whitespace-nowrap rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:-translate-y-px hover:bg-[var(--bg-elevated)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-65 disabled:hover:translate-y-0"
               >
                 <FileCheck size={14} />
                 {isExportingPdf ? "Generating PDF..." : "Board PDF"}
@@ -701,14 +686,31 @@ export default function CompliancePage() {
               <button
                 type="button"
                 onClick={() => setIsAddModalOpen(true)}
-                className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-200 hover:scale-105 active:scale-95"
+                className="btn btn-primary inline-flex flex-none items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 hover:-translate-y-px active:translate-y-0"
               >
                 <Plus size={14} />
                 Add Framework
               </button>
             </div>
-          </div>
-        </section>
+          }
+          stats={[
+            {
+              label: "Total Frameworks",
+              value: numberFormatter.format(frameworkStats.totalFrameworks),
+              icon: Layers,
+            },
+            {
+              label: "Average Coverage",
+              value: `${frameworkStats.averageCompliance.toFixed(0)}%`,
+              icon: Shield,
+            },
+            {
+              label: "Total Controls",
+              value: numberFormatter.format(frameworkStats.totalControls),
+              icon: Target,
+            }
+          ]}
+        />
 
         {pageError ? (
           <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-sm text-red-200">
@@ -759,31 +761,31 @@ export default function CompliancePage() {
             return (
               <article
                 key={metric.label}
-                className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-300/35 hover:shadow-lg hover:shadow-sky-300/10 animate-in fade-in slide-in-from-bottom-4"
+                className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-300/35 hover:shadow-lg hover:shadow-sky-300/10 animate-in fade-in slide-in-from-bottom-4"
                 style={{ animationDelay: `${index * 90}ms`, animationFillMode: "backwards" }}
               >
                 <div className="flex items-start justify-between">
-                  <p className="text-sm text-slate-300">{metric.label}</p>
-                  <div className="rounded-lg border border-white/10 bg-white/5 p-2 transition-transform duration-200 hover:scale-110">
-                    <Icon size={15} className="text-slate-200" />
+                  <p className="text-sm text-[var(--text-muted)]">{metric.label}</p>
+                  <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2 transition-transform duration-200 hover:scale-110">
+                    <Icon size={15} className="text-[var(--text-secondary)]" />
                   </div>
                 </div>
-                <p className="mt-4 text-2xl font-semibold text-white break-words">{metric.value}</p>
-                <p className="mt-1 text-sm text-slate-400">{metric.hint}</p>
+                <p className="mt-4 text-2xl font-semibold text-[var(--text-primary)] break-words">{metric.value}</p>
+                <p className="mt-1 text-sm text-[var(--text-secondary)]">{metric.hint}</p>
               </article>
             );
           })}
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-4 sm:p-5 animate-in fade-in slide-in-from-bottom-3 duration-500">
+        <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4 sm:p-5 animate-in fade-in slide-in-from-bottom-3 duration-500">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-white">Framework Selector</h2>
-              <p className="text-sm text-slate-400">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">Framework Selector</h2>
+              <p className="text-sm text-[var(--text-secondary)]">
                 Choose a framework to inspect controls and assessments.
               </p>
             </div>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-[var(--text-muted)]">
               {frameworks.length === 0
                 ? "No frameworks configured"
                 : `${frameworks.length} frameworks loaded`}
@@ -791,10 +793,10 @@ export default function CompliancePage() {
           </div>
 
           {frameworks.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-white/20 bg-white/[0.02] p-10 text-center">
-              <FileCheck className="mx-auto h-12 w-12 text-slate-500" />
-              <p className="mt-4 text-base font-medium text-white">No Frameworks Yet</p>
-              <p className="mt-2 text-sm text-slate-400">
+            <div className="rounded-xl border border-dashed border-[var(--border-color)] bg-[var(--bg-tertiary)] p-10 text-center">
+              <FileCheck className="mx-auto h-12 w-12 text-[var(--text-muted)]" />
+              <p className="mt-4 text-base font-medium text-[var(--text-primary)]">No Frameworks Yet</p>
+              <p className="mt-2 text-sm text-[var(--text-secondary)]">
                 Add your first framework to start tracking controls and evidence.
               </p>
               <button
@@ -807,7 +809,7 @@ export default function CompliancePage() {
               </button>
             </div>
           ) : (
-                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {frameworks.map((framework, index) => {
                 const isSelected = selectedFramework?.frameworkId === framework.frameworkId;
                 const maturityTone = getMaturityTone(framework.avgMaturityLevel);
@@ -825,10 +827,10 @@ export default function CompliancePage() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <h3 className="truncate text-sm font-semibold text-white">
+                        <h3 className="truncate text-sm font-semibold text-[var(--text-primary)]">
                           {framework.frameworkName}
                         </h3>
-                        <p className="mt-1 text-xs text-slate-400">
+                        <p className="mt-1 text-xs text-[var(--text-muted)]">
                           {numberFormatter.format(framework.totalControls)} controls
                         </p>
                       </div>
@@ -870,7 +872,7 @@ export default function CompliancePage() {
                       />
                     </div>
 
-                    <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400">
+                    <div className="mt-3 flex items-center justify-between text-[11px] text-[var(--text-muted)]">
                       <span>{framework.compliant} passing</span>
                       <span>{framework.nonCompliant} failing</span>
                       <ChevronRight
@@ -890,15 +892,15 @@ export default function CompliancePage() {
 
         <section className="grid gap-5 xl:grid-cols-12">
           <div className="xl:col-span-8 space-y-4">
-            <div className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
+            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
               {selectedFramework ? (
                 <>
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div>
-                      <h2 className="text-lg font-semibold text-white">
+                      <h2 className="text-lg font-semibold text-[var(--text-primary)]">
                         {selectedFramework.frameworkName} Controls
                       </h2>
-                      <p className="mt-1 text-sm text-slate-400">
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">
                         Review status, ownership, and NIST alignment across all mapped controls.
                       </p>
                     </div>
@@ -923,7 +925,7 @@ export default function CompliancePage() {
                         placeholder="Search control ID, title, owner, category..."
                         value={searchQuery}
                         onChange={(event) => setSearchQuery(event.target.value)}
-                        className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.03] pl-10 pr-3 text-sm text-white outline-none transition-colors duration-200 placeholder:text-slate-500 focus:border-sky-300/45"
+                        className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.03] pl-10 pr-3 text-sm text-[var(--text-primary)] outline-none transition-colors duration-200 placeholder:text-slate-500 focus:border-sky-300/45"
                       />
                     </label>
 
@@ -977,7 +979,7 @@ export default function CompliancePage() {
                         setSelectedStatus("ALL");
                         setSelectedNistFunction("ALL");
                       }}
-                      className="h-11 rounded-xl border border-white/20 bg-white/[0.04] px-4 text-sm font-medium text-slate-200 transition-all duration-200 hover:bg-white/[0.08]"
+                      className="h-11 rounded-xl border border-white/20 bg-white/[0.04] px-4 text-sm font-medium text-[var(--text-secondary)] transition-all duration-200 hover:bg-white/[0.08]"
                     >
                       Clear
                     </button>
@@ -988,7 +990,7 @@ export default function CompliancePage() {
                       {
                         key: "ALL",
                         label: `All (${selectedFrameworkStats.total})`,
-                        tone: "border-white/20 bg-white/[0.05] text-slate-200",
+                        tone: "border-white/20 bg-white/[0.05] text-[var(--text-secondary)]",
                       },
                       {
                         key: "COMPLIANT",
@@ -1008,7 +1010,7 @@ export default function CompliancePage() {
                       {
                         key: "NOT_ASSESSED",
                         label: `Not Assessed (${selectedFrameworkStats.notAssessed})`,
-                        tone: "border-slate-400/30 bg-slate-500/10 text-slate-200",
+                        tone: "border-slate-400/30 bg-slate-500/10 text-[var(--text-secondary)]",
                       },
                     ].map((chip) => (
                       <button
@@ -1021,7 +1023,7 @@ export default function CompliancePage() {
                           "rounded-full border px-3 py-1 font-medium transition-all duration-200",
                           selectedStatus === chip.key
                             ? chip.tone
-                            : "border-white/10 bg-white/[0.02] text-slate-400 hover:text-slate-200",
+                            : "border-white/10 bg-white/[0.02] text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
                         )}
                       >
                         {chip.label}
@@ -1032,8 +1034,8 @@ export default function CompliancePage() {
               ) : (
                 <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-10 text-center">
                   <FileCheck className="mx-auto h-10 w-10 text-slate-500" />
-                  <p className="mt-4 text-base font-medium text-white">No Framework Selected</p>
-                  <p className="mt-2 text-sm text-slate-400">
+                  <p className="mt-4 text-base font-medium text-[var(--text-primary)]">No Framework Selected</p>
+                  <p className="mt-2 text-sm text-[var(--text-muted)]">
                     Select a framework to review and assess controls.
                   </p>
                 </div>
@@ -1041,12 +1043,12 @@ export default function CompliancePage() {
             </div>
 
             {selectedFramework ? (
-              <div className="overflow-hidden rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)]">
+              <div className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
                 {filteredControls.length === 0 ? (
                   <div className="p-14 text-center">
                     <FileCheck className="mx-auto h-12 w-12 text-slate-500" />
-                    <p className="mt-4 text-base font-medium text-white">No Controls Found</p>
-                    <p className="mt-2 text-sm text-slate-400">
+                    <p className="mt-4 text-base font-medium text-[var(--text-primary)]">No Controls Found</p>
+                    <p className="mt-2 text-sm text-[var(--text-muted)]">
                       Adjust filters or add controls to this framework.
                     </p>
                   </div>
@@ -1084,7 +1086,7 @@ export default function CompliancePage() {
 
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="rounded-md border border-sky-300/35 bg-sky-300/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-sky-200">
+                                <span className="rounded-md border border-sky-300/35 bg-sky-300/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-sky-700 dark:text-sky-200">
                                   {control.controlId}
                                 </span>
                                 <span
@@ -1118,11 +1120,11 @@ export default function CompliancePage() {
                                 ) : null}
                               </div>
 
-                              <h3 className="mt-2 text-sm font-semibold text-white transition-colors duration-200 group-hover:text-sky-100 sm:text-base">
+                              <h3 className="mt-2 text-sm font-semibold text-[var(--text-primary)] transition-colors duration-200 group-hover:text-sky-100 sm:text-base">
                                 {control.title}
                               </h3>
 
-                              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+                              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
                                 {control.category ? (
                                   <span className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5">
                                     {control.category}
@@ -1178,14 +1180,14 @@ export default function CompliancePage() {
           </div>
 
           <aside className="xl:col-span-4 space-y-4">
-            <section className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
-              <h3 className="text-base font-semibold text-white">Framework Benchmark</h3>
-              <p className="mt-1 text-sm text-slate-400">Coverage score by framework</p>
+            <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+              <h3 className="text-base font-semibold text-[var(--text-primary)]">Framework Benchmark</h3>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">Coverage score by framework</p>
               <div className="mt-4">
                 {frameworks.length > 0 ? (
                   <ComplianceBarChart data={frameworks} />
                 ) : (
-                  <p className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-4 text-sm text-slate-400">
+                  <p className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-4 text-sm text-[var(--text-muted)]">
                     Add frameworks to see comparison trends.
                   </p>
                 )}
@@ -1193,9 +1195,9 @@ export default function CompliancePage() {
             </section>
 
             {selectedFramework ? (
-              <section className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
-                <h3 className="text-base font-semibold text-white">Current Framework</h3>
-                <p className="mt-1 text-sm text-slate-400">{selectedFramework.frameworkName}</p>
+              <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+                <h3 className="text-base font-semibold text-[var(--text-primary)]">Current Framework</h3>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">{selectedFramework.frameworkName}</p>
 
                 <div className="mt-4 grid grid-cols-2 gap-3">
                   {[
@@ -1235,9 +1237,9 @@ export default function CompliancePage() {
             ) : null}
 
             {selectedFramework ? (
-              <section className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
-                <h3 className="text-base font-semibold text-white">NIST Coverage</h3>
-                <p className="mt-1 text-sm text-slate-400">Controls per CSF function</p>
+              <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+                <h3 className="text-base font-semibold text-[var(--text-primary)]">NIST Coverage</h3>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">Controls per CSF function</p>
                 <div className="mt-4 space-y-3">
                   {Object.entries(nistCsfConfig).map(([key, config]) => {
                     const total = selectedFramework.totalControls || 1;
@@ -1247,11 +1249,11 @@ export default function CompliancePage() {
                     return (
                       <div key={key}>
                         <div className="flex items-center justify-between text-xs">
-                          <span className="inline-flex items-center gap-1.5 text-slate-200">
+                          <span className="inline-flex items-center gap-1.5 text-[var(--text-secondary)]">
                             <Icon size={12} style={{ color: config.color }} />
                             {config.label}
                           </span>
-                          <span className="text-slate-400">{value}</span>
+                          <span className="text-[var(--text-muted)]">{value}</span>
                         </div>
                         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
                           <div
@@ -1269,9 +1271,9 @@ export default function CompliancePage() {
               </section>
             ) : null}
 
-            <section className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5">
-              <h3 className="text-base font-semibold text-white">Maturity Scale</h3>
-              <p className="mt-1 text-sm text-slate-400">Reference for levels 0 to 5</p>
+            <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+              <h3 className="text-base font-semibold text-[var(--text-primary)]">Maturity Scale</h3>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">Reference for levels 0 to 5</p>
               <div className="mt-4 space-y-2">
                 {maturityLabels.map((item) => (
                   <div key={item.level} className="flex items-center gap-2">
@@ -1284,7 +1286,7 @@ export default function CompliancePage() {
                     >
                       {item.level}
                     </span>
-                    <span className="text-sm text-slate-300">{item.label}</span>
+                    <span className="text-sm text-[var(--text-secondary)]">{item.label}</span>
                   </div>
                 ))}
               </div>
@@ -1326,14 +1328,14 @@ export default function CompliancePage() {
           <div className="mt-6 flex justify-end gap-3">
             <button
               type="button"
-              className="btn btn-secondary"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
               onClick={() => setIsAddModalOpen(false)}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="btn btn-primary"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-600 bg-blue-600 px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-blue-700"
               disabled={isSubmitting || !newFramework.name}
             >
               {isSubmitting ? (
@@ -1366,9 +1368,9 @@ export default function CompliancePage() {
                 setSelectedFramework((prev) =>
                   prev
                     ? {
-                        ...prev,
-                        frameworkName: event.target.value,
-                      }
+                      ...prev,
+                      frameworkName: event.target.value,
+                    }
                     : prev,
                 )
               }
@@ -1385,9 +1387,9 @@ export default function CompliancePage() {
                 setSelectedFramework((prev) =>
                   prev
                     ? {
-                        ...prev,
-                        description: event.target.value,
-                      }
+                      ...prev,
+                      description: event.target.value,
+                    }
                     : prev,
                 )
               }
@@ -1396,12 +1398,16 @@ export default function CompliancePage() {
           <div className="mt-6 flex justify-end gap-3">
             <button
               type="button"
-              className="btn btn-secondary"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
               onClick={() => setIsEditFrameworkModalOpen(false)}
             >
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+            <button
+              type="submit"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-600 bg-blue-600 px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-blue-700"
+              disabled={isSubmitting}
+            >
               {isSubmitting ? (
                 <ShieldLoader size="sm" variant="cyber" className="mr-2" />
               ) : null}
@@ -1440,7 +1446,7 @@ export default function CompliancePage() {
           </div>
 
           {selectedTemplateId ? (
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-slate-300">
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-[var(--text-secondary)]">
               {templates.find((template) => template.id === selectedTemplateId)?.description}
             </div>
           ) : null}
@@ -1449,7 +1455,7 @@ export default function CompliancePage() {
             <button
               type="button"
               onClick={() => void loadTemplates()}
-              className="btn btn-secondary"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
               disabled={isTemplateLoading}
             >
               {isTemplateLoading ? "Loading..." : "Refresh Templates"}
@@ -1458,14 +1464,14 @@ export default function CompliancePage() {
               <button
                 type="button"
                 onClick={() => setIsTemplateModalOpen(false)}
-                className="btn btn-secondary"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={() => void importTemplate()}
-                className="btn btn-primary"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-600 bg-blue-600 px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-blue-700"
                 disabled={!selectedTemplateId || isTemplateImporting}
               >
                 {isTemplateImporting ? "Importing..." : "Import"}

@@ -182,7 +182,7 @@ export default function ScannersPage() {
                 {/* Header */}
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-white">Scanners & Integrations</h1>
+                        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Scanners & Integrations</h1>
                         <p className="text-[var(--text-secondary)] mt-1">
                             Connect vulnerability scanners and import findings
                         </p>
@@ -248,7 +248,7 @@ export default function ScannersPage() {
                                 Select Asset to Scan
                             </label>
                             <select
-                                className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                                 value={scanConfig.assetId}
                                 onChange={(e) => setScanConfig({ ...scanConfig, assetId: e.target.value })}
                             >
@@ -266,7 +266,7 @@ export default function ScannersPage() {
                                 Scanner / Agent
                             </label>
                             <select
-                                className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                                 value={scanConfig.scannerId}
                                 onChange={(e) => setScanConfig({ ...scanConfig, scannerId: e.target.value })}
                             >
@@ -286,7 +286,7 @@ export default function ScannersPage() {
                             </label>
                             <input
                                 type="password"
-                                className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                                 placeholder="sk-or-v1-..."
                                 value={scanConfig.apiKey}
                                 onChange={(e) => setScanConfig({ ...scanConfig, apiKey: e.target.value })}
@@ -366,7 +366,7 @@ export default function ScannersPage() {
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-3 mb-2">
-                                                            <h3 className="font-semibold text-white">{scanner.name}</h3>
+                                                            <h3 className="font-semibold text-[var(--text-primary)]">{scanner.name}</h3>
                                                             <span
                                                                 className={cn(
                                                                     "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium",
@@ -395,15 +395,15 @@ export default function ScannersPage() {
                                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
                                                             <div>
                                                                 <p className="text-xs text-[var(--text-muted)]">Last Sync</p>
-                                                                <p className="text-sm text-white">{scanner.lastSync}</p>
+                                                                <p className="text-sm text-[var(--text-primary)]">{scanner.lastSync}</p>
                                                             </div>
                                                             <div>
                                                                 <p className="text-xs text-[var(--text-muted)]">Sync Interval</p>
-                                                                <p className="text-sm text-white">{scanner.syncInterval}</p>
+                                                                <p className="text-sm text-[var(--text-primary)]">{scanner.syncInterval}</p>
                                                             </div>
                                                             <div>
                                                                 <p className="text-xs text-[var(--text-muted)]">Assets Scanned</p>
-                                                                <p className="text-sm text-white">{scanner.assetsScanned}</p>
+                                                                <p className="text-sm text-[var(--text-primary)]">{scanner.assetsScanned}</p>
                                                             </div>
                                                             <div>
                                                                 <p className="text-xs text-[var(--text-muted)]">Vulns Found</p>
@@ -412,10 +412,10 @@ export default function ScannersPage() {
                                                         </div>
                                                     </div>
                                                     <div className="flex gap-2">
-                                                        <button className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-white transition-all duration-200 hover:scale-110 active:scale-95">
+                                                        <button className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all duration-200 hover:scale-110 active:scale-95">
                                                             <RefreshCw size={16} />
                                                         </button>
-                                                        <button className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-white transition-all duration-200 hover:scale-110 active:scale-95">
+                                                        <button className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all duration-200 hover:scale-110 active:scale-95">
                                                             <Settings size={16} />
                                                         </button>
                                                         <button
@@ -433,7 +433,7 @@ export default function ScannersPage() {
                                 ) : (
                                     <div className="card p-20 text-center">
                                         <Scan size={48} className="text-[var(--text-muted)] mx-auto mb-4 opacity-20" />
-                                        <h3 className="text-lg font-semibold text-white mb-2">No Scanners Connected</h3>
+                                        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">No Scanners Connected</h3>
                                         <p className="text-[var(--text-secondary)] mb-6 max-w-md mx-auto">
                                             Connect vulnerability scanners to automatically import findings and keep your security posture up to date.
                                         </p>
@@ -452,7 +452,7 @@ export default function ScannersPage() {
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-tertiary)]">
                                         <span className="text-sm text-[var(--text-secondary)]">Total Scanners</span>
-                                        <span className="text-lg font-bold text-white">{scanners.length}</span>
+                                        <span className="text-lg font-bold text-[var(--text-primary)]">{scanners.length}</span>
                                     </div>
                                     <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-tertiary)]">
                                         <span className="text-sm text-[var(--text-secondary)]">Active</span>
@@ -475,7 +475,7 @@ export default function ScannersPage() {
                                         (scanner) => (
                                             <button
                                                 key={scanner}
-                                                className="p-3 rounded-lg bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] text-sm text-[var(--text-secondary)] hover:text-white transition-all duration-300 ease-in-out"
+                                                className="p-3 rounded-lg bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all duration-300 ease-in-out"
                                             >
                                                 {scanner}
                                             </button>
@@ -514,7 +514,7 @@ export default function ScannersPage() {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <h3 className="font-medium text-white">{scan.name}</h3>
+                                                        <h3 className="font-medium text-[var(--text-primary)]">{scan.name}</h3>
                                                         <span
                                                             className="px-2 py-0.5 rounded text-[10px] font-medium"
                                                             style={{
@@ -532,7 +532,7 @@ export default function ScannersPage() {
                                                     </div>
                                                 </div>
                                                 <div className="text-right hidden md:block">
-                                                    <div className="text-sm font-medium text-white">{scan.hosts}</div>
+                                                    <div className="text-sm font-medium text-[var(--text-primary)]">{scan.hosts}</div>
                                                     <div className="text-xs text-[var(--text-muted)]">Hosts</div>
                                                 </div>
                                                 <div className="text-right hidden md:block">
@@ -548,7 +548,7 @@ export default function ScannersPage() {
                         ) : (
                             <div className="p-20 text-center">
                                 <Clock size={48} className="text-[var(--text-muted)] mx-auto mb-4 opacity-20" />
-                                <h3 className="text-lg font-semibold text-white mb-2">No Scan Results Yet</h3>
+                                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">No Scan Results Yet</h3>
                                 <p className="text-[var(--text-secondary)] mb-6 max-w-md mx-auto">
                                     Connect a scanner and run your first scan to see results here.
                                 </p>
@@ -562,7 +562,7 @@ export default function ScannersPage() {
                         <Card title="Upload Scan Results" subtitle="Import findings from exported scan files">
                             <div className="border-2 border-dashed border-[var(--border-color)] rounded-xl p-8 text-center hover:border-blue-500/50 transition-all duration-300 ease-in-out cursor-pointer">
                                 <FileJson size={48} className="text-[var(--text-muted)] mx-auto mb-4" />
-                                <h3 className="font-medium text-white mb-2">
+                                <h3 className="font-medium text-[var(--text-primary)] mb-2">
                                     Drop scan file here or click to browse
                                 </h3>
                                 <p className="text-sm text-[var(--text-muted)] mb-4">
@@ -591,7 +591,7 @@ export default function ScannersPage() {
                                     >
                                         <FileJson size={16} className="text-blue-400" />
                                         <div>
-                                            <p className="text-sm text-white">{format.name}</p>
+                                            <p className="text-sm text-[var(--text-primary)]">{format.name}</p>
                                             <p className="text-xs text-[var(--text-muted)]">{format.desc}</p>
                                         </div>
                                     </div>

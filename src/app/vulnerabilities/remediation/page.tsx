@@ -42,7 +42,7 @@ const statusOptions: RemediationStatus[] = [
 ];
 
 const statusTone: Record<RemediationStatus, string> = {
-  DRAFT: "border-slate-400/35 bg-slate-500/10 text-slate-200",
+  DRAFT: "border-slate-400/35 bg-slate-500/10 text-[var(--text-secondary)]",
   ACTIVE: "border-sky-400/35 bg-sky-500/10 text-sky-200",
   BLOCKED: "border-red-400/35 bg-red-500/10 text-red-200",
   COMPLETED: "border-emerald-400/35 bg-emerald-500/10 text-emerald-200",
@@ -262,8 +262,8 @@ export default function RemediationPlansPage() {
         <section className="rounded-3xl border border-white/10 bg-[linear-gradient(132deg,rgba(56,189,248,0.2),rgba(18,18,26,0.9)_44%,rgba(18,18,26,0.96))] p-6 sm:p-8">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
             <div>
-              <h1 className="text-2xl font-semibold text-white sm:text-3xl">Remediation Plans</h1>
-              <p className="mt-2 text-sm text-slate-200">
+              <h1 className="text-2xl font-semibold text-[var(--text-primary)] sm:text-3xl">Remediation Plans</h1>
+              <p className="mt-2 text-sm text-[var(--text-secondary)]">
                 Track plan ownership, linked vulnerabilities, evidence, and completion progress.
               </p>
               <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-100">
@@ -282,7 +282,7 @@ export default function RemediationPlansPage() {
               <button
                 type="button"
                 onClick={() => void fetchPlans({ silent: true })}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/15"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-white/15"
               >
                 <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
                 Refresh
@@ -313,23 +313,23 @@ export default function RemediationPlansPage() {
           ].map((item) => (
             <article
               key={item.label}
-              className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-4"
+              className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4"
             >
-              <p className="text-sm text-slate-400">{item.label}</p>
+              <p className="text-sm text-[var(--text-muted)]">{item.label}</p>
               <p className={cn("mt-2 text-2xl font-semibold", item.tone)}>{item.value}</p>
             </article>
           ))}
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)]">
+        <section className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
           <header className="border-b border-white/10 px-5 py-4">
-            <h2 className="text-base font-semibold text-white">Plan Tracker</h2>
+            <h2 className="text-base font-semibold text-[var(--text-primary)]">Plan Tracker</h2>
           </header>
 
           {plans.length === 0 ? (
             <div className="p-12 text-center">
               <CheckCircle2 className="mx-auto h-10 w-10 text-slate-500" />
-              <p className="mt-3 text-sm text-slate-400">No remediation plans yet.</p>
+              <p className="mt-3 text-sm text-[var(--text-muted)]">No remediation plans yet.</p>
             </div>
           ) : (
             <div className="divide-y divide-white/10">
@@ -340,7 +340,7 @@ export default function RemediationPlansPage() {
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="truncate text-sm font-semibold text-white">{plan.name}</p>
+                          <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{plan.name}</p>
                           <span
                             className={cn(
                               "rounded-full border px-2 py-0.5 text-[11px]",
@@ -349,14 +349,14 @@ export default function RemediationPlansPage() {
                           >
                             {formatLabel(plan.status)}
                           </span>
-                          <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] text-slate-300">
+                          <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]">
                             {progress}% complete
                           </span>
                         </div>
                         {plan.description ? (
-                          <p className="mt-1 text-xs text-slate-400">{plan.description}</p>
+                          <p className="mt-1 text-xs text-[var(--text-muted)]">{plan.description}</p>
                         ) : null}
-                        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)]">
                           <span>
                             Owner {plan.owner?.name || plan.owner?.email || "Unassigned"}
                           </span>
@@ -391,7 +391,7 @@ export default function RemediationPlansPage() {
                             setSelectedPlan(plan);
                             setIsEvidenceOpen(true);
                           }}
-                          className="inline-flex items-center gap-1 rounded-lg border border-white/20 bg-white/[0.03] px-3 py-2 text-xs font-medium text-slate-200 transition hover:bg-white/[0.08]"
+                          className="inline-flex items-center gap-1 rounded-lg border border-white/20 bg-white/[0.03] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-white/[0.08]"
                         >
                           <Paperclip size={12} />
                           Add Evidence
@@ -427,7 +427,7 @@ export default function RemediationPlansPage() {
       >
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-sm text-white">Plan Name</label>
+            <label className="mb-1 block text-sm text-[var(--text-primary)]">Plan Name</label>
             <input
               className="input"
               value={createForm.name}
@@ -435,7 +435,7 @@ export default function RemediationPlansPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-white">Description</label>
+            <label className="mb-1 block text-sm text-[var(--text-primary)]">Description</label>
             <textarea
               className="input min-h-[96px]"
               value={createForm.description}
@@ -446,7 +446,7 @@ export default function RemediationPlansPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm text-white">Status</label>
+              <label className="mb-1 block text-sm text-[var(--text-primary)]">Status</label>
               <select
                 className="input"
                 value={createForm.status}
@@ -465,7 +465,7 @@ export default function RemediationPlansPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm text-white">Due Date</label>
+              <label className="mb-1 block text-sm text-[var(--text-primary)]">Due Date</label>
               <input
                 type="datetime-local"
                 className="input"
@@ -475,7 +475,7 @@ export default function RemediationPlansPage() {
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-sm text-white">Vulnerability IDs (comma separated)</label>
+            <label className="mb-1 block text-sm text-[var(--text-primary)]">Vulnerability IDs (comma separated)</label>
             <input
               className="input"
               placeholder="vuln-id-1,vuln-id-2"
@@ -508,11 +508,11 @@ export default function RemediationPlansPage() {
         }
       >
         <div className="space-y-3">
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-[var(--text-muted)]">
             Plan: {selectedPlan?.name || "N/A"} ({selectedPlan?.id || "no id"})
           </p>
           <div>
-            <label className="mb-1 block text-sm text-white">Title</label>
+            <label className="mb-1 block text-sm text-[var(--text-primary)]">Title</label>
             <input
               className="input"
               value={evidenceForm.title}
@@ -523,7 +523,7 @@ export default function RemediationPlansPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm text-white">File Name</label>
+              <label className="mb-1 block text-sm text-[var(--text-primary)]">File Name</label>
               <input
                 className="input"
                 value={evidenceForm.fileName}
@@ -533,7 +533,7 @@ export default function RemediationPlansPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm text-white">MIME Type</label>
+              <label className="mb-1 block text-sm text-[var(--text-primary)]">MIME Type</label>
               <input
                 className="input"
                 value={evidenceForm.mimeType}
@@ -544,7 +544,7 @@ export default function RemediationPlansPage() {
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-sm text-white">Notes</label>
+            <label className="mb-1 block text-sm text-[var(--text-primary)]">Notes</label>
             <textarea
               className="input min-h-[84px]"
               value={evidenceForm.notes}
@@ -554,7 +554,7 @@ export default function RemediationPlansPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-white">Content (text)</label>
+            <label className="mb-1 block text-sm text-[var(--text-primary)]">Content (text)</label>
             <textarea
               className="input min-h-[120px] font-mono text-xs"
               placeholder="Paste command output, evidence notes, or log excerpt"

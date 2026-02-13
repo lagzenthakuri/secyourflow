@@ -93,7 +93,7 @@ export default function LoginPage() {
                             width={80}
                             height={80}
                         />
-                        <span className="text-2xl font-semibold tracking-[0.25em] text-white">
+                        <span className="text-2xl font-semibold tracking-[0.25em] text-[var(--text-primary)]">
                             SECYOUR<span className="text-sky-300">FLOW</span>
                         </span>
                     </Link>
@@ -113,7 +113,7 @@ export default function LoginPage() {
 
                         {/* Email */}
                         <div>
-                            <label className="block text-sm font-medium text-white mb-2">
+                            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                                 Email Address
                             </label>
                             <div className="relative">
@@ -135,7 +135,7 @@ export default function LoginPage() {
                         {/* Password */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <label className="block text-sm font-medium text-white">
+                                <label className="block text-sm font-medium text-[var(--text-primary)]">
                                     Password
                                 </label>
                                 <a
@@ -161,7 +161,7 @@ export default function LoginPage() {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-white"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                                 >
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>

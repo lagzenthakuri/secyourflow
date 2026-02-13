@@ -7,6 +7,7 @@ import { AddAssetModal } from "@/components/assets/AddAssetModal";
 import { EditAssetModal } from "@/components/assets/EditAssetModal";
 import { AssetActions } from "@/components/assets/AssetActions";
 import { Modal } from "@/components/ui/Modal";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { cn } from "@/lib/utils";
 import { Asset } from "@/types";
@@ -52,7 +53,7 @@ const AssetMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-[500px] items-center justify-center rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)]">
+      <div className="flex h-[500px] items-center justify-center rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
         <ShieldLoader size="lg" variant="cyber" />
       </div>
     ),
@@ -168,7 +169,7 @@ const assetTypeIcons: Record<string, LucideIcon> = {
 
 const statusTones: Record<AssetStatus, string> = {
   ACTIVE: "border-emerald-400/35 bg-emerald-500/10 text-emerald-200",
-  INACTIVE: "border-slate-400/35 bg-slate-500/10 text-slate-200",
+  INACTIVE: "border-slate-400/35 bg-slate-500/10 text-[var(--text-secondary)]",
   MAINTENANCE: "border-yellow-400/35 bg-yellow-500/10 text-yellow-200",
   DECOMMISSIONED: "border-red-400/35 bg-red-500/10 text-red-200",
 };
@@ -178,7 +179,7 @@ const criticalityTones: Record<AssetCriticality, string> = {
   HIGH: "border-orange-400/35 bg-orange-500/10 text-orange-200",
   MEDIUM: "border-yellow-400/35 bg-yellow-500/10 text-yellow-200",
   LOW: "border-emerald-400/35 bg-emerald-500/10 text-emerald-200",
-  INFORMATIONAL: "border-slate-400/35 bg-slate-500/10 text-slate-200",
+  INFORMATIONAL: "border-slate-400/35 bg-slate-500/10 text-[var(--text-secondary)]",
 };
 
 const numberFormatter = new Intl.NumberFormat("en-US");
@@ -436,9 +437,9 @@ export default function AssetsPage() {
           tags:
             bulkOperation === "set_tags"
               ? bulkValue
-                  .split(",")
-                  .map((item) => item.trim())
-                  .filter(Boolean)
+                .split(",")
+                .map((item) => item.trim())
+                .filter(Boolean)
               : undefined,
         }),
       });
@@ -571,40 +572,22 @@ export default function AssetsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-5">
-        <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(132deg,rgba(56,189,248,0.2),rgba(18,18,26,0.9)_44%,rgba(18,18,26,0.96))] p-6 sm:p-8 animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-sky-300/20 blur-3xl animate-pulse" />
-          <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-sky-300/35 bg-sky-300/10 px-3 py-1 text-xs font-medium text-sky-200">
-                <Sparkles size={13} />
-                Asset Operations Workspace
-              </div>
-              <h1 className="mt-4 text-2xl font-semibold text-white sm:text-3xl">
-                Asset Inventory
-              </h1>
-              <p className="mt-3 text-sm leading-relaxed text-slate-200 sm:text-base">
-                Keep asset context, ownership, and exposure status centralized for faster SOC
-                triage and cleaner operational decisions.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-100">
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
-                  {numberFormatter.format(pagination.total)} total assets
-                </span>
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
-                  {activeOnPage} active on current page
-                </span>
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
-                  {vulnOnPage} with vulnerabilities
-                </span>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <PageHeader
+          title="Asset Inventory"
+          description="Keep asset context, ownership, and exposure status centralized for faster SOC triage and cleaner operational decisions."
+          badge={
+            <>
+              <Sparkles size={13} />
+              Asset Operations Workspace
+            </>
+          }
+          actions={
+            <>
               <button
                 type="button"
                 onClick={() => void exportData("csv")}
                 disabled={!assets.length}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Download size={14} />
                 Export CSV
@@ -613,7 +596,7 @@ export default function AssetsPage() {
                 type="button"
                 onClick={() => void exportData("xlsx")}
                 disabled={!assets.length}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Download size={14} />
                 Export XLSX
@@ -621,7 +604,7 @@ export default function AssetsPage() {
               <button
                 type="button"
                 onClick={() => setIsDiscoveryModalOpen(true)}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95"
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95"
               >
                 <UploadCloud size={14} />
                 Discovery Import
@@ -629,14 +612,40 @@ export default function AssetsPage() {
               <button
                 type="button"
                 onClick={() => setIsAddModalOpen(true)}
-                className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-200 hover:scale-105 active:scale-95"
+                className="btn btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
               >
                 <Plus size={14} />
                 Add Asset
               </button>
-            </div>
-          </div>
-        </section>
+            </>
+          }
+          stats={[
+            {
+              label: "Total Assets",
+              value: numberFormatter.format(pagination.total),
+              trend: { value: `${pagination.totalPages} pages indexed`, neutral: true },
+              icon: Server,
+            },
+            {
+              label: "Active (page)",
+              value: numberFormatter.format(activeOnPage),
+              trend: { value: "Live operational assets", neutral: true },
+              icon: CheckCircle2,
+            },
+            {
+              label: "Critical (page)",
+              value: numberFormatter.format(criticalOnPage),
+              trend: { value: "High business sensitivity", neutral: true },
+              icon: AlertTriangle,
+            },
+            {
+              label: "Vuln Exposure",
+              value: numberFormatter.format(vulnOnPage),
+              trend: { value: "Assets needing remediation", neutral: true },
+              icon: XCircle,
+            },
+          ]}
+        />
 
         {actionError ? (
           <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-3 text-sm text-red-200">
@@ -686,59 +695,13 @@ export default function AssetsPage() {
           </section>
         ) : null}
 
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            {
-              label: "Total Assets",
-              value: numberFormatter.format(pagination.total),
-              hint: `${pagination.totalPages} pages indexed`,
-              icon: Server,
-            },
-            {
-              label: "Active (page)",
-              value: numberFormatter.format(activeOnPage),
-              hint: "Live operational assets",
-              icon: CheckCircle2,
-            },
-            {
-              label: "Critical (page)",
-              value: numberFormatter.format(criticalOnPage),
-              hint: "High business sensitivity",
-              icon: AlertTriangle,
-            },
-            {
-              label: "Vuln Exposure",
-              value: numberFormatter.format(vulnOnPage),
-              hint: "Assets needing remediation",
-              icon: XCircle,
-            },
-          ].map((metric, index) => {
-            const Icon = metric.icon;
-            return (
-              <article
-                key={metric.label}
-                className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-300/35 hover:shadow-lg hover:shadow-sky-300/10 animate-in fade-in slide-in-from-bottom-4"
-                style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'backwards' }}
-              >
-                <div className="flex items-start justify-between">
-                  <p className="text-sm text-slate-300">{metric.label}</p>
-                  <div className="rounded-lg border border-white/10 bg-white/5 p-2 transition-transform duration-200 group-hover:scale-110">
-                    <Icon size={15} className="text-slate-200" />
-                  </div>
-                </div>
-                <p className="mt-4 text-3xl font-semibold text-white transition-all duration-300">{metric.value}</p>
-                <p className="mt-1 text-sm text-slate-400">{metric.hint}</p>
-              </article>
-            );
-          })}
-        </section>
 
-        <section className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-4 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '200ms', animationFillMode: 'backwards' }}>
+        <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '200ms', animationFillMode: 'backwards' }}>
           <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr_0.9fr_0.9fr_auto]">
             <label className="relative block">
               <Search
                 size={15}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 transition-colors duration-200"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] transition-colors duration-200"
               />
               <input
                 type="text"
@@ -748,14 +711,14 @@ export default function AssetsPage() {
                   setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
                 placeholder="Search by name, IP, or hostname"
-                className="input h-10 w-full !pl-9 text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30"
+                className="input h-10 w-full !pl-9 text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30 text-[var(--text-primary)] placeholder-[var(--text-muted)] border-[var(--border-color)] bg-[var(--bg-secondary)]"
               />
             </label>
 
             <label className="relative block">
               <Box
                 size={14}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 transition-colors duration-200"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] transition-colors duration-200"
               />
               <select
                 value={selectedType}
@@ -763,7 +726,7 @@ export default function AssetsPage() {
                   setSelectedType(event.target.value);
                   setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
-                className="input h-10 w-full appearance-none !pl-9 text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30"
+                className="input h-10 w-full appearance-none !pl-9 text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30 text-[var(--text-primary)] border-[var(--border-color)] bg-[var(--bg-secondary)]"
               >
                 <option value="ALL">All Types</option>
                 {assetTypes.map((type) => (
@@ -777,7 +740,7 @@ export default function AssetsPage() {
             <label className="relative block">
               <Filter
                 size={14}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 transition-colors duration-200"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] transition-colors duration-200"
               />
               <select
                 value={selectedStatus}
@@ -843,14 +806,14 @@ export default function AssetsPage() {
               <button
                 type="button"
                 onClick={resetFilters}
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-white/15 bg-white/5 px-4 text-sm text-slate-200 transition-all duration-200 hover:bg-white/10 hover:scale-105 active:scale-95"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-white/15 bg-white/5 px-4 text-sm text-[var(--text-secondary)] transition-all duration-200 hover:bg-white/10 hover:scale-105 active:scale-95"
               >
                 Reset
               </button>
               <button
                 type="button"
                 onClick={() => void refreshAssets()}
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-white/15 bg-white/5 px-4 text-sm text-slate-200 transition-all duration-200 hover:bg-white/10 hover:scale-105 active:scale-95"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-white/15 bg-white/5 px-4 text-sm text-[var(--text-secondary)] transition-all duration-200 hover:bg-white/10 hover:scale-105 active:scale-95"
               >
                 {isRefreshing ? <Loader2 size={15} className="animate-spin" /> : "Refresh"}
               </button>
@@ -865,7 +828,7 @@ export default function AssetsPage() {
                 "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-all duration-200",
                 viewMode === "list"
                   ? "bg-sky-300 text-slate-950 shadow-lg shadow-sky-300/20"
-                  : "text-slate-300 hover:bg-white/10 hover:text-white",
+                  : "text-[var(--text-secondary)] hover:bg-white/10 hover:text-[var(--text-primary)]",
               )}
             >
               <LayoutGrid size={14} />
@@ -878,7 +841,7 @@ export default function AssetsPage() {
                 "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-all duration-200",
                 viewMode === "map"
                   ? "bg-sky-300 text-slate-950 shadow-lg shadow-sky-300/20"
-                  : "text-slate-300 hover:bg-white/10 hover:text-white",
+                  : "text-[var(--text-secondary)] hover:bg-white/10 hover:text-[var(--text-primary)]",
               )}
             >
               <MapPin size={14} />
@@ -898,29 +861,29 @@ export default function AssetsPage() {
             <AssetMap assets={assets} />
 
             <div className="space-y-4">
-              <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '300ms', animationFillMode: 'backwards' }}>
-                <h2 className="text-lg font-semibold text-white">Type Distribution</h2>
-                <p className="mt-1 text-sm text-slate-400">Current filtered inventory mix.</p>
+              <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '300ms', animationFillMode: 'backwards' }}>
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Type Distribution</h2>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">Current filtered inventory mix.</p>
                 <div className="mt-4">
                   {typeDistribution.length > 0 ? (
                     <AssetTypeChart data={typeDistribution} />
                   ) : (
-                    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+                    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-[var(--text-muted)]">
                       No type distribution data available.
                     </div>
                   )}
                 </div>
               </article>
 
-              <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '400ms', animationFillMode: 'backwards' }}>
-                <h2 className="text-lg font-semibold text-white">Environment Coverage</h2>
+              <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '400ms', animationFillMode: 'backwards' }}>
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Environment Coverage</h2>
                 <div className="mt-4 space-y-3">
                   {environmentBreakdown.length > 0 ? (
                     environmentBreakdown.map((env, index) => (
                       <div key={env.name} className="animate-in fade-in slide-in-from-right-2 duration-300" style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}>
                         <div className="mb-1.5 flex items-center justify-between text-xs">
-                          <span className="text-slate-300">{formatLabel(env.name)}</span>
-                          <span className="text-slate-400">
+                          <span className="text-[var(--text-secondary)]">{formatLabel(env.name)}</span>
+                          <span className="text-[var(--text-muted)]">
                             {env.count} ({env.percentage.toFixed(1)}%)
                           </span>
                         </div>
@@ -933,7 +896,7 @@ export default function AssetsPage() {
                       </div>
                     ))
                   ) : (
-                    <p className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+                    <p className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-[var(--text-muted)]">
                       No environment breakdown available.
                     </p>
                   )}
@@ -943,11 +906,11 @@ export default function AssetsPage() {
           </section>
         ) : (
           <section className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
-            <article className="overflow-hidden rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)]">
+            <article className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
               <header className="flex flex-col gap-3 border-b border-white/10 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-white">Asset List</h2>
-                  <p className="text-sm text-slate-400">
+                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">Asset List</h2>
+                  <p className="text-sm text-[var(--text-muted)]">
                     Showing {assets.length} of {numberFormatter.format(pagination.total)} assets
                   </p>
                 </div>
@@ -957,7 +920,7 @@ export default function AssetsPage() {
               {assets.length === 0 ? (
                 <div className="p-16 text-center">
                   <Server className="mx-auto h-12 w-12 text-slate-600" />
-                  <p className="mt-4 text-sm text-slate-400">No assets match current filters.</p>
+                  <p className="mt-4 text-sm text-[var(--text-muted)]">No assets match current filters.</p>
                 </div>
               ) : (
                 <div className="divide-y divide-white/10">
@@ -978,7 +941,7 @@ export default function AssetsPage() {
                           <button
                             type="button"
                             onClick={() => toggleAssetSelection(asset.id)}
-                            className="mt-1 inline-flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-slate-400 transition hover:bg-white/10 hover:text-slate-200"
+                            className="mt-1 inline-flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-[var(--text-muted)] transition hover:bg-white/10 hover:text-[var(--text-secondary)]"
                           >
                             {selectedAssetIds.includes(asset.id) ? (
                               <CheckSquare size={14} className="text-sky-200" />
@@ -993,7 +956,7 @@ export default function AssetsPage() {
 
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="truncate text-sm font-medium text-white">{asset.name}</h3>
+                              <h3 className="truncate text-sm font-medium text-[var(--text-primary)]">{asset.name}</h3>
                               <span
                                 className={cn(
                                   "rounded-full border px-2 py-0.5 text-[11px]",
@@ -1012,7 +975,7 @@ export default function AssetsPage() {
                               </span>
                             </div>
 
-                            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
+                            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
                               <span>{formatLabel(asset.type)}</span>
                               <span>{formatLabel(asset.environment)}</span>
                               {asset.ipAddress ? <span>IP {asset.ipAddress}</span> : null}
@@ -1027,7 +990,7 @@ export default function AssetsPage() {
                               <button
                                 type="button"
                                 onClick={() => void fetchImpact(asset.id)}
-                                className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] text-slate-300 transition hover:bg-white/[0.08]"
+                                className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] text-[var(--text-secondary)] transition hover:bg-white/[0.08]"
                               >
                                 <Network size={11} />
                                 Impact
@@ -1039,7 +1002,7 @@ export default function AssetsPage() {
                                 {asset.tags.slice(0, 4).map((tag) => (
                                   <span
                                     key={`${asset.id}-${tag}`}
-                                    className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] text-slate-400"
+                                    className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] text-[var(--text-muted)]"
                                   >
                                     {tag}
                                   </span>
@@ -1081,7 +1044,7 @@ export default function AssetsPage() {
                               setLifecycleNotes("");
                               setIsLifecycleModalOpen(true);
                             }}
-                            className="inline-flex items-center rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-[11px] text-slate-300 transition hover:bg-white/[0.08]"
+                            className="inline-flex items-center rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-[11px] text-[var(--text-secondary)] transition hover:bg-white/[0.08]"
                           >
                             Lifecycle
                           </button>
@@ -1103,7 +1066,7 @@ export default function AssetsPage() {
                     onClick={() =>
                       setPagination((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))
                     }
-                    className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-sm text-slate-200 transition-all duration-200 hover:bg-white/10 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-all duration-200 hover:bg-white/10 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <ChevronLeft size={14} />
                     Prev
@@ -1117,7 +1080,7 @@ export default function AssetsPage() {
                         page: Math.min(prev.totalPages, prev.page + 1),
                       }))
                     }
-                    className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-sm text-slate-200 transition-all duration-200 hover:bg-white/10 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-all duration-200 hover:bg-white/10 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Next
                     <ChevronRight size={14} />
@@ -1127,29 +1090,29 @@ export default function AssetsPage() {
             </article>
 
             <div className="space-y-4">
-              <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '300ms', animationFillMode: 'backwards' }}>
-                <h2 className="text-lg font-semibold text-white">Type Distribution</h2>
-                <p className="mt-1 text-sm text-slate-400">Current filtered inventory mix.</p>
+              <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '300ms', animationFillMode: 'backwards' }}>
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Type Distribution</h2>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">Current filtered inventory mix.</p>
                 <div className="mt-4">
                   {typeDistribution.length > 0 ? (
                     <AssetTypeChart data={typeDistribution} />
                   ) : (
-                    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+                    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-[var(--text-muted)]">
                       No type distribution data available.
                     </div>
                   )}
                 </div>
               </article>
 
-              <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '400ms', animationFillMode: 'backwards' }}>
-                <h2 className="text-lg font-semibold text-white">Environment Breakdown</h2>
+              <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '400ms', animationFillMode: 'backwards' }}>
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Environment Breakdown</h2>
                 <div className="mt-4 space-y-3">
                   {environmentBreakdown.length > 0 ? (
                     environmentBreakdown.map((env, index) => (
                       <div key={env.name} className="animate-in fade-in slide-in-from-right-2 duration-300" style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}>
                         <div className="mb-1.5 flex items-center justify-between text-xs">
-                          <span className="text-slate-300">{formatLabel(env.name)}</span>
-                          <span className="text-slate-400">
+                          <span className="text-[var(--text-secondary)]">{formatLabel(env.name)}</span>
+                          <span className="text-[var(--text-muted)]">
                             {env.count} ({env.percentage.toFixed(1)}%)
                           </span>
                         </div>
@@ -1162,15 +1125,15 @@ export default function AssetsPage() {
                       </div>
                     ))
                   ) : (
-                    <p className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+                    <p className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-[var(--text-muted)]">
                       No environment breakdown available.
                     </p>
                   )}
                 </div>
               </article>
 
-              <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '500ms', animationFillMode: 'backwards' }}>
-                <h2 className="text-lg font-semibold text-white">Recently Added</h2>
+              <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '500ms', animationFillMode: 'backwards' }}>
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Recently Added</h2>
                 <div className="mt-4 space-y-2">
                   {assets.slice(0, 4).map((asset, index) => {
                     const Icon = assetTypeIcons[asset.type] || Server;
@@ -1185,7 +1148,7 @@ export default function AssetsPage() {
                             <Icon size={13} className="text-sky-300" />
                           </div>
                           <div className="min-w-0">
-                            <p className="truncate text-sm text-slate-200">{asset.name}</p>
+                            <p className="truncate text-sm text-[var(--text-secondary)]">{asset.name}</p>
                             <p className="text-xs text-slate-500">
                               {formatLabel(asset.type)} · {formatLabel(asset.environment)}
                             </p>
@@ -1195,23 +1158,23 @@ export default function AssetsPage() {
                     );
                   })}
                   {!assets.length ? (
-                    <p className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+                    <p className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-[var(--text-muted)]">
                       No assets available.
                     </p>
                   ) : null}
                 </div>
               </article>
 
-              <article className="rounded-2xl border border-white/10 bg-[rgba(18,18,26,0.84)] p-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '600ms', animationFillMode: 'backwards' }}>
-                <h2 className="text-lg font-semibold text-white">Relationships</h2>
-                <p className="mt-1 text-sm text-slate-400">
+              <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '600ms', animationFillMode: 'backwards' }}>
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Relationships</h2>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">
                   Dependency mapping and impact summary.
                 </p>
                 <div className="mt-3 space-y-2">
                   {relationships.slice(0, 6).map((relationship) => (
                     <div
                       key={relationship.id}
-                      className="rounded-lg border border-white/10 bg-white/[0.03] p-2 text-xs text-slate-300"
+                      className="rounded-lg border border-white/10 bg-white/[0.03] p-2 text-xs text-[var(--text-secondary)]"
                     >
                       <p className="font-medium">
                         {relationship.parentAsset.name} {formatLabel(relationship.relationshipType)}{" "}
@@ -1231,7 +1194,7 @@ export default function AssetsPage() {
                     <p className="text-xs text-sky-100">
                       Impact Summary {impactAssetId ? `(Asset ${impactAssetId.slice(0, 8)}...)` : ""}
                     </p>
-                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-200">
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[var(--text-secondary)]">
                       <span>Relationships: {impact.summary.relationships}</span>
                       <span>Connected: {impact.summary.connectedAssets}</span>
                       <span>Critical deps: {impact.summary.criticalDependencies}</span>
@@ -1272,7 +1235,7 @@ export default function AssetsPage() {
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm text-white">Mode</label>
+              <label className="mb-1 block text-sm text-[var(--text-primary)]">Mode</label>
               <select
                 className="input"
                 value={discoveryMode}
@@ -1284,7 +1247,7 @@ export default function AssetsPage() {
             </div>
             {discoveryMode === "json" ? (
               <div>
-                <label className="mb-1 block text-sm text-white">Source</label>
+                <label className="mb-1 block text-sm text-[var(--text-primary)]">Source</label>
                 <input
                   className="input"
                   value={discoverySource}
@@ -1294,7 +1257,7 @@ export default function AssetsPage() {
             ) : null}
           </div>
           <div>
-            <label className="mb-1 block text-sm text-white">
+            <label className="mb-1 block text-sm text-[var(--text-primary)]">
               {discoveryMode === "nmap" ? "Nmap XML" : "JSON payload"}
             </label>
             <textarea
@@ -1327,21 +1290,21 @@ export default function AssetsPage() {
         }
       >
         <div className="space-y-3">
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-[var(--text-muted)]">
             Asset: {lifecycleAsset?.name || "N/A"} ({lifecycleAsset?.id || "N/A"})
           </p>
           <div>
-            <label className="mb-1 block text-sm text-white">Action</label>
+            <label className="mb-1 block text-sm text-[var(--text-primary)]">Action</label>
             <select
               className="input"
               value={lifecycleAction}
               onChange={(event) =>
                 setLifecycleAction(
                   event.target.value as
-                    | "transfer"
-                    | "decommission"
-                    | "ownership_change"
-                    | "reactivate",
+                  | "transfer"
+                  | "decommission"
+                  | "ownership_change"
+                  | "reactivate",
                 )
               }
             >
@@ -1353,7 +1316,7 @@ export default function AssetsPage() {
           </div>
           {lifecycleAction === "transfer" ? (
             <div>
-              <label className="mb-1 block text-sm text-white">Target Environment</label>
+              <label className="mb-1 block text-sm text-[var(--text-primary)]">Target Environment</label>
               <select
                 className="input"
                 value={lifecycleToEnvironment}
@@ -1369,7 +1332,7 @@ export default function AssetsPage() {
           ) : null}
           {lifecycleAction === "ownership_change" ? (
             <div>
-              <label className="mb-1 block text-sm text-white">New Owner</label>
+              <label className="mb-1 block text-sm text-[var(--text-primary)]">New Owner</label>
               <input
                 className="input"
                 value={lifecycleToOwner}
@@ -1378,7 +1341,7 @@ export default function AssetsPage() {
             </div>
           ) : null}
           <div>
-            <label className="mb-1 block text-sm text-white">Notes</label>
+            <label className="mb-1 block text-sm text-[var(--text-primary)]">Notes</label>
             <textarea
               className="input min-h-[100px]"
               value={lifecycleNotes}

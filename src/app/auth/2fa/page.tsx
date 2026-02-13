@@ -266,7 +266,7 @@ export default function TwoFactorChallengePage() {
                             width={80}
                             height={80}
                         />
-                        <span className="text-2xl font-semibold tracking-[0.25em] text-white">
+                        <span className="text-2xl font-semibold tracking-[0.25em] text-[var(--text-primary)]">
                             SECYOUR<span className="text-sky-300">FLOW</span>
                         </span>
                     </Link>
@@ -278,7 +278,7 @@ export default function TwoFactorChallengePage() {
                             <ShieldCheck className="w-6 h-6 text-blue-400" />
                         </div>
                         <div>
-                            <h1 className="text-xl font-semibold text-white">Two-Factor Challenge</h1>
+                            <h1 className="text-xl font-semibold text-[var(--text-primary)]">Two-Factor Challenge</h1>
                             <p className="text-xs text-[var(--text-muted)]">
                                 Two-factor authentication is required before you can access the platform.
                             </p>
@@ -311,12 +311,12 @@ export default function TwoFactorChallengePage() {
                                 />
                                 <div>
                                     <p className="text-xs text-[var(--text-muted)] mb-1">Manual secret</p>
-                                    <code className="px-3 py-2 rounded bg-[var(--bg-primary)] text-sm text-white break-all block">
+                                    <code className="px-3 py-2 rounded bg-[var(--bg-primary)] text-sm text-[var(--text-primary)] break-all block">
                                         {enrollment.secret}
                                     </code>
                                 </div>
                                 <label className="block">
-                                    <span className="text-sm font-medium text-white">Authenticator Code</span>
+                                    <span className="text-sm font-medium text-[var(--text-primary)]">Authenticator Code</span>
                                     <div className="relative mt-2">
                                         <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={16} />
                                         <input
@@ -340,7 +340,7 @@ export default function TwoFactorChallengePage() {
                 ) : (
                     <form onSubmit={submitChallenge} className="space-y-4">
                         <label className="block">
-                            <span className="text-sm font-medium text-white">Authenticator or Recovery Code</span>
+                            <span className="text-sm font-medium text-[var(--text-primary)]">Authenticator or Recovery Code</span>
                             <div className="relative mt-2">
                                 <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={16} />
                                 <input

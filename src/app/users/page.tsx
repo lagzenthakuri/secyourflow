@@ -97,7 +97,7 @@ export default function UsersPage() {
                 {/* Header */}
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-white">Users & Access</h1>
+                        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Users & Access</h1>
                         <p className="text-[var(--text-secondary)] mt-1">
                             Manage user accounts and role-based access control
                         </p>
@@ -113,7 +113,7 @@ export default function UsersPage() {
                 {/* Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="card p-4">
-                        <p className="text-2xl font-bold text-white">{users.length}</p>
+                        <p className="text-2xl font-bold text-[var(--text-primary)]">{users.length}</p>
                         <p className="text-xs text-[var(--text-muted)]">Total Users</p>
                     </div>
                     <div className="card p-4">
@@ -160,7 +160,7 @@ export default function UsersPage() {
                                     >
                                         <div className="flex items-center gap-4">
                                             <div className="relative">
-                                                <div className="w-10 h-10 rounded-xl border border-blue-400/50 bg-blue-600 flex items-center justify-center text-white font-medium">
+                                                <div className="w-10 h-10 rounded-xl border border-blue-400/50 bg-blue-600 flex items-center justify-center text-[var(--text-primary)] font-medium">
                                                     {user.name
                                                         .split(" ")
                                                         .map((n: string) => n[0])
@@ -179,14 +179,14 @@ export default function UsersPage() {
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-0.5">
-                                                    <h3 className="font-medium text-white">{user.name}</h3>
+                                                    <h3 className="font-medium text-[var(--text-primary)]">{user.name}</h3>
                                                     {editingUser === user.id ? (
                                                         <select
                                                             value={user.role}
                                                             onChange={(e) => handleRoleChange(user.id, e.target.value)}
                                                             onBlur={() => setEditingUser(null)}
                                                             autoFocus
-                                                            className="text-xs bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded px-1 py-0.5 text-white"
+                                                            className="text-xs bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded px-1 py-0.5 text-[var(--text-primary)]"
                                                         >
                                                             {Object.keys(roleColors).map(role => (
                                                                 <option key={role} value={role}>{role}</option>
@@ -246,7 +246,7 @@ export default function UsersPage() {
                                     >
                                         <div className="flex items-center gap-2 mb-1">
                                             <Shield size={14} className="text-blue-400" />
-                                            <span className="text-sm font-medium text-white">
+                                            <span className="text-sm font-medium text-[var(--text-primary)]">
                                                 {item.role}
                                             </span>
                                         </div>
