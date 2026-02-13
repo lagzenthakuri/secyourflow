@@ -196,6 +196,42 @@ export function TwoFactorSettingsPanel() {
         }
     };
 
+    const handleDisableTotp = async () => {
+        const code = window.prompt("Enter your 6-digit authenticator code or recovery code to disable 2FA:");
+        if (!code) return;
+
+        setError(null);
+        setNotice(null);
+        setIsSubmitting(true);
+
+        try {
+            const response = await fetch("/api/2fa/totp/disable", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ code }),
+            });
+
+            const payload = await response.json();
+            if (!response.ok) {
+                setError(payload?.error || "Unable to disable 2FA.");
+                return;
+            }
+
+            setNotice("Two-factor authentication has been disabled.");
+            await update({
+                twoFactorVerified: false,
+                twoFactorVerifiedAt: null,
+                user: { totpEnabled: false },
+            });
+            await refreshStatus();
+        } catch (requestError) {
+            console.error("2FA disable failed:", requestError);
+            setError("Unable to disable 2FA.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     const handleRegenerateRecovery = async () => {
         setError(null);
         setNotice(null);
@@ -362,14 +398,14 @@ export function TwoFactorSettingsPanel() {
 
                     {isTwoFactorEnabled && (
                         <div className="space-y-4">
-                            <p className="text-xs text-[var(--text-muted)]">
-                                Two-factor authentication is mandatory and cannot be disabled.
-                            </p>
-
                             <div className="flex flex-wrap items-center gap-2">
                                 <button className="btn btn-ghost" onClick={handleRegenerateRecovery} disabled={isSubmitting}>
                                     <RefreshCw size={14} />
                                     Regenerate Recovery Codes
+                                </button>
+                                <button className="btn btn-ghost text-red-400 hover:text-red-300" onClick={handleDisableTotp} disabled={isSubmitting}>
+                                    <ShieldOff size={14} />
+                                    Disable 2FA
                                 </button>
                             </div>
                         </div>

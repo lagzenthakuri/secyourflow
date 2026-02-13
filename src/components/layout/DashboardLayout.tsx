@@ -357,15 +357,33 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
     };
 
     const handleNotificationClick = async (notification: NotificationItem) => {
-        try {
-            await markOneNotificationAsRead(notification);
-        } catch (error) {
-            console.error(error);
+        // 1. Optimistically update local state
+        if (!notification.isRead) {
+            setNotifications((previous) =>
+                markNotificationRead(previous, notification.id).notifications
+            );
+            setNotificationsCount((prev) => Math.max(0, prev - 1));
         }
 
+        // 2. Clear state and navigate immediately if there's a link
         if (notification.link) {
             setShowNotifications(false);
             navigateToNotification(notification.link);
+        }
+
+        // 3. Perform the actual API call in the background
+        if (!notification.isRead) {
+            try {
+                await fetch("/api/notifications", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ id: notification.id, isRead: true }),
+                });
+            } catch (error) {
+                console.error("Failed to sync notification read state", error);
+                // Optional: Revert optimistic update if critical, 
+                // but usually fine for "read" state.
+            }
         }
     };
 
@@ -465,7 +483,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-    
+
     // Audit login events with IP and user agent
     useLoginAudit();
 

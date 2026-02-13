@@ -11,12 +11,7 @@ export async function GET() {
         if (!session || !session.user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-        if (session.user.role !== "MAIN_OFFICER") {
-            return NextResponse.json({ error: "MAIN-OFFICER role required" }, { status: 403 });
-        }
-        if (!isTwoFactorSatisfied(session)) {
-            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
-        }
+        // Basic auth is enough to see teammates for assignment
 
         // Ideally, we'd filter by organizationId if multi-tenant
         const org = await prisma.organization.findFirst();

@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { WidgetBuilder } from "@/components/dashboard/WidgetBuilder";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
@@ -268,6 +269,8 @@ function getReportStatusTone(status?: string | null) {
 export default function ReportsPage() {
   const [reportsList, setReportsList] = useState<ReportRecord[]>([]);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const { data: session } = useSession();
+  const isMainOfficer = session?.user?.role === "MAIN_OFFICER";
 
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -366,11 +369,11 @@ export default function ReportsPage() {
           isDefault: viewDefault,
           shares: viewShareRole
             ? [
-                {
-                  sharedWithRole: viewShareRole,
-                  canEdit: false,
-                },
-              ]
+              {
+                sharedWithRole: viewShareRole,
+                canEdit: false,
+              },
+            ]
             : [],
         }),
       });
@@ -532,13 +535,15 @@ export default function ReportsPage() {
                 />
                 Refresh
               </button>
-              <Link
-                href="/reports/activity"
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95"
-              >
-                <Clock3 size={14} />
-                Activity
-              </Link>
+              {isMainOfficer && (
+                <Link
+                  href="/reports/activity"
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/15 hover:scale-105 active:scale-95"
+                >
+                  <Clock3 size={14} />
+                  Activity
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={() => void handleGenerate(reportTemplates[0])}

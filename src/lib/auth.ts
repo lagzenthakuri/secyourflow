@@ -12,6 +12,48 @@ import {
     isTrustedTwoFactorSessionUpdate,
 } from "@/lib/security/two-factor-session";
 import { hasRecentTwoFactorVerification, TWO_FACTOR_REVERIFY_INTERVAL_MS } from "@/lib/security/two-factor";
+import { type Account } from "next-auth";
+
+async function refreshAccessToken(token: any) {
+    try {
+        const url = "https://oauth2.googleapis.com/token";
+        if (token.provider === "google") {
+            const response = await fetch(url, {
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({
+                    client_id: process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID || "",
+                    client_secret: process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET || "",
+                    grant_type: "refresh_token",
+                    refresh_token: token.refreshToken as string,
+                }),
+                method: "POST",
+            });
+
+            const refreshedTokens = await response.json();
+
+            if (!response.ok) {
+                throw refreshedTokens;
+            }
+
+            return {
+                ...token,
+                accessToken: refreshedTokens.access_token,
+                expiresAt: Date.now() + refreshedTokens.expires_in * 1000,
+                // Fall back to old refresh token, but use the new one if provided
+                refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
+            };
+        }
+
+        // Add other providers if needed (GitHub usually doesn't need refresh or doesn't provide refresh_token)
+        return token;
+    } catch (error) {
+        console.error("Error refreshing access token", error);
+        return {
+            ...token,
+            error: "RefreshAccessTokenError",
+        };
+    }
+}
 
 const authSecret =
     process.env.AUTH_SECRET ||
@@ -84,7 +126,8 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
     adapter: PrismaAdapter(prisma),
     session: {
         strategy: "jwt",
-        maxAge: 30 * 24 * 60 * 60, // 30 days
+        maxAge: 2 * 24 * 60 * 60, // 2 days
+        updateAge: 1 * 60 * 60, // 1 hour - update session every hour if active
     },
     providers: [
         Credentials({
@@ -155,19 +198,28 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
     ],
     callbacks: {
         ...authConfig.callbacks,
-        async jwt({ token, user, trigger, session }) {
-            if (user) {
+        async jwt({ token, user, account, trigger, session }) {
+            // Initial sign in
+            if (account && user) {
                 const signInUser = user as typeof user & {
                     role?: string;
                     totpEnabled?: boolean;
                     loginIp?: string | null;
                 };
-                const activeSessionId = randomUUID();
-                const activeSessionIp = normalizeIpAddress(signInUser.loginIp);
 
                 token.id = user.id;
                 token.role = signInUser.role || "ANALYST";
                 token.totpEnabled = Boolean(signInUser.totpEnabled);
+
+                // OAuth specific tokens
+                token.accessToken = account.access_token;
+                token.refreshToken = account.refresh_token;
+                token.expiresAt = (account.expires_at ?? 0) * 1000;
+                token.provider = account.provider;
+
+                const activeSessionId = randomUUID();
+                const activeSessionIp = normalizeIpAddress(signInUser.loginIp);
+
                 token.activeSessionId = activeSessionId;
                 // Always require a fresh 2FA flow after login.
                 token.twoFactorVerified = false;
@@ -205,6 +257,8 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 void import("./logger").then(({ logActivity }) => {
                     return logActivity("User login", "auth", user.email || "unknown", null, null, "User logged in", user.id);
                 }).catch(() => undefined);
+
+                return token;
             }
 
             // Validate 2FA-related secrets only when this session can actually use 2FA.
@@ -296,6 +350,22 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
 
             if (typeof token.authenticatedAt !== "number") {
                 token.authenticatedAt = Date.now();
+            } else {
+                // Keep the session alive while the user is active
+                token.authenticatedAt = Date.now();
+                if (token.twoFactorVerified === true && typeof token.twoFactorVerifiedAt === "number") {
+                    token.twoFactorVerifiedAt = Date.now();
+                }
+            }
+
+            // Return previous token if the access token has not expired yet
+            if (token.expiresAt && Date.now() < (token.expiresAt as number)) {
+                return token;
+            }
+
+            // Access token has expired, try to update it
+            if (token.refreshToken) {
+                return refreshAccessToken(token);
             }
 
             return token;
@@ -309,6 +379,8 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 session.twoFactorVerifiedAt =
                     typeof token.twoFactorVerifiedAt === "number" ? token.twoFactorVerifiedAt : null;
                 session.authenticatedAt = typeof token.authenticatedAt === "number" ? token.authenticatedAt : null;
+                session.accessToken = token.accessToken as string | undefined;
+                session.error = token.error as string | undefined;
             }
 
             return session;
@@ -337,5 +409,7 @@ declare module "next-auth" {
         twoFactorVerified?: boolean;
         twoFactorVerifiedAt?: number | null;
         authenticatedAt?: number | null;
+        accessToken?: string;
+        error?: string;
     }
 }

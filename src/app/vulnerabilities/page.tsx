@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AddVulnerabilityModal } from "@/components/vulnerabilities/AddVulnerabilityModal";
 import { EditVulnerabilityModal } from "@/components/vulnerabilities/EditVulnerabilityModal";
@@ -205,6 +206,17 @@ export default function VulnerabilitiesPage() {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingVuln, setEditingVuln] = useState<Vulnerability | null>(null);
+  const searchParams = useSearchParams();
+
+  // Sync search query from URL on mount
+  useEffect(() => {
+    const query = searchParams.get("search");
+    if (query) {
+      setSearchQuery(query);
+      // Auto-expand if the search param looks like a ID/CVE
+      setActiveVulnId(query);
+    }
+  }, [searchParams]);
 
   const fetchVulnerabilities = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
@@ -725,7 +737,7 @@ export default function VulnerabilitiesPage() {
                   const severityTone =
                     severityColor[vuln.severity] || severityColor.INFORMATIONAL;
                   const statusTone = statusColor[vuln.status] || statusColor.OPEN;
-                  const isExpanded = activeVulnId === vuln.id;
+                  const isExpanded = activeVulnId === vuln.id || (vuln.cveId && activeVulnId === vuln.cveId);
                   const workflowState = (vuln.workflowState || "NEW") as (typeof workflowOptions)[number];
                   const nextWorkflowStates = workflowTransitions[workflowState] || [];
                   const slaBadge = getSlaBadge(vuln.slaDueAt);

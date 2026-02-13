@@ -8,6 +8,7 @@ import { requireSessionWithOrg } from "@/lib/api-auth";
 import { calculateSlaDueAt } from "@/lib/workflow/sla";
 import { dispatchVulnerabilityNotifications } from "@/lib/notifications/rules";
 import { extractRequestContext } from "@/lib/request-utils";
+import { createNotification } from "@/lib/notifications/service";
 
 const createVulnerabilitySchema = z.object({
   title: z.string().min(3).max(300),
@@ -76,6 +77,7 @@ export async function GET(request: NextRequest) {
 
   if (search) {
     where.OR = [
+      { id: search },
       { title: { contains: search, mode: "insensitive" } },
       { cveId: { contains: search, mode: "insensitive" } },
       { description: { contains: search, mode: "insensitive" } },
@@ -214,11 +216,11 @@ export async function POST(request: NextRequest) {
         lastSeen: new Date(),
         assets: payload.assetId
           ? {
-              create: {
-                assetId: payload.assetId,
-                status: "OPEN",
-              },
-            }
+            create: {
+              assetId: payload.assetId,
+              status: "OPEN",
+            },
+          }
           : undefined,
       },
     });
@@ -249,6 +251,17 @@ export async function POST(request: NextRequest) {
       userId,
       ctx,
     );
+
+    // If assigned on creation, notify the assignee
+    if (newVuln.assignedUserId) {
+      await createNotification({
+        userId: newVuln.assignedUserId,
+        title: "New Vulnerability Assigned",
+        message: `A new vulnerability has been assigned to you: ${newVuln.title}`,
+        type: "INFO",
+        link: `/vulnerabilities?search=${newVuln.id}`
+      });
+    }
 
     try {
       await dispatchVulnerabilityNotifications({

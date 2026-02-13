@@ -1,86 +1,90 @@
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { cachedJsonResponse, errorResponse, CACHE_STRATEGIES } from '@/lib/api-response';
 import {
-  clearDatabaseUnavailable,
-  isDatabaseUnavailableError,
-  isDatabaseUnavailableInCooldown,
-  markDatabaseUnavailable,
+    clearDatabaseUnavailable,
+    isDatabaseUnavailableError,
+    isDatabaseUnavailableInCooldown,
+    markDatabaseUnavailable,
 } from "@/lib/database-availability";
 
 // ISR: revalidate every 5 minutes
 export const revalidate = 300;
 
 interface DashboardStats {
-  total_assets: bigint;
-  critical_assets: bigint;
-  total_vulnerabilities: bigint;
-  critical_vulns: bigint;
-  high_vulns: bigint;
-  medium_vulns: bigint;
-  low_vulns: bigint;
-  exploited_vulns: bigint;
-  kev_vulns: bigint;
-  open_vulns: bigint;
-  threat_indicators: bigint;
+    total_assets: bigint;
+    critical_assets: bigint;
+    total_vulnerabilities: bigint;
+    critical_vulns: bigint;
+    high_vulns: bigint;
+    medium_vulns: bigint;
+    low_vulns: bigint;
+    exploited_vulns: bigint;
+    kev_vulns: bigint;
+    open_vulns: bigint;
+    threat_indicators: bigint;
 }
 
 function buildFallbackDashboardData() {
-  const now = new Date();
-  const riskTrends = Array.from({ length: 6 }, (_, index) => {
-    const pointDate = new Date(now);
-    pointDate.setDate(pointDate.getDate() - (5 - index) * 7);
+    const now = new Date();
+    const riskTrends = Array.from({ length: 6 }, (_, index) => {
+        const pointDate = new Date(now);
+        pointDate.setDate(pointDate.getDate() - (5 - index) * 7);
+
+        return {
+            date: pointDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+            riskScore: 0,
+            criticalVulns: 0,
+            highVulns: 0,
+        };
+    });
 
     return {
-      date: pointDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-      riskScore: 0,
-      criticalVulns: 0,
-      highVulns: 0,
+        stats: {
+            totalAssets: 0,
+            criticalAssets: 0,
+            totalVulnerabilities: 0,
+            criticalVulnerabilities: 0,
+            highVulnerabilities: 0,
+            mediumVulnerabilities: 0,
+            lowVulnerabilities: 0,
+            exploitedVulnerabilities: 0,
+            cisaKevCount: 0,
+            openVulnerabilities: 0,
+            threatIndicatorCount: 0,
+            overallRiskScore: 0,
+            complianceScore: 0,
+            fixedThisMonth: 0,
+            meanTimeToRemediate: 0,
+        },
+        riskTrends,
+        severityDistribution: [
+            { severity: "CRITICAL", count: 0, percentage: 0 },
+            { severity: "HIGH", count: 0, percentage: 0 },
+            { severity: "MEDIUM", count: 0, percentage: 0 },
+            { severity: "LOW", count: 0, percentage: 0 },
+        ],
+        topRiskyAssets: [],
+        recentActivities: [],
+        exploitedVulnerabilities: [],
+        complianceOverview: [],
+        remediationTrends: riskTrends.map((point) => ({
+            month: point.date.split(" ")[0] ?? point.date,
+            opened: 0,
+            closed: 0,
+            net: 0,
+        })),
+        assetTypeDistribution: [],
+        degraded: true,
+        lastUpdated: now.toISOString(),
     };
-  });
-
-  return {
-    stats: {
-      totalAssets: 0,
-      criticalAssets: 0,
-      totalVulnerabilities: 0,
-      criticalVulnerabilities: 0,
-      highVulnerabilities: 0,
-      mediumVulnerabilities: 0,
-      lowVulnerabilities: 0,
-      exploitedVulnerabilities: 0,
-      cisaKevCount: 0,
-      openVulnerabilities: 0,
-      threatIndicatorCount: 0,
-      overallRiskScore: 0,
-      complianceScore: 0,
-      fixedThisMonth: 0,
-      meanTimeToRemediate: 0,
-    },
-    riskTrends,
-    severityDistribution: [
-      { severity: "CRITICAL", count: 0, percentage: 0 },
-      { severity: "HIGH", count: 0, percentage: 0 },
-      { severity: "MEDIUM", count: 0, percentage: 0 },
-      { severity: "LOW", count: 0, percentage: 0 },
-    ],
-    topRiskyAssets: [],
-    recentActivities: [],
-    exploitedVulnerabilities: [],
-    complianceOverview: [],
-    remediationTrends: riskTrends.map((point) => ({
-      month: point.date.split(" ")[0] ?? point.date,
-      opened: 0,
-      closed: 0,
-      net: 0,
-    })),
-    assetTypeDistribution: [],
-    degraded: true,
-    lastUpdated: now.toISOString(),
-  };
 }
 
 export async function GET() {
     try {
+        const session = await auth();
+        const isMainOfficer = session?.user?.role === "MAIN_OFFICER";
+
         if (isDatabaseUnavailableInCooldown()) {
             return cachedJsonResponse(buildFallbackDashboardData(), CACHE_STRATEGIES.DASHBOARD);
         }
@@ -110,19 +114,21 @@ export async function GET() {
             riskSnapshots,
             complianceFrameworks
         ] = await Promise.all([
-            prisma.auditLog.findMany({
-                take: 6,
-                orderBy: { createdAt: 'desc' },
-                select: {
-                    id: true,
-                    action: true,
-                    entityType: true,
-                    entityId: true,
-                    createdAt: true,
-                    user: { select: { name: true } }
-                }
-            }),
-            
+            isMainOfficer
+                ? prisma.auditLog.findMany({
+                    take: 6,
+                    orderBy: { createdAt: 'desc' },
+                    select: {
+                        id: true,
+                        action: true,
+                        entityType: true,
+                        entityId: true,
+                        createdAt: true,
+                        user: { select: { name: true } }
+                    }
+                })
+                : Promise.resolve([]),
+
             prisma.asset.findMany({
                 take: 5,
                 orderBy: { vulnerabilities: { _count: 'desc' } },
@@ -134,17 +140,17 @@ export async function GET() {
                     _count: { select: { vulnerabilities: true } }
                 }
             }),
-            
+
             prisma.vulnerability.groupBy({
                 by: ['severity'],
                 _count: { _all: true }
             }),
-            
+
             prisma.asset.groupBy({
                 by: ['type'],
                 _count: { _all: true }
             }),
-            
+
             prisma.riskSnapshot.findMany({
                 take: 6,
                 orderBy: { date: 'desc' },
@@ -156,7 +162,7 @@ export async function GET() {
                     complianceScore: true
                 }
             }),
-            
+
             prisma.complianceFramework.findMany({
                 take: 3,
                 select: {
@@ -217,8 +223,8 @@ export async function GET() {
             severityDistribution: severityDistribution.length > 0 ? severityDistribution.map(s => ({
                 severity: s.severity,
                 count: s._count._all,
-                percentage: Number(stats.total_vulnerabilities) > 0 
-                    ? (s._count._all / Number(stats.total_vulnerabilities)) * 100 
+                percentage: Number(stats.total_vulnerabilities) > 0
+                    ? (s._count._all / Number(stats.total_vulnerabilities)) * 100
                     : 0
             })) : [
                 { severity: 'CRITICAL', count: 0, percentage: 0 },
@@ -260,8 +266,8 @@ export async function GET() {
             assetTypeDistribution: assetTypeDistribution.map(a => ({
                 type: a.type,
                 count: a._count._all,
-                percentage: Number(stats.total_assets) > 0 
-                    ? (a._count._all / Number(stats.total_assets)) * 100 
+                percentage: Number(stats.total_assets) > 0
+                    ? (a._count._all / Number(stats.total_assets)) * 100
                     : 0
             })),
             lastUpdated: new Date().toISOString(),
