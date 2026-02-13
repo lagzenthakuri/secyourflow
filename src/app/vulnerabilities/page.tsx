@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -178,7 +178,7 @@ function getSlaBadge(slaDueAt?: string | Date | null) {
   };
 }
 
-export default function VulnerabilitiesPage() {
+function VulnerabilitiesContent() {
   const [vulns, setVulns] = useState<Vulnerability[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -1017,5 +1017,19 @@ export default function VulnerabilitiesPage() {
         />
       ) : null}
     </DashboardLayout>
+  );
+}
+
+export default function VulnerabilitiesPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <ShieldLoader size="lg" variant="cyber" />
+        </div>
+      </DashboardLayout>
+    }>
+      <VulnerabilitiesContent />
+    </Suspense>
   );
 }
