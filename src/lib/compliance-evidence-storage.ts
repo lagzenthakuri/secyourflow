@@ -16,8 +16,27 @@ const ALLOWED_MIME_TYPES = new Set([
   "application/octet-stream",
 ]);
 
-export function sanitizeFileName(fileName: string) {
-  return fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+/**
+ * Sanitize file name to prevent path traversal and other attacks
+ */
+export function sanitizeFileName(fileName: string): string {
+  // Remove any path components and dangerous characters
+  return path.basename(fileName)
+    .replace(/\.\./g, '') // Remove .. sequences
+    .replace(/[^a-zA-Z0-9._-]/g, "_") // Only allow safe characters
+    .substring(0, 255); // Limit length
+}
+
+/**
+ * Sanitize path component to prevent path traversal
+ */
+function sanitizePathComponent(component: string): string {
+  // Remove any path traversal attempts and dangerous characters
+  return component
+    .replace(/\.\./g, '')
+    .replace(/[\/\\]/g, '')
+    .replace(/[^a-zA-Z0-9_-]/g, '_')
+    .substring(0, 100);
 }
 
 export function assertEvidenceFileAllowed(fileName: string, mimeType: string, sizeBytes: number) {
@@ -38,7 +57,8 @@ export function assertEvidenceFileAllowed(fileName: string, mimeType: string, si
 }
 
 function getEvidenceBaseDir() {
-  return path.join(process.cwd(), "public", "uploads", "compliance-evidence");
+  // Store outside public directory for security
+  return path.join(process.cwd(), "private", "uploads", "compliance-evidence");
 }
 
 function buildTimestampSlug() {
@@ -53,25 +73,42 @@ export async function writeEvidenceFile(options: {
   mimeType: string;
   data: Buffer;
 }) {
+  // Sanitize all path components to prevent path traversal
+  const safeControlId = sanitizePathComponent(options.controlId);
+  const safeEvidenceId = sanitizePathComponent(options.evidenceId);
   const safeName = sanitizeFileName(options.originalFileName || "evidence.bin");
+  
+  // Validate version is a positive integer
+  const safeVersion = Math.max(1, Math.floor(Math.abs(options.version)));
+  
   const relativePath = path
     .join(
       "uploads",
       "compliance-evidence",
-      options.controlId,
-      options.evidenceId,
-      `v${options.version}_${buildTimestampSlug()}_${safeName}`,
+      safeControlId,
+      safeEvidenceId,
+      `v${safeVersion}_${buildTimestampSlug()}_${safeName}`,
     )
     .replace(/\\/g, "/");
 
-  const absolutePath = path.join(process.cwd(), "public", relativePath);
+  // Use private directory instead of public
+  const absolutePath = path.join(process.cwd(), "private", relativePath);
+  
+  // Verify the resolved path is still within the base directory (prevent path traversal)
+  const baseDir = getEvidenceBaseDir();
+  const resolvedPath = path.resolve(absolutePath);
+  const relativeToBase = path.relative(path.resolve(baseDir), resolvedPath);
+  if (relativeToBase.startsWith("..") || path.isAbsolute(relativeToBase)) {
+    throw new Error("Invalid file path - path traversal detected");
+  }
+
   await fs.mkdir(path.dirname(absolutePath), { recursive: true });
   await fs.writeFile(absolutePath, options.data);
 
   const checksum = crypto.createHash("sha256").update(options.data).digest("hex");
 
   return {
-    storagePath: `/${relativePath}`,
+    storagePath: `/${relativePath}`, // This will need authentication to access
     sizeBytes: options.data.byteLength,
     checksum,
     mimeType: options.mimeType,
@@ -100,4 +137,23 @@ export async function writeTextEvidenceFile(options: {
 
 export async function ensureEvidenceStorageExists() {
   await fs.mkdir(getEvidenceBaseDir(), { recursive: true });
+}
+
+/**
+ * Read evidence file with authentication check
+ */
+export async function readEvidenceFile(storagePath: string): Promise<Buffer> {
+  // Remove leading slash and validate path
+  const cleanPath = storagePath.replace(/^\//, '');
+  const absolutePath = path.join(process.cwd(), "private", cleanPath);
+  
+  // Verify the resolved path is still within the base directory
+  const baseDir = getEvidenceBaseDir();
+  const resolvedPath = path.resolve(absolutePath);
+  const relativeToBase = path.relative(path.resolve(baseDir), resolvedPath);
+  if (relativeToBase.startsWith("..") || path.isAbsolute(relativeToBase)) {
+    throw new Error("Invalid file path - access denied");
+  }
+
+  return await fs.readFile(absolutePath);
 }

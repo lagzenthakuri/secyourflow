@@ -1,25 +1,65 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { requireApiAuth } from "@/lib/security/api-auth";
 
 export async function PATCH(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const authResult = await requireApiAuth({
+        allowedRoles: [Role.IT_OFFICER, Role.PENTESTER, Role.MAIN_OFFICER],
+        request,
+    });
+    if ("response" in authResult) {
+        return authResult.response;
+    }
+
     try {
         const { id } = await params;
         const vulnData = await request.json();
+        const orgId = authResult.context.organizationId;
+
+        // Verify vulnerability belongs to user's organization
+        const existingVuln = await prisma.vulnerability.findFirst({
+            where: { id, organizationId: orgId }
+        });
+
+        if (!existingVuln) {
+            return NextResponse.json({ error: "Vulnerability not found" }, { status: 404 });
+        }
+
+        // Only allow specific fields to be updated (prevent mass assignment)
+        const allowedFields = [
+            'title', 'description', 'severity', 'status', 'cvssScore',
+            'cvssVector', 'cweId', 'cisaKev', 'epssScore', 'isExploited',
+            'patchAvailable', 'businessImpact', 'solution', 'dueDate', 'fixedAt', 'exploitMaturity', 'references'
+        ];
+
+        const updateData: Record<string, unknown> = { lastSeen: new Date() };
+        for (const field of allowedFields) {
+            if (field in vulnData) {
+                const value = vulnData[field];
+                // Sanitize string inputs
+                if (typeof value === 'string') {
+                    updateData[field] = value
+                        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                        .replace(/<[^>]+>/g, '')
+                        .trim();
+                } else {
+                    updateData[field] = value;
+                }
+            }
+        }
 
         const updatedVuln = await prisma.vulnerability.update({
             where: { id },
-            data: {
-                ...vulnData,
-                lastSeen: new Date(),
-            },
+            data: updateData,
         });
 
         return NextResponse.json(updatedVuln);
-    } catch (error) {
-        console.error("Update Vulnerability Error:", error);
+    } catch {
+        console.error("Update Vulnerability Error");
         return NextResponse.json(
             { error: "Failed to update vulnerability" },
             { status: 400 }
@@ -31,43 +71,47 @@ export async function DELETE(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    console.log("DELETE request received for vulnerability");
+    const authResult = await requireApiAuth({
+        allowedRoles: [Role.IT_OFFICER, Role.PENTESTER, Role.MAIN_OFFICER],
+        request,
+    });
+    if ("response" in authResult) {
+        return authResult.response;
+    }
+
     try {
         const { id } = await params;
-        console.log(`Target ID for deletion: ${id}`);
 
         if (!id) {
-            console.error("No ID provided in DELETE request");
             return NextResponse.json(
                 { error: "Vulnerability ID is required" },
                 { status: 400 }
             );
         }
 
-        // Verify existence first
-        const existing = await prisma.vulnerability.findUnique({
-            where: { id }
+        const orgId = authResult.context.organizationId;
+
+        // Verify vulnerability belongs to user's organization
+        const existing = await prisma.vulnerability.findFirst({
+            where: { id, organizationId: orgId }
         });
 
         if (!existing) {
-            console.error(`Vulnerability not found: ${id}`);
             return NextResponse.json(
                 { error: "Vulnerability not found" },
                 { status: 404 }
             );
         }
 
-        console.log(`Deleting vulnerability record: ${id}`);
         await prisma.vulnerability.delete({
             where: { id },
         });
 
-        console.log(`Successfully deleted vulnerability: ${id}`);
         return NextResponse.json({ message: "Vulnerability deleted successfully" });
-    } catch (error) {
-        console.error("CRITICAL: Delete Vulnerability Error:", error);
+    } catch {
+        console.error("Delete Vulnerability Error");
         return NextResponse.json(
-            { error: `Server error: ${error instanceof Error ? error.message : "Unknown error"}` },
+            { error: "Failed to delete vulnerability" },
             { status: 500 }
         );
     }

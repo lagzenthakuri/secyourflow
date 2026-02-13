@@ -1,5 +1,6 @@
 import { logEvent } from "@/modules/cve-search/api/log";
 import { getCveSearchService } from "@/modules/cve-search/api/service";
+import { requireApiAuth } from "@/lib/security/api-auth";
 import {
   badRequest,
   internalServerError,
@@ -12,6 +13,11 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 async function handleSearch(request: Request) {
+  const authResult = await requireApiAuth({ request });
+  if ("response" in authResult) {
+    return authResult.response;
+  }
+
   const requestId = crypto.randomUUID();
 
   try {

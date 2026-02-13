@@ -1,5 +1,6 @@
 import { logEvent } from "@/modules/cve-search/api/log";
 import { getCveSearchService } from "@/modules/cve-search/api/service";
+import { requireApiAuth } from "@/lib/security/api-auth";
 import {
   badRequest,
   internalServerError,
@@ -17,6 +18,11 @@ interface RouteContext {
 }
 
 export async function GET(_request: Request, context: RouteContext) {
+  const authResult = await requireApiAuth();
+  if ("response" in authResult) {
+    return authResult.response;
+  }
+
   const requestId = crypto.randomUUID();
 
   try {

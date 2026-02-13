@@ -21,10 +21,11 @@ export async function GET() {
       { status: statusCode }
     );
   } catch (error) {
+    console.error("Health endpoint error", error);
     return NextResponse.json(
       {
         status: "down",
-        error: error instanceof Error ? error.message : String(error),
+        error: "Health check failed",
         timestamp: new Date().toISOString(),
       },
       { status: 503 }

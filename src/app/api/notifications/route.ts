@@ -1,28 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { logActivity } from "@/lib/logger";
-import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
+import { requireApiAuth } from "@/lib/security/api-auth";
 
 export async function GET() {
-    try {
-        const session = await auth();
-        if (!session || !session.user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        if (!isTwoFactorSatisfied(session)) {
-            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
-        }
+    const authResult = await requireApiAuth();
+    if ("response" in authResult) {
+        return authResult.response;
+    }
 
+    try {
         const notifications = await prisma.notification.findMany({
-            where: { userId: session.user.id },
+            where: { userId: authResult.context.userId },
             orderBy: { createdAt: "desc" },
             take: 20,
         });
 
         const unreadCount = await prisma.notification.count({
             where: {
-                userId: session.user.id,
+                userId: authResult.context.userId,
                 isRead: false,
             },
         });
@@ -33,32 +30,51 @@ export async function GET() {
         }));
 
         return NextResponse.json({ notifications: normalizedNotifications, unreadCount });
-    } catch (error) {
-        console.error("Notifications API Error:", error);
+    } catch {
+        console.error("Notifications API Error");
         return NextResponse.json({ error: "Failed to fetch notifications" }, { status: 500 });
     }
 }
 
 export async function POST(request: NextRequest) {
-    try {
-        const session = await auth();
-        if (!session || !session.user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        if (!isTwoFactorSatisfied(session)) {
-            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
-        }
+    const authResult = await requireApiAuth({ request });
+    if ("response" in authResult) {
+        return authResult.response;
+    }
 
+    try {
         const body = await request.json();
         const { title, message, type, link, userId } = body;
+        if (typeof title !== "string" || !title.trim() || typeof message !== "string" || !message.trim()) {
+            return NextResponse.json({ error: "title and message are required" }, { status: 400 });
+        }
 
-        const targetUserId = userId || session.user.id;
+        let targetUserId = authResult.context.userId;
+        if (typeof userId === "string" && userId.trim()) {
+            if (userId !== authResult.context.userId && authResult.context.role !== Role.MAIN_OFFICER) {
+                return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+            }
+            targetUserId = userId;
+        }
+
+        if (targetUserId !== authResult.context.userId) {
+            const targetUser = await prisma.user.findFirst({
+                where: {
+                    id: targetUserId,
+                    organizationId: authResult.context.organizationId,
+                },
+                select: { id: true },
+            });
+            if (!targetUser) {
+                return NextResponse.json({ error: "User not found" }, { status: 404 });
+            }
+        }
 
         const notification = await prisma.notification.create({
             data: {
                 userId: targetUserId,
-                title,
-                message,
+                title: title.trim(),
+                message: message.trim(),
                 type: type || "INFO",
                 link,
             },
@@ -71,27 +87,24 @@ export async function POST(request: NextRequest) {
             null,
             notification,
             `Notification sent to user ${targetUserId}: ${title}`,
-            session.user.id
+            authResult.context.userId
         );
 
         return NextResponse.json(notification);
 
-    } catch (error) {
-        console.error("Create Notification Error:", error);
+    } catch {
+        console.error("Create Notification Error");
         return NextResponse.json({ error: "Failed to create notification" }, { status: 500 });
     }
 }
 
 export async function PATCH(request: NextRequest) {
-    try {
-        const session = await auth();
-        if (!session || !session.user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        if (!isTwoFactorSatisfied(session)) {
-            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
-        }
+    const authResult = await requireApiAuth({ request });
+    if ("response" in authResult) {
+        return authResult.response;
+    }
 
+    try {
         const body = await request.json();
         const { id, isRead, markAllRead } = body as {
             id?: string;
@@ -102,12 +115,12 @@ export async function PATCH(request: NextRequest) {
         if (id) {
             const readState = isRead !== undefined ? Boolean(isRead) : true;
 
-            const existingNotification = await prisma.notification.findFirst({
-                where: {
-                    id,
-                    userId: session.user.id,
-                },
-            });
+                const existingNotification = await prisma.notification.findFirst({
+                    where: {
+                        id,
+                        userId: authResult.context.userId,
+                    },
+                });
 
             if (!existingNotification) {
                 return NextResponse.json({ error: "Notification not found" }, { status: 404 });
@@ -134,7 +147,7 @@ export async function PATCH(request: NextRequest) {
 
         if (markAllRead) {
             const updateResult = await prisma.notification.updateMany({
-                where: { userId: session.user.id, isRead: false },
+                where: { userId: authResult.context.userId, isRead: false },
                 data: { isRead: true },
             });
 
@@ -143,8 +156,8 @@ export async function PATCH(request: NextRequest) {
 
         return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
-    } catch (error) {
-        console.error("Update Notification Error:", error);
+    } catch {
+        console.error("Update Notification Error");
         return NextResponse.json({ error: "Failed to update notification" }, { status: 500 });
     }
 }

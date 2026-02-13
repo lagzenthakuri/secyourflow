@@ -1,12 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { requireApiAuth } from "@/lib/security/api-auth";
 
 export async function GET(request: NextRequest) {
+    const authResult = await requireApiAuth({
+        allowedRoles: [Role.MAIN_OFFICER, Role.IT_OFFICER, Role.PENTESTER],
+    });
+    if ("response" in authResult) {
+        return authResult.response;
+    }
+
     try {
         const { searchParams } = new URL(request.url);
-        const limit = parseInt(searchParams.get("limit") || "10");
+        const requestedLimit = parseInt(searchParams.get("limit") || "10", 10);
+        const limit = Math.min(100, Math.max(1, Number.isFinite(requestedLimit) ? requestedLimit : 10));
 
         const scans = await prisma.scanResult.findMany({
+            where: {
+                organizationId: authResult.context.organizationId,
+            },
             include: {
                 scanner: {
                     select: {
@@ -32,8 +45,8 @@ export async function GET(request: NextRequest) {
         }));
 
         return NextResponse.json(formattedScans);
-    } catch (error) {
-        console.error("Scan Results GET Error:", error);
+    } catch {
+        console.error("Scan Results GET Error");
         return NextResponse.json(
             { error: "Failed to fetch scan results" },
             { status: 500 }

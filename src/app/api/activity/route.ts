@@ -1,27 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
+import { requireApiAuth } from "@/lib/security/api-auth";
 
 export async function GET(request: NextRequest) {
-    try {
-        const session = await auth();
-        if (!session || !session.user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        if (!isTwoFactorSatisfied(session)) {
-            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
-        }
+    const authResult = await requireApiAuth();
+    if ("response" in authResult) {
+        return authResult.response;
+    }
 
+    try {
         const searchParams = request.nextUrl.searchParams;
-        const limit = parseInt(searchParams.get("limit") || "20");
-        const page = parseInt(searchParams.get("page") || "1");
+        const rawLimit = parseInt(searchParams.get("limit") || "20", 10);
+        const limit = Math.min(100, Math.max(1, Number.isFinite(rawLimit) ? rawLimit : 20));
+        const rawPage = parseInt(searchParams.get("page") || "1", 10);
+        const page = Math.max(1, Number.isFinite(rawPage) ? rawPage : 1);
         const entityType = searchParams.get("entityType");
         const userId = searchParams.get("userId");
 
-        const where: Record<string, string> = {};
-        if (entityType) where.entityType = entityType;
-        if (userId) where.userId = userId;
+        if (userId && authResult.context.role !== Role.MAIN_OFFICER && userId !== authResult.context.userId) {
+            return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+        }
+
+        const where = {
+            ...(entityType ? { entityType } : {}),
+            ...(userId ? { userId } : {}),
+            user: {
+                organizationId: authResult.context.organizationId,
+            },
+        };
 
         const [logs, total] = await Promise.all([
             prisma.auditLog.findMany({
@@ -47,8 +54,8 @@ export async function GET(request: NextRequest) {
                 limit
             }
         });
-    } catch (error) {
-        console.error("Activity API Error:", error);
+    } catch {
+        console.error("Activity API Error");
         return NextResponse.json({ error: "Failed to fetch activity logs" }, { status: 500 });
     }
 }

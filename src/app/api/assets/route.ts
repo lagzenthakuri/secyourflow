@@ -1,18 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { AssetType, AssetStatus, Criticality } from "@prisma/client";
+import { AssetType, AssetStatus, Criticality, Environment, Role } from "@prisma/client";
+import { z } from "zod";
+
+import { requireApiAuth } from "@/lib/security/api-auth";
+
+const createAssetSchema = z.object({
+    name: z.string().trim().min(1).max(120),
+    type: z.nativeEnum(AssetType),
+    ipAddress: z.string().trim().max(128).optional().nullable(),
+    hostname: z.string().trim().max(255).optional().nullable(),
+    criticality: z.nativeEnum(Criticality).optional(),
+    status: z.nativeEnum(AssetStatus).optional(),
+    environment: z.nativeEnum(Environment).optional(),
+    owner: z.string().trim().max(120).optional().nullable(),
+    location: z.string().trim().max(120).optional().nullable(),
+    metadata: z.unknown().optional(),
+});
 
 export async function GET(request: NextRequest) {
+    const authResult = await requireApiAuth();
+    if ("response" in authResult) {
+        return authResult.response;
+    }
+    const orgId = authResult.context.organizationId;
+
     const searchParams = request.nextUrl.searchParams;
     const type = searchParams.get("type");
     const status = searchParams.get("status");
     const criticality = searchParams.get("criticality");
     const search = searchParams.get("search");
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20"))); // Max 100 per page
 
     try {
-        const where: Record<string, unknown> = {};
+        const where: Record<string, unknown> = {
+            organizationId: orgId
+        };
 
         if (type) where.type = type as AssetType;
         if (status) where.status = status as AssetStatus;
@@ -40,10 +65,12 @@ export async function GET(request: NextRequest) {
             }),
             prisma.asset.count({ where }),
             prisma.asset.groupBy({
+                where: { organizationId: orgId },
                 by: ['type'],
                 _count: { _all: true }
             }),
             prisma.asset.groupBy({
+                where: { organizationId: orgId },
                 by: ['environment'],
                 _count: { _all: true }
             })
@@ -80,8 +107,8 @@ export async function GET(request: NextRequest) {
             }
         });
 
-    } catch (error) {
-        console.error("Assets API Error:", error);
+    } catch {
+        console.error("Assets API Error");
         return NextResponse.json(
             { error: "Failed to fetch assets" },
             { status: 500 }
@@ -90,27 +117,59 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    const authResult = await requireApiAuth({
+        allowedRoles: [Role.IT_OFFICER, Role.PENTESTER, Role.MAIN_OFFICER],
+        request,
+    });
+    if ("response" in authResult) {
+        return authResult.response;
+    }
+    const orgId = authResult.context.organizationId;
+
     try {
         const body = await request.json();
+        const parsed = createAssetSchema.safeParse(body);
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: "Invalid asset payload", details: parsed.error.flatten() },
+                { status: 400 },
+            );
+        }
 
-        // In a real app, organizationId should come from the session
-        // For now, we'll use a constant or the first org found
-        const org = await prisma.organization.findFirst();
-        if (!org) throw new Error("No organization found");
+        const sanitizedData = {
+            name: sanitizeInput(parsed.data.name) as string,
+            type: parsed.data.type,
+            ipAddress: parsed.data.ipAddress ?? null,
+            hostname: sanitizeInput(parsed.data.hostname) ?? null,
+            criticality: parsed.data.criticality ?? Criticality.MEDIUM,
+            status: parsed.data.status ?? AssetStatus.ACTIVE,
+            environment: parsed.data.environment ?? Environment.PRODUCTION,
+            owner: sanitizeInput(parsed.data.owner) ?? null,
+            location: sanitizeInput(parsed.data.location) ?? null,
+            metadata: parsed.data.metadata as Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined,
+            organizationId: orgId,
+        };
 
         const newAsset = await prisma.asset.create({
-            data: {
-                ...body,
-                organizationId: org.id,
-            },
+            data: sanitizedData,
         });
 
         return NextResponse.json(newAsset, { status: 201 });
-    } catch (error) {
-        console.error("Create Asset Error:", error);
+    } catch {
+        console.error("Create Asset Error");
         return NextResponse.json(
             { error: "Failed to create asset" },
             { status: 400 }
         );
     }
+}
+
+// Helper function to sanitize inputs
+function sanitizeInput(input: unknown): string | undefined {
+    if (typeof input !== 'string') return undefined;
+    // Remove HTML tags and dangerous characters
+    return input
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/<[^>]+>/g, '')
+        .trim();
 }

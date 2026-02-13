@@ -1,30 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { processRiskAssessment } from "@/lib/risk-engine";
-import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
+import { requireApiAuth } from "@/lib/security/api-auth";
 
 export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const session = await auth();
-        if (!session || !session.user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        if (!isTwoFactorSatisfied(session)) {
-            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
+        const authResult = await requireApiAuth({ request });
+        if ("response" in authResult) {
+            return authResult.response;
         }
 
         const { id } = await params;
+        const orgId = authResult.context.organizationId;
 
-        // Find vulnerability and its first associated asset
-        const vulnerability = await prisma.vulnerability.findUnique({
-            where: { id },
+        const vulnerability = await prisma.vulnerability.findFirst({
+            where: {
+                id,
+                organizationId: orgId,
+            },
             include: {
                 assets: {
-                    take: 1
+                    take: 1,
+                    include: {
+                        asset: {
+                            select: {
+                                id: true,
+                                organizationId: true,
+                            },
+                        },
+                    },
                 }
             }
         });
@@ -33,17 +40,16 @@ export async function POST(
             return NextResponse.json({ error: "Vulnerability not found" }, { status: 404 });
         }
 
-        const assetId = vulnerability.assets[0]?.assetId;
+        const linkedAsset = vulnerability.assets[0]?.asset;
+        const assetId = linkedAsset?.id;
 
-        if (!assetId) {
+        if (!assetId || linkedAsset.organizationId !== orgId) {
             return NextResponse.json({
-                error: "No asset associated with this vulnerability. Please associate an asset before analyzing risk."
+                error: "No valid asset associated with this vulnerability. Please associate an in-organization asset before analyzing risk."
             }, { status: 400 });
         }
 
-        // Trigger analysis
-        // Note: In a real app we might want to wait or return a pending state
-        await processRiskAssessment(vulnerability.id, assetId, vulnerability.organizationId);
+        await processRiskAssessment(vulnerability.id, assetId, orgId, authResult.context.userId);
 
         return NextResponse.json({ message: "Analysis triggered and completed" });
 

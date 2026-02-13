@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { assertEvidenceFileAllowed, writeEvidenceFile } from "@/lib/compliance-evidence-storage";
+import { requireApiAuth } from "@/lib/security/api-auth";
 
 export const runtime = "nodejs";
 
@@ -9,12 +11,31 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   void request;
+  const authResult = await requireApiAuth();
+  if ("response" in authResult) {
+    return authResult.response;
+  }
+
   try {
     const { id } = await params;
+    const control = await prisma.complianceControl.findFirst({
+      where: {
+        id,
+        framework: {
+          organizationId: authResult.context.organizationId,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!control) {
+      return NextResponse.json({ error: "Control not found" }, { status: 404 });
+    }
 
     const evidence = await prisma.complianceEvidence.findMany({
       where: {
         controlId: id,
+        organizationId: authResult.context.organizationId,
       },
       include: {
         versions: {
@@ -31,9 +52,9 @@ export async function GET(
     return NextResponse.json({
       data: evidence,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to load evidence" },
+      { error: "Failed to load evidence" },
       { status: 500 },
     );
   }
@@ -43,6 +64,14 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const authResult = await requireApiAuth({
+    allowedRoles: [Role.IT_OFFICER, Role.PENTESTER, Role.MAIN_OFFICER],
+    request,
+  });
+  if ("response" in authResult) {
+    return authResult.response;
+  }
+
   try {
     const { id } = await params;
     const control = await prisma.complianceControl.findUnique({
@@ -59,6 +88,10 @@ export async function POST(
     });
 
     if (!control) {
+      return NextResponse.json({ error: "Control not found" }, { status: 404 });
+    }
+
+    if (control.framework.organizationId !== authResult.context.organizationId) {
       return NextResponse.json({ error: "Control not found" }, { status: 404 });
     }
 
@@ -155,6 +188,7 @@ export async function POST(
           controlId: control.id,
           assetId,
           organizationId: control.framework.organizationId,
+          uploadedById: authResult.context.userId,
           currentVersion: 0,
         },
         select: {
@@ -190,6 +224,7 @@ export async function POST(
           storagePath: filePayload.storagePath,
           checksum: filePayload.checksum,
           notes,
+          uploadedById: authResult.context.userId,
         },
       });
 
@@ -250,9 +285,9 @@ export async function POST(
       sizeBytes: filePayload.sizeBytes,
       checksum: filePayload.checksum,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to upload evidence" },
+      { error: "Failed to upload evidence" },
       { status: 400 },
     );
   }

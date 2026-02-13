@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
 function normalizeOrigin(value: string | null): string | null {
     if (!value) {
@@ -12,7 +12,7 @@ function normalizeOrigin(value: string | null): string | null {
     }
 }
 
-export function hasTrustedOrigin(request: NextRequest): boolean {
+export function hasTrustedOrigin(request: Request): boolean {
     const requestOrigin = normalizeOrigin(request.headers.get("origin"));
     if (!requestOrigin) {
         return false;
@@ -34,5 +34,34 @@ export function hasTrustedOrigin(request: NextRequest): boolean {
         allowedOrigins.add(nextAuthUrl);
     }
 
-    return allowedOrigins.has(requestOrigin);
+  return allowedOrigins.has(requestOrigin);
+}
+
+function isMutatingMethod(method: string): boolean {
+  return method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE";
+}
+
+function hasSessionCookie(request: Request): boolean {
+  const cookieHeader = request.headers.get("cookie") ?? "";
+  return /(__Secure-)?(next-auth|authjs)\.session-token=/.test(cookieHeader);
+}
+
+/**
+ * Enforce same-origin checks only for cookie-authenticated mutating requests.
+ * Token-authorized calls without session cookies are intentionally skipped.
+ */
+export function requireTrustedOriginForSessionMutation(request: Request): NextResponse | null {
+  if (!isMutatingMethod(request.method.toUpperCase())) {
+    return null;
+  }
+
+  if (!hasSessionCookie(request)) {
+    return null;
+  }
+
+  if (hasTrustedOrigin(request)) {
+    return null;
+  }
+
+  return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
 }

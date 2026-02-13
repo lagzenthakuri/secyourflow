@@ -1,14 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { requireApiAuth } from "@/lib/security/api-auth";
 
 export async function GET(
-    request: NextRequest,
+    _request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const authResult = await requireApiAuth();
+    if ("response" in authResult) {
+        return authResult.response;
+    }
+
     try {
         const { id } = await params;
-        const asset = await prisma.asset.findUnique({
-            where: { id },
+        const orgId = authResult.context.organizationId;
+
+        // Authorization check - ensure asset belongs to user's organization
+        const asset = await prisma.asset.findFirst({
+            where: { 
+                id,
+                organizationId: orgId
+            },
             include: {
                 _count: {
                     select: { vulnerabilities: true }
@@ -24,9 +37,9 @@ export async function GET(
             ...asset,
             vulnerabilityCount: asset._count.vulnerabilities
         });
-    } catch (error) {
-        console.error("Get Asset Error:", error);
-        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
+    } catch {
+        console.error("Get Asset Error");
+        return NextResponse.json({ error: 'Failed to fetch asset' }, { status: 500 });
     }
 }
 
@@ -34,20 +47,60 @@ export async function PATCH(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const authResult = await requireApiAuth({
+        allowedRoles: [Role.IT_OFFICER, Role.PENTESTER, Role.MAIN_OFFICER],
+        request,
+    });
+    if ("response" in authResult) {
+        return authResult.response;
+    }
+
     try {
         const { id } = await params;
         const body = await request.json();
+        const orgId = authResult.context.organizationId;
+
+        // Verify asset belongs to user's organization
+        const existingAsset = await prisma.asset.findFirst({
+            where: { id, organizationId: orgId }
+        });
+
+        if (!existingAsset) {
+            return NextResponse.json({ error: "Asset not found" }, { status: 404 });
+        }
+
+        // Only allow specific fields to be updated (prevent mass assignment)
+        const allowedFields = [
+            'name', 'type', 'ipAddress', 'hostname',
+            'criticality', 'status', 'environment', 'owner', 'location', 'metadata'
+        ];
+
+        const updateData: Record<string, unknown> = {};
+        for (const field of allowedFields) {
+            if (field in body) {
+                const value = body[field];
+                // Sanitize string inputs
+                if (typeof value === 'string') {
+                    updateData[field] = value
+                        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                        .replace(/<[^>]+>/g, '')
+                        .trim();
+                } else {
+                    updateData[field] = value;
+                }
+            }
+        }
 
         // Update the asset
         const updatedAsset = await prisma.asset.update({
             where: { id },
-            data: body,
+            data: updateData,
         });
 
         return NextResponse.json(updatedAsset);
-    } catch (error) {
-        console.error("Update Asset Error:", error);
-        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 400 });
+    } catch {
+        console.error("Update Asset Error");
+        return NextResponse.json({ error: 'Failed to update asset' }, { status: 400 });
     }
 }
 
@@ -55,8 +108,26 @@ export async function DELETE(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const authResult = await requireApiAuth({
+        allowedRoles: [Role.IT_OFFICER, Role.PENTESTER, Role.MAIN_OFFICER],
+        request,
+    });
+    if ("response" in authResult) {
+        return authResult.response;
+    }
+
     try {
         const { id } = await params;
+        const orgId = authResult.context.organizationId;
+
+        // Verify asset belongs to user's organization
+        const existingAsset = await prisma.asset.findFirst({
+            where: { id, organizationId: orgId }
+        });
+
+        if (!existingAsset) {
+            return NextResponse.json({ error: "Asset not found" }, { status: 404 });
+        }
 
         // 1. Find vulnerabilities currently linked to this asset
         const linkedVulns = await prisma.assetVulnerability.findMany({
@@ -84,7 +155,6 @@ export async function DELETE(
             const orphanIds = vulnIds.filter(vid => !stillLinkedIds.has(vid));
 
             if (orphanIds.length > 0) {
-                console.log(`Cleaning up ${orphanIds.length} orphaned vulnerabilities`);
                 await prisma.vulnerability.deleteMany({
                     where: { id: { in: orphanIds } }
                 });
@@ -92,8 +162,8 @@ export async function DELETE(
         }
 
         return NextResponse.json({ message: "Asset and associated data deleted successfully" });
-    } catch (error) {
-        console.error("Delete Asset Error:", error);
-        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 400 });
+    } catch {
+        console.error("Delete Asset Error");
+        return NextResponse.json({ error: 'Failed to delete asset' }, { status: 400 });
     }
 }

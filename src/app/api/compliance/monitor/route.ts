@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { runContinuousComplianceAudit } from "@/lib/evidence-engine";
 import { auth } from "@/lib/auth";
+import { requireTrustedOriginForSessionMutation } from "@/lib/security/csrf";
 import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
 
 function isAdminTokenAuthorized(request: Request): boolean {
@@ -14,6 +15,11 @@ function isAdminTokenAuthorized(request: Request): boolean {
 }
 
 export async function POST(request: Request) {
+  const originGuardResponse = requireTrustedOriginForSessionMutation(request);
+  if (originGuardResponse) {
+    return originGuardResponse;
+  }
+
   if (!isAdminTokenAuthorized(request)) {
     const session = await auth();
     if (!session?.user?.id) {

@@ -1,12 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Role } from "@prisma/client";
+import { z } from "zod";
+
 import { prisma } from "@/lib/prisma";
+import { requireApiAuth } from "@/lib/security/api-auth";
+
+const createFrameworkSchema = z.object({
+    name: z.string().trim().min(1).max(160),
+    version: z.string().trim().max(80).optional(),
+    description: z.string().trim().max(2000).optional(),
+    isActive: z.boolean().optional(),
+});
 
 export async function GET(request: NextRequest) {
+    const authResult = await requireApiAuth();
+    if ("response" in authResult) {
+        return authResult.response;
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const frameworkId = searchParams.get("frameworkId");
 
     try {
-        const where: Record<string, string> = {};
+        const where: Record<string, string> = { organizationId: authResult.context.organizationId };
         if (frameworkId) where.id = frameworkId;
 
         const frameworks = await prisma.complianceFramework.findMany({
@@ -69,8 +85,8 @@ export async function GET(request: NextRequest) {
                 averageCompliance: avgCompliance,
             },
         });
-    } catch (error) {
-        console.error("Compliance API Error:", error);
+    } catch {
+        console.error("Compliance API Error");
         return NextResponse.json(
             { error: "Failed to fetch framework" },
             { status: 500 }
@@ -80,15 +96,25 @@ export async function GET(request: NextRequest) {
 
 
 export async function POST(request: NextRequest) {
+    const authResult = await requireApiAuth({
+        allowedRoles: [Role.IT_OFFICER, Role.PENTESTER, Role.MAIN_OFFICER],
+        request,
+    });
+    if ("response" in authResult) {
+        return authResult.response;
+    }
+
     try {
         const body = await request.json();
-        const org = await prisma.organization.findFirst();
-        if (!org) throw new Error("No organization found");
+        const parsed = createFrameworkSchema.safeParse(body);
+        if (!parsed.success) {
+            return NextResponse.json({ error: "Invalid framework payload" }, { status: 400 });
+        }
 
         const newFramework = await prisma.complianceFramework.create({
             data: {
-                ...body,
-                organizationId: org.id,
+                ...parsed.data,
+                organizationId: authResult.context.organizationId,
             },
         });
 

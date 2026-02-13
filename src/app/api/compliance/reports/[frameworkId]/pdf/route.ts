@@ -1,16 +1,35 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import {
   buildComplianceFrameworkReport,
   generateComplianceReportPdf,
 } from "@/lib/compliance-reporting";
+import { requireApiAuth } from "@/lib/security/api-auth";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ frameworkId: string }> },
 ) {
   void request;
+  const authResult = await requireApiAuth();
+  if ("response" in authResult) {
+    return authResult.response;
+  }
+
   try {
     const { frameworkId } = await params;
+    const framework = await prisma.complianceFramework.findFirst({
+      where: {
+        id: frameworkId,
+        organizationId: authResult.context.organizationId,
+      },
+      select: { id: true },
+    });
+
+    if (!framework) {
+      return NextResponse.json({ error: "Framework not found" }, { status: 404 });
+    }
+
     const report = await buildComplianceFrameworkReport(frameworkId);
     const pdf = generateComplianceReportPdf(report);
 
@@ -24,9 +43,9 @@ export async function GET(
         "Content-Disposition": `attachment; filename=\"${fileNameSafeFramework}_Compliance_${datePart}.pdf\"`,
       },
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to generate compliance PDF" },
+      { error: "Failed to generate compliance PDF" },
       { status: 500 },
     );
   }

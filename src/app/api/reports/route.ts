@@ -1,21 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { generateAIReportSummary } from "@/lib/report-engine";
 import { buildComplianceFrameworkReport } from "@/lib/compliance-reporting";
+import { requireApiAuth } from "@/lib/security/api-auth";
+
+const createReportSchema = z.object({
+    name: z.string().trim().min(1).max(160).optional(),
+    type: z.string().trim().min(1),
+    description: z.string().trim().max(4000).optional(),
+    format: z.string().trim().max(24).optional(),
+    frameworkId: z.string().trim().optional(),
+});
 
 export async function GET() {
-    try {
-        const org = await prisma.organization.findFirst();
-        if (!org) throw new Error("No organization found");
+    const authResult = await requireApiAuth();
+    if ("response" in authResult) {
+        return authResult.response;
+    }
 
+    try {
         const reports = await prisma.report.findMany({
-            where: { organizationId: org.id },
+            where: { organizationId: authResult.context.organizationId },
             orderBy: { createdAt: 'desc' },
         });
 
         return NextResponse.json(reports);
-    } catch (error) {
-        console.error("Reports GET Error:", error);
+    } catch {
+        console.error("Reports GET Error");
         return NextResponse.json(
             { error: "Failed to fetch reports" },
             { status: 500 }
@@ -24,27 +36,32 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+    const authResult = await requireApiAuth({ request });
+    if ("response" in authResult) {
+        return authResult.response;
+    }
+
     try {
         const body = await request.json();
-        const org = await prisma.organization.findFirst();
-        if (!org) throw new Error("No organization found");
+        const parsed = createReportSchema.safeParse(body);
+        if (!parsed.success) {
+            return NextResponse.json({ error: "Invalid report payload" }, { status: 400 });
+        }
 
-        // Use first user as reporter for now (in real app, use auth session)
-        const user = await prisma.user.findFirst({
-            where: { organizationId: org.id }
-        });
-        if (!user) throw new Error("No user found");
+        const orgId = authResult.context.organizationId;
+        const userId = authResult.context.userId;
+        const reportType = parsed.data.type;
 
-        if (body.type === "compliance") {
-            const framework = body.frameworkId
+        if (reportType === "compliance") {
+            const framework = parsed.data.frameworkId
                 ? await prisma.complianceFramework.findFirst({
                     where: {
-                        id: body.frameworkId,
-                        organizationId: org.id,
+                        id: parsed.data.frameworkId,
+                        organizationId: orgId,
                     },
                 })
                 : await prisma.complianceFramework.findFirst({
-                    where: { organizationId: org.id },
+                    where: { organizationId: orgId },
                     orderBy: { updatedAt: "desc" }
                 });
 
@@ -59,31 +76,32 @@ export async function POST(request: NextRequest) {
             const completedReport = await prisma.report.create({
                 data: {
                     name: `${framework.name} Compliance Audit Report`,
-                    type: body.type,
+                    type: reportType,
                     description: frameworkReport.executiveSummary.substring(0, 1000),
-                    format: body.format || "PDF",
+                    format: parsed.data.format || "PDF",
                     status: "COMPLETED",
                     size: `${frameworkReport.summary.totalControls} controls`,
                     url: `/api/compliance/reports/${framework.id}/pdf`,
-                    organizationId: org.id,
-                    userId: user.id,
+                    organizationId: orgId,
+                    userId,
                 }
             });
 
             return NextResponse.json(completedReport, { status: 201 });
         }
 
+        const defaultName = parsed.data.name ?? `${reportType.toUpperCase()} Report ${new Date().toISOString().slice(0, 10)}`;
         const newReport = await prisma.report.create({
             data: {
-                name: body.name,
-                type: body.type,
-                description: body.description || "Generating AI Summary...",
-                format: body.format || "PDF",
+                name: defaultName,
+                type: reportType,
+                description: parsed.data.description || "Generating AI summary...",
+                format: parsed.data.format || "PDF",
                 status: "PENDING",
-                size: "Calculating...",
+                size: "Pending",
                 url: "#",
-                organizationId: org.id,
-                userId: user.id,
+                organizationId: orgId,
+                userId,
             },
         });
 
@@ -93,14 +111,14 @@ export async function POST(request: NextRequest) {
                 where: { id: newReport.id },
                 data: {
                     status: "COMPLETED",
-                    size: (Math.random() * 5 + 1).toFixed(1) + " MB"
+                    size: "Generated"
                 }
             }).catch(console.error);
         });
 
         return NextResponse.json(newReport, { status: 201 });
-    } catch (error) {
-        console.error("Reports POST Error:", error);
+    } catch {
+        console.error("Reports POST Error");
         return NextResponse.json(
             { error: "Failed to generate report" },
             { status: 400 }

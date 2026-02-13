@@ -279,15 +279,33 @@ export async function processRiskAssessment(
         // 1. Fetch Asset + Context
         const asset = await prisma.asset.findUnique({
             where: { id: assetId },
-            include: { complianceControls: true }
+            include: { complianceControls: true },
         });
 
         const vulnerability = await prisma.vulnerability.findUnique({
-            where: { id: vulnerabilityId }
+            where: { id: vulnerabilityId },
         });
 
         if (!asset || !vulnerability) {
             console.error("[RiskEngine] Asset or Vulnerability not found");
+            return;
+        }
+
+        if (
+            asset.organizationId !== organizationId ||
+            vulnerability.organizationId !== organizationId ||
+            asset.organizationId !== vulnerability.organizationId
+        ) {
+            console.error(
+                "[RiskEngine] Organization mismatch for risk assessment request",
+                {
+                    vulnerabilityId,
+                    assetId,
+                    requestedOrganizationId: organizationId,
+                    assetOrganizationId: asset.organizationId,
+                    vulnerabilityOrganizationId: vulnerability.organizationId,
+                },
+            );
             return;
         }
 

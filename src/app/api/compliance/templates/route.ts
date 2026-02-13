@@ -1,15 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { Role } from "@prisma/client";
+
 import { listComplianceTemplates } from "@/lib/compliance-template-library";
 import { assertTemplateId, importComplianceTemplate } from "@/lib/compliance-template-importer";
+import { requireApiAuth } from "@/lib/security/api-auth";
 
 export async function GET() {
+  const authResult = await requireApiAuth();
+  if ("response" in authResult) {
+    return authResult.response;
+  }
+
   return NextResponse.json({
     data: listComplianceTemplates(),
   });
 }
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireApiAuth({
+    allowedRoles: [Role.IT_OFFICER, Role.MAIN_OFFICER],
+    request,
+  });
+  if ("response" in authResult) {
+    return authResult.response;
+  }
+
   try {
     const body = (await request.json()) as {
       templateId?: string;
@@ -24,32 +39,16 @@ export async function POST(request: NextRequest) {
 
     const templateId = assertTemplateId(body.templateId);
 
-    const organization = await prisma.organization.findFirst({
-      orderBy: {
-        createdAt: "asc",
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    if (!organization) {
-      return NextResponse.json({ error: "No organization found" }, { status: 400 });
-    }
-
     const result = await importComplianceTemplate({
       templateId,
-      organizationId: organization.id,
+      organizationId: authResult.context.organizationId,
       overwriteExisting: body.overwriteExisting,
       frameworkName: body.frameworkName,
       frameworkDescription: body.frameworkDescription,
     });
 
     return NextResponse.json(result, { status: 201 });
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to import template" },
-      { status: 400 },
-    );
+  } catch {
+    return NextResponse.json({ error: "Failed to import template" }, { status: 400 });
   }
 }

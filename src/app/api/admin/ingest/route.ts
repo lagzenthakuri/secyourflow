@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { IngestionOrchestrator } from "@/modules/cve-ingestion/orchestrator";
 import { logger } from "@/modules/cve-ingestion/utils/logger";
 import { auth } from "@/lib/auth";
+import { requireTrustedOriginForSessionMutation } from "@/lib/security/csrf";
 import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,11 @@ function isAuthorizedByAdminToken(request: Request): boolean {
 }
 
 export async function POST(request: Request) {
+  const originGuardResponse = requireTrustedOriginForSessionMutation(request);
+  if (originGuardResponse) {
+    return originGuardResponse;
+  }
+
   const tokenAuthorized = isAuthorizedByAdminToken(request);
   if (!tokenAuthorized) {
     const cookieHeader = request.headers.get("cookie") ?? "";
@@ -72,7 +78,6 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error: "Ingestion failed",
-        message: error instanceof Error ? error.message : String(error),
       },
       { status: 500 }
     );

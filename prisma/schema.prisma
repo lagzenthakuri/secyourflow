@@ -95,6 +95,9 @@ model Organization {
   policies             Policy[]
   reports              Report[]
   riskEntries          RiskRegister[]
+  riskSnapshots        RiskSnapshot[]
+  scannerConfigs       ScannerConfig[]
+  scanResults          ScanResult[]
   settings             Setting?
   users                User[]
   vulnerabilities      Vulnerability[]
@@ -651,12 +654,17 @@ model ScannerConfig {
   isActive     Boolean      @default(true)
   lastSync     DateTime?
   syncInterval Int          @default(86400)
+  organizationId String
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   scanResults  ScanResult[]
 
   @@index([type])
   @@index([isActive])
+  @@index([organizationId])
+  @@index([organizationId, isActive])
+  @@index([organizationId, type])
 }
 
 model ScanResult {
@@ -669,16 +677,22 @@ model ScanResult {
   totalVulns Int           @default(0)
   rawData    Json?
   scannerId  String
+  organizationId String
   createdAt  DateTime      @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   scanner    ScannerConfig @relation(fields: [scannerId], references: [id], onDelete: Cascade)
 
   @@index([scanId])
   @@index([scannerId])
   @@index([status])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, createdAt(sort: Desc)])
 }
 
 model RiskSnapshot {
   id               String   @id @default(cuid())
+  organizationId   String
   date             DateTime @default(now())
   totalAssets      Int
   criticalAssets   Int
@@ -692,8 +706,11 @@ model RiskSnapshot {
   overallRiskScore Float
   complianceScore  Float?
   metadata         Json?
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([date])
+  @@index([organizationId])
+  @@index([organizationId, date(sort: Desc)])
 }
 
 model Setting {

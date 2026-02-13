@@ -1,12 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Role, Severity, VulnStatus, VulnSource } from "@prisma/client";
+import { z } from "zod";
+
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { Severity, VulnStatus, VulnSource } from "@prisma/client";
 import { logActivity } from "@/lib/logger";
 import { processRiskAssessment } from "@/lib/risk-engine";
-import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
+import { requireApiAuth } from "@/lib/security/api-auth";
+
+const createVulnerabilitySchema = z.object({
+    assetId: z.string().trim().optional(),
+    cveId: z.string().trim().max(64).optional(),
+    title: z.string().trim().min(1).max(300),
+    description: z.string().trim().max(6000).optional(),
+    severity: z.nativeEnum(Severity),
+    cvssScore: z.number().min(0).max(10).optional(),
+    cvssVector: z.string().trim().max(256).optional(),
+    epssScore: z.number().min(0).max(1).optional(),
+    cweId: z.string().trim().max(64).optional(),
+    cisaKev: z.boolean().optional(),
+    isExploited: z.boolean().optional(),
+    patchAvailable: z.boolean().optional(),
+    businessImpact: z.string().trim().max(2000).optional(),
+    source: z.nativeEnum(VulnSource).optional(),
+    status: z.nativeEnum(VulnStatus).optional(),
+    references: z.array(z.string().trim().max(500)).optional(),
+});
 
 export async function GET(request: NextRequest) {
+    const authResult = await requireApiAuth();
+    if ("response" in authResult) {
+        return authResult.response;
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const severity = searchParams.get("severity");
     const status = searchParams.get("status");
@@ -14,22 +39,14 @@ export async function GET(request: NextRequest) {
     const cisaKev = searchParams.get("kev");
     const source = searchParams.get("source");
     const search = searchParams.get("search");
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
+    const rawPage = parseInt(searchParams.get("page") || "1", 10);
+    const page = Math.max(1, Number.isFinite(rawPage) ? rawPage : 1);
+    const rawLimit = parseInt(searchParams.get("limit") || "20", 10);
+    const limit = Math.min(100, Math.max(1, Number.isFinite(rawLimit) ? rawLimit : 20));
 
     try {
-        const session = await auth();
-        if (!session?.user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        if (!isTwoFactorSatisfied(session)) {
-            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
-        }
-
-        const org = await prisma.organization.findFirst();
-        if (!org) throw new Error("No organization found");
-
-        const where: Record<string, unknown> = { organizationId: org.id };
+        const orgId = authResult.context.organizationId;
+        const where: Record<string, unknown> = { organizationId: orgId };
 
         if (severity) where.severity = severity as Severity;
         if (status) where.status = status as VulnStatus;
@@ -64,12 +81,12 @@ export async function GET(request: NextRequest) {
             prisma.vulnerability.count({ where }),
             prisma.vulnerability.groupBy({
                 by: ['severity'],
-                where: { organizationId: org.id },
+                where: { organizationId: orgId },
                 _count: { _all: true }
             }),
             prisma.vulnerability.groupBy({
                 by: ['source'],
-                where: { organizationId: org.id },
+                where: { organizationId: orgId },
                 _count: { _all: true }
             })
         ]);
@@ -117,8 +134,8 @@ export async function GET(request: NextRequest) {
                 }
             }
         });
-    } catch (error) {
-        console.error("Vulnerabilities API Error:", error);
+    } catch {
+        console.error("Vulnerabilities API Error");
         return NextResponse.json(
             { error: "Failed to fetch vulnerabilities" },
             { status: 500 }
@@ -127,26 +144,41 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    const authResult = await requireApiAuth({
+        allowedRoles: [Role.IT_OFFICER, Role.PENTESTER, Role.MAIN_OFFICER],
+        request,
+    });
+    if ("response" in authResult) {
+        return authResult.response;
+    }
+
     try {
-        const session = await auth();
-        if (!session?.user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        const parsed = createVulnerabilitySchema.safeParse(await request.json());
+        if (!parsed.success) {
+            return NextResponse.json({ error: "Invalid vulnerability payload" }, { status: 400 });
         }
-        if (!isTwoFactorSatisfied(session)) {
-            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
+        const { assetId, ...vulnData } = parsed.data;
+        const orgId = authResult.context.organizationId;
+        const userId = authResult.context.userId;
+
+        if (assetId) {
+            const asset = await prisma.asset.findFirst({
+                where: {
+                    id: assetId,
+                    organizationId: orgId,
+                },
+                select: { id: true },
+            });
+
+            if (!asset) {
+                return NextResponse.json({ error: "Asset not found" }, { status: 404 });
+            }
         }
-
-        const { assetId, ...vulnData } = await request.json();
-
-        const org = await prisma.organization.findFirst();
-        if (!org) throw new Error("No organization found");
-
-        const userId = session.user.id;
 
         const newVuln = await prisma.vulnerability.create({
             data: {
                 ...vulnData,
-                organizationId: org.id,
+                organizationId: orgId,
                 source: vulnData.source || "MANUAL",
                 status: vulnData.status || "OPEN",
                 firstDetected: new Date(),
@@ -181,7 +213,7 @@ export async function POST(request: NextRequest) {
             const securityTeam = await prisma.user.findMany({
                 where: {
                     role: { in: ['IT_OFFICER', 'MAIN_OFFICER', 'ANALYST'] },
-                    organizationId: org.id
+                    organizationId: orgId
                 },
                 select: { id: true }
             });
@@ -216,14 +248,14 @@ export async function POST(request: NextRequest) {
         // We run this asynchronously (fire and forget for API response speed, but awaited here since we want to be sure it starts)
         // In production, this would go to a job queue.
         if (assetId) {
-            processRiskAssessment(newVuln.id, assetId, org.id, userId).catch(err =>
+            processRiskAssessment(newVuln.id, assetId, orgId, userId).catch(err =>
                 console.error("Background Risk Assessment Validation Failed", err)
             );
         }
 
         return NextResponse.json(newVuln, { status: 201 });
-    } catch (error) {
-        console.error("Create Vulnerability Error:", error);
+    } catch {
+        console.error("Create Vulnerability Error");
         return NextResponse.json(
             { error: "Failed to create vulnerability" },
             { status: 400 }

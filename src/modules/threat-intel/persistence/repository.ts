@@ -34,53 +34,12 @@ export class ThreatIntelRepository {
       select: { organizationId: true },
     });
 
-    if (!user) {
-      return null;
-    }
-
-    if (user.organizationId) {
-      return user.organizationId;
-    }
-
-    const firstOrg = await this.db.organization.findFirst({
-      orderBy: { createdAt: "asc" },
-      select: { id: true },
-    });
-
-    if (firstOrg) {
-      await this.db.user.update({
-        where: { id: userId },
-        data: { organizationId: firstOrg.id },
-      });
-
-      return firstOrg.id;
-    }
-
-    const createdOrg = await this.db.organization.create({
-      data: { name: "My Organization" },
-      select: { id: true },
-    });
-
-    await this.db.user.update({
-      where: { id: userId },
-      data: { organizationId: createdOrg.id },
-    });
-
-    return createdOrg.id;
+    return user?.organizationId ?? null;
   }
 
-  async seedAndReturnDefaultOrganization(): Promise<{ id: string }> {
-    const existing = await this.db.organization.findFirst({
-      orderBy: { createdAt: "asc" },
-      select: { id: true },
-    });
-
-    if (existing) {
-      return existing;
-    }
-
-    return this.db.organization.create({
-      data: { name: "My Organization" },
+  async getOrganizationById(organizationId: string): Promise<{ id: string } | null> {
+    return this.db.organization.findUnique({
+      where: { id: organizationId },
       select: { id: true },
     });
   }

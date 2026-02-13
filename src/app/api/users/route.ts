@@ -1,28 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Role } from "@prisma/client";
+
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { logActivity } from "@/lib/logger";
-import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
+import { requireApiAuth } from "@/lib/security/api-auth";
 
 export async function GET() {
+    const authResult = await requireApiAuth({
+        allowedRoles: [Role.MAIN_OFFICER],
+    });
+    if ("response" in authResult) {
+        return authResult.response;
+    }
+
     try {
-        const session = await auth();
-        if (!session || !session.user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        if (session.user.role !== "MAIN_OFFICER") {
-            return NextResponse.json({ error: "MAIN-OFFICER role required" }, { status: 403 });
-        }
-        if (!isTwoFactorSatisfied(session)) {
-            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
-        }
-
-        // Ideally, we'd filter by organizationId if multi-tenant
-        const org = await prisma.organization.findFirst();
-
         const users = await prisma.user.findMany({
-            where: org ? { organizationId: org.id } : {},
-            orderBy: { createdAt: 'desc' },
+            where: { organizationId: authResult.context.organizationId },
+            orderBy: { createdAt: "desc" },
             select: {
                 id: true,
                 name: true,
@@ -30,56 +24,80 @@ export async function GET() {
                 role: true,
                 lastLogin: true,
                 createdAt: true,
-            }
+            },
         });
 
-        const formattedUsers = users.map(user => ({
+        const formattedUsers = users.map((user) => ({
             id: user.id,
             name: user.name || "Unknown User",
             email: user.email,
             role: user.role,
-            department: "Security", // Department isn't in schema yet, fallback
+            department: "Security",
             lastActive: user.lastLogin ? getTimeAgo(new Date(user.lastLogin)) : "Never",
-            status: user.lastLogin && (Date.now() - new Date(user.lastLogin).getTime() < 5 * 60 * 1000) ? "online" : "offline"
+            status:
+                user.lastLogin && Date.now() - new Date(user.lastLogin).getTime() < 5 * 60 * 1000
+                    ? "online"
+                    : "offline",
         }));
 
         return NextResponse.json(formattedUsers);
-    } catch (error) {
-        console.error("Users API Error:", error);
+    } catch {
+        console.error("Users API Error");
         return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
     }
 }
 
 export async function PUT(request: NextRequest) {
-    try {
-        const session = await auth();
-        // Check if user is authenticated and is MAIN_OFFICER.
-        if (!session || !session.user || session.user.role !== 'MAIN_OFFICER') {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        if (!isTwoFactorSatisfied(session)) {
-            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
-        }
+    const authResult = await requireApiAuth({
+        allowedRoles: [Role.MAIN_OFFICER],
+        request,
+    });
+    if ("response" in authResult) {
+        return authResult.response;
+    }
 
-        const body = await request.json();
+    try {
+        const body = (await request.json()) as { userId?: string; role?: Role };
         const { userId, role } = body;
 
         if (!userId || !role) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        const validRoles = new Set(["ANALYST", "IT_OFFICER", "PENTESTER", "MAIN_OFFICER"]);
-        if (!validRoles.has(role)) {
+        if (!Object.values(Role).includes(role)) {
             return NextResponse.json({ error: "Invalid role value" }, { status: 400 });
         }
 
-        const currentUser = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { role: true, email: true }
+        const currentUser = await prisma.user.findFirst({
+            where: {
+                id: userId,
+                organizationId: authResult.context.organizationId,
+            },
+            select: { id: true, role: true, email: true },
         });
 
+        if (!currentUser) {
+            return NextResponse.json({ error: "User not found" }, { status: 404 });
+        }
+
+        if (currentUser.role === Role.MAIN_OFFICER && role !== Role.MAIN_OFFICER) {
+            const mainOfficerCount = await prisma.user.count({
+                where: {
+                    organizationId: authResult.context.organizationId,
+                    role: Role.MAIN_OFFICER,
+                },
+            });
+
+            if (mainOfficerCount <= 1) {
+                return NextResponse.json(
+                    { error: "At least one MAIN_OFFICER must remain in the organization" },
+                    { status: 400 },
+                );
+            }
+        }
+
         const updatedUser = await prisma.user.update({
-            where: { id: userId },
+            where: { id: currentUser.id },
             data: { role },
         });
 
@@ -87,16 +105,15 @@ export async function PUT(request: NextRequest) {
             "Role updated",
             "user",
             updatedUser.email,
-            currentUser?.role ? { role: currentUser.role } : null,
+            { role: currentUser.role },
             { role },
-            `Role changed from ${currentUser?.role} to ${role} by ${session.user.name}`,
-            session.user.id
+            `Role changed from ${currentUser.role} to ${role}`,
+            authResult.context.userId,
         );
 
         return NextResponse.json(updatedUser);
-
-    } catch (error) {
-        console.error("Update User Error:", error);
+    } catch {
+        console.error("Update User Error");
         return NextResponse.json({ error: "Failed to update user" }, { status: 500 });
     }
 }

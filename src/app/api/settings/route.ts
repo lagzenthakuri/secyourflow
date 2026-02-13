@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Setting } from "@prisma/client";
+import { Role, type Setting } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { logActivity } from "@/lib/logger";
-import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
+import { requireApiAuth } from "@/lib/security/api-auth";
 
 const PASSWORD_POLICIES = new Set(["STRONG", "MEDIUM", "BASIC"]);
 
@@ -15,17 +14,14 @@ const DEFAULT_SETTING_VALUES = {
 };
 
 export async function GET() {
+    const authResult = await requireApiAuth();
+    if ("response" in authResult) {
+        return authResult.response;
+    }
+
     try {
-        const session = await auth();
-        if (!session?.user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
-        if (!isTwoFactorSatisfied(session)) {
-            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
-        }
-
-        const org = await prisma.organization.findFirst({
+        const org = await prisma.organization.findUnique({
+            where: { id: authResult.context.organizationId },
             include: { settings: true }
         });
         if (!org) throw new Error("No organization found");
@@ -276,15 +272,15 @@ function buildSettingsUpdateData(
 }
 
 export async function POST(request: NextRequest) {
-    try {
-        const session = await auth();
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        if (!isTwoFactorSatisfied(session)) {
-            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
-        }
+    const authResult = await requireApiAuth({ request });
+    if ("response" in authResult) {
+        return authResult.response;
+    }
 
+    try {
         const body = parseRequestBody(await request.json());
-        const org = await prisma.organization.findFirst({
+        const org = await prisma.organization.findUnique({
+            where: { id: authResult.context.organizationId },
             include: { settings: true },
         });
         if (!org) throw new Error("No organization found");
@@ -308,7 +304,7 @@ export async function POST(request: NextRequest) {
         }
 
         // RBAC: MAIN_OFFICER required for high-risk settings.
-        const isMainOfficer = session.user.role === 'MAIN_OFFICER';
+        const isMainOfficer = authResult.context.role === Role.MAIN_OFFICER;
         const wantsOrganizationNameChange =
             requestedOrganizationName !== undefined && requestedOrganizationName !== org.name;
         const wantsDomainChange =
@@ -367,8 +363,8 @@ export async function POST(request: NextRequest) {
             updatedSettings.id,
             null,
             null,
-            `Settings updated by ${session.user.name}`,
-            session.user.id
+            "Settings updated",
+            authResult.context.userId
         );
 
         return NextResponse.json(updatedSettings);
