@@ -100,13 +100,13 @@ export function AssetActions({
                                 }}
                                 className="w-full flex items-center gap-3 px-3 py-3 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] rounded-lg transition-all duration-300 ease-in-out text-left"
                             >
-                                <Edit2 size={14} className="text-blue-600 dark:text-blue-400" />
+                                <Edit2 size={14} className="text-intent-accent" />
                                 Edit Asset
                             </button>
                             <button
                                 type="button"
                                 onClick={handleDeleteClick}
-                                className="w-full flex items-center gap-3 px-3 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-500/10 rounded-lg transition-all duration-300 ease-in-out text-left"
+                                className="w-full flex items-center gap-3 px-3 py-3 text-sm font-medium text-intent-danger hover:bg-red-500/10 rounded-lg transition-all duration-300 ease-in-out text-left"
                             >
                                 <Trash2 size={14} />
                                 Delete Asset

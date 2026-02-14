@@ -90,7 +90,7 @@ export default function Contact() {
               height={40}
             />
             <span className="text-xs font-semibold tracking-[0.25em] text-[var(--text-primary)] sm:text-sm">
-              SECYOUR<span className="text-sky-600 dark:text-sky-300">FLOW</span>
+              SECYOUR<span className="text-intent-accent">FLOW</span>
             </span>
           </Link>
 
@@ -107,7 +107,7 @@ export default function Contact() {
             <Link href="/#outcomes" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
               Outcomes
             </Link>
-            <Link href="/contact" className="text-sm text-sky-600 dark:text-sky-300 transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
+            <Link href="/contact" className="text-sm text-intent-accent transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
               Contact
             </Link>
           </div>
@@ -133,7 +133,7 @@ export default function Contact() {
             <div className="space-y-12">
               <Link
                 href="/"
-                className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors group"
+                className="inline-flex items-center gap-2 text-sm text-intent-accent hover:text-intent-accent-strong transition-colors group"
               >
                 <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
                 BACK TO HOME
@@ -141,7 +141,7 @@ export default function Contact() {
 
               <div>
                 <h1 className="text-5xl lg:text-6xl font-bold text-[var(--text-primary)] mb-6">
-                  Contact <span className="text-blue-600 dark:text-blue-400">Us</span>
+                  Contact <span className="text-intent-accent">Us</span>
                 </h1>
                 <p className="text-lg text-[var(--text-muted)] leading-relaxed">
                   Get in touch with us. We would love to hear from you!
@@ -149,14 +149,14 @@ export default function Contact() {
               </div>
 
               <div className="space-y-8">
-                <h2 className="text-sm font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                <h2 className="text-sm font-semibold text-intent-accent uppercase tracking-wider">
                   GET IN TOUCH
                 </h2>
 
                 <div className="space-y-6">
                   <div className="flex items-center gap-4">
                     <div className="w-5 h-5 flex items-center justify-center">
-                      <Mail size={20} className="text-blue-600 dark:text-blue-400" />
+                      <Mail size={20} className="text-intent-accent" />
                     </div>
                     <div>
                       <p className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-1">EMAIL</p>
@@ -166,7 +166,7 @@ export default function Contact() {
 
                   <div className="flex items-center gap-4">
                     <div className="w-5 h-5 flex items-center justify-center">
-                      <Phone size={20} className="text-blue-600 dark:text-blue-400" />
+                      <Phone size={20} className="text-intent-accent" />
                     </div>
                     <div>
                       <p className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-1">PHONE</p>
@@ -176,7 +176,7 @@ export default function Contact() {
 
                   <div className="flex items-center gap-4">
                     <div className="w-5 h-5 flex items-center justify-center">
-                      <MapPin size={20} className="text-blue-600 dark:text-blue-400" />
+                      <MapPin size={20} className="text-intent-accent" />
                     </div>
                     <div>
                       <p className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-1">ADDRESS</p>
@@ -199,7 +199,7 @@ export default function Contact() {
                     className={`p-4 rounded-lg border ${
                       submitStatus.type === "success"
                         ? "bg-green-500/10 border-green-500/50 text-green-600 dark:text-green-400"
-                        : "bg-red-500/10 border-red-500/50 text-red-600 dark:text-red-400"
+                        : "bg-red-500/10 border-red-500/50 text-intent-danger"
                     }`}
                   >
                     {submitStatus.message}
@@ -259,7 +259,7 @@ export default function Contact() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full px-6 py-4 bg-blue-500 hover:bg-blue-600 text-[var(--text-primary)] font-semibold rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group uppercase tracking-wide"
+                  className="w-full px-6 py-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group uppercase tracking-wide"
                 >
                   {isSubmitting ? (
                     <>

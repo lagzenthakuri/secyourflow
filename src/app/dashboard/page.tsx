@@ -395,7 +395,7 @@ function getActivityTone(entityType: string, action: string) {
   if (entityType === "asset") {
     return {
       icon: Server,
-      iconColor: "text-sky-600 dark:text-sky-300",
+      iconColor: "text-intent-accent",
       shell: "border-sky-400/20 bg-sky-500/10",
     };
   }

@@ -204,7 +204,7 @@ export function RiskRegisterTable() {
 
     const getCategoryColor = (category: string) => {
         const cat = category.toLowerCase();
-        if (cat.includes('critical')) return "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20";
+        if (cat.includes('critical')) return "bg-red-500/10 text-intent-danger border-red-500/20";
         if (cat.includes('high')) return "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20";
         if (cat.includes('medium')) return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-500 border-yellow-500/20";
         return "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20";
@@ -222,7 +222,7 @@ export function RiskRegisterTable() {
         <div className="space-y-4">
             {/* Toolbar */}
             {error && (
-                <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm flex items-center gap-2">
+                <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-intent-danger text-sm flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4" />
                     {error}
                 </div>
@@ -293,7 +293,7 @@ export function RiskRegisterTable() {
                                         <td className="p-4">
                                             <div className="flex flex-col gap-1">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1.5 rounded">{risk.displayId}</span>
+                                                    <span className="font-mono text-xs font-bold text-intent-accent bg-blue-500/10 px-1.5 rounded">{risk.displayId}</span>
                                                     <span className={cn(
                                                         "text-[10px] px-2 py-0.5 rounded-full border",
                                                         getCategoryColor(risk.riskCategory)
@@ -311,15 +311,15 @@ export function RiskRegisterTable() {
                                             <div className="flex justify-center gap-3 text-xs font-mono text-[var(--text-secondary)]">
                                                 <div className="flex flex-col items-center">
                                                     <span className="text-[10px] uppercase text-[var(--text-muted)]">Conf</span>
-                                                    <span className={cn(risk.confidentiality >= 4 && "text-red-600 dark:text-red-400 font-bold")}>{risk.confidentiality}</span>
+                                                    <span className={cn(risk.confidentiality >= 4 && "text-intent-danger font-bold")}>{risk.confidentiality}</span>
                                                 </div>
                                                 <div className="flex flex-col items-center">
                                                     <span className="text-[10px] uppercase text-[var(--text-muted)]">Int</span>
-                                                    <span className={cn(risk.integrity >= 4 && "text-red-600 dark:text-red-400 font-bold")}>{risk.integrity}</span>
+                                                    <span className={cn(risk.integrity >= 4 && "text-intent-danger font-bold")}>{risk.integrity}</span>
                                                 </div>
                                                 <div className="flex flex-col items-center">
                                                     <span className="text-[10px] uppercase text-[var(--text-muted)]">Avail</span>
-                                                    <span className={cn(risk.availability >= 4 && "text-red-600 dark:text-red-400 font-bold")}>{risk.availability}</span>
+                                                    <span className={cn(risk.availability >= 4 && "text-intent-danger font-bold")}>{risk.availability}</span>
                                                 </div>
                                             </div>
                                         </td>
@@ -353,8 +353,8 @@ export function RiskRegisterTable() {
                                                 <div className="flex items-center gap-2">
                                                     <span className={cn(
                                                         "px-2 py-1 rounded text-xs font-medium border",
-                                                        risk.treatmentOption === "Mitigate" && "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
-                                                        risk.treatmentOption === "Avoid" && "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
+                                                        risk.treatmentOption === "Mitigate" && "bg-blue-500/10 text-intent-accent border-blue-500/20",
+                                                        risk.treatmentOption === "Avoid" && "bg-red-500/10 text-intent-danger border-red-500/20",
                                                         risk.treatmentOption === "Transfer" && "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
                                                         risk.treatmentOption === "Accept" && "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20",
                                                         !["Mitigate", "Avoid", "Transfer", "Accept"].includes(risk.treatmentOption) && "bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20"
@@ -387,7 +387,7 @@ export function RiskRegisterTable() {
                                                         <button onClick={handleSave} disabled={isSaving} className="p-1.5 rounded bg-green-500/10 text-green-600 dark:text-green-400 hover:bg-green-500/20">
                                                             {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                                                         </button>
-                                                        <button onClick={handleCancelEdit} className="p-1.5 rounded bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20">
+                                                        <button onClick={handleCancelEdit} className="p-1.5 rounded bg-red-500/10 text-intent-danger hover:bg-red-500/20">
                                                             <X size={16} />
                                                         </button>
                                                     </>
@@ -486,7 +486,7 @@ export function RiskRegisterTable() {
                                                             </div>
                                                             <div>
                                                                 <span className="text-xs text-[var(--text-muted)] block mb-1">Violated Controls</span>
-                                                                <div className="text-xs text-red-600 dark:text-red-400 p-2 bg-red-500/5 rounded border border-red-500/10 font-mono">
+                                                                <div className="text-xs text-intent-danger p-2 bg-red-500/5 rounded border border-red-500/10 font-mono">
                                                                     {risk.controlsViolated || "None"}
                                                                 </div>
                                                             </div>

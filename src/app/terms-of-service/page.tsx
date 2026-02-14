@@ -9,7 +9,7 @@ export default function TermsOfService() {
       <div className="max-w-4xl mx-auto px-6 py-12">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-sm text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 transition-colors mb-8"
+          className="inline-flex items-center gap-2 text-sm text-sky-600 dark:text-sky-400 hover:text-intent-accent-strong transition-colors mb-8"
         >
           <ArrowLeft size={16} />
           Back to Home
@@ -105,7 +105,7 @@ export default function TermsOfService() {
             <h2 className="text-2xl font-semibold text-[var(--text-primary)] mt-8 mb-4">7. Data and Privacy</h2>
             <p>
               Your use of the Service is also governed by our{" "}
-              <Link href="/privacy-policy" className="text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300">Privacy Policy</Link>.
+              <Link href="/privacy-policy" className="text-sky-600 dark:text-sky-400 hover:text-intent-accent-strong">Privacy Policy</Link>.
               We collect, use, and protect your data as described in that policy.
             </p>
           </section>

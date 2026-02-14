@@ -25,7 +25,7 @@ const variants = {
     c3: "var(--color-accent-500, #06b6d4)",
   },
   cyber: {
-    text: "text-sky-600 dark:text-sky-300",
+    text: "text-intent-accent",
     c1: "var(--color-primary-600, #2563eb)",
     c2: "var(--color-accent-500, #06b6d4)",
     c3: "var(--color-primary-500, #3b82f6)",

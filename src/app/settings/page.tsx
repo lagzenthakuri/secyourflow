@@ -30,6 +30,7 @@ import { useSession } from "next-auth/react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useRouter } from "next/navigation";
 import { TwoFactorSettingsPanel } from "@/components/settings/TwoFactorSettingsPanel";
+import { useUiFeedback } from "@/hooks/useUiFeedback";
 
 // Feature flags storage key
 const FEATURE_FLAGS_KEY = "secyourflow.settings.featureFlags.v1";
@@ -44,7 +45,7 @@ function Toast({ message, type, onClose }: { message: string; type: "success" | 
     return (
         <div className={cn(
             "fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-top",
-            type === "success" ? "bg-green-500/20 border border-green-500/50 text-green-600 dark:text-green-400" : "bg-red-500/20 border border-red-500/50 text-red-600 dark:text-red-400"
+            type === "success" ? "bg-green-500/20 border border-green-500/50 text-green-600 dark:text-green-400" : "bg-red-500/20 border border-red-500/50 text-intent-danger"
         )}>
             {type === "success" ? <CheckCircle2 size={18} /> : <XCircle size={18} />}
             <span className="text-sm font-medium">{message}</span>
@@ -1474,7 +1475,7 @@ function SystemHealthSection({ settings, fetchSettings }: SystemHealthSectionPro
                                     Configured
                                 </span>
                             ) : (
-                                <span className="flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400">
+                                <span className="flex items-center gap-1 text-xs font-medium text-intent-danger">
                                     <XCircle size={14} />
                                     Missing
                                 </span>
@@ -1569,7 +1570,7 @@ function APIAccessSection() {
                                     <button className="btn btn-ghost text-xs py-1" disabled>
                                         Reveal
                                     </button>
-                                    <button className="btn btn-ghost text-xs py-1 text-red-600 dark:text-red-400" disabled>
+                                    <button className="btn btn-ghost text-xs py-1 text-intent-danger" disabled>
                                         Revoke
                                     </button>
                                 </div>
@@ -1588,6 +1589,7 @@ function APIAccessSection() {
 
 // Users Management Tab
 function UsersManagementTab() {
+    const { showToast } = useUiFeedback();
     const { data: session } = useSession();
     const isMainOfficer = session?.user?.role === MAIN_OFFICER_ROLE;
     interface UserRecord {
@@ -1640,10 +1642,19 @@ function UsersManagementTab() {
                 );
             } else {
                 const err = await response.json() as { error?: string };
-                alert(err.error || "Failed to update role");
+                showToast({
+                    title: "Role update failed",
+                    description: err.error || "Failed to update role",
+                    intent: "error",
+                });
             }
         } catch (error) {
             console.error("Failed to update role:", error);
+            showToast({
+                title: "Role update failed",
+                description: "An unexpected error occurred while updating role.",
+                intent: "error",
+            });
         } finally {
             setIsUpdating(null);
         }
@@ -1692,7 +1703,7 @@ function UsersManagementTab() {
                                             <span className={cn(
                                                 "px-2 py-1 rounded-full text-[10px] font-bold uppercase",
                                                 user.role === MAIN_OFFICER_ROLE ? "bg-purple-500/10 text-purple-600 dark:text-purple-400" :
-                                                    user.role === 'ANALYST' ? "bg-blue-500/10 text-blue-600 dark:text-blue-400" :
+                                                    user.role === 'ANALYST' ? "bg-blue-500/10 text-intent-accent" :
                                                         "bg-gray-500/10 text-gray-600 dark:text-gray-400"
                                             )}>
                                                 {formatRoleLabel(user.role)}

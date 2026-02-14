@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { Vulnerability } from "@/types";
 import { cn, getTimeAgo } from "@/lib/utils";
+import { useUiFeedback } from "@/hooks/useUiFeedback";
 import {
   Activity,
   AlertTriangle,
@@ -229,6 +231,7 @@ function scoreIntensity(vulnerabilityCount: number, indicatorCount: number): str
 }
 
 export default function ThreatsPage() {
+  const { showToast } = useUiFeedback();
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
 
   const [exploitedVulns, setExploitedVulns] = useState<Vulnerability[]>([]);
@@ -339,12 +342,18 @@ export default function ThreatsPage() {
       const result = (await response.json()) as CorrelationResponse;
       await fetchThreats({ silent: true });
       if (result.summary) {
-        alert(
-          `Correlation complete: ${result.summary.matchesCreated} new, ${result.summary.matchesUpdated} updated, ${result.summary.alertsGenerated} alerts generated.`,
-        );
+        showToast({
+          title: "Correlation complete",
+          description: `${result.summary.matchesCreated} new, ${result.summary.matchesUpdated} updated, ${result.summary.alertsGenerated} alerts generated.`,
+          intent: "success",
+        });
       }
     } catch (requestError) {
-      alert(requestError instanceof Error ? requestError.message : "Correlation failed");
+      showToast({
+        title: "Correlation failed",
+        description: requestError instanceof Error ? requestError.message : "Correlation failed",
+        intent: "error",
+      });
     } finally {
       setIsRefreshing(false);
     }
@@ -379,11 +388,19 @@ export default function ThreatsPage() {
         throw new Error(data.error || "IOC import failed");
       }
 
-      alert(`Import complete: ${data.summary?.created ?? 0} created, ${data.summary?.updated ?? 0} updated, ${data.summary?.skipped ?? 0} skipped.`);
+      showToast({
+        title: "IOC import complete",
+        description: `${data.summary?.created ?? 0} created, ${data.summary?.updated ?? 0} updated, ${data.summary?.skipped ?? 0} skipped.`,
+        intent: "success",
+      });
       setImportPayload("");
       await fetchThreats({ silent: true });
     } catch (requestError) {
-      alert(requestError instanceof Error ? requestError.message : "IOC import failed");
+      showToast({
+        title: "IOC import failed",
+        description: requestError instanceof Error ? requestError.message : "IOC import failed",
+        intent: "error",
+      });
     } finally {
       setIsRefreshing(false);
     }
@@ -412,7 +429,11 @@ export default function ThreatsPage() {
       setNewIocValue("");
       await fetchThreats({ silent: true });
     } catch (requestError) {
-      alert(requestError instanceof Error ? requestError.message : "Failed to add IOC");
+      showToast({
+        title: "Failed to add IOC",
+        description: requestError instanceof Error ? requestError.message : "Failed to add IOC",
+        intent: "error",
+      });
     } finally {
       setIsRefreshing(false);
     }
@@ -573,9 +594,9 @@ export default function ThreatsPage() {
                 )}
               </div>
               <div className="border-t border-[var(--border-color)] p-4">
-                <a href="/vulnerabilities?filter=exploited" className="inline-flex items-center gap-2 text-sm text-sky-700 hover:text-sky-800 dark:text-sky-300 dark:hover:text-sky-200">
+                <Link href="/vulnerabilities?filter=exploited" className="inline-flex items-center gap-2 text-sm text-sky-700 hover:text-sky-800 dark:text-sky-300 dark:hover:text-sky-200">
                   Open vulnerability queue <ArrowRight size={14} />
-                </a>
+                </Link>
               </div>
             </article>
 

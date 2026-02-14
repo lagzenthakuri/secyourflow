@@ -57,7 +57,7 @@ export function FrameworkActions({
                 disabled={isDeleting}
             >
                 {isDeleting ? (
-                    <Loader2 size={14} className="animate-spin text-blue-600 dark:text-blue-400" />
+                    <Loader2 size={14} className="animate-spin text-intent-accent" />
                 ) : (
                     <Settings size={14} />
                 )}

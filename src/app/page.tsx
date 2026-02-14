@@ -194,7 +194,7 @@ export default function Home() {
               height={48}
             />
             <span className="text-sm font-semibold tracking-[0.25em] text-[var(--text-primary)] sm:text-base">
-              SECYOUR<span className="text-sky-600 dark:text-sky-300">FLOW</span>
+              SECYOUR<span className="text-intent-accent">FLOW</span>
             </span>
           </Link>
 
@@ -348,7 +348,7 @@ export default function Home() {
         <section id="features" data-animate="features" className="scroll-mt-28 px-6 py-20" aria-labelledby="features-heading">
           <div className="mx-auto w-full max-w-6xl">
             <div className={`max-w-3xl transition-all duration-700 ${sectionsVisible.features ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-600 dark:text-sky-300">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-intent-accent">
                 Platform
               </p>
               <h2 className="mt-4 text-3xl font-semibold text-[var(--text-primary)] sm:text-4xl">
@@ -391,7 +391,7 @@ export default function Home() {
           <div className="mx-auto w-full max-w-6xl">
             <div className={`flex flex-col gap-4 md:flex-row md:items-end md:justify-between transition-all duration-700 ${sectionsVisible.workflow ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
               <div className="max-w-3xl">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-600 dark:text-sky-300">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-intent-accent">
                   Workflow
                 </p>
                 <h2 className="mt-4 text-3xl font-semibold text-[var(--text-primary)] sm:text-4xl">
@@ -414,7 +414,7 @@ export default function Home() {
                   className={`marketing-card-surface group rounded-2xl border p-6 transition-all duration-700 hover:border-sky-300/30 hover:bg-[var(--marketing-card-bg-strong)] hover:-translate-y-1 ${sectionsVisible.workflow ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
                   style={{ transitionDelay: `${idx * 100}ms` }}
                 >
-                  <div className="text-xs font-semibold tracking-[0.22em] text-sky-600 dark:text-sky-300">
+                  <div className="text-xs font-semibold tracking-[0.22em] text-intent-accent">
                     STEP {item.step}
                   </div>
                   <h3 className="mt-4 text-lg font-semibold text-[var(--text-primary)]">{item.title}</h3>
@@ -456,7 +456,7 @@ export default function Home() {
 
             <aside className={`group relative overflow-hidden rounded-xl border border-sky-400/20 bg-gradient-to-br from-sky-400/10 to-[var(--bg-tertiary)] p-7 backdrop-blur-sm transition-all duration-700 hover:border-sky-400/30 ${sectionsVisible.outcomes ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`} style={{ transitionDelay: '300ms' }}>
               <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-sky-500/10 blur-3xl transition-all duration-700 group-hover:bg-sky-500/20" />
-              <div className="relative inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-sky-600 dark:text-sky-300 transition-all duration-300 group-hover:scale-110">
+              <div className="relative inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-intent-accent transition-all duration-300 group-hover:scale-110">
                 <LockKeyhole size={18} />
               </div>
               <h3 className="relative mt-5 text-xl font-bold text-[var(--text-primary)]">

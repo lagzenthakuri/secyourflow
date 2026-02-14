@@ -129,7 +129,7 @@ export default function UsersPage() {
                         <p className="text-xs text-[var(--text-muted)]">Main Officers</p>
                     </div>
                     <div className="card p-4">
-                        <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{Object.keys(roleColors).length}</p>
+                        <p className="text-2xl font-bold text-intent-accent">{Object.keys(roleColors).length}</p>
                         <p className="text-xs text-[var(--text-muted)]">Roles Defined</p>
                     </div>
                 </div>
@@ -245,7 +245,7 @@ export default function UsersPage() {
                                         className="p-3 rounded-lg bg-[var(--bg-tertiary)]"
                                     >
                                         <div className="flex items-center gap-2 mb-1">
-                                            <Shield size={14} className="text-blue-600 dark:text-blue-400" />
+                                            <Shield size={14} className="text-intent-accent" />
                                             <span className="text-sm font-medium text-[var(--text-primary)]">
                                                 {item.role}
                                             </span>
@@ -261,7 +261,7 @@ export default function UsersPage() {
                         <Card
                             title="Activity Log"
                             action={
-                                <Link href="/reports/activity" className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
+                                <Link href="/reports/activity" className="text-xs text-intent-accent hover:text-intent-accent-strong">
                                     See all
                                 </Link>
                             }

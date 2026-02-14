@@ -9,7 +9,7 @@ export default function Resources() {
       <div className="max-w-5xl mx-auto px-6 py-12">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-sm text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 transition-colors mb-8"
+          className="inline-flex items-center gap-2 text-sm text-sky-600 dark:text-sky-400 hover:text-intent-accent-strong transition-colors mb-8"
         >
           <ArrowLeft size={16} />
           Back to Home
@@ -28,9 +28,9 @@ export default function Resources() {
               Documentation
             </h2>
             <div className="grid gap-4 md:grid-cols-2">
-              <a
-                href="#"
-                className="group p-6 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-elevated)] transition-all"
+              <div
+                aria-disabled="true"
+                className="group p-6 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] opacity-85"
               >
                 <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2 flex items-center justify-between">
                   Getting Started Guide
@@ -39,11 +39,12 @@ export default function Resources() {
                 <p className="text-sm text-[var(--text-muted)]">
                   Learn the basics of SecYourFlow and set up your first security workspace.
                 </p>
-              </a>
+                <p className="mt-2 text-[11px] font-medium text-[var(--text-muted)]">Coming soon</p>
+              </div>
 
-              <a
-                href="#"
-                className="group p-6 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-elevated)] transition-all"
+              <div
+                aria-disabled="true"
+                className="group p-6 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] opacity-85"
               >
                 <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2 flex items-center justify-between">
                   API Documentation
@@ -52,11 +53,12 @@ export default function Resources() {
                 <p className="text-sm text-[var(--text-muted)]">
                   Complete API reference for integrating SecYourFlow with your tools.
                 </p>
-              </a>
+                <p className="mt-2 text-[11px] font-medium text-[var(--text-muted)]">Coming soon</p>
+              </div>
 
-              <a
-                href="#"
-                className="group p-6 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-elevated)] transition-all"
+              <div
+                aria-disabled="true"
+                className="group p-6 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] opacity-85"
               >
                 <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2 flex items-center justify-between">
                   User Manual
@@ -65,11 +67,12 @@ export default function Resources() {
                 <p className="text-sm text-[var(--text-muted)]">
                   Comprehensive guide covering all features and workflows.
                 </p>
-              </a>
+                <p className="mt-2 text-[11px] font-medium text-[var(--text-muted)]">Coming soon</p>
+              </div>
 
-              <a
-                href="#"
-                className="group p-6 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-elevated)] transition-all"
+              <div
+                aria-disabled="true"
+                className="group p-6 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] opacity-85"
               >
                 <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2 flex items-center justify-between">
                   Best Practices
@@ -78,7 +81,8 @@ export default function Resources() {
                 <p className="text-sm text-[var(--text-muted)]">
                   Security operations best practices and recommended workflows.
                 </p>
-              </a>
+                <p className="mt-2 text-[11px] font-medium text-[var(--text-muted)]">Coming soon</p>
+              </div>
             </div>
           </section>
 
@@ -122,9 +126,9 @@ export default function Resources() {
               Downloads
             </h2>
             <div className="space-y-3">
-              <a
-                href="#"
-                className="flex items-center justify-between p-4 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-elevated)] transition-all"
+              <div
+                aria-disabled="true"
+                className="flex items-center justify-between p-4 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] opacity-85"
               >
                 <div className="flex items-center gap-3">
                   <FileText size={20} className="text-[var(--text-muted)]" />
@@ -134,11 +138,11 @@ export default function Resources() {
                   </div>
                 </div>
                 <Download size={18} className="text-[var(--text-muted)]" />
-              </a>
+              </div>
 
-              <a
-                href="#"
-                className="flex items-center justify-between p-4 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-elevated)] transition-all"
+              <div
+                aria-disabled="true"
+                className="flex items-center justify-between p-4 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] opacity-85"
               >
                 <div className="flex items-center gap-3">
                   <Code size={20} className="text-[var(--text-muted)]" />
@@ -148,11 +152,11 @@ export default function Resources() {
                   </div>
                 </div>
                 <Download size={18} className="text-[var(--text-muted)]" />
-              </a>
+              </div>
 
-              <a
-                href="#"
-                className="flex items-center justify-between p-4 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-elevated)] transition-all"
+              <div
+                aria-disabled="true"
+                className="flex items-center justify-between p-4 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] opacity-85"
               >
                 <div className="flex items-center gap-3">
                   <FileText size={20} className="text-[var(--text-muted)]" />
@@ -162,8 +166,9 @@ export default function Resources() {
                   </div>
                 </div>
                 <Download size={18} className="text-[var(--text-muted)]" />
-              </a>
+              </div>
             </div>
+            <p className="text-[11px] text-[var(--text-muted)]">Downloads are not available yet.</p>
           </section>
 
           {/* Support */}
@@ -179,19 +184,21 @@ export default function Resources() {
               >
                 Contact Support
               </Link>
-              <a
-                href="#"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[var(--border-hover)] text-[var(--text-secondary)] font-medium text-sm hover:border-[var(--border-hover)] hover:bg-[var(--bg-tertiary)] transition-colors"
+              <button
+                type="button"
+                disabled
+                aria-disabled="true"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[var(--border-hover)] text-[var(--text-secondary)] font-medium text-sm opacity-70 cursor-not-allowed"
               >
                 Community Forum
-              </a>
+              </button>
             </div>
           </section>
         </div>
 
         <div className="mt-12 pt-8 border-t border-[var(--border-color)]">
           <p className="text-sm text-[var(--text-muted)] text-center">
-            © 2026 SECYOURALL. ALL RIGHTS RESERVED.
+            © 2026 SECYOURFLOW. ALL RIGHTS RESERVED.
           </p>
         </div>
       </div>

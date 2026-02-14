@@ -49,7 +49,7 @@ export function RiskAssessmentView({ riskEntry, vulnerabilityId, onRefresh }: Ri
     if (isAnalyzing || riskEntry?.status === "PROCESSING") {
         return (
             <div className="p-4 rounded-lg bg-blue-500/5 border border-blue-500/10 flex items-center gap-3">
-                <Clock size={18} className="text-blue-600 dark:text-blue-400 animate-pulse" />
+                <Clock size={18} className="text-intent-accent animate-pulse" />
                 <p className="text-sm text-[var(--text-secondary)]">
                     AI Risk Assessment in progress...
                 </p>
@@ -60,13 +60,13 @@ export function RiskAssessmentView({ riskEntry, vulnerabilityId, onRefresh }: Ri
     if (error || riskEntry?.status === "FAILED") {
         return (
             <div className="p-4 rounded-lg bg-red-500/5 border border-red-500/10 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
+                <div className="flex items-center gap-3 text-intent-danger">
                     <AlertCircle size={18} />
                     <p className="text-sm">{error || "AI Risk Assessment failed. Please try again."}</p>
                 </div>
                 <button
                     onClick={handleStartAnalysis}
-                    className="text-xs font-semibold px-3 py-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-colors"
+                    className="text-xs font-semibold px-3 py-1 rounded bg-red-500/10 hover:bg-red-500/20 text-intent-danger transition-colors"
                 >
                     Retry
                 </button>
@@ -161,7 +161,7 @@ export function RiskAssessmentView({ riskEntry, vulnerabilityId, onRefresh }: Ri
 
             <div className="flex flex-wrap gap-2">
                 {analysis.controls_violated_iso27001?.map((control: string) => (
-                    <span key={control} className="px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-[10px] text-red-600 dark:text-red-400">
+                    <span key={control} className="px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-[10px] text-intent-danger">
                         {control} Violated
                     </span>
                 ))}

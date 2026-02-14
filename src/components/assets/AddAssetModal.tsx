@@ -106,7 +106,7 @@ export function AddAssetModal({ isOpen, onClose, onSuccess }: AddAssetModalProps
         >
             <form onSubmit={handleSubmit} className="space-y-4">
                 {error && (
-                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
+                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2 text-intent-danger text-sm">
                         <AlertCircle size={16} />
                         {error}
                     </div>

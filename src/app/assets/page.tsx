@@ -951,7 +951,7 @@ export default function AssetsPage() {
                           </button>
 
                           <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2.5 transition-all duration-200 group-hover:border-sky-300/30 group-hover:bg-sky-300/10 group-hover:scale-110">
-                            <Icon size={18} className="text-sky-600 dark:text-sky-300 transition-transform duration-200 group-hover:rotate-12" />
+                            <Icon size={18} className="text-intent-accent transition-transform duration-200 group-hover:rotate-12" />
                           </div>
 
                           <div className="min-w-0 flex-1">
@@ -1145,7 +1145,7 @@ export default function AssetsPage() {
                       >
                         <div className="flex items-center gap-2.5">
                           <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-1.5 transition-all duration-200 group-hover:border-sky-300/30">
-                            <Icon size={13} className="text-sky-600 dark:text-sky-300" />
+                            <Icon size={13} className="text-intent-accent" />
                           </div>
                           <div className="min-w-0">
                             <p className="truncate text-sm text-[var(--text-secondary)]">{asset.name}</p>

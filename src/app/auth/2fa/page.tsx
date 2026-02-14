@@ -267,7 +267,7 @@ export default function TwoFactorChallengePage() {
                             height={80}
                         />
                         <span className="text-2xl font-semibold tracking-[0.25em] text-[var(--text-primary)]">
-                            SECYOUR<span className="text-sky-600 dark:text-sky-300">FLOW</span>
+                            SECYOUR<span className="text-intent-accent">FLOW</span>
                         </span>
                     </Link>
                 </div>
@@ -275,7 +275,7 @@ export default function TwoFactorChallengePage() {
                 <div className="card p-8">
                     <div className="flex items-center gap-3 mb-6">
                         <div className="w-11 h-11 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center">
-                            <ShieldCheck className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                            <ShieldCheck className="w-6 h-6 text-intent-accent" />
                         </div>
                         <div>
                             <h1 className="text-xl font-semibold text-[var(--text-primary)]">Two-Factor Challenge</h1>
@@ -369,7 +369,7 @@ export default function TwoFactorChallengePage() {
                 )}
 
                 {error && (
-                    <p className="text-sm text-red-600 dark:text-red-400 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 mt-4">
+                    <p className="text-sm text-intent-danger rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 mt-4">
                         {error}
                     </p>
                 )}

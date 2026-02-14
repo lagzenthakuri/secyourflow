@@ -9,7 +9,7 @@ export default function PrivacyPolicy() {
       <div className="max-w-4xl mx-auto px-6 py-12">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-sm text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 transition-colors mb-8"
+          className="inline-flex items-center gap-2 text-sm text-sky-600 dark:text-sky-400 hover:text-intent-accent-strong transition-colors mb-8"
         >
           <ArrowLeft size={16} />
           Back to Home
@@ -109,7 +109,7 @@ export default function PrivacyPolicy() {
             <h2 className="text-2xl font-semibold text-[var(--text-primary)] mt-8 mb-4">7. Cookies and Tracking</h2>
             <p>
               We use cookies and similar tracking technologies to enhance your experience. For more information,
-              please see our <Link href="/cookie-policy" className="text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300">Cookie Policy</Link>.
+              please see our <Link href="/cookie-policy" className="text-sky-600 dark:text-sky-400 hover:text-intent-accent-strong">Cookie Policy</Link>.
             </p>
           </section>
 

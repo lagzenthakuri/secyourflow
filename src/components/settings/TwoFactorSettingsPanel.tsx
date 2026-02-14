@@ -6,6 +6,7 @@ import { Copy, Download, RefreshCw, ShieldCheck, ShieldOff, Smartphone } from "l
 import { useSession } from "next-auth/react";
 import { SecurityLoader } from "@/components/ui/SecurityLoader";
 import { cn } from "@/lib/utils";
+import { useUiFeedback } from "@/hooks/useUiFeedback";
 
 type TotpStatusResponse = {
     enabled: boolean;
@@ -92,6 +93,7 @@ function RecoveryCodeViewer({
 }
 
 export function TwoFactorSettingsPanel() {
+    const { prompt: requestInput } = useUiFeedback();
     const { data: session, update } = useSession();
     const [status, setStatus] = useState<TotpStatusResponse | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -197,7 +199,14 @@ export function TwoFactorSettingsPanel() {
     };
 
     const handleDisableTotp = async () => {
-        const code = window.prompt("Enter your 6-digit authenticator code or recovery code to disable 2FA:");
+        const code = await requestInput({
+            title: "Disable Two-Factor Authentication",
+            message: "Enter your 6-digit authenticator code or recovery code to disable 2FA.",
+            placeholder: "123456 or recovery code",
+            confirmLabel: "Disable 2FA",
+            cancelLabel: "Cancel",
+            validate: (value) => (value ? null : "A code is required."),
+        });
         if (!code) return;
 
         setError(null);
@@ -403,7 +412,7 @@ export function TwoFactorSettingsPanel() {
                                     <RefreshCw size={14} />
                                     Regenerate Recovery Codes
                                 </button>
-                                <button className="btn btn-ghost text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300" onClick={handleDisableTotp} disabled={isSubmitting}>
+                                <button className="btn btn-ghost text-intent-danger hover:text-intent-danger-strong" onClick={handleDisableTotp} disabled={isSubmitting}>
                                     <ShieldOff size={14} />
                                     Disable 2FA
                                 </button>

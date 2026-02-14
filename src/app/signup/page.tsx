@@ -72,7 +72,7 @@ export default function SignUpPage() {
                             height={80}
                         />
                         <span className="text-2xl font-semibold tracking-[0.25em] text-[var(--text-primary)]">
-                            SECYOUR<span className="text-sky-600 dark:text-sky-300">FLOW</span>
+                            SECYOUR<span className="text-intent-accent">FLOW</span>
                         </span>
                     </Link>
                     <p className="text-[var(--text-secondary)] mt-4">
@@ -220,7 +220,7 @@ export default function SignUpPage() {
                 {/* Footer */}
                 <p className="text-center text-sm text-[var(--text-muted)] mt-6">
                     Already have an account?{" "}
-                    <Link href="/login" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
+                    <Link href="/login" className="text-intent-accent hover:text-intent-accent-strong">
                         Sign in
                     </Link>
                 </p>

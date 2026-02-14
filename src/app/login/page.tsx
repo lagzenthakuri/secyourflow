@@ -94,7 +94,7 @@ export default function LoginPage() {
                             height={80}
                         />
                         <span className="text-2xl font-semibold tracking-[0.25em] text-[var(--text-primary)]">
-                            SECYOUR<span className="text-sky-600 dark:text-sky-300">FLOW</span>
+                            SECYOUR<span className="text-intent-accent">FLOW</span>
                         </span>
                     </Link>
                     <p className="text-[var(--text-secondary)] mt-4">
@@ -138,12 +138,14 @@ export default function LoginPage() {
                                 <label className="block text-sm font-medium text-[var(--text-primary)]">
                                     Password
                                 </label>
-                                <a
-                                    href="#"
-                                    className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                                <button
+                                    type="button"
+                                    disabled
+                                    aria-disabled="true"
+                                    className="text-xs text-[var(--text-muted)] cursor-not-allowed"
                                 >
-                                    Forgot password?
-                                </a>
+                                    Forgot password? (Coming soon)
+                                </button>
                             </div>
                             <div className="relative">
                                 <Lock
@@ -243,7 +245,7 @@ export default function LoginPage() {
                 {/* Footer */}
                 <p className="text-center text-sm text-[var(--text-muted)] mt-6">
                     Don&apos;t have an account?{" "}
-                    <Link href="/signup" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
+                    <Link href="/signup" className="text-intent-accent hover:text-intent-accent-strong">
                         Sign up
                     </Link>
                 </p>

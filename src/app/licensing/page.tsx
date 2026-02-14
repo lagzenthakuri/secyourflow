@@ -9,7 +9,7 @@ export default function Licensing() {
       <div className="max-w-4xl mx-auto px-6 py-12">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-sm text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 transition-colors mb-8"
+          className="inline-flex items-center gap-2 text-sm text-sky-600 dark:text-sky-400 hover:text-intent-accent-strong transition-colors mb-8"
         >
           <ArrowLeft size={16} />
           Back to Home

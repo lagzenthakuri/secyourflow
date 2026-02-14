@@ -42,7 +42,7 @@ const NIST_CSF_FUNCTIONS = ["GOVERN", "IDENTIFY", "PROTECT", "DETECT", "RESPOND"
 
 const statusStyles: Record<ComplianceStatus, { bg: string; text: string }> = {
     COMPLIANT: { bg: "bg-green-500/10", text: "text-green-600 dark:text-green-400" },
-    NON_COMPLIANT: { bg: "bg-red-500/10", text: "text-red-600 dark:text-red-400" },
+    NON_COMPLIANT: { bg: "bg-red-500/10", text: "text-intent-danger" },
     PARTIALLY_COMPLIANT: { bg: "bg-yellow-500/10", text: "text-yellow-600 dark:text-yellow-400" },
     NOT_ASSESSED: { bg: "bg-gray-500/10", text: "text-gray-600 dark:text-gray-400" },
     NOT_APPLICABLE: { bg: "bg-gray-500/10", text: "text-gray-600 dark:text-gray-400" },
@@ -119,7 +119,7 @@ export function AssessControlModal({ isOpen, onClose, onSuccess, control }: Asse
         >
             <form onSubmit={handleSubmit} className="p-1 space-y-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
                 {error && (
-                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
+                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2 text-intent-danger text-sm">
                         <AlertCircle size={16} />
                         {error}
                     </div>
@@ -179,7 +179,7 @@ export function AssessControlModal({ isOpen, onClose, onSuccess, control }: Asse
                                         className={cn(
                                             "flex items-center justify-between px-3 py-2 rounded-lg border text-sm transition-all",
                                             formData.implementationStatus === status
-                                                ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/50 ring-1 ring-blue-500/50"
+                                                ? "bg-blue-500/10 text-intent-accent border-blue-500/50 ring-1 ring-blue-500/50"
                                                 : "bg-[var(--bg-tertiary)] text-[var(--text-muted)] border-transparent hover:bg-[var(--bg-secondary)]"
                                         )}
                                     >

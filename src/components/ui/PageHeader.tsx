@@ -86,7 +86,7 @@ export function PageHeader({ title, description, badge, actions, stats, classNam
                                                 <span className={cn(
                                                     "text-[10px] font-bold",
                                                     stat.trend.neutral ? "text-[var(--text-muted)]" :
-                                                        stat.trend.isUp ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+                                                        stat.trend.isUp ? "text-emerald-600 dark:text-emerald-400" : "text-intent-danger"
                                                 )}>
                                                     {stat.trend.value}
                                                 </span>

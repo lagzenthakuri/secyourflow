@@ -20,6 +20,7 @@ type ThemeContextValue = {
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
+export const THEME_STORAGE_KEY = "secyourflow.theme.mode.v1";
 
 const APP_SHELL_PREFIXES = [
   "/dashboard",
@@ -45,6 +46,23 @@ function resolveSystemTheme(): ThemeMode {
   }
 
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+
+function resolveStoredTheme(): ThemeMode | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (stored === "light" || stored === "dark") {
+    return stored;
+  }
+
+  return null;
+}
+
+function resolveInitialTheme(): ThemeMode {
+  return resolveStoredTheme() ?? resolveSystemTheme();
 }
 
 function applyTheme(theme: ThemeMode) {
@@ -80,13 +98,21 @@ export function useTheme(): ThemeContextValue {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [theme, setTheme] = useState<ThemeMode>(() => resolveSystemTheme());
+  const [theme, setTheme] = useState<ThemeMode>(() => resolveInitialTheme());
   const transitionTimeoutRef = useRef<number | null>(null);
+  const hasManualOverrideRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    hasManualOverrideRef.current = resolveStoredTheme() !== null;
+  }, []);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: light)");
 
     const handleSystemThemeChange = (event: MediaQueryListEvent) => {
+      if (hasManualOverrideRef.current) {
+        return;
+      }
       setTheme(event.matches ? "light" : "dark");
     };
 
@@ -117,7 +143,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       window.clearTimeout(transitionTimeoutRef.current);
     }
     transitionTimeoutRef.current = startThemeTransition();
-    setTheme((current) => (current === "dark" ? "light" : "dark"));
+    setTheme((current) => {
+      const next = current === "dark" ? "light" : "dark";
+      window.localStorage.setItem(THEME_STORAGE_KEY, next);
+      hasManualOverrideRef.current = true;
+      return next;
+    });
   };
 
   const contextValue = useMemo<ThemeContextValue>(

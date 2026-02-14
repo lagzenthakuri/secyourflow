@@ -130,7 +130,7 @@ export default function ReportsActivityPage() {
       <DashboardLayout>
         <div className="flex min-h-[60vh] flex-col items-center justify-center p-6 text-center">
           <div className="rounded-2xl border border-red-400/20 bg-red-500/5 p-8 max-w-md">
-            <XCircle size={48} className="mx-auto text-red-600 dark:text-red-400 mb-4" />
+            <XCircle size={48} className="mx-auto text-intent-danger mb-4" />
             <h1 className="text-xl font-semibold text-[var(--text-primary)] mb-2">Access Denied</h1>
             <p className="text-sm text-[var(--text-muted)] mb-6">
               The Activity Log is only accessible by Main Officers. Please contact your administrator if you believe this is an error.
@@ -286,7 +286,7 @@ export default function ReportsActivityPage() {
                         </div>
                       </div>
                       <button
-                        className="text-xs text-sky-600 dark:text-sky-300 hover:text-sky-700 dark:hover:text-sky-200 transition-colors"
+                        className="text-xs text-intent-accent hover:text-intent-accent-strong transition-colors"
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedActivity(activity);
@@ -326,7 +326,7 @@ export default function ReportsActivityPage() {
             <div className="space-y-6 p-6">
               <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <ActivityIcon size={16} className="text-sky-600 dark:text-sky-300" />
+                  <ActivityIcon size={16} className="text-intent-accent" />
                   <h3 className="text-sm font-semibold text-[var(--text-primary)]">Action Information</h3>
                 </div>
                 <div className="space-y-3">

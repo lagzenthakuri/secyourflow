@@ -202,7 +202,7 @@ const reportTypeMeta: Record<
     icon: TrendingUp,
     tone: "text-sky-700 dark:text-sky-200",
     border: "border-sky-300/30",
-    iconTone: "text-sky-600 dark:text-sky-300",
+    iconTone: "text-intent-accent",
   },
   technical: {
     icon: Shield,

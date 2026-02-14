@@ -28,14 +28,14 @@ export function StatCard({
 }: StatCardProps) {
     const getTrendIcon = () => {
         if (!trend) return null;
-        if (trend.value > 0) return <TrendingUp size={14} className="text-red-600 dark:text-red-400" />;
+        if (trend.value > 0) return <TrendingUp size={14} className="text-intent-danger" />;
         if (trend.value < 0) return <TrendingDown size={14} className="text-green-600 dark:text-green-400" />;
         return <Minus size={14} className="text-gray-600 dark:text-gray-400" />;
     };
 
     const getTrendColor = () => {
         if (!trend) return "";
-        if (trend.value > 0) return "text-red-600 dark:text-red-400";
+        if (trend.value > 0) return "text-intent-danger";
         if (trend.value < 0) return "text-green-600 dark:text-green-400";
         return "text-gray-600 dark:text-gray-400";
     };

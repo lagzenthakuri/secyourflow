@@ -10,7 +10,7 @@ export default function About() {
       <div className="max-w-5xl mx-auto px-6 py-12">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-sm text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 transition-colors mb-8"
+          className="inline-flex items-center gap-2 text-sm text-sky-600 dark:text-sky-400 hover:text-intent-accent-strong transition-colors mb-8"
         >
           <ArrowLeft size={16} />
           Back to Home
@@ -38,7 +38,7 @@ export default function About() {
 
           <section className="grid gap-6 md:grid-cols-3 my-12">
             <div className="p-6 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)]">
-              <div className="inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-sky-600 dark:text-sky-300 mb-4">
+              <div className="inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-intent-accent mb-4">
                 <Shield size={20} />
               </div>
               <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">Our Mission</h3>
@@ -49,7 +49,7 @@ export default function About() {
             </div>
 
             <div className="p-6 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)]">
-              <div className="inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-sky-600 dark:text-sky-300 mb-4">
+              <div className="inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-intent-accent mb-4">
                 <Target size={20} />
               </div>
               <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">Our Vision</h3>
@@ -60,7 +60,7 @@ export default function About() {
             </div>
 
             <div className="p-6 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)]">
-              <div className="inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-sky-600 dark:text-sky-300 mb-4">
+              <div className="inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-intent-accent mb-4">
                 <Users size={20} />
               </div>
               <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">Our Team</h3>

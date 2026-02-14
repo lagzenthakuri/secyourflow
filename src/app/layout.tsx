@@ -5,6 +5,7 @@ import "./globals.css";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { NavigationProgress } from "@/components/providers/NavigationProgress";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { UiFeedbackProvider } from "@/components/providers/UiFeedbackProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -42,7 +43,10 @@ const themeBootstrapScript = `
   (function () {
     try {
       var root = document.documentElement;
-      var preferred = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+      var stored = window.localStorage.getItem("secyourflow.theme.mode.v1");
+      var preferred = stored === "light" || stored === "dark"
+        ? stored
+        : (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
       root.classList.remove("theme-dark", "theme-light", "dark");
       if (preferred === "light") {
         root.classList.add("theme-light");
@@ -66,8 +70,10 @@ export default function RootLayout({
           {themeBootstrapScript}
         </Script>
         <ThemeProvider>
-          <NavigationProgress />
-          <AuthProvider>{children}</AuthProvider>
+          <UiFeedbackProvider>
+            <NavigationProgress />
+            <AuthProvider>{children}</AuthProvider>
+          </UiFeedbackProvider>
         </ThemeProvider>
       </body>
     </html>
