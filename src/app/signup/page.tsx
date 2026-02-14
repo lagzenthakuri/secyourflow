@@ -72,7 +72,7 @@ export default function SignUpPage() {
                             height={80}
                         />
                         <span className="text-2xl font-semibold tracking-[0.25em] text-[var(--text-primary)]">
-                            SECYOUR<span className="text-sky-300">FLOW</span>
+                            SECYOUR<span className="text-sky-600 dark:text-sky-300">FLOW</span>
                         </span>
                     </Link>
                     <p className="text-[var(--text-secondary)] mt-4">
@@ -84,7 +84,7 @@ export default function SignUpPage() {
                 <div className="card p-8">
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {error && (
-                            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
+                            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-300 text-sm">
                                 {error}
                             </div>
                         )}
@@ -220,7 +220,7 @@ export default function SignUpPage() {
                 {/* Footer */}
                 <p className="text-center text-sm text-[var(--text-muted)] mt-6">
                     Already have an account?{" "}
-                    <Link href="/login" className="text-blue-400 hover:text-blue-300">
+                    <Link href="/login" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
                         Sign in
                     </Link>
                 </p>

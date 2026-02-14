@@ -77,7 +77,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             {/* Mobile Overlay */}
             {isOpen && (
                 <div
-                    className="lg:hidden fixed inset-0 bg-black/50 z-30 transition-opacity duration-300 ease-in-out"
+                    className="lg:hidden fixed inset-0 bg-[var(--overlay-scrim)] z-30 transition-opacity duration-300 ease-in-out"
                     onClick={() => setIsOpen(false)}
                 />
             )}
@@ -98,8 +98,8 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                             width={40}
                             height={40}
                         />
-                        <span className="text-[14px] font-bold tracking-[0.22em] text-white">
-                            SECYOUR<span className="text-sky-300">FLOW</span>
+                        <span className="text-[14px] font-bold tracking-[0.22em] text-[var(--text-primary)]">
+                            SECYOUR<span className="text-sky-600 dark:text-sky-300">FLOW</span>
                         </span>
                     </Link>
                 </div>
@@ -162,7 +162,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                                 {userInitials}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-white truncate">
+                                <p className="text-sm font-medium text-[var(--text-primary)] truncate">
                                     {userName}
                                 </p>
                                 <p className="text-[10px] text-[var(--text-muted)] uppercase">
@@ -180,7 +180,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                                 <div className="bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-xl shadow-2xl p-1 overflow-hidden">
                                     <button
                                         onClick={() => signOut({ callbackUrl: "/" })}
-                                        className="w-full flex items-center gap-2 p-2.5 text-sm text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
+                                        className="w-full flex items-center gap-2 p-2.5 text-sm text-red-600 dark:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
                                     >
                                         <LogOut size={16} />
                                         Sign Out
@@ -423,7 +423,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                 {/* Live Threats Indicator */}
                 <Link href="/threats">
                     <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all duration-300 ease-in-out cursor-pointer">
-                        <span className="live-indicator text-xs font-medium text-red-400">
+                        <span className="live-indicator text-xs font-medium text-red-600 dark:text-red-400">
                             {threatsCount} Active Threats
                         </span>
                     </div>
@@ -457,7 +457,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                             <div className="p-3 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-tertiary)]">
                                 <h3 className="font-semibold text-sm">Notifications</h3>
                                 {notificationsCount > 0 && (
-                                    <button onClick={markAsRead} className="text-xs text-blue-400 hover:text-blue-300 transition-all duration-300 ease-in-out">
+                                    <button onClick={markAsRead} className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-all duration-300 ease-in-out">
                                         Mark all read
                                     </button>
                                 )}

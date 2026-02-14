@@ -1,7 +1,32 @@
-import * as XLSX from "xlsx";
+import { createRequire } from "module";
 import type { RenderedReport, TabularReportData } from "@/lib/reporting/types";
 
+type XlsxModule = {
+  utils: {
+    book_new: () => unknown;
+    aoa_to_sheet: (rows: Array<Array<string>>) => unknown;
+    book_append_sheet: (workbook: unknown, worksheet: unknown, name: string) => void;
+  };
+  write: (
+    workbook: unknown,
+    options: { type: "buffer"; bookType: "xlsx"; compression: boolean },
+  ) => Buffer;
+};
+
+const require = createRequire(import.meta.url);
+
+function loadXlsx(): XlsxModule {
+  try {
+    return require("xlsx") as XlsxModule;
+  } catch {
+    throw new Error(
+      'XLSX export dependency is missing. Install it with "npm install xlsx" and restart the server.',
+    );
+  }
+}
+
 export function renderXlsxReport(data: TabularReportData, fileNameBase: string): RenderedReport {
+  const XLSX = loadXlsx();
   const workbook = XLSX.utils.book_new();
 
   const summarySheetData = [

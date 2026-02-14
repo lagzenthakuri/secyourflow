@@ -267,7 +267,7 @@ export default function TwoFactorChallengePage() {
                             height={80}
                         />
                         <span className="text-2xl font-semibold tracking-[0.25em] text-[var(--text-primary)]">
-                            SECYOUR<span className="text-sky-300">FLOW</span>
+                            SECYOUR<span className="text-sky-600 dark:text-sky-300">FLOW</span>
                         </span>
                     </Link>
                 </div>
@@ -275,7 +275,7 @@ export default function TwoFactorChallengePage() {
                 <div className="card p-8">
                     <div className="flex items-center gap-3 mb-6">
                         <div className="w-11 h-11 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center">
-                            <ShieldCheck className="w-6 h-6 text-blue-400" />
+                            <ShieldCheck className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
                             <h1 className="text-xl font-semibold text-[var(--text-primary)]">Two-Factor Challenge</h1>
@@ -298,7 +298,7 @@ export default function TwoFactorChallengePage() {
                             </button>
                         ) : (
                             <form onSubmit={submitEnrollmentVerification} className="space-y-4">
-                                <p className="text-sm text-blue-100 border border-blue-500/30 bg-blue-500/10 rounded-lg px-3 py-2">
+                                <p className="text-sm text-blue-700 dark:text-blue-100 border border-blue-500/30 bg-blue-500/10 rounded-lg px-3 py-2">
                                     Scan this QR code in Google Authenticator, then verify with a 6-digit code.
                                 </p>
                                 <Image
@@ -363,13 +363,13 @@ export default function TwoFactorChallengePage() {
                 )}
 
                 {notice && (
-                    <p className="text-sm text-green-300 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 mt-4">
+                    <p className="text-sm text-green-600 dark:text-green-300 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 mt-4">
                         {notice}
                     </p>
                 )}
 
                 {error && (
-                    <p className="text-sm text-red-400 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 mt-4">
+                    <p className="text-sm text-red-600 dark:text-red-400 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 mt-4">
                         {error}
                     </p>
                 )}

@@ -298,8 +298,8 @@ export default function ScannersPage() {
 
                         <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
                             <div className="flex gap-3">
-                                <AlertTriangle className="text-blue-400 shrink-0" size={18} />
-                                <div className="text-xs text-blue-100/80 leading-relaxed">
+                                <AlertTriangle className="text-blue-600 dark:text-blue-400 shrink-0" size={18} />
+                                <div className="text-xs text-blue-700 dark:text-blue-100/80 leading-relaxed">
                                     The Tenable API will be used to perform the scan and retrieve findings. AI will only be used to provide deep insights, remediation steps, and business context for the results.
                                 </div>
                             </div>
@@ -314,7 +314,7 @@ export default function ScannersPage() {
                         className={cn(
                             "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                             activeTab === "scanners"
-                                ? "bg-blue-500/20 text-blue-400 shadow-lg shadow-blue-500/10"
+                                ? "bg-blue-500/20 text-blue-600 dark:text-blue-400 shadow-lg shadow-blue-500/10"
                                 : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
                         )}
                     >
@@ -325,7 +325,7 @@ export default function ScannersPage() {
                         className={cn(
                             "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                             activeTab === "scans"
-                                ? "bg-blue-500/20 text-blue-400 shadow-lg shadow-blue-500/10"
+                                ? "bg-blue-500/20 text-blue-600 dark:text-blue-400 shadow-lg shadow-blue-500/10"
                                 : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
                         )}
                     >
@@ -336,7 +336,7 @@ export default function ScannersPage() {
                         className={cn(
                             "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                             activeTab === "import"
-                                ? "bg-blue-500/20 text-blue-400 shadow-lg shadow-blue-500/10"
+                                ? "bg-blue-500/20 text-blue-600 dark:text-blue-400 shadow-lg shadow-blue-500/10"
                                 : "text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
                         )}
                     >
@@ -362,7 +362,7 @@ export default function ScannersPage() {
                                             >
                                                 <div className="flex items-start gap-4">
                                                     <div className="p-3 rounded-xl bg-[var(--bg-tertiary)]">
-                                                        <Scan size={24} className="text-blue-400" />
+                                                        <Scan size={24} className="text-blue-600 dark:text-blue-400" />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-3 mb-2">
@@ -386,7 +386,7 @@ export default function ScannersPage() {
                                                         </div>
 
                                                         {scanner.error && (
-                                                            <div className="flex items-center gap-2 mb-2 text-sm text-red-400">
+                                                            <div className="flex items-center gap-2 mb-2 text-sm text-red-600 dark:text-red-400">
                                                                 <AlertTriangle size={14} />
                                                                 {scanner.error}
                                                             </div>
@@ -407,7 +407,7 @@ export default function ScannersPage() {
                                                             </div>
                                                             <div>
                                                                 <p className="text-xs text-[var(--text-muted)]">Vulns Found</p>
-                                                                <p className="text-sm text-orange-400">{scanner.vulnsFound}</p>
+                                                                <p className="text-sm text-orange-600 dark:text-orange-400">{scanner.vulnsFound}</p>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -420,7 +420,7 @@ export default function ScannersPage() {
                                                         </button>
                                                         <button
                                                             onClick={() => handleDeleteScanner(scanner.id)}
-                                                            className="p-2 rounded-lg hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-400 transition-all duration-200 hover:scale-110 active:scale-95"
+                                                            className="p-2 rounded-lg hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-700 dark:hover:text-red-400 transition-all duration-200 hover:scale-110 active:scale-95"
                                                             title="Delete Scanner"
                                                         >
                                                             <Trash2 size={16} />
@@ -456,13 +456,13 @@ export default function ScannersPage() {
                                     </div>
                                     <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-tertiary)]">
                                         <span className="text-sm text-[var(--text-secondary)]">Active</span>
-                                        <span className="text-lg font-bold text-green-400">
+                                        <span className="text-lg font-bold text-green-600 dark:text-green-400">
                                             {scanners.filter((s) => s.status === "active").length}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-tertiary)]">
                                         <span className="text-sm text-[var(--text-secondary)]">With Errors</span>
-                                        <span className="text-lg font-bold text-red-400">
+                                        <span className="text-lg font-bold text-red-600 dark:text-red-400">
                                             {scanners.filter((s) => s.status === "error").length}
                                         </span>
                                     </div>
@@ -536,7 +536,7 @@ export default function ScannersPage() {
                                                     <div className="text-xs text-[var(--text-muted)]">Hosts</div>
                                                 </div>
                                                 <div className="text-right hidden md:block">
-                                                    <div className="text-sm font-medium text-orange-400">{scan.vulns}</div>
+                                                    <div className="text-sm font-medium text-orange-600 dark:text-orange-400">{scan.vulns}</div>
                                                     <div className="text-xs text-[var(--text-muted)]">Findings</div>
                                                 </div>
                                                 <ChevronRight size={18} className="text-[var(--text-muted)]" />
@@ -589,7 +589,7 @@ export default function ScannersPage() {
                                         key={format.name}
                                         className="flex items-center gap-3 p-3 rounded-lg bg-[var(--bg-tertiary)]"
                                     >
-                                        <FileJson size={16} className="text-blue-400" />
+                                        <FileJson size={16} className="text-blue-600 dark:text-blue-400" />
                                         <div>
                                             <p className="text-sm text-[var(--text-primary)]">{format.name}</p>
                                             <p className="text-xs text-[var(--text-muted)]">{format.desc}</p>

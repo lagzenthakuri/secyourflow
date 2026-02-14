@@ -18,14 +18,14 @@ const sizeMap = {
 
 const variants = {
   primary: {
-    text: "text-blue-300",
+    text: "text-blue-600 dark:text-blue-300",
     // Use CSS vars if you have them; these are safe defaults:
     c1: "var(--color-primary-600, #2563eb)",
     c2: "var(--color-primary-500, #3b82f6)",
     c3: "var(--color-accent-500, #06b6d4)",
   },
   cyber: {
-    text: "text-sky-300",
+    text: "text-sky-600 dark:text-sky-300",
     c1: "var(--color-primary-600, #2563eb)",
     c2: "var(--color-accent-500, #06b6d4)",
     c3: "var(--color-primary-500, #3b82f6)",

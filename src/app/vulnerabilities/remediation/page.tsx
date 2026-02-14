@@ -42,11 +42,11 @@ const statusOptions: RemediationStatus[] = [
 ];
 
 const statusTone: Record<RemediationStatus, string> = {
-  DRAFT: "border-slate-400/35 bg-slate-500/10 text-[var(--text-secondary)]",
-  ACTIVE: "border-sky-400/35 bg-sky-500/10 text-sky-200",
-  BLOCKED: "border-red-400/35 bg-red-500/10 text-red-200",
-  COMPLETED: "border-emerald-400/35 bg-emerald-500/10 text-emerald-200",
-  ARCHIVED: "border-purple-400/35 bg-purple-500/10 text-purple-200",
+  DRAFT: "border-[var(--border-hover)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]",
+  ACTIVE: "border-sky-400/35 bg-sky-500/10 text-sky-700 dark:text-sky-200",
+  BLOCKED: "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200",
+  COMPLETED: "border-emerald-400/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
+  ARCHIVED: "border-purple-400/35 bg-purple-500/10 text-purple-700 dark:text-purple-200",
 };
 
 function formatLabel(value: string) {
@@ -259,21 +259,21 @@ export default function RemediationPlansPage() {
   return (
     <DashboardLayout>
       <div className="space-y-5">
-        <section className="rounded-3xl border border-white/10 bg-[linear-gradient(132deg,rgba(56,189,248,0.2),rgba(18,18,26,0.9)_44%,rgba(18,18,26,0.96))] p-6 sm:p-8">
+        <section className="rounded-3xl border border-[var(--border-color)] bg-[linear-gradient(132deg,rgba(56,189,248,0.2),rgba(18,18,26,0.9)_44%,rgba(18,18,26,0.96))] p-6 sm:p-8">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
             <div>
               <h1 className="text-2xl font-semibold text-[var(--text-primary)] sm:text-3xl">Remediation Plans</h1>
               <p className="mt-2 text-sm text-[var(--text-secondary)]">
                 Track plan ownership, linked vulnerabilities, evidence, and completion progress.
               </p>
-              <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-100">
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
+              <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--text-primary)]">
+                <span className="rounded-full border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-3 py-1">
                   {plans.length} plans
                 </span>
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
+                <span className="rounded-full border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-3 py-1">
                   {summary.active} active
                 </span>
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
+                <span className="rounded-full border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-3 py-1">
                   {summary.blocked} blocked
                 </span>
               </div>
@@ -282,7 +282,7 @@ export default function RemediationPlansPage() {
               <button
                 type="button"
                 onClick={() => void fetchPlans({ silent: true })}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-white/15"
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
               >
                 <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
                 Refresh
@@ -300,16 +300,16 @@ export default function RemediationPlansPage() {
         </section>
 
         {error ? (
-          <section className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          <section className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
             {error}
           </section>
         ) : null}
 
         <section className="grid gap-4 sm:grid-cols-3">
           {[
-            { label: "Completed", value: summary.completed, tone: "text-emerald-200" },
-            { label: "Active", value: summary.active, tone: "text-sky-200" },
-            { label: "Blocked", value: summary.blocked, tone: "text-red-200" },
+            { label: "Completed", value: summary.completed, tone: "text-emerald-700 dark:text-emerald-200" },
+            { label: "Active", value: summary.active, tone: "text-sky-700 dark:text-sky-200" },
+            { label: "Blocked", value: summary.blocked, tone: "text-red-700 dark:text-red-200" },
           ].map((item) => (
             <article
               key={item.label}
@@ -322,17 +322,17 @@ export default function RemediationPlansPage() {
         </section>
 
         <section className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
-          <header className="border-b border-white/10 px-5 py-4">
+          <header className="border-b border-[var(--border-color)] px-5 py-4">
             <h2 className="text-base font-semibold text-[var(--text-primary)]">Plan Tracker</h2>
           </header>
 
           {plans.length === 0 ? (
             <div className="p-12 text-center">
-              <CheckCircle2 className="mx-auto h-10 w-10 text-slate-500" />
+              <CheckCircle2 className="mx-auto h-10 w-10 text-[var(--text-muted)]" />
               <p className="mt-3 text-sm text-[var(--text-muted)]">No remediation plans yet.</p>
             </div>
           ) : (
-            <div className="divide-y divide-white/10">
+            <div className="divide-y divide-[var(--border-color)]">
               {plans.map((plan) => {
                 const progress = calculateProgress(plan);
                 return (
@@ -349,7 +349,7 @@ export default function RemediationPlansPage() {
                           >
                             {formatLabel(plan.status)}
                           </span>
-                          <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]">
+                          <span className="rounded-full border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]">
                             {progress}% complete
                           </span>
                         </div>
@@ -391,7 +391,7 @@ export default function RemediationPlansPage() {
                             setSelectedPlan(plan);
                             setIsEvidenceOpen(true);
                           }}
-                          className="inline-flex items-center gap-1 rounded-lg border border-white/20 bg-white/[0.03] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-white/[0.08]"
+                          className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)]"
                         >
                           <Paperclip size={12} />
                           Add Evidence

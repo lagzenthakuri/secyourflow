@@ -212,11 +212,11 @@ type SeverityFilter = (typeof severityOptions)[number];
 const numberFormatter = new Intl.NumberFormat("en-US");
 
 function getSeverityTone(severity?: SeverityTone) {
-  if (severity === "CRITICAL") return "border-red-400/35 bg-red-500/10 text-red-200";
-  if (severity === "HIGH") return "border-orange-400/35 bg-orange-500/10 text-orange-200";
-  if (severity === "MEDIUM") return "border-yellow-400/35 bg-yellow-500/10 text-yellow-200";
-  if (severity === "LOW") return "border-emerald-400/35 bg-emerald-500/10 text-emerald-200";
-  return "border-slate-400/35 bg-slate-500/10 text-[var(--text-secondary)]";
+  if (severity === "CRITICAL") return "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200";
+  if (severity === "HIGH") return "border-orange-400/35 bg-orange-500/10 text-orange-700 dark:text-orange-200";
+  if (severity === "MEDIUM") return "border-yellow-400/35 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200";
+  if (severity === "LOW") return "border-emerald-400/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200";
+  return "border-[var(--border-hover)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]";
 }
 
 function scoreIntensity(vulnerabilityCount: number, indicatorCount: number): string {
@@ -225,7 +225,7 @@ function scoreIntensity(vulnerabilityCount: number, indicatorCount: number): str
   if (score >= 5) return "bg-orange-500/20 border-orange-400/45";
   if (score >= 2) return "bg-yellow-500/15 border-yellow-400/40";
   if (score >= 1) return "bg-emerald-500/15 border-emerald-400/35";
-  return "bg-white/5 border-white/10";
+  return "bg-[var(--bg-tertiary)] border-[var(--border-color)]";
 }
 
 export default function ThreatsPage() {
@@ -459,7 +459,7 @@ export default function ThreatsPage() {
               <button
                 type="button"
                 onClick={runCorrelation}
-                className="inline-flex items-center gap-2 rounded-xl border border-red-300/35 bg-red-400/10 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-400/20 dark:text-red-100"
+                className="inline-flex items-center gap-2 rounded-xl border border-red-300/45 bg-red-100/90 px-4 py-2 text-sm font-medium text-red-800 transition hover:bg-red-200/80 dark:border-red-300/35 dark:bg-red-400/10 dark:text-red-100 dark:hover:bg-red-400/20"
               >
                 <Target size={14} />
                 Run Correlation
@@ -516,10 +516,10 @@ export default function ThreatsPage() {
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
                 className={cn(
-                  "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition",
+                  "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition",
                   active
-                    ? "border-sky-300/45 bg-sky-400/15 text-sky-700 dark:text-sky-100"
-                    : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]",
+                    ? "border-sky-600/55 bg-sky-100/90 text-sky-900 font-semibold dark:border-sky-300/45 dark:bg-sky-400/15 dark:text-sky-400"
+                    : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]",
                 )}
               >
                 <Icon size={14} />
@@ -556,7 +556,7 @@ export default function ThreatsPage() {
                           {vulnerability.severity}
                         </span>
                         {vulnerability.cisaKev ? (
-                          <span className="rounded-full border border-orange-400/35 bg-orange-500/10 px-2 py-0.5 text-[11px] text-orange-200">
+                          <span className="rounded-full border border-orange-400/35 bg-orange-500/10 px-2 py-0.5 text-[11px] text-orange-700 dark:text-orange-200">
                             KEV
                           </span>
                         ) : null}
@@ -593,10 +593,10 @@ export default function ThreatsPage() {
                         className={cn(
                           "rounded-full border px-2 py-0.5 text-[11px]",
                           run.status === "SUCCESS"
-                            ? "border-emerald-400/35 bg-emerald-500/10 text-emerald-200"
+                            ? "border-emerald-400/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200"
                             : run.status === "PARTIAL"
-                              ? "border-yellow-400/35 bg-yellow-500/10 text-yellow-200"
-                              : "border-red-400/35 bg-red-500/10 text-red-200",
+                              ? "border-yellow-400/35 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200"
+                              : "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200",
                         )}
                       >
                         {run.status}
@@ -633,7 +633,7 @@ export default function ThreatsPage() {
                 {matrix.tactics.map((tactic) => (
                   <article key={tactic.tacticId} className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4">
                     <div className="mb-3">
-                      <p className="text-xs text-sky-300">{tactic.tacticExternalId}</p>
+                      <p className="text-xs text-sky-700 dark:text-sky-300">{tactic.tacticExternalId}</p>
                       <h3 className="text-base font-semibold text-[var(--text-primary)]">{tactic.tacticName}</h3>
                       {tactic.shortName ? <p className="text-xs text-[var(--text-muted)]">{tactic.shortName}</p> : null}
                     </div>
@@ -648,7 +648,7 @@ export default function ThreatsPage() {
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div>
-                              <p className="text-xs text-sky-300">{technique.techniqueExternalId}</p>
+                              <p className="text-xs text-sky-700 dark:text-sky-300">{technique.techniqueExternalId}</p>
                               <p className="text-sm text-[var(--text-primary)]">{technique.techniqueName}</p>
                             </div>
                             {technique.maxSeverity ? (
@@ -739,7 +739,7 @@ export default function ThreatsPage() {
                 <button
                   type="button"
                   onClick={addManualIoc}
-                  className="rounded-lg border border-sky-300/35 bg-sky-400/15 px-3 text-sm text-sky-100 transition hover:bg-sky-400/20"
+                  className="rounded-lg border border-sky-300/35 bg-sky-400/15 px-3 text-sm text-sky-700 dark:text-sky-100 transition hover:bg-sky-400/20"
                 >
                   Add IOC
                 </button>
@@ -760,7 +760,7 @@ export default function ThreatsPage() {
                 <button
                   type="button"
                   onClick={submitImport}
-                  className="inline-flex items-center gap-2 rounded-lg border border-emerald-300/35 bg-emerald-400/15 px-3 py-1.5 text-sm text-emerald-100 transition hover:bg-emerald-400/20"
+                  className="inline-flex items-center gap-2 rounded-lg border border-emerald-300/35 bg-emerald-400/15 px-3 py-1.5 text-sm text-emerald-700 dark:text-emerald-100 transition hover:bg-emerald-400/20"
                 >
                   <FileUp size={14} />
                   Import
@@ -824,7 +824,7 @@ export default function ThreatsPage() {
                 {actors.map((actor) => (
                   <div key={actor.id} className="p-4">
                     <div className="flex flex-wrap items-center gap-2">
-                      {actor.externalId ? <span className="font-mono text-xs text-sky-300">{actor.externalId}</span> : null}
+                      {actor.externalId ? <span className="font-mono text-xs text-sky-700 dark:text-sky-300">{actor.externalId}</span> : null}
                       <h3 className="text-sm font-medium text-[var(--text-primary)]">{actor.name}</h3>
                     </div>
                     {actor.description ? <p className="mt-1 text-sm text-[var(--text-secondary)]">{actor.description}</p> : null}
@@ -853,7 +853,7 @@ export default function ThreatsPage() {
                 {campaigns.map((campaign) => (
                   <div key={campaign.id} className="p-4">
                     <div className="flex flex-wrap items-center gap-2">
-                      {campaign.externalId ? <span className="font-mono text-xs text-sky-300">{campaign.externalId}</span> : null}
+                      {campaign.externalId ? <span className="font-mono text-xs text-sky-700 dark:text-sky-300">{campaign.externalId}</span> : null}
                       <h3 className="text-sm font-medium text-[var(--text-primary)]">{campaign.name}</h3>
                     </div>
                     {campaign.description ? <p className="mt-1 text-sm text-[var(--text-secondary)]">{campaign.description}</p> : null}

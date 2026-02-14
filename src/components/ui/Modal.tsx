@@ -52,7 +52,7 @@ export function Modal({
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
             <div
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                className="absolute inset-0 bg-[var(--overlay-scrim)] backdrop-blur-sm"
                 onClick={onClose}
             />
             <div
@@ -63,7 +63,7 @@ export function Modal({
                 )}
             >
                 <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-color)]">
-                    <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+                    <h2 className="text-xl font-semibold text-[var(--text-primary)]">{title}</h2>
                     <button
                         onClick={onClose}
                         className="p-1 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] transition-all duration-300 ease-in-out"

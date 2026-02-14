@@ -175,16 +175,16 @@ export default function Home() {
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-grid opacity-45" />
         <div 
-          className="absolute -top-56 left-1/2 h-[680px] w-[980px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.26),rgba(10,10,15,0)_64%)] transition-transform duration-300"
+          className="hero-radial-primary absolute -top-56 left-1/2 h-[680px] w-[980px] -translate-x-1/2 rounded-full transition-transform duration-300"
           style={{ transform: `translate(-50%, ${scrollY * 0.15}px)` }}
         />
         <div 
-          className="absolute bottom-[-220px] right-[-140px] h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,rgba(56,189,248,0.22),rgba(10,10,15,0)_72%)] transition-transform duration-300"
+          className="hero-radial-secondary absolute bottom-[-220px] right-[-140px] h-[420px] w-[420px] rounded-full transition-transform duration-300"
           style={{ transform: `translate(0, ${-scrollY * 0.1}px)` }}
         />
       </div>
 
-      <nav className="fixed top-0 z-50 w-full border-b border-white/10 bg-[rgba(10,10,15,0.84)] backdrop-blur-xl" role="navigation" aria-label="Main navigation">
+      <nav className="marketing-nav-glass fixed top-0 z-50 w-full border-b backdrop-blur-xl" role="navigation" aria-label="Main navigation">
         <div className="mx-auto flex h-20 w-full max-w-6xl items-center justify-between px-6">
           <Link href="/" className="inline-flex items-center gap-3" aria-label="SecYourFlow home">
             <Image
@@ -194,24 +194,24 @@ export default function Home() {
               height={48}
             />
             <span className="text-sm font-semibold tracking-[0.25em] text-[var(--text-primary)] sm:text-base">
-              SECYOUR<span className="text-sky-300">FLOW</span>
+              SECYOUR<span className="text-sky-600 dark:text-sky-300">FLOW</span>
             </span>
           </Link>
 
           <div className="hidden items-center gap-8 md:flex">
-            <a href="#features" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
+            <a href="#features" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
               Platform
             </a>
-            <a href="#workflow" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
+            <a href="#workflow" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
               Workflow
             </a>
-            <a href="#use-cases" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
+            <a href="#use-cases" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
               Use Cases
             </a>
-            <a href="#outcomes" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
+            <a href="#outcomes" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
               Outcomes
             </a>
-            <Link href="/contact" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
+            <Link href="/contact" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
               Contact
             </Link>
           </div>
@@ -219,7 +219,7 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 shadow-[0_10px_28px_-16px_rgba(56,189,248,0.9)] transition hover:bg-sky-200 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950"
+              className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 shadow-[0_10px_28px_-16px_rgba(56,189,248,0.9)] transition hover:bg-sky-200 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)]"
             >
               Dashboard
               <ArrowRight size={16} />
@@ -232,7 +232,7 @@ export default function Home() {
         <section className="px-6 pb-20 pt-32" aria-label="Hero section">
           <div className="mx-auto grid w-full max-w-6xl gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             <div className={`transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
-              <div className="inline-flex items-center gap-2 rounded-full border border-sky-300/30 bg-sky-300/10 px-3 py-1.5 text-xs font-medium text-sky-200">
+              <div className="inline-flex items-center gap-2 rounded-full border border-sky-300/30 bg-sky-300/10 px-3 py-1.5 text-xs font-medium text-sky-700 dark:text-sky-200">
                 <Activity size={14} />
                 SOC-grade cyber risk command center
               </div>
@@ -254,14 +254,14 @@ export default function Home() {
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
                   href="/dashboard"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-300 px-6 py-3 text-sm font-semibold text-slate-950 shadow-[0_14px_32px_-18px_rgba(56,189,248,0.95)] transition hover:bg-sky-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-300 px-6 py-3 text-sm font-semibold text-slate-950 shadow-[0_14px_32px_-18px_rgba(56,189,248,0.95)] transition hover:bg-sky-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)]"
                 >
                   Open Dashboard
                   <ChevronRight size={16} />
                 </Link>
                 <Link
                   href="/risk-register"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-medium text-slate-100 transition hover:border-white/25 hover:bg-white/10 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-6 py-3 text-sm font-medium text-[var(--text-primary)] transition hover:border-[var(--border-hover)] hover:bg-[var(--bg-elevated)] hover:scale-105 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)]"
                 >
                   Review Risk Register
                 </Link>
@@ -269,7 +269,7 @@ export default function Home() {
 
               <div className="mt-8 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
                 {["Signal-first workflows", "Analyst-ready context", "Executive-level clarity"].map((item) => (
-                  <span key={item} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
+                  <span key={item} className="rounded-full border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-1.5">
                     {item}
                   </span>
                 ))}
@@ -293,7 +293,7 @@ export default function Home() {
                       <span className="text-[var(--text-secondary)]">{signal.label}</span>
                       <span className="font-medium text-[var(--text-primary)]">{signal.level}%</span>
                     </div>
-                    <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                    <div className="h-2 rounded-full bg-[var(--bg-tertiary)] overflow-hidden">
                       <div
                         className={`h-full rounded-full ${signal.tone} transition-all duration-1000 ease-out`}
                         style={{ 
@@ -307,11 +307,11 @@ export default function Home() {
               </div>
 
               <div className="mt-7 grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3">
                   <p className="text-xs text-[var(--text-muted)]">Open High Risk</p>
                   <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">14</p>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3">
                   <p className="text-xs text-[var(--text-muted)]">Control Drift</p>
                   <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">6</p>
                 </div>
@@ -320,7 +320,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="px-6 py-16 bg-[rgba(9,14,22,0.5)]" aria-label="Platform statistics">
+        <section className="marketing-section-surface px-6 py-16" aria-label="Platform statistics">
           <div className="mx-auto w-full max-w-6xl">
             <div className="grid gap-8 md:grid-cols-3">
               {statsData.map((stat, index) => {
@@ -331,7 +331,7 @@ export default function Home() {
                     className={`text-center transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
                     style={{ transitionDelay: `${300 + index * 100}ms` }}
                   >
-                    <div className="inline-flex rounded-full border border-sky-300/30 bg-sky-300/10 p-3 text-sky-200">
+                    <div className="inline-flex rounded-full border border-sky-300/30 bg-sky-300/10 p-3 text-sky-700 dark:text-sky-200">
                       <Icon size={24} />
                     </div>
                     <p className="mt-4 text-4xl font-bold text-[var(--text-primary)]">
@@ -348,7 +348,7 @@ export default function Home() {
         <section id="features" data-animate="features" className="scroll-mt-28 px-6 py-20" aria-labelledby="features-heading">
           <div className="mx-auto w-full max-w-6xl">
             <div className={`max-w-3xl transition-all duration-700 ${sectionsVisible.features ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-300">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-600 dark:text-sky-300">
                 Platform
               </p>
               <h2 className="mt-4 text-3xl font-semibold text-[var(--text-primary)] sm:text-4xl">
@@ -366,10 +366,10 @@ export default function Home() {
                 return (
                   <article
                     key={item.title}
-                    className={`group rounded-2xl border border-white/10 bg-[rgba(20,20,30,0.78)] p-6 transition-all duration-700 hover:-translate-y-1 hover:border-sky-300/35 hover:bg-[rgba(20,20,30,0.95)] ${sectionsVisible.features ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+                    className={`marketing-card-surface group rounded-2xl border p-6 transition-all duration-700 hover:-translate-y-1 hover:border-sky-300/35 hover:bg-[var(--marketing-card-bg-strong)] ${sectionsVisible.features ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
                     style={{ transitionDelay: `${idx * 100}ms` }}
                   >
-                    <div className="inline-flex rounded-lg border border-sky-300/35 bg-sky-300/10 p-2.5 text-sky-200 transition-all duration-300 group-hover:scale-110">
+                    <div className="inline-flex rounded-lg border border-sky-300/35 bg-sky-300/10 p-2.5 text-sky-700 dark:text-sky-200 transition-all duration-300 group-hover:scale-110">
                       <Icon size={18} />
                     </div>
                     <h3 className="mt-5 text-lg font-semibold text-[var(--text-primary)]">{item.title}</h3>
@@ -386,12 +386,12 @@ export default function Home() {
         <section
           id="workflow"
           data-animate="workflow"
-          className="scroll-mt-28 border-y border-white/10 bg-[rgba(9,14,22,0.66)] px-6 py-20"
+          className="hero-section-surface scroll-mt-28 border-y border-[var(--border-color)] px-6 py-20"
         >
           <div className="mx-auto w-full max-w-6xl">
             <div className={`flex flex-col gap-4 md:flex-row md:items-end md:justify-between transition-all duration-700 ${sectionsVisible.workflow ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
               <div className="max-w-3xl">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-300">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-600 dark:text-sky-300">
                   Workflow
                 </p>
                 <h2 className="mt-4 text-3xl font-semibold text-[var(--text-primary)] sm:text-4xl">
@@ -400,7 +400,7 @@ export default function Home() {
               </div>
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-2 text-sm font-medium text-sky-200 transition hover:text-sky-100"
+                className="inline-flex items-center gap-2 text-sm font-medium text-sky-700 dark:text-sky-200 transition hover:text-sky-800 dark:hover:text-sky-100"
               >
                 See it in dashboard
                 <ArrowRight size={15} />
@@ -411,10 +411,10 @@ export default function Home() {
               {workflowSteps.map((item, idx) => (
                 <article
                   key={item.step}
-                  className={`group rounded-2xl border border-white/10 bg-[rgba(14,18,28,0.84)] p-6 transition-all duration-700 hover:border-sky-300/30 hover:-translate-y-1 ${sectionsVisible.workflow ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+                  className={`marketing-card-surface group rounded-2xl border p-6 transition-all duration-700 hover:border-sky-300/30 hover:bg-[var(--marketing-card-bg-strong)] hover:-translate-y-1 ${sectionsVisible.workflow ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
                   style={{ transitionDelay: `${idx * 100}ms` }}
                 >
-                  <div className="text-xs font-semibold tracking-[0.22em] text-sky-300">
+                  <div className="text-xs font-semibold tracking-[0.22em] text-sky-600 dark:text-sky-300">
                     STEP {item.step}
                   </div>
                   <h3 className="mt-4 text-lg font-semibold text-[var(--text-primary)]">{item.title}</h3>
@@ -429,7 +429,7 @@ export default function Home() {
         <section id="outcomes" data-animate="outcomes" className="scroll-mt-20 px-6 py-24">
           <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[1.2fr_0.8fr]">
             <div className={`transition-all duration-700 ${sectionsVisible.outcomes ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-              <p className="text-xs font-bold uppercase tracking-wider text-sky-400">
+              <p className="text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
                 Outcomes
               </p>
               <h2 className="mt-3 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">
@@ -444,19 +444,19 @@ export default function Home() {
                 {outcomeCards.map((item, idx) => (
                   <article 
                     key={item.label} 
-                    className={`rounded-xl border border-slate-800/50 bg-slate-900/30 p-5 backdrop-blur-sm transition-all duration-700 hover:border-slate-700/50 hover:bg-slate-900/50 hover:-translate-y-0.5 ${sectionsVisible.outcomes ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+                    className={`rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-5 backdrop-blur-sm transition-all duration-700 hover:border-[var(--border-hover)] hover:bg-[var(--bg-elevated)] hover:-translate-y-0.5 ${sectionsVisible.outcomes ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
                     style={{ transitionDelay: `${idx * 100}ms` }}
                   >
                     <p className="text-2xl font-black text-[var(--text-primary)]">{item.value}</p>
-                    <p className="mt-2 text-sm text-slate-500">{item.label}</p>
+                    <p className="mt-2 text-sm text-[var(--text-muted)]">{item.label}</p>
                   </article>
                 ))}
               </div>
             </div>
 
-            <aside className={`group relative overflow-hidden rounded-xl border border-sky-400/20 bg-gradient-to-br from-sky-400/10 to-slate-900/50 p-7 backdrop-blur-sm transition-all duration-700 hover:border-sky-400/30 ${sectionsVisible.outcomes ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`} style={{ transitionDelay: '300ms' }}>
+            <aside className={`group relative overflow-hidden rounded-xl border border-sky-400/20 bg-gradient-to-br from-sky-400/10 to-[var(--bg-tertiary)] p-7 backdrop-blur-sm transition-all duration-700 hover:border-sky-400/30 ${sectionsVisible.outcomes ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`} style={{ transitionDelay: '300ms' }}>
               <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-sky-500/10 blur-3xl transition-all duration-700 group-hover:bg-sky-500/20" />
-              <div className="relative inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-sky-300 transition-all duration-300 group-hover:scale-110">
+              <div className="relative inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-sky-600 dark:text-sky-300 transition-all duration-300 group-hover:scale-110">
                 <LockKeyhole size={18} />
               </div>
               <h3 className="relative mt-5 text-xl font-bold text-[var(--text-primary)]">
@@ -469,15 +469,15 @@ export default function Home() {
 
               <div className="relative mt-6 space-y-2.5 text-sm text-[var(--text-secondary)]">
                 <div className="flex items-center gap-2.5 transition-all duration-300 hover:translate-x-1 hover:text-[var(--text-primary)]">
-                  <Gauge size={15} className="text-sky-400" />
+                  <Gauge size={15} className="text-sky-600 dark:text-sky-400" />
                   Risk score clarity for every critical asset
                 </div>
                 <div className="flex items-center gap-2.5 transition-all duration-300 hover:translate-x-1 hover:text-[var(--text-primary)]">
-                  <Siren size={15} className="text-sky-400" />
+                  <Siren size={15} className="text-sky-600 dark:text-sky-400" />
                   Prioritized response queue for exploited issues
                 </div>
                 <div className="flex items-center gap-2.5 transition-all duration-300 hover:translate-x-1 hover:text-[var(--text-primary)]">
-                  <FileCheck2 size={15} className="text-sky-400" />
+                  <FileCheck2 size={15} className="text-sky-600 dark:text-sky-400" />
                   Compliance mapping tied to remediation
                 </div>
               </div>
@@ -492,7 +492,7 @@ export default function Home() {
                 </Link>
                 <Link
                   href="/login"
-                  className="inline-flex items-center justify-center rounded-lg border border-slate-700 bg-slate-900/50 px-5 py-2.5 text-sm text-[var(--text-secondary)] backdrop-blur-sm transition-all duration-300 hover:border-slate-600 hover:bg-slate-800/50 hover:text-[var(--text-primary)]"
+                  className="inline-flex items-center justify-center rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-5 py-2.5 text-sm text-[var(--text-secondary)] backdrop-blur-sm transition-all duration-300 hover:border-[var(--border-hover)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
                 >
                   Sign In
                 </Link>

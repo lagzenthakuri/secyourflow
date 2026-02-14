@@ -1,10 +1,10 @@
-import { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 interface Stat {
     label: string;
     value: string | number;
-    icon?: any;
+    icon?: ComponentType<{ size?: number }>;
     trend?: {
         value: string | number;
         isUp?: boolean;
@@ -38,7 +38,7 @@ export function PageHeader({ title, description, badge, actions, stats, classNam
                 <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6">
                     <div className="flex-1 min-w-0 xl:min-w-[280px]">
                         {badge && (
-                            <div className="mb-4 inline-flex items-center gap-2 rounded-lg border border-sky-300/20 bg-sky-400/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-sky-400">
+                            <div className="mb-4 inline-flex items-center gap-2 rounded-lg border border-sky-300/20 bg-sky-400/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-sky-600 dark:text-sky-400">
                                 {badge}
                             </div>
                         )}
@@ -86,7 +86,7 @@ export function PageHeader({ title, description, badge, actions, stats, classNam
                                                 <span className={cn(
                                                     "text-[10px] font-bold",
                                                     stat.trend.neutral ? "text-[var(--text-muted)]" :
-                                                        stat.trend.isUp ? "text-emerald-400" : "text-red-400"
+                                                        stat.trend.isUp ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
                                                 )}>
                                                     {stat.trend.value}
                                                 </span>

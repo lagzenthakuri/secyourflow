@@ -32,7 +32,7 @@ const RiskTrendChart = dynamic(
   () => import("@/components/charts/DashboardCharts").then((mod) => mod.RiskTrendChart),
   {
     ssr: false,
-    loading: () => <div className="h-[280px] animate-pulse rounded-xl bg-white/5" />,
+    loading: () => <div className="h-[280px] animate-pulse rounded-xl bg-[var(--bg-tertiary)]" />,
   },
 );
 
@@ -40,7 +40,7 @@ const VulnStatusChart = dynamic(
   () => import("@/components/charts/DashboardCharts").then((mod) => mod.VulnStatusChart),
   {
     ssr: false,
-    loading: () => <div className="h-[240px] animate-pulse rounded-xl bg-white/5" />,
+    loading: () => <div className="h-[240px] animate-pulse rounded-xl bg-[var(--bg-tertiary)]" />,
   },
 );
 
@@ -48,7 +48,7 @@ const ComplianceBarChart = dynamic(
   () => import("@/components/charts/DashboardCharts").then((mod) => mod.ComplianceBarChart),
   {
     ssr: false,
-    loading: () => <div className="h-[240px] animate-pulse rounded-xl bg-white/5" />,
+    loading: () => <div className="h-[240px] animate-pulse rounded-xl bg-[var(--bg-tertiary)]" />,
   },
 );
 
@@ -200,39 +200,39 @@ const reportTypeMeta: Record<
 > = {
   executive: {
     icon: TrendingUp,
-    tone: "text-sky-200",
+    tone: "text-sky-700 dark:text-sky-200",
     border: "border-sky-300/30",
-    iconTone: "text-sky-300",
+    iconTone: "text-sky-600 dark:text-sky-300",
   },
   technical: {
     icon: Shield,
-    tone: "text-orange-200",
+    tone: "text-orange-700 dark:text-orange-200",
     border: "border-orange-300/30",
-    iconTone: "text-orange-300",
+    iconTone: "text-orange-600 dark:text-orange-300",
   },
   compliance: {
     icon: FileCheck,
-    tone: "text-emerald-200",
+    tone: "text-emerald-700 dark:text-emerald-200",
     border: "border-emerald-300/30",
-    iconTone: "text-emerald-300",
+    iconTone: "text-emerald-600 dark:text-emerald-300",
   },
   inventory: {
     icon: Target,
-    tone: "text-violet-200",
+    tone: "text-violet-700 dark:text-violet-200",
     border: "border-violet-300/30",
-    iconTone: "text-violet-300",
+    iconTone: "text-violet-600 dark:text-violet-300",
   },
   threat: {
     icon: TrendingDown,
-    tone: "text-red-200",
+    tone: "text-red-700 dark:text-red-200",
     border: "border-red-300/30",
-    iconTone: "text-red-300",
+    iconTone: "text-red-600 dark:text-red-300",
   },
   tracking: {
     icon: BarChart3,
-    tone: "text-cyan-200",
+    tone: "text-cyan-700 dark:text-cyan-200",
     border: "border-cyan-300/30",
-    iconTone: "text-cyan-300",
+    iconTone: "text-cyan-600 dark:text-cyan-300",
   },
 };
 
@@ -256,15 +256,15 @@ function formatLabel(value: string) {
 function getReportStatusTone(status?: string | null) {
   const normalized = (status || "").toUpperCase();
   if (normalized === "COMPLETED") {
-    return "border-emerald-400/35 bg-emerald-500/10 text-emerald-200";
+    return "border-emerald-400/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200";
   }
   if (normalized === "PENDING") {
-    return "border-yellow-400/35 bg-yellow-500/10 text-yellow-200";
+    return "border-yellow-400/35 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200";
   }
   if (normalized === "FAILED") {
-    return "border-red-400/35 bg-red-500/10 text-red-200";
+    return "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200";
   }
-  return "border-slate-400/35 bg-slate-500/10 text-[var(--text-secondary)]";
+  return "border-[var(--border-hover)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]";
 }
 
 export default function ReportsPage() {
@@ -754,7 +754,7 @@ export default function ReportsPage() {
                 {complianceOverview.length > 0 ? (
                   <ComplianceBarChart data={complianceOverview} />
                 ) : (
-                  <p className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-4 text-sm text-[var(--text-muted)]">
+                  <p className="rounded-xl border border-dashed border-[var(--border-hover)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
                     Compliance chart appears when frameworks are available.
                   </p>
                 )}
@@ -769,19 +769,19 @@ export default function ReportsPage() {
                   {
                     label: "Completed",
                     value: queueStats.completed,
-                    tone: "text-emerald-200 border-emerald-400/30 bg-emerald-500/10",
+                    tone: "text-emerald-800 dark:text-emerald-200 border-emerald-300/60 bg-emerald-100/85 dark:border-emerald-400/30 dark:bg-emerald-500/12",
                     icon: CheckCircle2,
                   },
                   {
                     label: "Pending",
                     value: queueStats.pending,
-                    tone: "text-yellow-200 border-yellow-400/30 bg-yellow-500/10",
+                    tone: "text-amber-800 dark:text-amber-200 border-amber-300/60 bg-amber-100/85 dark:border-amber-400/30 dark:bg-amber-500/12",
                     icon: Clock3,
                   },
                   {
                     label: "Failed",
                     value: queueStats.failed,
-                    tone: "text-red-200 border-red-400/30 bg-red-500/10",
+                    tone: "text-red-800 dark:text-red-200 border-red-300/60 bg-red-100/85 dark:border-red-400/30 dark:bg-red-500/12",
                     icon: AlertTriangle,
                   },
                 ].map((item) => {
@@ -823,16 +823,16 @@ export default function ReportsPage() {
                             className={cn(
                               "font-semibold",
                               framework.compliancePercentage >= 80
-                                ? "text-emerald-300"
+                                ? "text-emerald-600 dark:text-emerald-300"
                                 : framework.compliancePercentage >= 60
-                                  ? "text-yellow-300"
-                                  : "text-red-300",
+                                  ? "text-yellow-600 dark:text-yellow-300"
+                                  : "text-red-600 dark:text-red-300",
                             )}
                           >
                             {framework.compliancePercentage.toFixed(0)}%
                           </span>
                         </div>
-                        <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                        <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
                           <div
                             className={cn(
                               "h-full rounded-full transition-all duration-500",
@@ -876,7 +876,7 @@ export default function ReportsPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <label className="rounded-lg border border-white/10 bg-white/[0.03] p-2 text-xs text-[var(--text-secondary)]">
+                  <label className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2 text-xs text-[var(--text-secondary)]">
                     Share Role
                     <select
                       className="input mt-1 h-9 text-xs"
@@ -889,7 +889,7 @@ export default function ReportsPage() {
                       <option value="MAIN_OFFICER">MAIN_OFFICER</option>
                     </select>
                   </label>
-                  <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-2 text-xs text-[var(--text-secondary)]">
+                  <label className="flex items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2 text-xs text-[var(--text-secondary)]">
                     <input
                       type="checkbox"
                       checked={viewDefault}
@@ -918,7 +918,7 @@ export default function ReportsPage() {
                   {dashboardViews.map((view) => (
                     <div
                       key={view.id}
-                      className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2"
+                      className="flex items-center justify-between rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2"
                     >
                       <button
                         type="button"
@@ -935,14 +935,14 @@ export default function ReportsPage() {
                         type="button"
                         onClick={() => void deleteDashboardView(view.id)}
                         disabled={isSavingView}
-                        className="rounded-md border border-red-400/35 bg-red-500/10 px-2 py-1 text-[11px] text-red-200 transition hover:bg-red-500/20 disabled:opacity-50"
+                        className="rounded-md border border-red-400/35 bg-red-500/10 px-2 py-1 text-[11px] text-red-700 dark:text-red-200 transition hover:bg-red-500/20 disabled:opacity-50"
                       >
                         Delete
                       </button>
                     </div>
                   ))}
                   {dashboardViews.length === 0 ? (
-                    <p className="text-xs text-slate-500">No saved views yet.</p>
+                    <p className="text-xs text-[var(--text-muted)]">No saved views yet.</p>
                   ) : null}
                 </div>
               </div>

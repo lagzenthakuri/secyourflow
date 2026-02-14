@@ -51,13 +51,13 @@ export function FrameworkActions({
                 className={cn(
                     "p-1.5 rounded-lg transition-all duration-300 ease-in-out border bg-[var(--bg-tertiary)] border-[var(--border-color)]",
                     isOpen 
-                        ? "text-white border-blue-500/50" 
-                        : "text-[var(--text-muted)] hover:text-white"
+                        ? "text-[var(--text-primary)] border-blue-500/50" 
+                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 )}
                 disabled={isDeleting}
             >
                 {isDeleting ? (
-                    <Loader2 size={14} className="animate-spin text-blue-400" />
+                    <Loader2 size={14} className="animate-spin text-blue-600 dark:text-blue-400" />
                 ) : (
                     <Settings size={14} />
                 )}
@@ -77,7 +77,7 @@ export function FrameworkActions({
                                     onEdit();
                                     setIsOpen(false);
                                 }}
-                                className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-white hover:bg-white/5 rounded-lg transition-all duration-300 ease-in-out text-left"
+                                className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] rounded-lg transition-all duration-300 ease-in-out text-left"
                             >
                                 <Edit2 size={12} />
                                 Edit Basic Info
@@ -97,7 +97,7 @@ export function FrameworkActions({
                         </div>
                     ) : (
                         <div className="p-3 bg-red-500/5">
-                            <p className="text-xs font-bold text-white mb-2">Delete Framework?</p>
+                            <p className="text-xs font-bold text-[var(--text-primary)] mb-2">Delete Framework?</p>
                             <div className="flex gap-2">
                                 <button
                                     type="button"
@@ -118,7 +118,7 @@ export function FrameworkActions({
                                         e.stopPropagation();
                                         setIsConfirming(false);
                                     }}
-                                    className="flex-1 py-1.5 bg-[var(--bg-tertiary)] text-white rounded-lg text-[10px]"
+                                    className="flex-1 py-1.5 bg-[var(--bg-tertiary)] text-[var(--text-primary)] rounded-lg text-[10px]"
                                 >
                                     No
                                 </button>

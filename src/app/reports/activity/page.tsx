@@ -36,13 +36,13 @@ function formatLabel(value: string) {
 
 function getEntityTypeColor(entityType: string) {
   const type = entityType.toLowerCase();
-  if (type.includes("auth") || type.includes("user")) return "border-blue-400/35 bg-blue-500/10 text-blue-200";
-  if (type.includes("vulnerability")) return "border-red-400/35 bg-red-500/10 text-red-200";
-  if (type.includes("asset")) return "border-green-400/35 bg-green-500/10 text-green-200";
-  if (type.includes("compliance")) return "border-purple-400/35 bg-purple-500/10 text-purple-200";
-  if (type.includes("risk")) return "border-orange-400/35 bg-orange-500/10 text-orange-200";
-  if (type.includes("report")) return "border-yellow-400/35 bg-yellow-500/10 text-yellow-200";
-  return "border-sky-400/35 bg-sky-500/10 text-sky-200";
+  if (type.includes("auth") || type.includes("user")) return "border-blue-400/35 bg-blue-500/10 text-blue-700 dark:text-blue-200";
+  if (type.includes("vulnerability")) return "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200";
+  if (type.includes("asset")) return "border-green-400/35 bg-green-500/10 text-green-700 dark:text-green-200";
+  if (type.includes("compliance")) return "border-purple-400/35 bg-purple-500/10 text-purple-700 dark:text-purple-200";
+  if (type.includes("risk")) return "border-orange-400/35 bg-orange-500/10 text-orange-700 dark:text-orange-200";
+  if (type.includes("report")) return "border-yellow-400/35 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200";
+  return "border-sky-400/35 bg-sky-500/10 text-sky-700 dark:text-sky-200";
 }
 
 export default function ReportsActivityPage() {
@@ -130,7 +130,7 @@ export default function ReportsActivityPage() {
       <DashboardLayout>
         <div className="flex min-h-[60vh] flex-col items-center justify-center p-6 text-center">
           <div className="rounded-2xl border border-red-400/20 bg-red-500/5 p-8 max-w-md">
-            <XCircle size={48} className="mx-auto text-red-400 mb-4" />
+            <XCircle size={48} className="mx-auto text-red-600 dark:text-red-400 mb-4" />
             <h1 className="text-xl font-semibold text-[var(--text-primary)] mb-2">Access Denied</h1>
             <p className="text-sm text-[var(--text-muted)] mb-6">
               The Activity Log is only accessible by Main Officers. Please contact your administrator if you believe this is an error.
@@ -150,7 +150,7 @@ export default function ReportsActivityPage() {
   return (
     <DashboardLayout>
       <div className="space-y-5">
-        <section className="rounded-3xl border border-white/10 bg-[linear-gradient(132deg,rgba(56,189,248,0.2),rgba(18,18,26,0.9)_44%,rgba(18,18,26,0.96))] p-6 sm:p-8">
+        <section className="rounded-3xl border border-[var(--border-color)] bg-[linear-gradient(132deg,rgba(56,189,248,0.2),rgba(18,18,26,0.9)_44%,rgba(18,18,26,0.96))] p-6 sm:p-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h1 className="text-2xl font-semibold text-[var(--text-primary)] sm:text-3xl">Activity Log</h1>
@@ -179,7 +179,7 @@ export default function ReportsActivityPage() {
         </section>
 
         {error ? (
-          <section className="rounded-2xl border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          <section className="rounded-2xl border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
             {error}
           </section>
         ) : null}
@@ -189,17 +189,17 @@ export default function ReportsActivityPage() {
             {
               label: "Total Activities",
               value: totalActivities,
-              tone: "border-sky-400/35 bg-sky-500/10 text-sky-200",
+              tone: "border-sky-400/35 bg-sky-500/10 text-sky-700 dark:text-sky-200",
             },
             {
               label: "Today",
               value: todayActivities,
-              tone: "border-emerald-400/35 bg-emerald-500/10 text-emerald-200",
+              tone: "border-emerald-400/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
             },
             {
               label: "This Week",
               value: thisWeekActivities,
-              tone: "border-yellow-400/35 bg-yellow-500/10 text-yellow-200",
+              tone: "border-yellow-400/35 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200",
             },
           ].map((item) => (
             <article key={item.label} className={cn("rounded-xl border px-4 py-3", item.tone)}>
@@ -213,7 +213,7 @@ export default function ReportsActivityPage() {
           <label className="relative block">
             <Search
               size={15}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
             />
             <input
               className="input h-10 w-full !pl-9 text-sm"
@@ -225,13 +225,13 @@ export default function ReportsActivityPage() {
         </section>
 
         <section className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
-          <header className="border-b border-white/10 px-5 py-4">
+          <header className="border-b border-[var(--border-color)] px-5 py-4">
             <h2 className="text-base font-semibold text-[var(--text-primary)]">Activity Log</h2>
           </header>
           {filteredActivities.length === 0 ? (
             <div className="p-8 text-sm text-[var(--text-muted)]">No activity logs found.</div>
           ) : (
-            <div className="divide-y divide-white/10">
+            <div className="divide-y divide-[var(--border-color)]">
               {filteredActivities.map((activity) => {
                 const userAgentInfo = parseUserAgent(activity.userAgent);
                 const activityDate = new Date(activity.createdAt);
@@ -240,7 +240,7 @@ export default function ReportsActivityPage() {
                 return (
                   <div
                     key={activity.id}
-                    className="px-5 py-4 cursor-pointer transition-colors hover:bg-white/[0.03]"
+                    className="px-5 py-4 cursor-pointer transition-colors hover:bg-[var(--bg-elevated)]"
                     onClick={() => setSelectedActivity(activity)}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -286,7 +286,7 @@ export default function ReportsActivityPage() {
                         </div>
                       </div>
                       <button
-                        className="text-xs text-sky-300 hover:text-sky-200 transition-colors"
+                        className="text-xs text-sky-600 dark:text-sky-300 hover:text-sky-700 dark:hover:text-sky-200 transition-colors"
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedActivity(activity);
@@ -306,27 +306,27 @@ export default function ReportsActivityPage() {
       {/* Detail Modal */}
       {selectedActivity && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-scrim)] backdrop-blur-sm p-4"
           onClick={() => setSelectedActivity(null)}
         >
           <div
             className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-[var(--border-color)] bg-[var(--bg-elevated)] shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[rgba(18,18,26,0.98)] px-6 py-4">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--border-color)] bg-[var(--bg-elevated)] px-6 py-4">
               <h2 className="text-xl font-semibold text-[var(--text-primary)]">Activity Details</h2>
               <button
                 onClick={() => setSelectedActivity(null)}
-                className="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-white/10 hover:text-[var(--text-primary)]"
+                className="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
               >
                 <X size={20} />
               </button>
             </div>
 
             <div className="space-y-6 p-6">
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <ActivityIcon size={16} className="text-sky-300" />
+                  <ActivityIcon size={16} className="text-sky-600 dark:text-sky-300" />
                   <h3 className="text-sm font-semibold text-[var(--text-primary)]">Action Information</h3>
                 </div>
                 <div className="space-y-3">
@@ -350,9 +350,9 @@ export default function ReportsActivityPage() {
               </div>
 
               {selectedActivity.user ? (
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <User size={16} className="text-blue-300" />
+                    <User size={16} className="text-blue-600 dark:text-blue-300" />
                     <h3 className="text-sm font-semibold text-[var(--text-primary)]">User Information</h3>
                   </div>
                   <div className="space-y-3">
@@ -368,7 +368,7 @@ export default function ReportsActivityPage() {
                     </div>
                     <div>
                       <p className="text-xs text-[var(--text-muted)] mb-1">Role</p>
-                      <span className="inline-block rounded-full border border-purple-400/35 bg-purple-500/10 px-2 py-0.5 text-[11px] text-purple-200">
+                      <span className="inline-block rounded-full border border-purple-400/35 bg-purple-500/10 px-2 py-0.5 text-[11px] text-purple-700 dark:text-purple-200">
                         {formatLabel(selectedActivity.user.role)}
                       </span>
                     </div>
@@ -377,9 +377,9 @@ export default function ReportsActivityPage() {
               ) : null}
 
               {/* Network & Device Information */}
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <Globe size={16} className="text-green-300" />
+                  <Globe size={16} className="text-green-600 dark:text-green-300" />
                   <h3 className="text-sm font-semibold text-[var(--text-primary)]">Network & Device</h3>
                 </div>
                 <div className="space-y-3">
@@ -413,14 +413,14 @@ export default function ReportsActivityPage() {
                     </div>
                   )}
                   {!selectedActivity.userAgent && (
-                    <p className="text-sm text-slate-500">No user agent information available</p>
+                    <p className="text-sm text-[var(--text-muted)]">No user agent information available</p>
                   )}
                 </div>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <Calendar size={16} className="text-yellow-300" />
+                  <Calendar size={16} className="text-yellow-600 dark:text-yellow-300" />
                   <h3 className="text-sm font-semibold text-[var(--text-primary)]">Timestamp</h3>
                 </div>
                 <div>
@@ -436,16 +436,16 @@ export default function ReportsActivityPage() {
               </div>
 
               {(selectedActivity.oldValue || selectedActivity.newValue) ? (
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <FileText size={16} className="text-orange-300" />
+                    <FileText size={16} className="text-orange-600 dark:text-orange-300" />
                     <h3 className="text-sm font-semibold text-[var(--text-primary)]">Changes</h3>
                   </div>
                   <div className="space-y-3">
                     {selectedActivity.oldValue ? (
                       <div>
                         <p className="text-xs text-[var(--text-muted)] mb-1">Previous Value</p>
-                        <pre className="text-xs text-[var(--text-secondary)] bg-black/20 rounded-lg p-3 overflow-x-auto">
+                        <pre className="text-xs text-[var(--text-secondary)] bg-[var(--code-block-bg)] rounded-lg p-3 overflow-x-auto">
                           {JSON.stringify(selectedActivity.oldValue, null, 2)}
                         </pre>
                       </div>
@@ -453,7 +453,7 @@ export default function ReportsActivityPage() {
                     {selectedActivity.newValue ? (
                       <div>
                         <p className="text-xs text-[var(--text-muted)] mb-1">New Value</p>
-                        <pre className="text-xs text-[var(--text-secondary)] bg-black/20 rounded-lg p-3 overflow-x-auto">
+                        <pre className="text-xs text-[var(--text-secondary)] bg-[var(--code-block-bg)] rounded-lg p-3 overflow-x-auto">
                           {JSON.stringify(selectedActivity.newValue, null, 2)}
                         </pre>
                       </div>

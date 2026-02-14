@@ -1,10 +1,17 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Moon, Sun } from "lucide-react";
 import { usePathname } from "next/navigation";
-
-const THEME_KEY = "secyourflow-theme";
 
 type ThemeMode = "dark" | "light";
 type ThemeContextValue = {
@@ -32,14 +39,9 @@ function isAppShellPath(pathname: string): boolean {
   return APP_SHELL_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
-function resolveInitialTheme(): ThemeMode {
+function resolveSystemTheme(): ThemeMode {
   if (typeof window === "undefined") {
     return "dark";
-  }
-
-  const stored = window.localStorage.getItem(THEME_KEY);
-  if (stored === "dark" || stored === "light") {
-    return stored;
   }
 
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
@@ -56,6 +58,14 @@ function applyTheme(theme: ThemeMode) {
   root.style.colorScheme = theme;
 }
 
+function startThemeTransition(durationMs = 220) {
+  const root = document.documentElement;
+  root.classList.add("theme-transitioning");
+  return window.setTimeout(() => {
+    root.classList.remove("theme-transitioning");
+  }, durationMs);
+}
+
 export function useTheme(): ThemeContextValue {
   const value = useContext(ThemeContext);
   if (!value) {
@@ -70,23 +80,43 @@ export function useTheme(): ThemeContextValue {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [theme, setTheme] = useState<ThemeMode>("dark");
-  const [isReady, setIsReady] = useState(false);
+  const [theme, setTheme] = useState<ThemeMode>(() => resolveSystemTheme());
+  const transitionTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const initialTheme = resolveInitialTheme();
-    setTheme(initialTheme);
-    applyTheme(initialTheme);
-    setIsReady(true);
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: light)");
+
+    const handleSystemThemeChange = (event: MediaQueryListEvent) => {
+      setTheme(event.matches ? "light" : "dark");
+    };
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", handleSystemThemeChange);
+      return () => mediaQuery.removeEventListener("change", handleSystemThemeChange);
+    }
+
+    mediaQuery.addListener(handleSystemThemeChange);
+    return () => mediaQuery.removeListener(handleSystemThemeChange);
   }, []);
 
-  useEffect(() => {
-    if (!isReady) return;
+  useLayoutEffect(() => {
     applyTheme(theme);
-    window.localStorage.setItem(THEME_KEY, theme);
-  }, [isReady, theme]);
+  }, [theme]);
+
+  useEffect(() => {
+    return () => {
+      if (transitionTimeoutRef.current !== null) {
+        window.clearTimeout(transitionTimeoutRef.current);
+      }
+      document.documentElement.classList.remove("theme-transitioning");
+    };
+  }, []);
 
   const toggleTheme = () => {
+    if (transitionTimeoutRef.current !== null) {
+      window.clearTimeout(transitionTimeoutRef.current);
+    }
+    transitionTimeoutRef.current = startThemeTransition();
     setTheme((current) => (current === "dark" ? "light" : "dark"));
   };
 

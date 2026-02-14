@@ -68,10 +68,10 @@ function RecoveryCodeViewer({
 
     return (
         <div className="p-4 rounded-lg border border-yellow-500/40 bg-yellow-500/10 space-y-3">
-            <p className="text-sm text-yellow-300 font-medium">
+            <p className="text-sm text-yellow-600 dark:text-yellow-300 font-medium">
                 Save these recovery codes now. They are shown only once.
             </p>
-            <pre className="text-sm bg-[var(--bg-primary)]/70 border border-[var(--border-color)] rounded-lg p-3 text-white overflow-x-auto">
+            <pre className="text-sm bg-[var(--bg-primary)]/70 border border-[var(--border-color)] rounded-lg p-3 text-[var(--text-primary)] overflow-x-auto">
                 {recoveryText}
             </pre>
             <div className="flex flex-wrap gap-2">
@@ -281,7 +281,7 @@ export function TwoFactorSettingsPanel() {
         <div className="p-4 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-color)] space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <h4 className="text-sm font-medium text-white flex items-center gap-2">
+                    <h4 className="text-sm font-medium text-[var(--text-primary)] flex items-center gap-2">
                         <Smartphone size={16} />
                         Google Authenticator (TOTP)
                     </h4>
@@ -293,8 +293,8 @@ export function TwoFactorSettingsPanel() {
                     className={cn(
                         "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide",
                         isTwoFactorEnabled
-                            ? "bg-green-500/15 border border-green-500/40 text-green-300"
-                            : "bg-yellow-500/15 border border-yellow-500/40 text-yellow-200",
+                            ? "bg-green-500/15 border border-green-500/40 text-green-600 dark:text-green-300"
+                            : "bg-yellow-500/15 border border-yellow-500/40 text-yellow-700 dark:text-yellow-200",
                     )}
                 >
                     {isTwoFactorEnabled ? <ShieldCheck size={12} /> : <ShieldOff size={12} />}
@@ -316,13 +316,13 @@ export function TwoFactorSettingsPanel() {
                     )}
 
                     {error && (
-                        <p className="text-sm text-red-300 border border-red-500/40 bg-red-500/10 rounded-lg px-3 py-2">
+                        <p className="text-sm text-red-600 dark:text-red-300 border border-red-500/40 bg-red-500/10 rounded-lg px-3 py-2">
                             {error}
                         </p>
                     )}
 
                     {notice && (
-                        <p className="text-sm text-green-300 border border-green-500/40 bg-green-500/10 rounded-lg px-3 py-2">
+                        <p className="text-sm text-green-600 dark:text-green-300 border border-green-500/40 bg-green-500/10 rounded-lg px-3 py-2">
                             {notice}
                         </p>
                     )}
@@ -333,7 +333,7 @@ export function TwoFactorSettingsPanel() {
                                 {isSubmitting ? "Preparing..." : "Enable 2FA"}
                             </button>
                             {status?.hasPendingEnrollment && (
-                                <span className="text-xs text-yellow-300 self-center">
+                                <span className="text-xs text-yellow-600 dark:text-yellow-300 self-center">
                                     Enrollment is pending verification.
                                 </span>
                             )}
@@ -342,7 +342,7 @@ export function TwoFactorSettingsPanel() {
 
                     {enrollment && (
                         <div className="space-y-4 border border-blue-500/30 bg-blue-500/10 rounded-lg p-4">
-                            <p className="text-sm text-blue-100">
+                            <p className="text-sm text-blue-700 dark:text-blue-100">
                                 Scan with Google Authenticator. If you cannot scan, copy the secret manually.
                             </p>
                             <Image
@@ -356,7 +356,7 @@ export function TwoFactorSettingsPanel() {
                             <div>
                                 <p className="text-xs text-[var(--text-muted)] mb-1">Manual secret</p>
                                 <div className="flex flex-wrap gap-2">
-                                    <code className="px-3 py-2 rounded bg-[var(--bg-primary)] text-sm text-white break-all">
+                                    <code className="px-3 py-2 rounded bg-[var(--bg-primary)] text-sm text-[var(--text-primary)] break-all">
                                         {enrollment.secret}
                                     </code>
                                     <button className="btn btn-secondary text-sm py-1.5" onClick={copyEnrollmentSecret}>
@@ -366,7 +366,7 @@ export function TwoFactorSettingsPanel() {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <label className="block text-sm text-white font-medium">
+                                <label className="block text-sm text-[var(--text-primary)] font-medium">
                                     Verify with 6-digit code
                                 </label>
                                 <input
@@ -403,7 +403,7 @@ export function TwoFactorSettingsPanel() {
                                     <RefreshCw size={14} />
                                     Regenerate Recovery Codes
                                 </button>
-                                <button className="btn btn-ghost text-red-400 hover:text-red-300" onClick={handleDisableTotp} disabled={isSubmitting}>
+                                <button className="btn btn-ghost text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300" onClick={handleDisableTotp} disabled={isSubmitting}>
                                     <ShieldOff size={14} />
                                     Disable 2FA
                                 </button>

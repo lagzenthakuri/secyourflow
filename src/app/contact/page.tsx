@@ -76,11 +76,11 @@ export default function Contact() {
       {/* Background Effects */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-grid opacity-30" />
-        <div className="absolute -top-56 left-1/2 h-[680px] w-[980px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.15),rgba(10,10,15,0)_64%)]" />
+        <div className="hero-radial-soft absolute -top-56 left-1/2 h-[680px] w-[980px] -translate-x-1/2 rounded-full" />
       </div>
 
       {/* Navigation */}
-      <nav className="fixed top-0 z-50 w-full border-b border-white/10 bg-[rgba(10,10,15,0.84)] backdrop-blur-xl" role="navigation" aria-label="Main navigation">
+      <nav className="marketing-nav-glass fixed top-0 z-50 w-full border-b backdrop-blur-xl" role="navigation" aria-label="Main navigation">
         <div className="mx-auto flex h-20 w-full max-w-6xl items-center justify-between px-6">
           <Link href="/" className="inline-flex items-center gap-3" aria-label="SecYourFlow home">
             <Image
@@ -90,24 +90,24 @@ export default function Contact() {
               height={40}
             />
             <span className="text-xs font-semibold tracking-[0.25em] text-[var(--text-primary)] sm:text-sm">
-              SECYOUR<span className="text-sky-300">FLOW</span>
+              SECYOUR<span className="text-sky-600 dark:text-sky-300">FLOW</span>
             </span>
           </Link>
 
           <div className="hidden items-center gap-8 md:flex">
-            <Link href="/#features" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
+            <Link href="/#features" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
               Platform
             </Link>
-            <Link href="/#workflow" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
+            <Link href="/#workflow" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
               Workflow
             </Link>
-            <Link href="/#use-cases" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
+            <Link href="/#use-cases" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
               Use Cases
             </Link>
-            <Link href="/#outcomes" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
+            <Link href="/#outcomes" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
               Outcomes
             </Link>
-            <Link href="/contact" className="text-sm text-sky-300 transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950 rounded px-2 py-1">
+            <Link href="/contact" className="text-sm text-sky-600 dark:text-sky-300 transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
               Contact
             </Link>
           </div>
@@ -115,7 +115,7 @@ export default function Contact() {
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 shadow-[0_10px_28px_-16px_rgba(56,189,248,0.9)] transition hover:bg-sky-200 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950"
+              className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 shadow-[0_10px_28px_-16px_rgba(56,189,248,0.9)] transition hover:bg-sky-200 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)]"
             >
               Dashboard
               <ArrowRight size={16} />
@@ -133,7 +133,7 @@ export default function Contact() {
             <div className="space-y-12">
               <Link
                 href="/"
-                className="inline-flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors group"
+                className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors group"
               >
                 <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
                 BACK TO HOME
@@ -141,7 +141,7 @@ export default function Contact() {
 
               <div>
                 <h1 className="text-5xl lg:text-6xl font-bold text-[var(--text-primary)] mb-6">
-                  Contact <span className="text-blue-400">Us</span>
+                  Contact <span className="text-blue-600 dark:text-blue-400">Us</span>
                 </h1>
                 <p className="text-lg text-[var(--text-muted)] leading-relaxed">
                   Get in touch with us. We would love to hear from you!
@@ -149,14 +149,14 @@ export default function Contact() {
               </div>
 
               <div className="space-y-8">
-                <h2 className="text-sm font-semibold text-blue-400 uppercase tracking-wider">
+                <h2 className="text-sm font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
                   GET IN TOUCH
                 </h2>
 
                 <div className="space-y-6">
                   <div className="flex items-center gap-4">
                     <div className="w-5 h-5 flex items-center justify-center">
-                      <Mail size={20} className="text-blue-400" />
+                      <Mail size={20} className="text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
                       <p className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-1">EMAIL</p>
@@ -166,7 +166,7 @@ export default function Contact() {
 
                   <div className="flex items-center gap-4">
                     <div className="w-5 h-5 flex items-center justify-center">
-                      <Phone size={20} className="text-blue-400" />
+                      <Phone size={20} className="text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
                       <p className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-1">PHONE</p>
@@ -176,7 +176,7 @@ export default function Contact() {
 
                   <div className="flex items-center gap-4">
                     <div className="w-5 h-5 flex items-center justify-center">
-                      <MapPin size={20} className="text-blue-400" />
+                      <MapPin size={20} className="text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
                       <p className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-1">ADDRESS</p>
@@ -188,7 +188,7 @@ export default function Contact() {
             </div>
 
             {/* Right Side - Contact Form */}
-            <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800/50 rounded-2xl p-8">
+            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-8 backdrop-blur-sm">
               <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-8 uppercase tracking-wide">
                 SEND US A MESSAGE
               </h2>
@@ -198,8 +198,8 @@ export default function Contact() {
                   <div
                     className={`p-4 rounded-lg border ${
                       submitStatus.type === "success"
-                        ? "bg-green-500/10 border-green-500/50 text-green-400"
-                        : "bg-red-500/10 border-red-500/50 text-red-400"
+                        ? "bg-green-500/10 border-green-500/50 text-green-600 dark:text-green-400"
+                        : "bg-red-500/10 border-red-500/50 text-red-600 dark:text-red-400"
                     }`}
                   >
                     {submitStatus.message}
@@ -218,7 +218,7 @@ export default function Contact() {
                       value={formData.name}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-4 bg-slate-800/50 border border-slate-700/50 rounded-lg text-[var(--text-primary)] placeholder-slate-500 focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/50 transition-all duration-300"
+                      className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-4 text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-all duration-300 focus:border-blue-400/50 focus:outline-none focus:ring-1 focus:ring-blue-400/50"
                       placeholder="Your name"
                     />
                   </div>
@@ -234,7 +234,7 @@ export default function Contact() {
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-4 bg-slate-800/50 border border-slate-700/50 rounded-lg text-[var(--text-primary)] placeholder-slate-500 focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/50 transition-all duration-300"
+                      className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-4 text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-all duration-300 focus:border-blue-400/50 focus:outline-none focus:ring-1 focus:ring-blue-400/50"
                       placeholder="your@email.com"
                     />
                   </div>
@@ -251,7 +251,7 @@ export default function Contact() {
                     onChange={handleChange}
                     required
                     rows={6}
-                    className="w-full px-4 py-4 bg-slate-800/50 border border-slate-700/50 rounded-lg text-[var(--text-primary)] placeholder-slate-500 focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/50 transition-all duration-300 resize-none"
+                    className="w-full resize-none rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-4 text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-all duration-300 focus:border-blue-400/50 focus:outline-none focus:ring-1 focus:ring-blue-400/50"
                     placeholder="Your message here..."
                   />
                 </div>
@@ -259,7 +259,7 @@ export default function Contact() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full px-6 py-4 bg-blue-500 hover:bg-blue-600 text-[var(--text-primary)] font-semibold rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group uppercase tracking-wide"
+                  className="w-full px-6 py-4 bg-blue-500 hover:bg-blue-600 text-[var(--text-primary)] font-semibold rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group uppercase tracking-wide"
                 >
                   {isSubmitting ? (
                     <>

@@ -39,7 +39,7 @@ function MetricButton({ label, value, currentValue, onClick }: MetricButtonProps
             type="button"
             onClick={onClick}
             className={`px-3 py-1.5 text-xs rounded-md border transition-all ${currentValue === value
-                ? "bg-sky-500/20 border-sky-500 text-sky-600 theme-dark:text-sky-400"
+                ? "bg-sky-500/20 border-sky-500 text-sky-600 dark:text-sky-400"
                 : "bg-[var(--bg-tertiary)] border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]"
                 }`}
         >

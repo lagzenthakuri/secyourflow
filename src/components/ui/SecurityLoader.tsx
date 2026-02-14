@@ -72,31 +72,31 @@ const iconMap = {
 const variantColors = {
     primary: {
         badge: "border-blue-400/35 bg-blue-500/10",
-        icon: "text-blue-300",
+        icon: "text-blue-600 dark:text-blue-300",
         track: "bg-blue-500/15",
         fill: "from-blue-300 via-blue-200 to-blue-300",
     },
     cyber: {
         badge: "border-cyan-400/35 bg-cyan-500/10",
-        icon: "text-cyan-300",
+        icon: "text-cyan-600 dark:text-cyan-300",
         track: "bg-cyan-500/15",
         fill: "from-cyan-300 via-sky-200 to-cyan-300",
     },
     success: {
         badge: "border-green-400/35 bg-green-500/10",
-        icon: "text-green-300",
+        icon: "text-green-600 dark:text-green-300",
         track: "bg-green-500/15",
         fill: "from-green-300 via-emerald-200 to-green-300",
     },
     warning: {
         badge: "border-yellow-400/35 bg-yellow-500/10",
-        icon: "text-yellow-300",
+        icon: "text-yellow-600 dark:text-yellow-300",
         track: "bg-yellow-500/15",
         fill: "from-yellow-300 via-amber-200 to-yellow-300",
     },
     danger: {
         badge: "border-red-400/35 bg-red-500/10",
-        icon: "text-red-300",
+        icon: "text-red-600 dark:text-red-300",
         track: "bg-red-500/15",
         fill: "from-red-300 via-orange-200 to-red-300",
     },
@@ -181,7 +181,7 @@ export function SecurityLoadingOverlay({
     if (!isLoading) return null;
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[var(--overlay-scrim)] backdrop-blur-sm animate-fade-in">
             <SecurityLoader
                 size={size}
                 icon={icon}
