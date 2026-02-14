@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
-  serverExternalPackages: ["xlsx"],
+  serverExternalPackages: ["exceljs"],
 
   // Enable React strict mode
   reactStrictMode: true,

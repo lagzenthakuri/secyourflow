@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { assertTemplateId, importComplianceTemplate } from "@/lib/compliance-template-importer";
+import { requireSessionWithOrg } from "@/lib/api-auth";
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireSessionWithOrg(request, { allowedRoles: ["MAIN_OFFICER"] });
+  if (!authResult.ok) return authResult.response;
+
   try {
     const body = (await request.json()) as {
       templateId?: string;
@@ -16,22 +19,10 @@ export async function POST(request: NextRequest) {
     }
 
     const templateId = assertTemplateId(body.templateId);
-    const organization = await prisma.organization.findFirst({
-      orderBy: {
-        createdAt: "asc",
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    if (!organization) {
-      return NextResponse.json({ error: "No organization found" }, { status: 400 });
-    }
 
     const result = await importComplianceTemplate({
       templateId,
-      organizationId: organization.id,
+      organizationId: authResult.context.organizationId,
       overwriteExisting: body.overwriteExisting,
       frameworkName: body.frameworkName,
       frameworkDescription: body.frameworkDescription,

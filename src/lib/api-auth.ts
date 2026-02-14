@@ -35,7 +35,7 @@ export async function requireSessionWithOrg(
     };
   }
 
-  let user = await prisma.user.findUnique({
+  const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: { id: true, organizationId: true, role: true },
   });
@@ -47,32 +47,13 @@ export async function requireSessionWithOrg(
     };
   }
 
-  if (!user.organizationId) {
-    const firstOrg = await prisma.organization.findFirst({
-      orderBy: { createdAt: "asc" },
-      select: { id: true },
-    });
-
-    const organizationId =
-      firstOrg?.id ??
-      (
-        await prisma.organization.create({
-          data: { name: "My Organization" },
-          select: { id: true },
-        })
-      ).id;
-
-    user = await prisma.user.update({
-      where: { id: user.id },
-      data: { organizationId },
-      select: { id: true, organizationId: true, role: true },
-    });
-  }
-
   if (!user?.organizationId) {
     return {
       ok: false,
-      response: NextResponse.json({ error: "Organization context required" }, { status: 403 }),
+      response: NextResponse.json(
+        { error: "Organization context required. Contact an administrator." },
+        { status: 403 },
+      ),
     };
   }
 

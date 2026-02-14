@@ -8,7 +8,6 @@
     "buildd": "npm run build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit",
     "import:framework": "tsx scripts/import-framework-template.ts",
     "import:iso27001": "tsx scripts/import-iso27001-template.ts",
@@ -22,6 +21,7 @@
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "d3-geo": "^3.1.1",
+    "exceljs": "^4.4.0",
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.563.0",
@@ -36,7 +36,6 @@
     "react-simple-maps": "^1.0.0",
     "recharts": "^3.7.0",
     "tailwind-merge": "^3.4.0",
-    "xlsx": "^0.18.5",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -55,7 +54,6 @@
     "prisma": "^6.19.2",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5",
-    "vitest": "^4.0.18"
+    "typescript": "^5"
   }
 }

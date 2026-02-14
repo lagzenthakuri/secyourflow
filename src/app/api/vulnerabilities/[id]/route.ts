@@ -70,7 +70,7 @@ export async function PATCH(
   });
 
   // Handle Notifications
-  const promises: Promise<any>[] = [];
+  const promises: Array<Promise<unknown>> = [];
 
   // 1. If assignedUserId changed and is set, notify the new assignee
   if (payload.assignedUserId && payload.assignedUserId !== existing.assignedUserId) {

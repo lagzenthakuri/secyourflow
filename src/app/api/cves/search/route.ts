@@ -1,5 +1,6 @@
 import { logEvent } from "@/modules/cve-search/api/log";
 import { getCveSearchService } from "@/modules/cve-search/api/service";
+import { requireSessionWithOrg } from "@/lib/api-auth";
 import {
   badRequest,
   internalServerError,
@@ -13,6 +14,10 @@ export const revalidate = 0;
 
 async function handleSearch(request: Request) {
   const requestId = crypto.randomUUID();
+  const authResult = await requireSessionWithOrg(request);
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   try {
     const query = parseSearchQueryFromUrl(request.url);

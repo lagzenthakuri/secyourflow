@@ -10,6 +10,7 @@ import { CustomFeedAdapter } from "./adapters/custom-feed-adapter";
 import { MitreTaxiiClient } from "./mitre/taxii-client";
 import { MitreAttackService } from "./mitre/service";
 import { IocCorrelationEngine } from "./correlation/engine";
+import { decryptSecret } from "@/lib/crypto/sealed-secrets";
 
 export interface FeedSyncResult {
   feedId: string;
@@ -79,7 +80,7 @@ export class ThreatIntelOrchestrator {
           source: feed.source,
           url: feed.url,
           format: feed.format,
-          apiKey: feed.apiKey,
+          apiKey: decryptSecret(feed.apiKey),
           headers:
             feed.metadata && typeof feed.metadata === "object" && !Array.isArray(feed.metadata)
               ? ((feed.metadata as Record<string, unknown>).headers as Record<string, string> | undefined)

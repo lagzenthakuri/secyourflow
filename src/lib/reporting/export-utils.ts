@@ -3,7 +3,7 @@ import { renderCsvReport } from "@/lib/reporting/renderers/csv";
 import { renderXlsxReport } from "@/lib/reporting/renderers/xlsx";
 import type { TabularReportData } from "@/lib/reporting/types";
 
-export function renderTabularExport(
+export async function renderTabularExport(
   data: TabularReportData,
   format: "csv" | "xlsx",
   fileBase: string,
