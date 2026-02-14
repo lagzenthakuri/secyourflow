@@ -434,7 +434,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                     onClick={toggleTheme}
                     aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
                     title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-                    className="relative p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all duration-300 ease-in-out border border-[var(--border-color)]"
+                    className="relative p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all duration-300 ease-in-out"
                 >
                     {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
                 </button>
