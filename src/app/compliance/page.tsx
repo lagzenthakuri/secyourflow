@@ -185,10 +185,11 @@ function getComplianceBarTone(value: number) {
 
 function escapeCsv(value: unknown): string {
   const str = String(value ?? "");
-  if (!str.includes(",") && !str.includes("\"") && !str.includes("\n")) {
-    return str;
+  const normalized = /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
+  if (!normalized.includes(",") && !normalized.includes("\"") && !normalized.includes("\n")) {
+    return normalized;
   }
-  return `"${str.replace(/"/g, '""')}"`;
+  return `"${normalized.replace(/"/g, '""')}"`;
 }
 
 function getMaturityTone(level?: number | null) {

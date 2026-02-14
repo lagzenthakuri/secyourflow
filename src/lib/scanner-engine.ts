@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { Severity } from "@prisma/client";
 import { TenableService } from "./scanners/tenable";
 import { decryptSecret } from "@/lib/crypto/sealed-secrets";
+import { createHash } from "crypto";
 
 interface FoundVulnerability {
     title: string;
@@ -20,6 +21,18 @@ interface FoundVulnerability {
 interface AiFindingDetails {
     description?: string;
     remediation?: string;
+}
+
+function buildScannerVulnerabilityId(
+    organizationId: string,
+    scannerId: string,
+    findingId: string,
+) {
+    const digest = createHash("sha256")
+        .update(`${organizationId}:${scannerId}:${findingId}`)
+        .digest("hex")
+        .slice(0, 24);
+    return `TEN-${digest}`;
 }
 
 // Removed runAIScan as requested. AI is only used for detailing results, not for scanning.
@@ -100,11 +113,13 @@ export async function runTenableScan(assetId: string, scannerId: string, organiz
         for (const finding of tenableFindings) {
             // 2. Use AI for giving details of the result (AS REQUESTED)
             const aiDetails = await getAIDetailsForResult(finding, asset);
+            const externalFindingId = String(finding.id ?? `${finding.title}:${finding.cveId ?? "unknown"}`);
+            const vulnerabilityId = buildScannerVulnerabilityId(organizationId, scannerId, externalFindingId);
 
             const vulnerability = await prisma.vulnerability.upsert({
-                where: { id: `TEN-${finding.id}` }, // Using stable ID
+                where: { id: vulnerabilityId },
                 create: {
-                    id: `TEN-${finding.id}`,
+                    id: vulnerabilityId,
                     title: finding.title,
                     description: aiDetails.description || finding.description,
                     severity: finding.severity,
@@ -115,19 +130,46 @@ export async function runTenableScan(assetId: string, scannerId: string, organiz
                     source: "TENABLE",
                     status: "OPEN",
                     organizationId,
-                    metadata: { ai_enhanced: true, original_description: finding.description },
-                    assets: {
-                        create: {
-                            assetId: asset.id,
-                            status: "OPEN"
-                        }
+                    metadata: {
+                        ai_enhanced: true,
+                        original_description: finding.description,
+                        scannerId,
+                        externalFindingId,
                     }
                 },
                 update: {
                     lastSeen: new Date(),
+                    severity: finding.severity,
+                    cvssScore: finding.cvssScore,
+                    cvssVector: finding.cvssVector,
+                    cveId: finding.cveId,
                     description: aiDetails.description || finding.description,
                     solution: aiDetails.remediation || "Follow Tenable recommendations",
+                    metadata: {
+                        ai_enhanced: true,
+                        original_description: finding.description,
+                        scannerId,
+                        externalFindingId,
+                    },
                 }
+            });
+
+            await prisma.assetVulnerability.upsert({
+                where: {
+                    assetId_vulnerabilityId: {
+                        assetId: asset.id,
+                        vulnerabilityId: vulnerability.id,
+                    },
+                },
+                create: {
+                    assetId: asset.id,
+                    vulnerabilityId: vulnerability.id,
+                    status: "OPEN",
+                },
+                update: {
+                    status: "OPEN",
+                    lastSeen: new Date(),
+                },
             });
 
             // 3. Trigger Risk Assessment (which uses AI for control recommendations)

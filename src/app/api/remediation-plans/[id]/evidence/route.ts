@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSessionWithOrg } from "@/lib/api-auth";
-import { addRemediationEvidence } from "@/lib/remediation/plans";
+import { addRemediationEvidence, RemediationPlanError } from "@/lib/remediation/plans";
 
 const createEvidenceSchema = z.object({
   title: z.string().min(2).max(180),
@@ -70,19 +70,27 @@ export async function POST(
   const content = payload.contentBase64 ? Buffer.from(payload.contentBase64, "base64") : Buffer.from("");
   const checksum = crypto.createHash("sha256").update(content).digest("hex");
 
-  const created = await addRemediationEvidence({
-    organizationId: authResult.context.organizationId,
-    uploadedById: authResult.context.userId,
-    planId: id,
-    vulnerabilityId: payload.vulnerabilityId,
-    title: payload.title,
-    fileName: payload.fileName,
-    mimeType: payload.mimeType,
-    sizeBytes: content.byteLength,
-    storagePath: `inline://remediation/${id}/${Date.now()}_${payload.fileName}`,
-    checksum,
-    notes: payload.notes,
-  });
+  try {
+    const created = await addRemediationEvidence({
+      organizationId: authResult.context.organizationId,
+      uploadedById: authResult.context.userId,
+      planId: id,
+      vulnerabilityId: payload.vulnerabilityId,
+      title: payload.title,
+      fileName: payload.fileName,
+      mimeType: payload.mimeType,
+      sizeBytes: content.byteLength,
+      storagePath: `inline://remediation/${id}/${Date.now()}_${payload.fileName}`,
+      checksum,
+      notes: payload.notes,
+    });
 
-  return NextResponse.json(created, { status: 201 });
+    return NextResponse.json(created, { status: 201 });
+  } catch (error) {
+    if (error instanceof RemediationPlanError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+
+    return NextResponse.json({ error: "Failed to add remediation evidence" }, { status: 500 });
+  }
 }

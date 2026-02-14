@@ -192,8 +192,42 @@ export async function POST(request: NextRequest) {
   const status = (payload.status || "OPEN") as VulnStatus;
   const severity = (payload.severity || "MEDIUM") as Severity;
   const workflowState = (payload.workflowState || mapStatusToWorkflow(status)) as WorkflowState;
+  const assignedUserId =
+    typeof payload.assignedUserId === "string" && payload.assignedUserId.trim().length > 0
+      ? payload.assignedUserId.trim()
+      : undefined;
+  const assetId =
+    typeof payload.assetId === "string" && payload.assetId.trim().length > 0 ? payload.assetId.trim() : undefined;
 
   try {
+    if (assignedUserId) {
+      const assignee = await prisma.user.findFirst({
+        where: {
+          id: assignedUserId,
+          organizationId,
+        },
+        select: { id: true },
+      });
+
+      if (!assignee) {
+        return NextResponse.json({ error: "assignedUserId is invalid for your organization" }, { status: 400 });
+      }
+    }
+
+    if (assetId) {
+      const targetAsset = await prisma.asset.findFirst({
+        where: {
+          id: assetId,
+          organizationId,
+        },
+        select: { id: true },
+      });
+
+      if (!targetAsset) {
+        return NextResponse.json({ error: "assetId is invalid for your organization" }, { status: 400 });
+      }
+    }
+
     const newVuln = await prisma.vulnerability.create({
       data: {
         title: payload.title,
@@ -205,7 +239,7 @@ export async function POST(request: NextRequest) {
         source: (payload.source || "MANUAL") as VulnSource,
         status,
         workflowState,
-        assignedUserId: payload.assignedUserId || undefined,
+        assignedUserId,
         assignedTeam: payload.assignedTeam || undefined,
         slaDueAt: payload.slaDueAt ? new Date(payload.slaDueAt) : calculateSlaDueAt(severity),
         solution: payload.solution,
@@ -214,10 +248,10 @@ export async function POST(request: NextRequest) {
         organizationId,
         firstDetected: new Date(),
         lastSeen: new Date(),
-        assets: payload.assetId
+        assets: assetId
           ? {
             create: {
-              assetId: payload.assetId,
+              assetId,
               status: "OPEN",
             },
           }
@@ -279,8 +313,8 @@ export async function POST(request: NextRequest) {
       console.error("Rule-based notification dispatch failed", notifyError);
     }
 
-    if (payload.assetId) {
-      processRiskAssessment(newVuln.id, payload.assetId, organizationId, userId).catch((err) =>
+    if (assetId) {
+      processRiskAssessment(newVuln.id, assetId, organizationId, userId).catch((err) =>
         console.error("Background Risk Assessment Validation Failed", err),
       );
     }

@@ -1,4 +1,3 @@
-
 import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { timingSafeEqual } from "crypto";
@@ -51,7 +50,9 @@ function hasValidInviteToken(candidate: string | undefined, headerToken: string 
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { name, email, password, inviteToken } = registerSchema.parse(body);
+        const { name, email: rawEmail, password, inviteToken } = registerSchema.parse(body);
+        const email = rawEmail.trim().toLowerCase();
+        const normalizedName = name.trim();
 
         if (!isPublicRegistrationEnabled()) {
             const headerInviteToken = req.headers.get("x-registration-invite-token");
@@ -63,8 +64,14 @@ export async function POST(req: Request) {
             }
         }
 
-        const existingUser = await prisma.user.findUnique({
-            where: { email },
+        const existingUser = await prisma.user.findFirst({
+            where: {
+                email: {
+                    equals: email,
+                    mode: "insensitive",
+                },
+            },
+            select: { id: true },
         });
 
         if (existingUser) {
@@ -101,7 +108,7 @@ export async function POST(req: Request) {
 
         const user = await prisma.user.create({
             data: {
-                name,
+                name: normalizedName,
                 email,
                 password: hashedPassword,
                 role: "ANALYST", // Default role

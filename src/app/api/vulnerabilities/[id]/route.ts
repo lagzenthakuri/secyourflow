@@ -47,10 +47,31 @@ export async function PATCH(
     return NextResponse.json({ error: "Vulnerability not found" }, { status: 404 });
   }
 
+  const assignedUserId =
+    payload.assignedUserId === null
+      ? null
+      : typeof payload.assignedUserId === "string" && payload.assignedUserId.trim().length > 0
+        ? payload.assignedUserId.trim()
+        : undefined;
+
+  if (typeof assignedUserId === "string") {
+    const assignee = await prisma.user.findFirst({
+      where: {
+        id: assignedUserId,
+        organizationId: authResult.context.organizationId,
+      },
+      select: { id: true },
+    });
+
+    if (!assignee) {
+      return NextResponse.json({ error: "assignedUserId is invalid for your organization" }, { status: 400 });
+    }
+  }
+
   const data: Record<string, unknown> = {
     ...payload,
     description: payload.description ?? undefined,
-    assignedUserId: payload.assignedUserId ?? undefined,
+    assignedUserId,
     assignedTeam: payload.assignedTeam ?? undefined,
     solution: payload.solution ?? undefined,
     slaDueAt: payload.slaDueAt ? new Date(payload.slaDueAt) : undefined,
@@ -73,9 +94,9 @@ export async function PATCH(
   const promises: Array<Promise<unknown>> = [];
 
   // 1. If assignedUserId changed and is set, notify the new assignee
-  if (payload.assignedUserId && payload.assignedUserId !== existing.assignedUserId) {
+  if (typeof assignedUserId === "string" && assignedUserId !== existing.assignedUserId) {
     promises.push(createNotification({
-      userId: payload.assignedUserId,
+      userId: assignedUserId,
       title: "Vulnerability Assigned",
       message: `You have been assigned to vulnerability: ${updated.title}`,
       type: "INFO",
@@ -93,7 +114,7 @@ export async function PATCH(
     // Or if there was a previous assignee who isn't the one who fixed it? 
     // Usually "assigner" means the person who gave the task.
 
-    promises.push(notifyMainOfficers("Vulnerability Fixed", message, link));
+    promises.push(notifyMainOfficers(authResult.context.organizationId, "Vulnerability Fixed", message, link));
 
     // If the vulnerability was assigned to someone else, notify them too
     if (updated.assignedUserId && updated.assignedUserId !== authResult.context.userId) {
