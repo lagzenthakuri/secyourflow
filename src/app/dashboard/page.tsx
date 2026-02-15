@@ -671,8 +671,8 @@ export default function DashboardPage() {
                 <ArrowRight size={14} />
               </Link>
             </div>
-          </div>
-        )}
+          </section>
+        ) : null}
 
         {/* MAIN KPIS */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -713,11 +713,6 @@ export default function DashboardPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <p className="text-sm text-[var(--text-secondary)]">{metric.label}</p>
-                    {metric.priority === "high" && (
-                      <span className="mt-1 inline-block rounded-full border border-orange-300/55 bg-orange-100/90 px-2 py-0.5 text-[10px] font-semibold text-orange-800 dark:border-orange-400/35 dark:bg-orange-500/15 dark:text-orange-200">
-                        NEEDS ATTENTION
-                      </span>
-                    )}
                   </div>
                   <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2 transition-all duration-300 group-hover:scale-110 group-hover:bg-sky-300/10">
                     <Icon size={15} className="text-[var(--text-muted)] transition-colors group-hover:text-sky-500 dark:group-hover:text-sky-300" />
@@ -728,312 +723,290 @@ export default function DashboardPage() {
                 <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
                   <div
                     className="h-full rounded-full bg-sky-400 transition-all duration-700 ease-out"
-                    style={{ width: `${Math.min(Math.max(metric.bar, 0), 100)}%` }}
+                    style={{ width: `${Math.min(Math.max(metric.percent, 0), 100)}%` }}
                   />
                 </div>
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">Priority Queue</h2>
-                  <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white animate-pulse-subtle">
-                    TOP PRIORITY
+              </article>
+            );
+          })}
+    </div>
+
+  {/* PRIORITY QUEUE COLUMN */ }
+  <div className="flex flex-col h-full rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+    <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center gap-2">
+        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Priority</h2>
+        <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white animate-pulse-subtle">
+          HOT
+        </span>
+      </div>
+      <Link
+        href="/vulnerabilities?filter=exploited"
+        className="text-xs text-sky-600 dark:text-sky-400 hover:text-sky-500"
+      >
+        View Queue
+      </Link>
+    </div>
+
+    <div className="flex-1 space-y-3 overflow-y-auto max-h-[300px] custom-scrollbar">
+      {priorityQueue.length > 0 ? (
+        priorityQueue.map((vuln) => (
+          <div
+            key={vuln.id}
+            className="group rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 transition-all duration-300 hover:border-orange-300/40 hover:bg-[var(--bg-elevated)]"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-[var(--text-primary)]">{vuln.title}</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded border ${getSeverityBadgeTone(vuln.severity)}`}>
+                    {vuln.severity}
                   </span>
+                  {vuln.cisaKev && (
+                    <span className="text-[10px] font-bold text-red-500">KEV</span>
+                  )}
+                  <span className="text-[10px] text-[var(--text-muted)] font-mono">{vuln.cveId}</span>
                 </div>
               </div>
-              <Link
-                href="/vulnerabilities?filter=exploited"
-                className="text-sm text-sky-700 dark:text-sky-300 transition-all duration-200 hover:text-sky-600 dark:hover:text-sky-200 hover:scale-105"
-              >
-                View all
-              </Link>
-            </div>
-          ))}
-        </div>
-
-            {priorityQueue.length > 0 ? (
-              <div className="mt-5 space-y-3">
-                {priorityQueue.map((vuln, index) => (
-                  <div
-                    key={vuln.id}
-                    className="group rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 transition-all duration-300 hover:border-orange-300/40 hover:bg-[var(--bg-elevated)] hover:-translate-y-0.5 hover:shadow-lg animate-fade-in"
-                    style={{ animationDelay: `${index * 50}ms` }}
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-md bg-orange-400/20 px-2 py-0.5 text-xs font-semibold text-orange-700 dark:text-orange-300 transition-all duration-200 group-hover:bg-orange-400/30">
-                            #{index + 1}
-                          </span>
-                          <span className="font-mono text-xs text-sky-700 dark:text-sky-300 transition-all duration-200 group-hover:text-sky-600 dark:group-hover:text-sky-200">
-                            {vuln.cveId || "No CVE ID"}
-                          </span>
-                          <span
-                            className={`rounded-full border px-2 py-0.5 text-[11px] transition-all duration-200 ${getSeverityBadgeTone(vuln.severity)}`}
-                          >
-                            {vuln.severity}
-                          </span>
-                          {vuln.cisaKev ? (
-                            <span className="rounded-full border border-red-400/35 bg-red-500/10 px-2 py-0.5 text-[11px] text-red-700 dark:text-red-200 animate-pulse-subtle">
-                              KEV
-                            </span>
-                          ) : null}
-                        </div>
-                        <p className="mt-2 truncate text-sm text-[var(--text-secondary)] transition-colors duration-200 group-hover:text-[var(--text-primary)]">{vuln.title}</p>
-                      </div>
-
-                      <div className="flex items-center gap-5 text-right">
-                        <div>
-                          <p className="text-sm font-medium text-[var(--text-primary)] transition-all duration-200 group-hover:text-orange-500 dark:group-hover:text-orange-300">
-                            {((vuln.epssScore || 0) * 100).toFixed(1)}%
-                          </p>
-                          <p className="text-xs text-[var(--text-muted)]">EPSS</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-[var(--text-primary)] transition-all duration-200 group-hover:text-orange-500 dark:group-hover:text-orange-300">{vuln.affectedAssets || 0}</p>
-                          <p className="text-xs text-[var(--text-muted)]">Assets</p>
-                        </div>
-                      </div>
-                      <p className="text-sm font-bold text-white truncate leading-tight">{vuln.title}</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-sm font-black text-white">{((vuln.epssScore || 0) * 100).toFixed(1)}%</div>
-                      <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">EPSS</div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="p-10 text-center text-[var(--text-muted)] text-sm font-medium">No critical vulnerabilities detected.</div>
-              )}
-            </div>
-          </div>
-
-          {/* RISK SNAPSHOT */}
-          <div className="card flex flex-col items-center justify-center py-12 px-8 text-center bg-gradient-to-b from-[var(--bg-card)] to-[var(--bg-primary)]">
-            <div className="relative mb-8">
-              <svg className="w-48 h-48 transform -rotate-90">
-                <circle cx="96" cy="96" r="88" fill="none" stroke="currentColor" strokeWidth="8" className="text-[var(--bg-tertiary)]" />
-                <circle
-                  cx="96" cy="96" r="88" fill="none" stroke="url(#riskGradient)" strokeWidth="12"
-                  strokeDasharray={2 * Math.PI * 88}
-                  strokeDashoffset={2 * Math.PI * 88 * (1 - riskMeter / 100)}
-                  strokeLinecap="round"
-                  className="transition-all duration-1000 ease-out drop-shadow-[0_0_12px_rgba(59,130,246,0.5)]"
-                />
-                <defs>
-                  <linearGradient id="riskGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#3b82f6" />
-                    <stop offset="100%" stopColor="#22d3ee" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-5xl font-black text-white tracking-tighter">{stats.overallRiskScore.toFixed(1)}</span>
-                <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] mt-1">System Risk</span>
+              <div className="text-right shrink-0">
+                <div className="text-sm font-bold text-orange-500">{((vuln.epssScore || 0) * 100).toFixed(1)}%</div>
+                <div className="text-[9px] text-[var(--text-muted)] uppercase">EPSS</div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-x-8 gap-y-4 w-full max-w-md mx-auto">
-              {severityRows.map((entry) => (
-                <div key={entry.severity} className="text-left group">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">{entry.severity}</span>
-                    <span className="text-xs font-black text-white">{entry.count}</span>
+          </div>
+        ))
+      ) : (
+        <div className="h-full flex items-center justify-center p-4 text-center text-[var(--text-muted)] text-sm">
+          No critical issues.
+        </div>
+      )}
+    </div>
+  </div>
+
+  {/* RISK SNAPSHOT */ }
+  <div className="card flex flex-col items-center justify-center py-12 px-8 text-center bg-gradient-to-b from-[var(--bg-card)] to-[var(--bg-primary)]">
+    <div className="relative mb-8">
+      <svg className="w-48 h-48 transform -rotate-90">
+        <circle cx="96" cy="96" r="88" fill="none" stroke="currentColor" strokeWidth="8" className="text-[var(--bg-tertiary)]" />
+        <circle
+          cx="96" cy="96" r="88" fill="none" stroke="url(#riskGradient)" strokeWidth="12"
+          strokeDasharray={2 * Math.PI * 88}
+          strokeDashoffset={2 * Math.PI * 88 * (1 - riskMeter / 100)}
+          strokeLinecap="round"
+          className="transition-all duration-1000 ease-out drop-shadow-[0_0_12px_rgba(59,130,246,0.5)]"
+        />
+        <defs>
+          <linearGradient id="riskGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#22d3ee" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-5xl font-black text-[var(--text-primary)] tracking-tighter">{stats.overallRiskScore.toFixed(1)}</span>
+        <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.3em] mt-1">System Risk</span>
+      </div>
+    </div>
+    <div className="grid grid-cols-2 gap-x-8 gap-y-4 w-full max-w-md mx-auto">
+      {severityRows.map((entry) => (
+        <div key={entry.severity} className="text-left group">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">{entry.severity}</span>
+            <span className="text-xs font-black text-white">{entry.count}</span>
+          </div>
+          <div className="h-1 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
+            <div
+              className={cn(
+                "h-full transition-all duration-1000",
+                entry.severity === "CRITICAL" ? "bg-red-500" :
+                  entry.severity === "HIGH" ? "bg-orange-500" :
+                    entry.severity === "MEDIUM" ? "bg-yellow-500" : "bg-blue-500"
+              )}
+              style={{ width: `${entry.percentage}%` }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+
+    {/* THIRD ROW - ANALYTICS & ACTIVITY */ }
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* ANALYTICS */ }
+      <div className="lg:col-span-2 card">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Compliance Overview</h2>
+                <span className="rounded-full bg-[var(--bg-tertiary)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">
+                  MONITOR
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">Framework posture by control status.</p>
+            </div>
+            <Link
+              href="/compliance"
+              className="text-sm text-sky-700 dark:text-sky-300 transition-all duration-200 hover:text-sky-600 dark:hover:text-sky-200 hover:scale-105"
+            >
+              Open module
+            </Link>
+          </div>
+
+          <div className="mt-5 space-y-4">
+            {complianceRows.length > 0 ? (
+              complianceRows.map((framework) => (
+                <div key={framework.frameworkId}>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <p className="text-sm text-[var(--text-secondary)]">{framework.frameworkName}</p>
+                    <p className="text-sm font-medium text-[var(--text-primary)]">
+                      {framework.compliancePercentage.toFixed(0)}%
+                    </p>
                   </div>
-                  <div className="h-1 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
                     <div
-                      className={cn(
-                        "h-full transition-all duration-1000",
-                        entry.severity === "CRITICAL" ? "bg-red-500" :
-                          entry.severity === "HIGH" ? "bg-orange-500" :
-                            entry.severity === "MEDIUM" ? "bg-yellow-500" : "bg-blue-500"
-                      )}
-                      style={{ width: `${entry.percentage}%` }}
+                      className={`h-full rounded-full ${getComplianceTone(framework.compliancePercentage)}`}
+                      style={{
+                        width: `${Math.min(Math.max(framework.compliancePercentage, 0), 100)}%`,
+                      }}
                     />
                   </div>
+                  <p className="mt-1.5 text-xs text-[var(--text-secondary)]">
+                    {framework.compliant} compliant · {framework.nonCompliant} non-compliant
+                  </p>
                 </div>
-              ))}
-            </div>
+              ))
+            ) : (
+              <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
+                Compliance frameworks are not configured yet.
+              </p>
+            )}
           </div>
         </div>
 
-        {/* THIRD ROW - ANALYTICS & ACTIVITY */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* ANALYTICS */}
-          <div className="lg:col-span-2 card">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">Compliance Overview</h2>
-                  <span className="rounded-full bg-[var(--bg-tertiary)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">
-                    MONITOR
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-[var(--text-secondary)]">Framework posture by control status.</p>
-              </div>
-              <Link
-                href="/compliance"
-                className="text-sm text-sky-700 dark:text-sky-300 transition-all duration-200 hover:text-sky-600 dark:hover:text-sky-200 hover:scale-105"
-              >
-                Open module
-              </Link>
-            </div>
-
-            <div className="mt-5 space-y-4">
-              {complianceRows.length > 0 ? (
-                complianceRows.map((framework) => (
-                  <div key={framework.frameworkId}>
-                    <div className="mb-1.5 flex items-center justify-between">
-                      <p className="text-sm text-[var(--text-secondary)]">{framework.frameworkName}</p>
-                      <p className="text-sm font-medium text-[var(--text-primary)]">
-                        {framework.compliancePercentage.toFixed(0)}%
-                      </p>
-                    </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
-                      <div
-                        className={`h-full rounded-full ${getComplianceTone(framework.compliancePercentage)}`}
-                        style={{
-                          width: `${Math.min(Math.max(framework.compliancePercentage, 0), 100)}%`,
-                        }}
-                      />
-                    </div>
-                    <p className="mt-1.5 text-xs text-[var(--text-secondary)]">
-                      {framework.compliant} compliant · {framework.nonCompliant} non-compliant
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
-                  Compliance frameworks are not configured yet.
-                </p>
-              )}
-            </div>
-          </article>
-
-          <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:border-sky-300/30 animate-fade-in" style={{ animationDelay: "300ms" }}>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">Top Risky Assets</h2>
-                  <span className="rounded-full border border-amber-300/60 bg-amber-100/85 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:border-amber-400/35 dark:bg-amber-500/15 dark:text-amber-200">
-                    REVIEW
-                  </span>
-                </div>
-              </div>
-              <Link href="/assets" className="text-sm text-sky-700 dark:text-sky-300 transition-all duration-200 hover:text-sky-600 dark:hover:text-sky-200 hover:scale-105">
-                View assets
-              </Link>
-            </div>
-
-            <div className="mt-5 space-y-3">
-              {riskyAssets.length > 0 ? (
-                riskyAssets.map((asset, idx) => (
-                  <div
-                    key={asset.id}
-                    className="group rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 transition-all duration-300 hover:border-sky-300/30 hover:bg-[var(--bg-elevated)] hover:-translate-y-0.5 animate-fade-in"
-                    style={{ animationDelay: `${idx * 50}ms` }}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-[var(--text-secondary)] transition-colors duration-200 group-hover:text-[var(--text-primary)]">{asset.name}</p>
-                        <p className="mt-0.5 text-xs text-[var(--text-muted)]">{formatAssetType(asset.type)}</p>
-                      </div>
-                      <p className="text-sm font-medium text-[var(--text-primary)] transition-all duration-200 group-hover:text-sky-500 dark:group-hover:text-sky-300">{asset.riskScore.toFixed(1)}</p>
-                    </div>
-                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]/50">
-                      <div
-                        className={`h-full rounded-full transition-all duration-700 ease-out ${getRiskBand(asset.riskScore).rail}`}
-                        style={{ width: `${Math.min(Math.max(asset.riskScore, 0), 100)}%` }}
-                      />
-                    </div>
-                    <p className="mt-1.5 text-xs text-[var(--text-muted)]">
-                      {asset.vulnerabilityCount} vulnerabilities · {asset.criticalVulnCount} critical
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
-                  No asset risk data is available yet.
-                </p>
-              )}
-            </div>
-          </article>
-        </section>
-
-        <section className={`grid gap-4 ${isMainOfficer ? 'xl:grid-cols-[1.15fr_0.85fr]' : 'xl:grid-cols-1'}`}>
-          <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Risk and Remediation Trends</h2>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-              Weekly risk evolution and monthly fix velocity.
-            </p>
-
-            <div className="mt-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                Risk Trend
-              </p>
-              <div className="mt-2">
-                <RiskTrendChart data={riskTrends} />
-              </div>
-            </div>
-
-            <div className="mt-6 border-t border-[var(--border-color)] pt-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                Remediation Velocity
-              </p>
-              <div className="mt-2">
-                <VulnStatusChart data={remediationTrends} />
-              </div>
-            </div>
-          </div>
-
-          {isMainOfficer && (
-            <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">Recent Activity</h2>
-                  <p className="mt-1 text-sm text-[var(--text-secondary)]">Latest high-signal events and updates.</p>
-                </div>
-                <Link
-                  href="/reports/activity"
-                  className="text-sm text-sky-700 dark:text-sky-300 transition hover:text-sky-600 dark:hover:text-sky-200"
-                >
-                  Full log
-                </Link>
-              </div>
-              <Link href="/reports/activity" className="p-2 rounded-lg hover:bg-white/5 transition-colors text-[var(--text-muted)]">
-                <ArrowRight size={18} />
-              </Link>
-            </div>
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
-              {activityRows.length > 0 ? (
-                activityRows.map((activity) => {
-                  const activityTone = getActivityTone(activity.entityType, activity.action);
-                  const Icon = activityTone.icon;
-                  return (
-                    <div key={activity.id} className="flex items-start gap-4 p-4 rounded-xl hover:bg-white/[0.02] transition-all group">
-                      <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-white/5 transition-transform group-hover:scale-110 shadow-lg",
-                        activityTone.shell
-                      )}>
-                        <Icon size={16} className={activityTone.iconColor} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex justify-between items-start gap-2 mb-1">
-                          <p className="text-sm font-bold text-white leading-tight">{activity.action}</p>
-                          <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase shrink-0">
-                            {getTimeAgo(activity.timestamp)}
-                          </span>
-                        </div>
-                        <p className="text-xs text-[var(--text-muted)] truncate font-mono">{activity.entityName}</p>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="p-10 text-center text-[var(--text-muted)] text-sm font-medium">No recent signals detected.</div>
-              )}
-            </div>
+    <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:border-sky-300/30 animate-fade-in" style={{ animationDelay: "300ms" }}>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Top Risky Assets</h2>
+            <span className="rounded-full border border-amber-300/60 bg-amber-100/85 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:border-amber-400/35 dark:bg-amber-500/15 dark:text-amber-200">
+              REVIEW
+            </span>
           </div>
         </div>
+        <Link href="/assets" className="text-sm text-sky-700 dark:text-sky-300 transition-all duration-200 hover:text-sky-600 dark:hover:text-sky-200 hover:scale-105">
+          View assets
+        </Link>
       </div>
-    </DashboardLayout>
+
+      <div className="mt-5 space-y-3">
+        {riskyAssets.length > 0 ? (
+          riskyAssets.map((asset, idx) => (
+            <div
+              key={asset.id}
+              className="group rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 transition-all duration-300 hover:border-sky-300/30 hover:bg-[var(--bg-elevated)] hover:-translate-y-0.5 animate-fade-in"
+              style={{ animationDelay: `${idx * 50}ms` }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-[var(--text-secondary)] transition-colors duration-200 group-hover:text-[var(--text-primary)]">{asset.name}</p>
+                  <p className="mt-0.5 text-xs text-[var(--text-muted)]">{formatAssetType(asset.type)}</p>
+                </div>
+                <p className="text-sm font-medium text-[var(--text-primary)] transition-all duration-200 group-hover:text-sky-500 dark:group-hover:text-sky-300">{asset.riskScore.toFixed(1)}</p>
+              </div>
+              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]/50">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ease-out ${getRiskBand(asset.riskScore).rail}`}
+                  style={{ width: `${Math.min(Math.max(asset.riskScore, 0), 100)}%` }}
+                />
+              </div>
+              <p className="mt-1.5 text-xs text-[var(--text-muted)]">
+                {asset.vulnerabilityCount} vulnerabilities · {asset.criticalVulnCount} critical
+              </p>
+            </div>
+          ))
+        ) : (
+          <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
+            No asset risk data is available yet.
+          </p>
+        )}
+      </div>
+    </article>
+      </div>
+
+    <section className={`grid gap-4 ${isMainOfficer ? 'xl:grid-cols-[1.15fr_0.85fr]' : 'xl:grid-cols-1'}`}>
+      <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Risk and Remediation Trends</h2>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          Weekly risk evolution and monthly fix velocity.
+        </p>
+
+        <div className="mt-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+            Risk Trend
+          </p>
+          <div className="mt-2">
+            <RiskTrendChart data={riskTrends} />
+          </div>
+        </div>
+
+        <div className="mt-6 border-t border-[var(--border-color)] pt-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+            Remediation Velocity
+          </p>
+          <div className="mt-2">
+            <VulnStatusChart data={remediationTrends} />
+          </div>
+        </div>
+      </article>
+
+      {isMainOfficer && (
+        <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 flex flex-col h-[600px]">
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">Recent Activity</h2>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">Latest high-signal events.</p>
+            </div>
+            <Link
+              href="/reports/activity"
+              className="text-sm text-sky-700 dark:text-sky-300 transition hover:text-sky-600 dark:hover:text-sky-200"
+            >
+              Full log
+            </Link>
+          </div>
+
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-1 space-y-2">
+            {activityRows.length > 0 ? (
+              activityRows.map((activity) => {
+                const activityTone = getActivityTone(activity.entityType, activity.action);
+                const Icon = activityTone.icon;
+                return (
+                  <div key={activity.id} className="flex items-start gap-4 p-4 rounded-xl hover:bg-white/[0.02] transition-all group border border-transparent hover:border-white/5">
+                    <div className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-white/5 transition-transform group-hover:scale-110 shadow-lg",
+                      activityTone.shell
+                    )}>
+                      <Icon size={16} className={activityTone.iconColor} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex justify-between items-start gap-2 mb-1">
+                        <p className="text-sm font-bold text-white leading-tight">{activity.action}</p>
+                        <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase shrink-0">
+                          {getTimeAgo(activity.timestamp)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[var(--text-muted)] truncate font-mono">{activity.entityName}</p>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="h-full flex items-center justify-center text-center text-[var(--text-muted)] text-sm font-medium">No recent signals detected.</div>
+            )}
+          </div>
+        </article>
+      )}
+    </section>
+    </div>
+  </DashboardLayout>
   );
 }

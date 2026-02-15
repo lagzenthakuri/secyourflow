@@ -1,4 +1,3 @@
-import { createRequire } from "module";
 import type { RenderedReport, TabularReportData } from "@/lib/reporting/types";
 
 type WorkbookLike = {
@@ -15,11 +14,14 @@ type ExcelJsModule = {
   Workbook: new () => WorkbookLike;
 };
 
-const require = createRequire(import.meta.url);
-
-function loadExcelJs(): ExcelJsModule {
+async function loadExcelJs(): Promise<ExcelJsModule> {
   try {
-    return require("exceljs") as ExcelJsModule;
+    const runtimeImport = new Function(
+      "specifier",
+      "return import(specifier);",
+    ) as (specifier: string) => Promise<ExcelJsModule & { default?: ExcelJsModule }>;
+    const module = await runtimeImport("exceljs");
+    return module.default ?? module;
   } catch {
     throw new Error(
       'XLSX export dependency is missing. Install it with "npm install exceljs" and restart the server.',
@@ -31,7 +33,7 @@ export async function renderXlsxReport(
   data: TabularReportData,
   fileNameBase: string,
 ): Promise<RenderedReport> {
-  const ExcelJS = loadExcelJs();
+  const ExcelJS = await loadExcelJs();
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "SecYourFlow";
 
