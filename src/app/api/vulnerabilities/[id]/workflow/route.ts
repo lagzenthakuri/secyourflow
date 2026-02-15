@@ -43,6 +43,12 @@ export async function PATCH(
 
   const now = new Date();
   const toState = payload.toState || vulnerability.workflowState;
+  const assignedUserId =
+    payload.assignedUserId === null
+      ? null
+      : typeof payload.assignedUserId === "string" && payload.assignedUserId.trim().length > 0
+        ? payload.assignedUserId.trim()
+        : undefined;
 
   if (toState !== vulnerability.workflowState) {
     try {
@@ -59,8 +65,22 @@ export async function PATCH(
     workflowState: toState,
   };
 
-  if (typeof payload.assignedUserId !== "undefined") {
-    updates.assignedUserId = payload.assignedUserId;
+  if (typeof assignedUserId === "string") {
+    const assignee = await prisma.user.findFirst({
+      where: {
+        id: assignedUserId,
+        organizationId,
+      },
+      select: { id: true },
+    });
+
+    if (!assignee) {
+      return NextResponse.json({ error: "assignedUserId is invalid for your organization" }, { status: 400 });
+    }
+  }
+
+  if (typeof assignedUserId !== "undefined") {
+    updates.assignedUserId = assignedUserId;
   }
 
   if (typeof payload.assignedTeam !== "undefined") {

@@ -1,5 +1,28 @@
 import { prisma } from "@/lib/prisma";
 
+function normalizeAssetIds(assetIds: string[]): string[] {
+  return [...new Set(assetIds.map((assetId) => assetId.trim()).filter((assetId) => assetId.length > 0))];
+}
+
+async function assertAssetIdsInOrganization(assetIds: string[], organizationId: string) {
+  if (assetIds.length === 0) {
+    return;
+  }
+
+  const normalizedAssetIds = normalizeAssetIds(assetIds);
+  const assets = await prisma.asset.findMany({
+    where: {
+      id: { in: normalizedAssetIds },
+      organizationId,
+    },
+    select: { id: true },
+  });
+
+  if (assets.length !== normalizedAssetIds.length) {
+    throw new Error("One or more assetIds are invalid for this organization");
+  }
+}
+
 export async function listAssetGroups(organizationId: string) {
   return prisma.assetGroup.findMany({
     where: { organizationId },
@@ -34,14 +57,16 @@ export async function createAssetGroup(params: {
   assetIds?: string[];
 }) {
   const { assetIds = [], ...rest } = params;
+  const normalizedAssetIds = normalizeAssetIds(assetIds);
+  await assertAssetIdsInOrganization(normalizedAssetIds, params.organizationId);
 
   return prisma.assetGroup.create({
     data: {
       ...rest,
-      members: assetIds.length
+      members: normalizedAssetIds.length
         ? {
             createMany: {
-              data: assetIds.map((assetId) => ({ assetId })),
+              data: normalizedAssetIds.map((assetId) => ({ assetId })),
             },
           }
         : undefined,
@@ -76,11 +101,14 @@ export async function updateAssetGroup(params: {
   const { assetIds, id, ...groupData } = params;
 
   if (Array.isArray(assetIds)) {
+    const normalizedAssetIds = normalizeAssetIds(assetIds);
+    await assertAssetIdsInOrganization(normalizedAssetIds, params.organizationId);
+
     await prisma.assetGroupMember.deleteMany({ where: { groupId: id } });
 
-    if (assetIds.length > 0) {
+    if (normalizedAssetIds.length > 0) {
       await prisma.assetGroupMember.createMany({
-        data: assetIds.map((assetId) => ({ groupId: id, assetId })),
+        data: normalizedAssetIds.map((assetId) => ({ groupId: id, assetId })),
         skipDuplicates: true,
       });
     }

@@ -3,6 +3,8 @@ import { processRiskAssessment } from "@/lib/risk-engine";
 import type { Prisma } from "@prisma/client";
 import { Severity } from "@prisma/client";
 import { TenableService } from "./scanners/tenable";
+import { decryptSecret } from "@/lib/crypto/sealed-secrets";
+import { createHash } from "crypto";
 
 interface FoundVulnerability {
     title: string;
@@ -21,16 +23,28 @@ interface AiFindingDetails {
     remediation?: string;
 }
 
+function buildScannerVulnerabilityId(
+    organizationId: string,
+    scannerId: string,
+    findingId: string,
+) {
+    const digest = createHash("sha256")
+        .update(`${organizationId}:${scannerId}:${findingId}`)
+        .digest("hex")
+        .slice(0, 24);
+    return `TEN-${digest}`;
+}
+
 // Removed runAIScan as requested. AI is only used for detailing results, not for scanning.
 
 /**
  * Runs a Tenable scan and uses AI to provide deep insights for each finding.
  */
-export async function runTenableScan(assetId: string, scannerId: string) {
-    const asset = await prisma.asset.findUnique({ where: { id: assetId } });
+export async function runTenableScan(assetId: string, scannerId: string, organizationId: string) {
+    const asset = await prisma.asset.findFirst({ where: { id: assetId, organizationId } });
     if (!asset) throw new Error("Asset not found");
 
-    const scannerConfig = await prisma.scannerConfig.findUnique({ where: { id: scannerId } });
+    const scannerConfig = await prisma.scannerConfig.findFirst({ where: { id: scannerId, organizationId } });
     if (!scannerConfig) throw new Error("Scanner configuration not found");
 
     // For generalized 'API' or 'AI' scanners, or if keys are missing during demo
@@ -41,7 +55,8 @@ export async function runTenableScan(assetId: string, scannerId: string) {
     }
 
     // Initialize Tenable if keys exist
-    const apiKeyParts = (scannerConfig.apiKey || "").split(":");
+    const decryptedApiKey = decryptSecret(scannerConfig.apiKey) || "";
+    const apiKeyParts = decryptedApiKey.split(":");
     const accessKey = apiKeyParts[0];
     const secretKey = apiKeyParts[1] || "";
     const tenable = new TenableService(accessKey, secretKey);
@@ -50,6 +65,7 @@ export async function runTenableScan(assetId: string, scannerId: string) {
         data: {
             scanId: `TEN-${Date.now()}`,
             scannerId: scannerId,
+            organizationId,
             status: "RUNNING",
             startTime: new Date(),
             totalHosts: 1,
@@ -94,17 +110,16 @@ export async function runTenableScan(assetId: string, scannerId: string) {
             tenableFindings = await tenable.getVulnerabilities();
         }
 
-        const org = await prisma.organization.findFirst();
-        if (!org) throw new Error("No organization found");
-
         for (const finding of tenableFindings) {
             // 2. Use AI for giving details of the result (AS REQUESTED)
             const aiDetails = await getAIDetailsForResult(finding, asset);
+            const externalFindingId = String(finding.id ?? `${finding.title}:${finding.cveId ?? "unknown"}`);
+            const vulnerabilityId = buildScannerVulnerabilityId(organizationId, scannerId, externalFindingId);
 
             const vulnerability = await prisma.vulnerability.upsert({
-                where: { id: `TEN-${finding.id}` }, // Using stable ID
+                where: { id: vulnerabilityId },
                 create: {
-                    id: `TEN-${finding.id}`,
+                    id: vulnerabilityId,
                     title: finding.title,
                     description: aiDetails.description || finding.description,
                     severity: finding.severity,
@@ -114,24 +129,51 @@ export async function runTenableScan(assetId: string, scannerId: string) {
                     solution: aiDetails.remediation || "Follow Tenable recommendations",
                     source: "TENABLE",
                     status: "OPEN",
-                    organizationId: org.id,
-                    metadata: { ai_enhanced: true, original_description: finding.description },
-                    assets: {
-                        create: {
-                            assetId: asset.id,
-                            status: "OPEN"
-                        }
+                    organizationId,
+                    metadata: {
+                        ai_enhanced: true,
+                        original_description: finding.description,
+                        scannerId,
+                        externalFindingId,
                     }
                 },
                 update: {
                     lastSeen: new Date(),
+                    severity: finding.severity,
+                    cvssScore: finding.cvssScore,
+                    cvssVector: finding.cvssVector,
+                    cveId: finding.cveId,
                     description: aiDetails.description || finding.description,
                     solution: aiDetails.remediation || "Follow Tenable recommendations",
+                    metadata: {
+                        ai_enhanced: true,
+                        original_description: finding.description,
+                        scannerId,
+                        externalFindingId,
+                    },
                 }
             });
 
+            await prisma.assetVulnerability.upsert({
+                where: {
+                    assetId_vulnerabilityId: {
+                        assetId: asset.id,
+                        vulnerabilityId: vulnerability.id,
+                    },
+                },
+                create: {
+                    assetId: asset.id,
+                    vulnerabilityId: vulnerability.id,
+                    status: "OPEN",
+                },
+                update: {
+                    status: "OPEN",
+                    lastSeen: new Date(),
+                },
+            });
+
             // 3. Trigger Risk Assessment (which uses AI for control recommendations)
-            processRiskAssessment(vulnerability.id, asset.id, org.id).catch(console.error);
+            processRiskAssessment(vulnerability.id, asset.id, organizationId).catch(console.error);
         }
 
         await prisma.scanResult.update({

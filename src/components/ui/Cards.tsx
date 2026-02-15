@@ -28,16 +28,16 @@ export function StatCard({
 }: StatCardProps) {
     const getTrendIcon = () => {
         if (!trend) return null;
-        if (trend.value > 0) return <TrendingUp size={14} className="text-red-400" />;
-        if (trend.value < 0) return <TrendingDown size={14} className="text-green-400" />;
-        return <Minus size={14} className="text-gray-400" />;
+        if (trend.value > 0) return <TrendingUp size={14} className="text-intent-danger" />;
+        if (trend.value < 0) return <TrendingDown size={14} className="text-green-600 dark:text-green-400" />;
+        return <Minus size={14} className="text-gray-600 dark:text-gray-400" />;
     };
 
     const getTrendColor = () => {
         if (!trend) return "";
-        if (trend.value > 0) return "text-red-400";
-        if (trend.value < 0) return "text-green-400";
-        return "text-gray-400";
+        if (trend.value > 0) return "text-intent-danger";
+        if (trend.value < 0) return "text-green-600 dark:text-green-400";
+        return "text-gray-600 dark:text-gray-400";
     };
 
     return (
@@ -63,7 +63,7 @@ export function StatCard({
                     <span
                         className={cn(
                             "text-3xl font-bold",
-                            severity ? getSeverityBgClass(severity).split(" ")[1] : "text-slate-900 dark:text-slate-100"
+                            severity ? getSeverityBgClass(severity).split(" ")[1] : "text-[var(--text-primary)]"
                         )}
                     >
                         {value}
@@ -126,7 +126,7 @@ export function RiskScoreCard({ score, label, className }: RiskScoreCardProps) {
                         fill="none"
                         strokeWidth="12"
                         stroke="currentColor"
-                        className="text-slate-300/70 dark:text-white/10"
+                        className="text-[var(--border-hover)]"
                     />
                     {/* Progress ring */}
                     <circle
@@ -143,7 +143,7 @@ export function RiskScoreCard({ score, label, className }: RiskScoreCardProps) {
                 </svg>
                 {/* Center text */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-4xl font-bold text-slate-900 dark:text-slate-100">{score.toFixed(1)}</span>
+                    <span className="text-4xl font-bold text-[var(--text-primary)]">{score.toFixed(1)}</span>
                     <span
                         className="text-sm font-medium"
                         style={{ color: getScoreColor() }}
@@ -238,7 +238,7 @@ export function Card({
                 <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-color)]">
                     <div>
                         {title && (
-                            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
+                            <h3 className="text-base font-semibold text-[var(--text-primary)]">{title}</h3>
                         )}
                         {subtitle && (
                             <p className="text-sm text-[var(--text-muted)] mt-0.5">{subtitle}</p>
@@ -267,7 +267,7 @@ export function EmptyState({ icon, title, description, action }: EmptyStateProps
                     {icon}
                 </div>
             )}
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">{title}</h3>
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-1">{title}</h3>
             <p className="text-sm text-[var(--text-muted)] max-w-sm mb-4">
                 {description}
             </p>
@@ -306,7 +306,7 @@ export function Table({ columns, data, onRowClick }: TableProps) {
                         <tr
                             key={idx}
                             className={cn(
-                                "hover:bg-slate-900/[0.02] dark:hover:bg-white/[0.02]",
+                                "hover:bg-[var(--bg-tertiary)]",
                                 onRowClick ? "cursor-pointer" : ""
                             )}
                             onClick={() => onRowClick?.(row)}

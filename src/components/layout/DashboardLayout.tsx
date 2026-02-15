@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
     LayoutDashboard,
@@ -77,7 +77,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             {/* Mobile Overlay */}
             {isOpen && (
                 <div
-                    className="lg:hidden fixed inset-0 bg-black/50 z-30 transition-opacity duration-300 ease-in-out"
+                    className="lg:hidden fixed inset-0 bg-[var(--overlay-scrim)] z-30 transition-opacity duration-300 ease-in-out"
                     onClick={() => setIsOpen(false)}
                 />
             )}
@@ -98,8 +98,8 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                             width={40}
                             height={40}
                         />
-                        <span className="text-[14px] font-bold tracking-[0.22em] text-white">
-                            SECYOUR<span className="text-sky-300">FLOW</span>
+                        <span className="text-[14px] font-bold tracking-[0.22em] text-[var(--text-primary)]">
+                            SECYOUR<span className="text-intent-accent">FLOW</span>
                         </span>
                     </Link>
                 </div>
@@ -162,7 +162,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                                 {userInitials}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-white truncate">
+                                <p className="text-sm font-medium text-[var(--text-primary)] truncate">
                                     {userName}
                                 </p>
                                 <p className="text-[10px] text-[var(--text-muted)] uppercase">
@@ -180,7 +180,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                                 <div className="bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-xl shadow-2xl p-1 overflow-hidden">
                                     <button
                                         onClick={() => signOut({ callbackUrl: "/" })}
-                                        className="w-full flex items-center gap-2 p-2.5 text-sm text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
+                                        className="w-full flex items-center gap-2 p-2.5 text-sm text-intent-danger rounded-lg hover:bg-red-500/10 transition-colors"
                                     >
                                         <LogOut size={16} />
                                         Sign Out
@@ -215,13 +215,41 @@ function getApiErrorMessage(payload: unknown): string | null {
 }
 
 export function TopBar({ onToggleSidebar }: TopBarProps) {
+    const { data: session } = useSession();
     const { theme, toggleTheme } = useTheme();
     const router = useRouter();
     const [threatsCount, setThreatsCount] = useState(0);
     const [notificationsCount, setNotificationsCount] = useState(0);
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     const [showNotifications, setShowNotifications] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [showSearchResults, setShowSearchResults] = useState(false);
+    const [activeResultIndex, setActiveResultIndex] = useState(0);
     const redirectedForTwoFactorRef = useRef(false);
+    const searchContainerRef = useRef<HTMLDivElement>(null);
+    const searchListId = "topbar-route-search-results";
+
+    const userRole = session?.user?.role || "ANALYST";
+    const searchableRoutes = useMemo(
+        () =>
+            [...navigation, ...secondaryNav]
+                .filter((item) => item.roles.includes(userRole))
+                .map((item) => ({
+                    name: item.name,
+                    href: item.href,
+                    keywords: `${item.name} ${item.href}`.toLowerCase(),
+                })),
+        [userRole],
+    );
+
+    const filteredSearchResults = useMemo(() => {
+        const query = searchQuery.trim().toLowerCase();
+        if (!query) {
+            return searchableRoutes.slice(0, 7);
+        }
+
+        return searchableRoutes.filter((item) => item.keywords.includes(query)).slice(0, 7);
+    }, [searchQuery, searchableRoutes]);
 
     const handleAuthFailure = useCallback(
         async (response: Response): Promise<boolean> => {
@@ -297,6 +325,21 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
         const interval = setInterval(fetchData, 60000);
         return () => clearInterval(interval);
     }, [handleAuthFailure]);
+
+    useEffect(() => {
+        const handleDocumentClick = (event: MouseEvent) => {
+            if (!searchContainerRef.current?.contains(event.target as Node)) {
+                setShowSearchResults(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleDocumentClick);
+        return () => document.removeEventListener("mousedown", handleDocumentClick);
+    }, []);
+
+    useEffect(() => {
+        setActiveResultIndex(0);
+    }, [searchQuery]);
 
     const markAsRead = async () => {
         try {
@@ -393,6 +436,12 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
         }
     };
 
+    const navigateToSearchResult = (href: string) => {
+        setShowSearchResults(false);
+        setSearchQuery("");
+        router.push(href);
+    };
+
     return (
         <header className="h-16 bg-[var(--bg-secondary)]/80 backdrop-blur-md border-b border-[var(--border-color)]/50 flex items-center justify-between px-6 sticky top-0 z-20">
             {/* Left Section: Menu Toggle & Search */}
@@ -405,16 +454,92 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                     <Menu size={20} />
                 </button>
 
-                <div className="relative flex-1">
+                <div className="relative flex-1" ref={searchContainerRef}>
                     <Search
                         size={18}
                         className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
                     />
                     <input
                         type="text"
+                        role="combobox"
+                        aria-expanded={showSearchResults}
+                        aria-controls={searchListId}
+                        aria-autocomplete="list"
+                        aria-activedescendant={
+                            showSearchResults && filteredSearchResults[activeResultIndex]
+                                ? `topbar-search-option-${activeResultIndex}`
+                                : undefined
+                        }
+                        value={searchQuery}
+                        onChange={(event) => {
+                            setSearchQuery(event.target.value);
+                            setShowSearchResults(true);
+                        }}
+                        onFocus={() => setShowSearchResults(true)}
+                        onKeyDown={(event) => {
+                            if (!showSearchResults) {
+                                return;
+                            }
+
+                            if (event.key === "ArrowDown") {
+                                event.preventDefault();
+                                setActiveResultIndex((current) =>
+                                    Math.min(current + 1, Math.max(0, filteredSearchResults.length - 1)),
+                                );
+                                return;
+                            }
+
+                            if (event.key === "ArrowUp") {
+                                event.preventDefault();
+                                setActiveResultIndex((current) => Math.max(current - 1, 0));
+                                return;
+                            }
+
+                            if (event.key === "Enter") {
+                                const result = filteredSearchResults[activeResultIndex];
+                                if (result) {
+                                    event.preventDefault();
+                                    navigateToSearchResult(result.href);
+                                }
+                                return;
+                            }
+
+                            if (event.key === "Escape") {
+                                event.preventDefault();
+                                setShowSearchResults(false);
+                            }
+                        }}
                         placeholder="Search assets, vulnerabilities, or CVEs..."
                         className="input !pl-10 py-2.5 text-sm bg-[var(--bg-tertiary)]"
                     />
+                    {showSearchResults && (
+                        <div className="absolute left-0 right-0 top-full mt-2 overflow-hidden rounded-xl border border-[var(--overlay-border,var(--border-color))] bg-[var(--overlay-surface,var(--bg-elevated))] shadow-[var(--overlay-shadow,var(--shadow-lg))]">
+                            <ul id={searchListId} role="listbox" className="max-h-72 overflow-y-auto p-1">
+                                {filteredSearchResults.length > 0 ? (
+                                    filteredSearchResults.map((result, index) => (
+                                        <li key={result.href} id={`topbar-search-option-${index}`} role="option" aria-selected={index === activeResultIndex}>
+                                            <button
+                                                type="button"
+                                                onMouseEnter={() => setActiveResultIndex(index)}
+                                                onClick={() => navigateToSearchResult(result.href)}
+                                                className={cn(
+                                                    "w-full rounded-lg px-3 py-2 text-left text-sm transition",
+                                                    index === activeResultIndex
+                                                        ? "bg-[var(--bg-tertiary)] text-[var(--text-primary)]"
+                                                        : "text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]",
+                                                )}
+                                            >
+                                                <span className="block font-medium">{result.name}</span>
+                                                <span className="mt-0.5 block text-xs text-[var(--text-muted)]">{result.href}</span>
+                                            </button>
+                                        </li>
+                                    ))
+                                ) : (
+                                    <li className="px-3 py-2 text-sm text-[var(--text-muted)]">No route matches found.</li>
+                                )}
+                            </ul>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -423,7 +548,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                 {/* Live Threats Indicator */}
                 <Link href="/threats">
                     <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all duration-300 ease-in-out cursor-pointer">
-                        <span className="live-indicator text-xs font-medium text-red-400">
+                        <span className="live-indicator text-xs font-medium text-intent-danger">
                             {threatsCount} Active Threats
                         </span>
                     </div>
@@ -434,7 +559,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                     onClick={toggleTheme}
                     aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
                     title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-                    className="relative p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all duration-300 ease-in-out border border-[var(--border-color)]"
+                    className="relative p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all duration-300 ease-in-out"
                 >
                     {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
                 </button>
@@ -457,7 +582,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                             <div className="p-3 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-tertiary)]">
                                 <h3 className="font-semibold text-sm">Notifications</h3>
                                 {notificationsCount > 0 && (
-                                    <button onClick={markAsRead} className="text-xs text-blue-400 hover:text-blue-300 transition-all duration-300 ease-in-out">
+                                    <button onClick={markAsRead} className="text-xs text-intent-accent hover:text-intent-accent-strong transition-all duration-300 ease-in-out">
                                         Mark all read
                                     </button>
                                 )}
@@ -521,14 +646,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     }, []);
 
     return (
-        <div className="dashboard-scale min-h-screen bg-[var(--bg-primary)] bg-grid">
+        <div className="min-h-screen bg-[var(--bg-primary)] bg-grid">
             <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
             <div className={cn(
                 "transition-all duration-400 ease-out",
                 isSidebarOpen ? "lg:ml-[260px]" : "lg:ml-0"
             )}>
                 <TopBar onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
-                <main className="p-6 min-h-[calc(100vh-4rem)]">{children}</main>
+                <main className="min-h-[calc(100vh-4rem)] p-4 sm:p-6">{children}</main>
             </div>
         </div>
     );

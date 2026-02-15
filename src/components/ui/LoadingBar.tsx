@@ -27,35 +27,35 @@ const variantStyles = {
         track: "bg-blue-500/15",
         fill: "from-blue-300 via-blue-200 to-blue-300",
         badge: "border-blue-400/35 bg-blue-500/10",
-        icon: "text-blue-300",
+        icon: "text-blue-600 dark:text-blue-300",
         glow: "shadow-[0_0_10px_rgba(59,130,246,0.35)]",
     },
     cyber: {
         track: "bg-cyan-500/15",
         fill: "from-cyan-300 via-sky-200 to-cyan-300",
         badge: "border-cyan-400/35 bg-cyan-500/10",
-        icon: "text-cyan-300",
+        icon: "text-cyan-600 dark:text-cyan-300",
         glow: "shadow-[0_0_10px_rgba(6,182,212,0.35)]",
     },
     success: {
         track: "bg-green-500/15",
         fill: "from-green-300 via-emerald-200 to-green-300",
         badge: "border-green-400/35 bg-green-500/10",
-        icon: "text-green-300",
+        icon: "text-green-600 dark:text-green-300",
         glow: "shadow-[0_0_10px_rgba(34,197,94,0.35)]",
     },
     warning: {
         track: "bg-yellow-500/15",
         fill: "from-yellow-300 via-amber-200 to-yellow-300",
         badge: "border-yellow-400/35 bg-yellow-500/10",
-        icon: "text-yellow-300",
+        icon: "text-yellow-600 dark:text-yellow-300",
         glow: "shadow-[0_0_10px_rgba(234,179,8,0.35)]",
     },
     danger: {
         track: "bg-red-500/15",
         fill: "from-red-300 via-orange-200 to-red-300",
         badge: "border-red-400/35 bg-red-500/10",
-        icon: "text-red-300",
+        icon: "text-red-600 dark:text-red-300",
         glow: "shadow-[0_0_10px_rgba(239,68,68,0.35)]",
     },
 };
@@ -177,7 +177,7 @@ export function LoadingSkeleton({
                     <div
                         key={i}
                         className={cn(
-                            "shimmer bg-white/5",
+                            "shimmer bg-[var(--bg-tertiary)]",
                             roundedClasses[rounded]
                         )}
                         style={{
@@ -193,7 +193,7 @@ export function LoadingSkeleton({
     return (
         <div
             className={cn(
-                "shimmer bg-white/5",
+                "shimmer bg-[var(--bg-tertiary)]",
                 roundedClasses[rounded],
                 className
             )}

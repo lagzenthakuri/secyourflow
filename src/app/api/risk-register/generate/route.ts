@@ -1,92 +1,78 @@
-
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { processRiskAssessment } from "@/lib/risk-engine";
-import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
+import { requireSessionWithOrg } from "@/lib/api-auth";
 
-export async function POST() {
-    try {
-        const session = await auth();
-        if (!session || !session.user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        if (!isTwoFactorSatisfied(session)) {
-            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
-        }
+const MAX_BATCH_SIZE = 10;
 
-        let user = await prisma.user.findUnique({
-            where: { id: session.user.id },
-            select: { id: true, organizationId: true }
-        });
+export async function POST(request: NextRequest) {
+  const authResult = await requireSessionWithOrg(request, {
+    allowedRoles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER"],
+  });
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
-        if (!user) {
-            return NextResponse.json({ error: "User not found" }, { status: 404 });
-        }
-
-        if (!user.organizationId) {
-            const firstOrg = await prisma.organization.findFirst();
-            if (firstOrg) {
-                user = await prisma.user.update({
-                    where: { id: user.id },
-                    data: { organizationId: firstOrg.id },
-                    select: { id: true, organizationId: true }
-                });
-            } else {
-                const newOrg = await prisma.organization.create({
-                    data: { name: "My Organization" }
-                });
-                user = await prisma.user.update({
-                    where: { id: user.id },
-                    data: { organizationId: newOrg.id },
-                    select: { id: true, organizationId: true }
-                });
-            }
-        }
-
-        if (!user || !user.organizationId) {
-            return NextResponse.json({ error: "Organization not found" }, { status: 403 });
-        }
-
-        // 1. Find all vulnerabilities that have linked assets but NO risk entry
-        // We look for vulnerabilities where none of their riskEntries match the current org
-        const vulnerabilities = await prisma.vulnerability.findMany({
-            where: {
-                organizationId: user.organizationId,
-                riskEntries: {
-                    none: {}
-                }
+  try {
+    const vulnerabilities = await prisma.vulnerability.findMany({
+      where: {
+        organizationId: authResult.context.organizationId,
+        riskEntries: {
+          none: {
+            organizationId: authResult.context.organizationId,
+          },
+        },
+      },
+      include: {
+        assets: {
+          where: {
+            asset: {
+              organizationId: authResult.context.organizationId,
             },
-            include: {
-                assets: {
-                    take: 1 // Just take the first asset for the risk assessment context
-                }
-            },
-            take: 5 // Limit to 5 at a time to avoid timeout/rate limits during demo
-        });
+          },
+          take: 1,
+          select: {
+            assetId: true,
+          },
+        },
+      },
+      take: MAX_BATCH_SIZE,
+      orderBy: {
+        updatedAt: "desc",
+      },
+    });
 
-        if (vulnerabilities.length === 0) {
-            return NextResponse.json({ message: "No new vulnerabilities to assess", count: 0 });
-        }
-
-        // 2. Trigger Assessment for each
-        let processedCount = 0;
-        for (const vuln of vulnerabilities) {
-            if (vuln.assets.length > 0) {
-                // We need the assetId. Connection is via AssetVulnerability (assets field)
-                const assetVulnerability = vuln.assets[0];
-                await processRiskAssessment(vuln.id, assetVulnerability.assetId, user.organizationId);
-                processedCount++;
-            }
-        }
-
-        return NextResponse.json({
-            message: `Started assessment for ${processedCount} vulnerabilities`,
-            count: processedCount
-        });
-
-    } catch (error) {
-        console.error("Error generating risks:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    if (vulnerabilities.length === 0) {
+      return NextResponse.json({ message: "No new vulnerabilities to assess", count: 0 });
     }
+
+    let processedCount = 0;
+    const failures: Array<{ vulnerabilityId: string; reason: string }> = [];
+
+    for (const vulnerability of vulnerabilities) {
+      const assetId = vulnerability.assets[0]?.assetId;
+      if (!assetId) {
+        continue;
+      }
+
+      try {
+        await processRiskAssessment(vulnerability.id, assetId, authResult.context.organizationId);
+        processedCount += 1;
+      } catch (error) {
+        failures.push({
+          vulnerabilityId: vulnerability.id,
+          reason: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    return NextResponse.json({
+      message: `Processed ${processedCount} vulnerabilities`,
+      count: processedCount,
+      failed: failures,
+    });
+  } catch (error) {
+    console.error("Error generating risk register entries:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
 }

@@ -9,7 +9,7 @@ export default function TermsOfService() {
       <div className="max-w-4xl mx-auto px-6 py-12">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-sm text-sky-400 hover:text-sky-300 transition-colors mb-8"
+          className="inline-flex items-center gap-2 text-sm text-sky-600 dark:text-sky-400 hover:text-intent-accent-strong transition-colors mb-8"
         >
           <ArrowLeft size={16} />
           Back to Home
@@ -18,7 +18,7 @@ export default function TermsOfService() {
         <h1 className="text-4xl font-bold text-[var(--text-primary)] mb-4">Terms of Service</h1>
         <p className="text-sm text-[var(--text-muted)] mb-8">Last updated: February 8, 2026</p>
 
-        <div className="prose prose-invert prose-slate max-w-none space-y-6 text-[var(--text-secondary)]">
+        <div className="prose prose-slate dark:prose-invert max-w-none space-y-6 text-[var(--text-secondary)]">
           <section>
             <h2 className="text-2xl font-semibold text-[var(--text-primary)] mt-8 mb-4">1. Acceptance of Terms</h2>
             <p>
@@ -105,7 +105,7 @@ export default function TermsOfService() {
             <h2 className="text-2xl font-semibold text-[var(--text-primary)] mt-8 mb-4">7. Data and Privacy</h2>
             <p>
               Your use of the Service is also governed by our{" "}
-              <Link href="/privacy-policy" className="text-sky-400 hover:text-sky-300">Privacy Policy</Link>.
+              <Link href="/privacy-policy" className="text-sky-600 dark:text-sky-400 hover:text-intent-accent-strong">Privacy Policy</Link>.
               We collect, use, and protect your data as described in that policy.
             </p>
           </section>
@@ -173,7 +173,7 @@ export default function TermsOfService() {
             <p>
               If you have any questions about these Terms, please contact us at:
             </p>
-            <div className="mt-4 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+            <div className="mt-4 p-4 bg-[var(--bg-tertiary)] rounded-lg border border-[var(--border-hover)]">
               <p className="font-semibold text-[var(--text-primary)]">SECYOURALL</p>
               <p>Email: legal@secyourall.com</p>
               <p>Maintained by SHYENA</p>
@@ -181,8 +181,8 @@ export default function TermsOfService() {
           </section>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-slate-800">
-          <p className="text-sm text-slate-500 text-center">
+        <div className="mt-12 pt-8 border-t border-[var(--border-color)]">
+          <p className="text-sm text-[var(--text-muted)] text-center">
             © 2026 SECYOURALL. ALL RIGHTS RESERVED.
           </p>
         </div>

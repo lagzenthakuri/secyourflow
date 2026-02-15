@@ -33,6 +33,7 @@ export async function pullEvidenceFromLogs(controlId: string, assetId: string) {
       select: {
         id: true,
         name: true,
+        organizationId: true,
       },
     }),
   ]);
@@ -42,6 +43,9 @@ export async function pullEvidenceFromLogs(controlId: string, assetId: string) {
   }
   if (!asset) {
     throw new Error(`Asset ${assetId} not found`);
+  }
+  if (asset.organizationId !== control.framework.organizationId) {
+    throw new Error(`Asset ${assetId} is outside the control organization scope`);
   }
 
   console.log(`[EvidenceEngine] Pulling log evidence for Control ${control.controlId} on Asset ${asset.name}`);
@@ -164,8 +168,9 @@ export async function pullEvidenceFromLogs(controlId: string, assetId: string) {
  * 1. Runs due scheduled control assessments.
  * 2. Pulls automated log evidence for detective/log-driven controls.
  */
-export async function runContinuousComplianceAudit() {
+export async function runContinuousComplianceAudit(options: { organizationId?: string } = {}) {
   const organizations = await prisma.organization.findMany({
+    where: options.organizationId ? { id: options.organizationId } : undefined,
     select: {
       id: true,
     },

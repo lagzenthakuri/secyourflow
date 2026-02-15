@@ -10,15 +10,15 @@ export async function logActivity(
     newValue?: Record<string, unknown> | null,
     details?: string,
     customUserId?: string,
-    requestContext?: RequestContext
+    requestContext?: RequestContext,
+    customOrganizationId?: string,
 ) {
     try {
         let userId = customUserId;
-        let session = null;
 
         if (!userId) {
             // 1. Try to get from session
-            session = await auth();
+            const session = await auth();
             userId = session?.user?.id;
         }
 
@@ -33,27 +33,20 @@ export async function logActivity(
             }
         }
 
-        // 3. Last resort fallback
-        if (!userId) {
-            // Find a specific admin (Lagzen) or any MAIN_OFFICER
-            const admin = await prisma.user.findFirst({
-                where: {
-                    OR: [
-                        { email: 'thakurizen2@gmail.com' },
-                        { role: 'MAIN_OFFICER' }
-                    ]
-                },
-                orderBy: { createdAt: 'desc' } // Prefer newer if multiple
-            });
-            userId = admin?.id;
-
-            if (userId) {
-                console.warn(`[Logger] Action "${action}" (${entityId}) was unattributed and fell back to admin ${admin?.email}`);
-            }
-        }
-
+        // 3. If still missing, skip logging instead of forcing incorrect attribution.
         if (!userId) {
             console.warn("[Logger] Could not attribute audit log to any user:", action);
+            return;
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { organizationId: true },
+        });
+
+        const organizationId = customOrganizationId || user?.organizationId || null;
+        if (!organizationId) {
+            console.warn("[Logger] Could not resolve organization for audit log:", action);
             return;
         }
 
@@ -63,6 +56,7 @@ export async function logActivity(
                 entityType,
                 entityId,
                 userId,
+                organizationId,
                 oldValue: oldValue ? JSON.parse(JSON.stringify(oldValue)) : undefined,
                 newValue: newValue ? JSON.parse(JSON.stringify(newValue)) : undefined,
                 ipAddress: requestContext?.ipAddress || null,

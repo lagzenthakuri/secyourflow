@@ -9,7 +9,7 @@ export default function Licensing() {
       <div className="max-w-4xl mx-auto px-6 py-12">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-sm text-sky-400 hover:text-sky-300 transition-colors mb-8"
+          className="inline-flex items-center gap-2 text-sm text-sky-600 dark:text-sky-400 hover:text-intent-accent-strong transition-colors mb-8"
         >
           <ArrowLeft size={16} />
           Back to Home
@@ -18,7 +18,7 @@ export default function Licensing() {
         <h1 className="text-4xl font-bold text-[var(--text-primary)] mb-4">Licensing</h1>
         <p className="text-sm text-[var(--text-muted)] mb-8">Last updated: February 8, 2026</p>
 
-        <div className="prose prose-invert prose-slate max-w-none space-y-6 text-[var(--text-secondary)]">
+        <div className="prose prose-slate dark:prose-invert max-w-none space-y-6 text-[var(--text-secondary)]">
           <section>
             <h2 className="text-2xl font-semibold text-[var(--text-primary)] mt-8 mb-4">1. Software License</h2>
             <p>
@@ -70,7 +70,7 @@ export default function Licensing() {
             </p>
 
             <div className="mt-6 space-y-4">
-              <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+              <div className="p-4 bg-[var(--bg-tertiary)] rounded-lg border border-[var(--border-hover)]">
                 <h4 className="font-semibold text-[var(--text-primary)] mb-2">Next.js</h4>
                 <p className="text-sm">License: MIT License</p>
                 <p className="text-sm text-[var(--text-muted)] mt-1">
@@ -78,7 +78,7 @@ export default function Licensing() {
                 </p>
               </div>
 
-              <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+              <div className="p-4 bg-[var(--bg-tertiary)] rounded-lg border border-[var(--border-hover)]">
                 <h4 className="font-semibold text-[var(--text-primary)] mb-2">React</h4>
                 <p className="text-sm">License: MIT License</p>
                 <p className="text-sm text-[var(--text-muted)] mt-1">
@@ -86,7 +86,7 @@ export default function Licensing() {
                 </p>
               </div>
 
-              <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+              <div className="p-4 bg-[var(--bg-tertiary)] rounded-lg border border-[var(--border-hover)]">
                 <h4 className="font-semibold text-[var(--text-primary)] mb-2">Prisma</h4>
                 <p className="text-sm">License: Apache License 2.0</p>
                 <p className="text-sm text-[var(--text-muted)] mt-1">
@@ -94,7 +94,7 @@ export default function Licensing() {
                 </p>
               </div>
 
-              <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+              <div className="p-4 bg-[var(--bg-tertiary)] rounded-lg border border-[var(--border-hover)]">
                 <h4 className="font-semibold text-[var(--text-primary)] mb-2">Tailwind CSS</h4>
                 <p className="text-sm">License: MIT License</p>
                 <p className="text-sm text-[var(--text-muted)] mt-1">
@@ -176,7 +176,7 @@ export default function Licensing() {
             <p>
               For licensing inquiries or to request permissions beyond the scope of this license, please contact us at:
             </p>
-            <div className="mt-4 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+            <div className="mt-4 p-4 bg-[var(--bg-tertiary)] rounded-lg border border-[var(--border-hover)]">
               <p className="font-semibold text-[var(--text-primary)]">SECYOURALL</p>
               <p>Email: licensing@secyourall.com</p>
               <p>Maintained by SHYENA</p>
@@ -184,8 +184,8 @@ export default function Licensing() {
           </section>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-slate-800">
-          <p className="text-sm text-slate-500 text-center">
+        <div className="mt-12 pt-8 border-t border-[var(--border-color)]">
+          <p className="text-sm text-[var(--text-muted)] text-center">
             © 2026 SECYOURALL. ALL RIGHTS RESERVED.
           </p>
         </div>

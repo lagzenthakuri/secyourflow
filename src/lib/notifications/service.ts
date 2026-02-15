@@ -27,10 +27,18 @@ export async function createNotification(input: CreateNotificationInput) {
     }
 }
 
-export async function notifyMainOfficers(title: string, message: string, link?: string) {
+export async function notifyMainOfficers(
+    organizationId: string,
+    title: string,
+    message: string,
+    link?: string,
+) {
     try {
         const mainOfficers = await prisma.user.findMany({
-            where: { role: "MAIN_OFFICER" },
+            where: {
+                role: "MAIN_OFFICER",
+                organizationId,
+            },
             select: { id: true }
         });
 

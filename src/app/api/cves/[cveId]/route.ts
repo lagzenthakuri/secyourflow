@@ -1,5 +1,6 @@
 import { logEvent } from "@/modules/cve-search/api/log";
 import { getCveSearchService } from "@/modules/cve-search/api/service";
+import { requireSessionWithOrg } from "@/lib/api-auth";
 import {
   badRequest,
   internalServerError,
@@ -18,6 +19,10 @@ interface RouteContext {
 
 export async function GET(_request: Request, context: RouteContext) {
   const requestId = crypto.randomUUID();
+  const authResult = await requireSessionWithOrg(_request);
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   try {
     const params = await context.params;

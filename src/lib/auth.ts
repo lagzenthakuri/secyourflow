@@ -12,9 +12,13 @@ import {
     isTrustedTwoFactorSessionUpdate,
 } from "@/lib/security/two-factor-session";
 import { hasRecentTwoFactorVerification, TWO_FACTOR_REVERIFY_INTERVAL_MS } from "@/lib/security/two-factor";
-import { type Account } from "next-auth";
 
-async function refreshAccessToken(token: any) {
+type RefreshableToken = Record<string, unknown> & {
+    provider?: string;
+    refreshToken?: string;
+};
+
+async function refreshAccessToken(token: RefreshableToken): Promise<RefreshableToken> {
     try {
         const url = "https://oauth2.googleapis.com/token";
         if (token.provider === "google") {
@@ -24,7 +28,7 @@ async function refreshAccessToken(token: any) {
                     client_id: process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID || "",
                     client_secret: process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET || "",
                     grant_type: "refresh_token",
-                    refresh_token: token.refreshToken as string,
+                    refresh_token: typeof token.refreshToken === "string" ? token.refreshToken : "",
                 }),
                 method: "POST",
             });
@@ -226,31 +230,12 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 token.twoFactorVerifiedAt = null;
                 token.authenticatedAt = Date.now();
 
-                const dbUser = await prisma.user.findUnique({
-                    where: { id: user.id },
-                    select: { organizationId: true }
-                });
-
-                let organizationId = dbUser?.organizationId;
-                if (!organizationId) {
-                    const firstOrg = await prisma.organization.findFirst();
-                    if (firstOrg) {
-                        organizationId = firstOrg.id;
-                    } else {
-                        const newOrg = await prisma.organization.create({
-                            data: { name: "My Organization" }
-                        });
-                        organizationId = newOrg.id;
-                    }
-                }
-
                 await prisma.user.update({
                     where: { id: user.id },
                     data: {
                         lastLogin: new Date(),
                         activeSessionId,
                         activeSessionIp,
-                        organizationId,
                     },
                 });
 
@@ -350,12 +335,6 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
 
             if (typeof token.authenticatedAt !== "number") {
                 token.authenticatedAt = Date.now();
-            } else {
-                // Keep the session alive while the user is active
-                token.authenticatedAt = Date.now();
-                if (token.twoFactorVerified === true && typeof token.twoFactorVerifiedAt === "number") {
-                    token.twoFactorVerifiedAt = Date.now();
-                }
             }
 
             // Return previous token if the access token has not expired yet

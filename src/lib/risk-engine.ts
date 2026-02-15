@@ -277,17 +277,23 @@ export async function processRiskAssessment(
         console.log(`[RiskEngine] Starting specific assessment flow for Vuln ${vulnerabilityId}`);
 
         // 1. Fetch Asset + Context
-        const asset = await prisma.asset.findUnique({
-            where: { id: assetId },
+        const asset = await prisma.asset.findFirst({
+            where: {
+                id: assetId,
+                organizationId,
+            },
             include: { complianceControls: true }
         });
 
-        const vulnerability = await prisma.vulnerability.findUnique({
-            where: { id: vulnerabilityId }
+        const vulnerability = await prisma.vulnerability.findFirst({
+            where: {
+                id: vulnerabilityId,
+                organizationId,
+            }
         });
 
         if (!asset || !vulnerability) {
-            console.error("[RiskEngine] Asset or Vulnerability not found");
+            console.error("[RiskEngine] Asset or vulnerability not found for organization context");
             return;
         }
 

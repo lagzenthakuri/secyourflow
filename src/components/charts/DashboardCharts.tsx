@@ -207,12 +207,12 @@ export function VulnStatusChart({ data }: VulnStatusChartProps) {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                 <XAxis
                     dataKey="month"
-                    tick={{ fill: "var(--text-muted)", fontSize: 11 }}
+                    tick={{ fill: "var(--text-secondary)", fontSize: 11 }}
                     tickLine={false}
                     axisLine={{ stroke: "var(--border-color)" }}
                 />
                 <YAxis
-                    tick={{ fill: "var(--text-muted)", fontSize: 11 }}
+                    tick={{ fill: "var(--text-secondary)", fontSize: 11 }}
                     tickLine={false}
                     axisLine={{ stroke: "var(--border-color)" }}
                 />
@@ -220,7 +220,7 @@ export function VulnStatusChart({ data }: VulnStatusChartProps) {
                 <Legend
                     wrapperStyle={{ paddingTop: 10 }}
                     formatter={(value) => (
-                        <span className="text-xs text-[var(--text-secondary)]">{value}</span>
+                        <span className="text-xs text-[var(--text-primary)]">{value}</span>
                     )}
                 />
                 <Bar dataKey="opened" name="Opened" fill={COLORS.CRITICAL} radius={[4, 4, 0, 0]} />

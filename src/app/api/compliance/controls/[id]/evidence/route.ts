@@ -1,20 +1,38 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { assertEvidenceFileAllowed, writeEvidenceFile } from "@/lib/compliance-evidence-storage";
+import { requireSessionWithOrg } from "@/lib/api-auth";
 
 export const runtime = "nodejs";
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  void request;
+  const authResult = await requireSessionWithOrg(request);
+  if (!authResult.ok) return authResult.response;
+
   try {
     const { id } = await params;
+
+    const control = await prisma.complianceControl.findFirst({
+      where: {
+        id,
+        framework: {
+          organizationId: authResult.context.organizationId,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!control) {
+      return NextResponse.json({ error: "Control not found" }, { status: 404 });
+    }
 
     const evidence = await prisma.complianceEvidence.findMany({
       where: {
         controlId: id,
+        organizationId: authResult.context.organizationId,
       },
       include: {
         versions: {
@@ -28,8 +46,17 @@ export async function GET(
       },
     });
 
+    const data = evidence.map((item) => ({
+      ...item,
+      versions: item.versions.map((version) => ({
+        ...version,
+        // Never expose underlying private storage paths.
+        storagePath: `/api/compliance/evidence/versions/${version.id}/download`,
+      })),
+    }));
+
     return NextResponse.json({
-      data: evidence,
+      data,
     });
   } catch (error) {
     return NextResponse.json(
@@ -40,14 +67,20 @@ export async function GET(
 }
 
 export async function POST(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const authResult = await requireSessionWithOrg(request);
+  if (!authResult.ok) return authResult.response;
+
   try {
     const { id } = await params;
-    const control = await prisma.complianceControl.findUnique({
+    const control = await prisma.complianceControl.findFirst({
       where: {
         id,
+        framework: {
+          organizationId: authResult.context.organizationId,
+        },
       },
       include: {
         framework: {
@@ -155,6 +188,7 @@ export async function POST(
           controlId: control.id,
           assetId,
           organizationId: control.framework.organizationId,
+          uploadedById: authResult.context.userId,
           currentVersion: 0,
         },
         select: {
@@ -180,7 +214,7 @@ export async function POST(
     });
 
     const latest = await prisma.$transaction(async (tx) => {
-      await tx.complianceEvidenceVersion.create({
+      const createdVersion = await tx.complianceEvidenceVersion.create({
         data: {
           evidenceId: evidenceRecord.id,
           version: nextVersion,
@@ -190,6 +224,7 @@ export async function POST(
           storagePath: filePayload.storagePath,
           checksum: filePayload.checksum,
           notes,
+          uploadedById: authResult.context.userId,
         },
       });
 
@@ -199,6 +234,7 @@ export async function POST(
         },
         data: {
           currentVersion: nextVersion,
+          uploadedById: authResult.context.userId,
           ...(title ? { title } : {}),
           ...(description !== null ? { description } : {}),
           ...(assetId ? { assetId } : {}),
@@ -206,8 +242,7 @@ export async function POST(
       });
 
       const evidenceSummary =
-        `Latest evidence file: ${fileValue.name} (v${nextVersion}) uploaded at ${new Date().toISOString()}. ` +
-        `Stored at ${filePayload.storagePath}.`;
+        `Latest evidence file: ${fileValue.name} (v${nextVersion}) uploaded at ${new Date().toISOString()}.`;
 
       await tx.complianceControl.update({
         where: {
@@ -239,14 +274,14 @@ export async function POST(
         });
       }
 
-      return updatedEvidence;
+      return { evidence: updatedEvidence, versionId: createdVersion.id };
     });
 
     return NextResponse.json({
-      evidenceId: latest.id,
+      evidenceId: latest.evidence.id,
       version: nextVersion,
       fileName: fileValue.name,
-      storagePath: filePayload.storagePath,
+      storagePath: `/api/compliance/evidence/versions/${latest.versionId}/download`,
       sizeBytes: filePayload.sizeBytes,
       checksum: filePayload.checksum,
     });

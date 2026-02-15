@@ -10,7 +10,7 @@ export default function About() {
       <div className="max-w-5xl mx-auto px-6 py-12">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-sm text-sky-400 hover:text-sky-300 transition-colors mb-8"
+          className="inline-flex items-center gap-2 text-sm text-sky-600 dark:text-sky-400 hover:text-intent-accent-strong transition-colors mb-8"
         >
           <ArrowLeft size={16} />
           Back to Home
@@ -26,7 +26,7 @@ export default function About() {
           <h1 className="text-4xl font-bold text-[var(--text-primary)]">About SECYOURALL</h1>
         </div>
 
-        <div className="prose prose-invert prose-slate max-w-none space-y-8 text-[var(--text-secondary)]">
+        <div className="prose prose-slate dark:prose-invert max-w-none space-y-8 text-[var(--text-secondary)]">
           <section>
             <p className="text-lg leading-relaxed">
               SECYOURALL is dedicated to forging excellence in cybersecurity, one flag at a time.
@@ -37,8 +37,8 @@ export default function About() {
           </section>
 
           <section className="grid gap-6 md:grid-cols-3 my-12">
-            <div className="p-6 rounded-xl border border-slate-800 bg-slate-900/30">
-              <div className="inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-sky-300 mb-4">
+            <div className="p-6 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)]">
+              <div className="inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-intent-accent mb-4">
                 <Shield size={20} />
               </div>
               <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">Our Mission</h3>
@@ -48,8 +48,8 @@ export default function About() {
               </p>
             </div>
 
-            <div className="p-6 rounded-xl border border-slate-800 bg-slate-900/30">
-              <div className="inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-sky-300 mb-4">
+            <div className="p-6 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)]">
+              <div className="inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-intent-accent mb-4">
                 <Target size={20} />
               </div>
               <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">Our Vision</h3>
@@ -59,8 +59,8 @@ export default function About() {
               </p>
             </div>
 
-            <div className="p-6 rounded-xl border border-slate-800 bg-slate-900/30">
-              <div className="inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-sky-300 mb-4">
+            <div className="p-6 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)]">
+              <div className="inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-intent-accent mb-4">
                 <Users size={20} />
               </div>
               <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">Our Team</h3>
@@ -99,7 +99,7 @@ export default function About() {
             </ul>
           </section>
 
-          <section className="mt-12 p-6 bg-slate-800/50 rounded-lg border border-slate-700">
+          <section className="mt-12 p-6 bg-[var(--bg-tertiary)] rounded-lg border border-[var(--border-hover)]">
             <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-3">Maintained by SHYENA</h2>
             <p className="text-sm text-[var(--text-muted)]">
               Our platform is actively maintained and continuously improved to meet the evolving
@@ -109,8 +109,8 @@ export default function About() {
           </section>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-slate-800">
-          <p className="text-sm text-slate-500 text-center">
+        <div className="mt-12 pt-8 border-t border-[var(--border-color)]">
+          <p className="text-sm text-[var(--text-muted)] text-center">
             © 2026 SECYOURALL. ALL RIGHTS RESERVED.
           </p>
         </div>

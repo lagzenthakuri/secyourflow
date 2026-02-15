@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     ]),
   };
 
-  const rendered = renderTabularExport(
+  const rendered = await renderTabularExport(
     data,
     format,
     `vulnerabilities_${data.generatedAt.slice(0, 10)}`,

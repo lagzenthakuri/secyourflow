@@ -38,7 +38,7 @@ export function assertEvidenceFileAllowed(fileName: string, mimeType: string, si
 }
 
 function getEvidenceBaseDir() {
-  return path.join(process.cwd(), "public", "uploads", "compliance-evidence");
+  return path.join(process.cwd(), "data", "compliance-evidence");
 }
 
 function buildTimestampSlug() {
@@ -56,26 +56,36 @@ export async function writeEvidenceFile(options: {
   const safeName = sanitizeFileName(options.originalFileName || "evidence.bin");
   const relativePath = path
     .join(
-      "uploads",
-      "compliance-evidence",
       options.controlId,
       options.evidenceId,
       `v${options.version}_${buildTimestampSlug()}_${safeName}`,
     )
     .replace(/\\/g, "/");
 
-  const absolutePath = path.join(process.cwd(), "public", relativePath);
+  const absolutePath = path.join(getEvidenceBaseDir(), relativePath);
   await fs.mkdir(path.dirname(absolutePath), { recursive: true });
   await fs.writeFile(absolutePath, options.data);
 
   const checksum = crypto.createHash("sha256").update(options.data).digest("hex");
 
   return {
-    storagePath: `/${relativePath}`,
+    storagePath: relativePath,
     sizeBytes: options.data.byteLength,
     checksum,
     mimeType: options.mimeType,
   };
+}
+
+export async function readEvidenceFile(storagePath: string): Promise<Buffer> {
+  const normalized = storagePath.replace(/^\/+/, "");
+  const absolutePath = path.resolve(getEvidenceBaseDir(), normalized);
+  const baseDir = path.resolve(getEvidenceBaseDir());
+
+  if (!absolutePath.startsWith(baseDir)) {
+    throw new Error("Invalid evidence file path");
+  }
+
+  return fs.readFile(absolutePath);
 }
 
 export async function writeTextEvidenceFile(options: {

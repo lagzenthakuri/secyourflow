@@ -3,14 +3,30 @@ import {
   buildComplianceFrameworkReport,
   generateComplianceReportPdf,
 } from "@/lib/compliance-reporting";
+import { requireSessionWithOrg } from "@/lib/api-auth";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ frameworkId: string }> },
 ) {
-  void request;
+  const authResult = await requireSessionWithOrg(request);
+  if (!authResult.ok) return authResult.response;
+
   try {
     const { frameworkId } = await params;
+    const framework = await prisma.complianceFramework.findFirst({
+      where: {
+        id: frameworkId,
+        organizationId: authResult.context.organizationId,
+      },
+      select: { id: true },
+    });
+
+    if (!framework) {
+      return NextResponse.json({ error: "Framework not found" }, { status: 404 });
+    }
+
     const report = await buildComplianceFrameworkReport(frameworkId);
     const pdf = generateComplianceReportPdf(report);
 
