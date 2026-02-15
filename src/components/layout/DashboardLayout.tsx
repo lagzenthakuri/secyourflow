@@ -85,7 +85,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             {/* Sidebar */}
             <aside
                 className={cn(
-                    "sidebar transition-transform duration-400 ease-out",
+                    "sidebar fixed top-0 left-0 bottom-0 z-[70] flex flex-col transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1)",
                     isOpen ? "translate-x-0" : "-translate-x-full"
                 )}
             >
@@ -105,84 +105,94 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 py-4 overflow-y-auto min-h-0">
-                    <div className="px-4 mb-2">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                            Main Menu
-                        </span>
+                <nav className="flex-1 px-4 py-6 space-y-8 overflow-y-auto custom-scrollbar">
+                    {/* Main Menu */}
+                    <div>
+                        <div className="px-5 mb-4">
+                            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                                Intelligence
+                            </span>
+                        </div>
+                        <div className="space-y-1">
+                            {filteredNav.map((item) => {
+                                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                                return (
+                                    <Link
+                                        key={item.href}
+                                        href={item.href}
+                                        className={cn("sidebar-link", isActive && "active")}
+                                        onClick={() => {
+                                            if (window.innerWidth < 1024) setIsOpen(false);
+                                        }}
+                                    >
+                                        <item.icon size={20} className={cn("transition-colors", isActive ? "text-blue-400" : "text-[var(--text-muted)]")} />
+                                        <span className="font-semibold">{item.name}</span>
+                                    </Link>
+                                );
+                            })}
+                        </div>
                     </div>
-                    {filteredNav.map((item) => {
-                        const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={cn("sidebar-link", isActive && "active")}
-                                onClick={() => {
-                                    if (window.innerWidth < 1024) setIsOpen(false);
-                                }}
-                            >
-                                <item.icon size={18} />
-                                {item.name}
-                            </Link>
-                        );
-                    })}
 
-                    <div className="px-4 mt-6 mb-2">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                            Administration
-                        </span>
+                    {/* Administration */}
+                    <div>
+                        <div className="px-5 mb-4">
+                            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                                Control Center
+                            </span>
+                        </div>
+                        <div className="space-y-1">
+                            {filteredSecondaryNav.map((item) => {
+                                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                                return (
+                                    <Link
+                                        key={item.href}
+                                        href={item.href}
+                                        className={cn("sidebar-link", isActive && "active")}
+                                        onClick={() => {
+                                            if (window.innerWidth < 1024) setIsOpen(false);
+                                        }}
+                                    >
+                                        <item.icon size={20} className={cn("transition-colors", isActive ? "text-blue-400" : "text-[var(--text-muted)]")} />
+                                        <span className="font-semibold">{item.name}</span>
+                                    </Link>
+                                );
+                            })}
+                        </div>
                     </div>
-                    {filteredSecondaryNav.map((item) => {
-                        const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={cn("sidebar-link", isActive && "active")}
-                                onClick={() => {
-                                    if (window.innerWidth < 1024) setIsOpen(false);
-                                }}
-                            >
-                                <item.icon size={18} />
-                                {item.name}
-                            </Link>
-                        );
-                    })}
                 </nav>
 
-                {/* User Section */}
-                <div className="p-4 border-t border-[var(--border-color)] mt-auto">
+                {/* User Section Redesigned */}
+                <div className="p-6 mt-auto">
                     <div className="relative">
                         <button
                             onClick={() => setShowSignOut(!showSignOut)}
-                            className="w-full flex items-center gap-3 p-3 rounded-xl bg-[var(--bg-tertiary)] cursor-pointer hover:bg-[var(--bg-tertiary)]/80 transition-colors"
+                            className="w-full flex items-center gap-4 p-4 rounded-2xl bg-[var(--bg-tertiary)]/50 backdrop-blur-md border border-[var(--border-color)] hover:border-blue-500/30 transition-all group"
                         >
-                            <div className="w-9 h-9 rounded-lg border border-blue-400/50 bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
-                                {userInitials}
+                            <div className="relative shrink-0">
+                                <div className="absolute inset-0 bg-blue-500/20 rounded-xl blur-lg group-hover:bg-blue-500/30 transition-all" />
+                                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white text-base font-bold relative z-10 shadow-lg border border-white/10">
+                                    {userInitials}
+                                </div>
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium text-[var(--text-primary)] truncate">
                                     {userName}
                                 </p>
-                                <p className="text-[10px] text-[var(--text-muted)] uppercase">
+                                <p className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider">
                                     {userRole.replace('_', ' ')}
                                 </p>
                             </div>
-                            <div className="p-1.5 rounded-lg text-[var(--text-muted)]">
-                                <ChevronDown size={14} />
-                            </div>
+                            <ChevronDown size={16} className={cn("text-[var(--text-muted)] transition-transform duration-300", showSignOut && "rotate-180")} />
                         </button>
 
-                        {/* Click-triggered Sign Out Menu */}
                         {showSignOut && (
-                            <div className="absolute bottom-full left-0 w-full mb-2 z-50 animate-fade-in">
-                                <div className="bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-xl shadow-2xl p-1 overflow-hidden">
+                            <div className="absolute bottom-full left-0 w-full mb-3 z-[80] animate-fade-in">
+                                <div className="bg-[var(--bg-elevated)] backdrop-blur-xl border border-[var(--border-color)] rounded-2xl shadow-2xl p-2 overflow-hidden">
                                     <button
                                         onClick={() => signOut({ callbackUrl: "/" })}
                                         className="w-full flex items-center gap-2 p-2.5 text-sm text-intent-danger rounded-lg hover:bg-red-500/10 transition-colors"
                                     >
-                                        <LogOut size={16} />
+                                        <LogOut size={18} />
                                         Sign Out
                                     </button>
                                 </div>
@@ -251,6 +261,8 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
         return searchableRoutes.filter((item) => item.keywords.includes(query)).slice(0, 7);
     }, [searchQuery, searchableRoutes]);
 
+    // ... (logic remains same, just redesigning the return)
+
     const handleAuthFailure = useCallback(
         async (response: Response): Promise<boolean> => {
             if (response.status === 401) {
@@ -284,13 +296,10 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Fetch Threats
                 const threatsRes = await fetch("/api/threats");
                 if (!threatsRes.ok) {
                     const shouldStop = await handleAuthFailure(threatsRes);
-                    if (shouldStop) {
-                        return;
-                    }
+                    if (shouldStop) return;
                 } else {
                     const threatsData = await threatsRes.json() as ThreatsResponse;
                     if (threatsData.stats) {
@@ -298,14 +307,10 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                     }
                 }
 
-                // Fetch Notifications
                 const notifRes = await fetch("/api/notifications");
                 if (!notifRes.ok) {
                     const shouldStop = await handleAuthFailure(notifRes);
-                    if (shouldStop) {
-                        return;
-                    }
-
+                    if (shouldStop) return;
                     setNotificationsCount(0);
                     setNotifications([]);
                     return;
@@ -321,7 +326,6 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
         };
 
         fetchData();
-        // Poll every minute
         const interval = setInterval(fetchData, 60000);
         return () => clearInterval(interval);
     }, [handleAuthFailure]);
@@ -351,9 +355,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
 
             if (!response.ok) {
                 const shouldStop = await handleAuthFailure(response);
-                if (shouldStop) {
-                    return;
-                }
+                if (shouldStop) return;
                 throw new Error("Failed to mark notifications as read");
             }
 
@@ -366,47 +368,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
         }
     };
 
-    const markOneNotificationAsRead = async (notification: NotificationItem) => {
-        if (notification.isRead) {
-            return;
-        }
-
-        const response = await fetch("/api/notifications", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: notification.id, isRead: true }),
-        });
-
-        if (!response.ok) {
-            const shouldStop = await handleAuthFailure(response);
-            if (shouldStop) {
-                return;
-            }
-            throw new Error("Failed to mark notification as read");
-        }
-
-        const updateResult = await response.json() as { changedToRead?: boolean };
-
-        setNotifications((previousNotifications) =>
-            markNotificationRead(previousNotifications, notification.id).notifications,
-        );
-
-        if (updateResult.changedToRead) {
-            setNotificationsCount((previousCount) => Math.max(0, previousCount - 1));
-        }
-    };
-
-    const navigateToNotification = (link: string) => {
-        if (link.startsWith("http://") || link.startsWith("https://")) {
-            window.location.href = link;
-            return;
-        }
-
-        router.push(link);
-    };
-
     const handleNotificationClick = async (notification: NotificationItem) => {
-        // 1. Optimistically update local state
         if (!notification.isRead) {
             setNotifications((previous) =>
                 markNotificationRead(previous, notification.id).notifications
@@ -414,13 +376,15 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
             setNotificationsCount((prev) => Math.max(0, prev - 1));
         }
 
-        // 2. Clear state and navigate immediately if there's a link
         if (notification.link) {
             setShowNotifications(false);
-            navigateToNotification(notification.link);
+            if (notification.link.startsWith("http")) {
+                window.location.href = notification.link;
+            } else {
+                router.push(notification.link);
+            }
         }
 
-        // 3. Perform the actual API call in the background
         if (!notification.isRead) {
             try {
                 await fetch("/api/notifications", {
@@ -430,8 +394,6 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                 });
             } catch (error) {
                 console.error("Failed to sync notification read state", error);
-                // Optional: Revert optimistic update if critical, 
-                // but usually fine for "read" state.
             }
         }
     };
@@ -443,21 +405,20 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
     };
 
     return (
-        <header className="h-16 bg-[var(--bg-secondary)]/80 backdrop-blur-md border-b border-[var(--border-color)]/50 flex items-center justify-between px-6 sticky top-0 z-20">
-            {/* Left Section: Menu Toggle & Search */}
-            <div className="flex items-center gap-4 flex-1 max-w-xl">
+        <header className="h-20 topbar px-10 flex items-center justify-between sticky top-0 z-[40]">
+            <div className="flex items-center gap-8 flex-1 max-w-2xl">
                 <button
                     onClick={onToggleSidebar}
-                    className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all duration-300 ease-in-out"
+                    className="p-3 rounded-xl bg-[var(--bg-tertiary)]/50 border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-white hover:border-blue-500/50 transition-all active:scale-95"
                     aria-label="Toggle Sidebar"
                 >
-                    <Menu size={20} />
+                    <Menu size={22} />
                 </button>
 
                 <div className="relative flex-1" ref={searchContainerRef}>
                     <Search
                         size={18}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+                        className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-blue-400 transition-colors"
                     />
                     <input
                         type="text"
@@ -564,16 +525,13 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                     {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
                 </button>
 
-                {/* Notifications */}
-                <div className="relative">
+                <div className="flex items-center gap-2">
                     <button
-                        onClick={() => setShowNotifications(!showNotifications)}
-                        className="relative p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all duration-300 ease-in-out"
+                        type="button"
+                        onClick={toggleTheme}
+                        className="p-3 rounded-xl bg-[var(--bg-tertiary)]/50 border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-white hover:border-blue-500/50 transition-all active:scale-95"
                     >
-                        <Bell size={20} />
-                        {notificationsCount > 0 && (
-                            <span className="notification-badge">{notificationsCount}</span>
-                        )}
+                        {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
                     </button>
 
                     {/* Dropdown */}
@@ -605,17 +563,22 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                                             <div className="flex items-start justify-between gap-2">
                                                 <p className="text-sm font-medium">{notif.title}</p>
                                                 {!notif.isRead && (
-                                                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-sky-400" />
+                                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.5)]" />
                                                 )}
-                                            </div>
-                                            <p className="text-xs text-[var(--text-muted)] mt-1">{notif.message}</p>
-                                            <p className="text-[10px] text-[var(--text-muted)] mt-2">{new Date(notif.createdAt).toLocaleString()}</p>
-                                        </button>
-                                    ))
-                                )}
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <div>
+                                                        <p className="text-sm font-bold text-white mb-1 leading-snug">{notif.title}</p>
+                                                        <p className="text-xs text-[var(--text-secondary)] line-clamp-2 leading-relaxed">{notif.message}</p>
+                                                        <p className="text-[10px] font-medium text-[var(--text-muted)] mt-2 uppercase tracking-wider">{new Date(notif.createdAt).toLocaleDateString()} • {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </div>
         </header>
@@ -649,8 +612,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         <div className="min-h-screen bg-[var(--bg-primary)] bg-grid">
             <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
             <div className={cn(
-                "transition-all duration-400 ease-out",
-                isSidebarOpen ? "lg:ml-[260px]" : "lg:ml-0"
+                "transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1)",
+                isSidebarOpen ? "lg:ml-[280px]" : "lg:ml-0"
             )}>
                 <TopBar onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
                 <main className="min-h-[calc(100vh-4rem)] p-4 sm:p-6">{children}</main>

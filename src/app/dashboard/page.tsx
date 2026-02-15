@@ -7,7 +7,7 @@ import { useSession } from "next-auth/react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
-import { getTimeAgo } from "@/lib/utils";
+import { cn, getTimeAgo } from "@/lib/utils";
 import {
   Activity,
   AlertTriangle,
@@ -585,68 +585,55 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-8 animate-fade-in max-w-[1600px] mx-auto">
         <PageHeader
-          title="Security Dashboard"
-          description="Centralized view for risk, threat activity, and remediation progress. Built to keep triage and action fast for SOC teams."
+          title="Command Surface"
+          description="Operational intelligence across your cyber risk perimeter. Real-time signals from assets, threats, and compliance frameworks."
           badge={
-            <>
-              <Siren size={13} className="mr-2" />
-              SOC Command Surface
-            </>
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-widest">
+              <Activity size={12} className="animate-pulse" />
+              Live Intelligence
+            </div>
           }
           actions={
-            <>
+            <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => {
                   void fetchDashboardData({ silent: true });
                   void fetchRecentActivity();
                 }}
-                className="btn btn-secondary !px-4 !py-2.5"
+                className="btn btn-secondary !bg-transparent hover:!bg-white/5"
               >
-                <RefreshCw size={15} className={isRefreshing ? "animate-spin mr-2" : "mr-2"} />
-                <span className="text-[var(--text-primary)]">Refresh</span>
+                <RefreshCw size={16} className={cn("transition-transform", isRefreshing && "animate-spin")} />
+                Sync
               </button>
               <Link
-                href="/risk-register"
-                className="btn btn-secondary !px-4 !py-2.5"
-              >
-                <span className="text-[var(--text-primary)]">Risk Register</span>
-                <ArrowRight size={14} className="ml-2 text-[var(--text-primary)]" />
-              </Link>
-              <Link
                 href="/threats"
-                className="btn btn-primary !px-5 !py-2.5 bg-gradient-to-r from-sky-500 to-sky-400 hover:from-sky-400 hover:to-sky-300 border-none shadow-lg shadow-sky-500/20"
+                className="btn btn-primary"
               >
-                Threat Queue
-                <ChevronRight size={14} className="ml-2" />
+                Triage Queue
+                <ArrowRight size={16} />
               </Link>
-            </>
+            </div>
           }
           stats={[
             {
-              label: "Last updated",
-              value: lastUpdatedLabel,
-              icon: Activity
+              label: "Assets",
+              value: stats.totalAssets,
+              icon: Server
             },
             {
-              label: "Open Vulnerabilities",
-              value: stats.openVulnerabilities,
-              icon: ShieldAlert,
-              trend: { value: `${stats.criticalVulnerabilities} critical`, isUp: false }
-            },
-            {
-              label: "Active Threats",
-              value: activeThreats,
-              icon: Siren,
-              trend: { value: "Live signals", neutral: true }
-            },
-            {
-              label: "Overall Risk",
-              value: `${stats.overallRiskScore.toFixed(1)}/100`,
+              label: "Risk Score",
+              value: stats.overallRiskScore.toFixed(1),
               icon: Gauge,
               trend: { value: riskBand.label, neutral: true }
+            },
+            {
+              label: "CISA KEV",
+              value: stats.cisaKevCount,
+              icon: ShieldAlert,
+              trend: { value: "Exploitable", isUp: true }
             }
           ]}
         />
@@ -684,45 +671,35 @@ export default function DashboardPage() {
                 <ArrowRight size={14} />
               </Link>
             </div>
-          </section>
-        ) : null}
+          </div>
+        )}
 
-        {/* KEY METRICS */}
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {/* MAIN KPIS */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             {
-              label: "Overall Risk Score",
-              value: stats.overallRiskScore.toFixed(1),
-              hint: `${riskBand.label} risk posture`,
-              icon: Gauge,
-              bar: stats.overallRiskScore,
-              priority: stats.overallRiskScore >= 60 ? "high" : "low",
-            },
-            {
-              label: "Open Vulnerabilities",
-              value: numberFormatter.format(stats.openVulnerabilities),
-              hint: `${stats.criticalVulnerabilities} critical · ${stats.highVulnerabilities} high`,
+              label: "Vulnerability Stance",
+              value: stats.openVulnerabilities,
+              hint: `${stats.criticalVulnerabilities} Critical Issues`,
               icon: ShieldAlert,
-              bar: stats.totalVulnerabilities
-                ? (stats.openVulnerabilities / stats.totalVulnerabilities) * 100
-                : 0,
-              priority: stats.criticalVulnerabilities > 0 ? "high" : "low",
+              color: "from-blue-500 to-cyan-400",
+              percent: stats.totalVulnerabilities ? (stats.openVulnerabilities / stats.totalVulnerabilities) * 100 : 0
             },
             {
-              label: "Active Threat Signals",
-              value: numberFormatter.format(activeThreats),
-              hint: `${stats.exploitedVulnerabilities} exploited · ${stats.threatIndicatorCount} indicators`,
-              icon: Siren,
-              bar: Math.min(activeThreats, 100),
-              priority: activeThreats > 0 ? "high" : "low",
+              label: "Risk Posture",
+              value: stats.overallRiskScore.toFixed(1),
+              hint: `${riskBand.label} Exposure`,
+              icon: Gauge,
+              color: "from-purple-500 to-indigo-400",
+              percent: stats.overallRiskScore
             },
             {
-              label: "Compliance Score",
+              label: "Compliance Delta",
               value: `${stats.complianceScore.toFixed(0)}%`,
-              hint: "Framework coverage health",
-              icon: FileCheck2,
-              bar: stats.complianceScore,
-              priority: stats.complianceScore < 80 ? "high" : "low",
+              hint: "Framework Coverage",
+              icon: CheckCircle2,
+              color: "from-emerald-500 to-teal-400",
+              percent: stats.complianceScore
             },
           ].map((metric, idx) => {
             const Icon = metric.icon;
@@ -754,15 +731,7 @@ export default function DashboardPage() {
                     style={{ width: `${Math.min(Math.max(metric.bar, 0), 100)}%` }}
                   />
                 </div>
-              </article>
-            );
-          })}
-        </section>
-
-        {/* TOP PRIORITY SECTION */}
-        <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-          <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:border-orange-300/30 animate-slide-in-left">
-            <div className="flex items-center justify-between gap-4">
+              </div>
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-semibold text-[var(--text-primary)]">Priority Queue</h2>
@@ -770,9 +739,6 @@ export default function DashboardPage() {
                     TOP PRIORITY
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                  Exploited vulnerabilities ranked for immediate SOC action.
-                </p>
               </div>
               <Link
                 href="/vulnerabilities?filter=exploited"
@@ -781,6 +747,8 @@ export default function DashboardPage() {
                 View all
               </Link>
             </div>
+          ))}
+        </div>
 
             {priorityQueue.length > 0 ? (
               <div className="mt-5 space-y-3">
@@ -825,62 +793,73 @@ export default function DashboardPage() {
                           <p className="text-xs text-[var(--text-muted)]">Assets</p>
                         </div>
                       </div>
+                      <p className="text-sm font-bold text-white truncate leading-tight">{vuln.title}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-sm font-black text-white">{((vuln.epssScore || 0) * 100).toFixed(1)}%</div>
+                      <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">EPSS</div>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="mt-5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-5 text-sm text-[var(--text-muted)]">
-                No exploited vulnerabilities are currently tracked.
-              </div>
-            )}
-          </article>
+                ))
+              ) : (
+                <div className="p-10 text-center text-[var(--text-muted)] text-sm font-medium">No critical vulnerabilities detected.</div>
+              )}
+            </div>
+          </div>
 
-          <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:border-sky-300/30 animate-slide-in-right">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">SOC Risk Snapshot</h2>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-              Distribution of vulnerability severity and current risk pressure.
-            </p>
-
-            <div className="mt-6 flex items-center justify-center">
-              <div
-                className="h-32 w-32 rounded-full p-[10px]"
-                style={{
-                  background: `conic-gradient(rgba(125,211,252,1) ${riskMeter}%, rgba(125,125,125,0.12) ${riskMeter}% 100%)`,
-                }}
-              >
-                <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-[var(--bg-card)]">
-                  <p className="text-2xl font-semibold text-[var(--text-primary)]">{stats.overallRiskScore.toFixed(1)}</p>
-                  <p className={`text-xs ${riskBand.color}`}>{riskBand.label}</p>
-                </div>
+          {/* RISK SNAPSHOT */}
+          <div className="card flex flex-col items-center justify-center py-12 px-8 text-center bg-gradient-to-b from-[var(--bg-card)] to-[var(--bg-primary)]">
+            <div className="relative mb-8">
+              <svg className="w-48 h-48 transform -rotate-90">
+                <circle cx="96" cy="96" r="88" fill="none" stroke="currentColor" strokeWidth="8" className="text-[var(--bg-tertiary)]" />
+                <circle
+                  cx="96" cy="96" r="88" fill="none" stroke="url(#riskGradient)" strokeWidth="12"
+                  strokeDasharray={2 * Math.PI * 88}
+                  strokeDashoffset={2 * Math.PI * 88 * (1 - riskMeter / 100)}
+                  strokeLinecap="round"
+                  className="transition-all duration-1000 ease-out drop-shadow-[0_0_12px_rgba(59,130,246,0.5)]"
+                />
+                <defs>
+                  <linearGradient id="riskGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#3b82f6" />
+                    <stop offset="100%" stopColor="#22d3ee" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-5xl font-black text-white tracking-tighter">{stats.overallRiskScore.toFixed(1)}</span>
+                <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] mt-1">System Risk</span>
               </div>
             </div>
-
-            <div className="mt-6 space-y-3">
+            <div className="grid grid-cols-2 gap-x-8 gap-y-4 w-full max-w-md mx-auto">
               {severityRows.map((entry) => (
-                <div key={entry.severity}>
-                  <div className="mb-1.5 flex items-center justify-between text-xs">
-                    <span className="text-[var(--text-secondary)]">{entry.severity}</span>
-                    <span className="text-[var(--text-muted)]">
-                      {entry.count} ({entry.percentage.toFixed(1)}%)
-                    </span>
+                <div key={entry.severity} className="text-left group">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">{entry.severity}</span>
+                    <span className="text-xs font-black text-white">{entry.count}</span>
                   </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
+                  <div className="h-1 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full ${getSeverityRailTone(entry.severity)}`}
-                      style={{ width: `${Math.min(Math.max(entry.percentage, 0), 100)}%` }}
+                      className={cn(
+                        "h-full transition-all duration-1000",
+                        entry.severity === "CRITICAL" ? "bg-red-500" :
+                          entry.severity === "HIGH" ? "bg-orange-500" :
+                            entry.severity === "MEDIUM" ? "bg-yellow-500" : "bg-blue-500"
+                      )}
+                      style={{ width: `${entry.percentage}%` }}
                     />
                   </div>
                 </div>
               ))}
             </div>
-          </article>
-        </section>
+          </div>
+        </div>
 
-        {/* LOWER PRIORITY SECTION */}
-        <section className="grid gap-4 xl:grid-cols-2">
-          <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:border-sky-300/30 animate-fade-in" style={{ animationDelay: "200ms" }}>
-            <div className="flex items-center justify-between gap-4">
+        {/* THIRD ROW - ANALYTICS & ACTIVITY */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* ANALYTICS */}
+          <div className="lg:col-span-2 card">
+            <div className="flex items-center justify-between mb-8">
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-semibold text-[var(--text-primary)]">Compliance Overview</h2>
@@ -938,7 +917,6 @@ export default function DashboardPage() {
                     REVIEW
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-[var(--text-secondary)]">Assets with highest security exposure.</p>
               </div>
               <Link href="/assets" className="text-sm text-sky-700 dark:text-sky-300 transition-all duration-200 hover:text-sky-600 dark:hover:text-sky-200 hover:scale-105">
                 View assets
@@ -1004,7 +982,7 @@ export default function DashboardPage() {
                 <VulnStatusChart data={remediationTrends} />
               </div>
             </div>
-          </article>
+          </div>
 
           {isMainOfficer && (
             <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
@@ -1020,45 +998,42 @@ export default function DashboardPage() {
                   Full log
                 </Link>
               </div>
-
-              <div className="mt-5 space-y-3">
-                {activityRows.length > 0 ? (
-                  activityRows.map((activity) => {
-                    const activityTone = getActivityTone(activity.entityType, activity.action);
-                    const Icon = activityTone.icon;
-
-                    return (
-                      <div
-                        key={activity.id}
-                        className="group rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 transition-all duration-300 hover:border-sky-300/20 hover:bg-[var(--bg-elevated)]"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div
-                            className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-300 group-hover:scale-110 ${activityTone.shell}`}
-                          >
-                            <Icon size={14} className={`${activityTone.iconColor} transition-all duration-300`} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm text-[var(--text-secondary)] transition-colors duration-200 group-hover:text-[var(--text-primary)]">{activity.action}</p>
-                            <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{activity.entityName}</p>
-                          </div>
-                          <p className="text-xs text-[var(--text-muted)]">
-                            {getTimeAgo(activity.timestamp)}
-                          </p>
-                        </div>
+              <Link href="/reports/activity" className="p-2 rounded-lg hover:bg-white/5 transition-colors text-[var(--text-muted)]">
+                <ArrowRight size={18} />
+              </Link>
+            </div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+              {activityRows.length > 0 ? (
+                activityRows.map((activity) => {
+                  const activityTone = getActivityTone(activity.entityType, activity.action);
+                  const Icon = activityTone.icon;
+                  return (
+                    <div key={activity.id} className="flex items-start gap-4 p-4 rounded-xl hover:bg-white/[0.02] transition-all group">
+                      <div className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-white/5 transition-transform group-hover:scale-110 shadow-lg",
+                        activityTone.shell
+                      )}>
+                        <Icon size={16} className={activityTone.iconColor} />
                       </div>
-                    );
-                  })
-                ) : (
-                  <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
-                    No recent activities were recorded.
-                  </p>
-                )}
-              </div>
-            </article>
-          )}
-        </section>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex justify-between items-start gap-2 mb-1">
+                          <p className="text-sm font-bold text-white leading-tight">{activity.action}</p>
+                          <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase shrink-0">
+                            {getTimeAgo(activity.timestamp)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-[var(--text-muted)] truncate font-mono">{activity.entityName}</p>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="p-10 text-center text-[var(--text-muted)] text-sm font-medium">No recent signals detected.</div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
-    </DashboardLayout >
+    </DashboardLayout>
   );
 }
