@@ -33,6 +33,7 @@ import { ControlActions } from "@/components/compliance/ControlActions";
 import { FrameworkActions } from "@/components/compliance/FrameworkActions";
 import { EvidenceUploadModal } from "@/components/compliance/EvidenceUploadModal";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
+import { ComplianceEngine } from "@/components/compliance/ComplianceEngine";
 
 interface FrameworkControl {
   id: string;
@@ -801,6 +802,8 @@ export default function CompliancePage() {
             );
           })}
         </section>
+
+        <ComplianceEngine />
 
         <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4 sm:p-5 animate-in fade-in slide-in-from-bottom-3 duration-500">
           <div className="mb-4 flex items-center justify-between gap-3">
