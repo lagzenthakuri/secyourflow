@@ -1,6 +1,6 @@
-
 import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
+import { timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
@@ -8,15 +8,70 @@ const registerSchema = z.object({
     name: z.string().min(2, "Name must be at least 2 characters"),
     email: z.string().email("Invalid email address"),
     password: z.string().min(8, "Password must be at least 8 characters"),
+    inviteToken: z.string().optional(),
 });
+
+function isPublicRegistrationEnabled(): boolean {
+    if (process.env.NODE_ENV !== "production") {
+        return true;
+    }
+    return process.env.ENABLE_PUBLIC_REGISTRATION === "true";
+}
+
+function getRegistrationOrganizationId(): string | null {
+    const configured = process.env.REGISTRATION_DEFAULT_ORGANIZATION_ID;
+    if (!configured || configured.trim().length === 0) {
+        return null;
+    }
+    return configured.trim();
+}
+
+function hasValidInviteToken(candidate: string | undefined, headerToken: string | null): boolean {
+    const configuredToken = process.env.REGISTRATION_INVITE_TOKEN;
+    if (!configuredToken) {
+        return false;
+    }
+
+    const provided = (candidate || headerToken || "").trim();
+    if (!provided) {
+        return false;
+    }
+
+    const configuredBuffer = Buffer.from(configuredToken, "utf8");
+    const providedBuffer = Buffer.from(provided, "utf8");
+
+    if (configuredBuffer.length !== providedBuffer.length) {
+        return false;
+    }
+
+    return timingSafeEqual(configuredBuffer, providedBuffer);
+}
 
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { name, email, password } = registerSchema.parse(body);
+        const { name, email: rawEmail, password, inviteToken } = registerSchema.parse(body);
+        const email = rawEmail.trim().toLowerCase();
+        const normalizedName = name.trim();
 
-        const existingUser = await prisma.user.findUnique({
-            where: { email },
+        if (!isPublicRegistrationEnabled()) {
+            const headerInviteToken = req.headers.get("x-registration-invite-token");
+            if (!hasValidInviteToken(inviteToken, headerInviteToken)) {
+                return NextResponse.json(
+                    { error: "Registration is restricted. Valid invite token required." },
+                    { status: 403 },
+                );
+            }
+        }
+
+        const existingUser = await prisma.user.findFirst({
+            where: {
+                email: {
+                    equals: email,
+                    mode: "insensitive",
+                },
+            },
+            select: { id: true },
         });
 
         if (existingUser) {
@@ -28,30 +83,42 @@ export async function POST(req: Request) {
 
         const hashedPassword = await hash(password, 12);
 
-        let organizationId: string;
-        const firstOrg = await prisma.organization.findFirst();
+        const registrationOrganizationId = getRegistrationOrganizationId();
+        if (!registrationOrganizationId) {
+            return NextResponse.json(
+                {
+                    error:
+                        "Registration is unavailable. REGISTRATION_DEFAULT_ORGANIZATION_ID is not configured.",
+                },
+                { status: 503 },
+            );
+        }
 
-        if (firstOrg) {
-            organizationId = firstOrg.id;
-        } else {
-            const newOrg = await prisma.organization.create({
-                data: { name: "My Organization" },
-            });
-            organizationId = newOrg.id;
+        const defaultOrganization = await prisma.organization.findUnique({
+            where: { id: registrationOrganizationId },
+            select: { id: true },
+        });
+
+        if (!defaultOrganization) {
+            return NextResponse.json(
+                { error: "Registration is temporarily unavailable. Registration organization is invalid." },
+                { status: 503 },
+            );
         }
 
         const user = await prisma.user.create({
             data: {
-                name,
+                name: normalizedName,
                 email,
                 password: hashedPassword,
                 role: "ANALYST", // Default role
-                organizationId,
+                organizationId: defaultOrganization.id,
             },
         });
 
         // Remove password from response
-        const { password: _, ...userWithoutPassword } = user;
+        const { password: storedPassword, ...userWithoutPassword } = user;
+        void storedPassword;
 
         return NextResponse.json(
             { message: "User created successfully", user: userWithoutPassword },
@@ -65,17 +132,14 @@ export async function POST(req: Request) {
             );
         }
 
-        console.error("Registration error [DETAILED]:", {
-            message: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-        });
+        console.error("Registration error:", error instanceof Error ? error.message : String(error));
 
         return NextResponse.json(
             {
                 error: "Registration failed",
-                message: error instanceof Error ? error.message : "An internal error occurred"
+                message: "An internal error occurred",
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

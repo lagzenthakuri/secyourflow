@@ -12,6 +12,18 @@ export async function createAssetRelationship(params: {
     throw new Error("An asset cannot relate to itself");
   }
 
+  const assets = await prisma.asset.findMany({
+    where: {
+      id: { in: [params.parentAssetId, params.childAssetId] },
+      organizationId: params.organizationId,
+    },
+    select: { id: true },
+  });
+
+  if (assets.length !== 2) {
+    throw new Error("parentAssetId and childAssetId must belong to your organization");
+  }
+
   return prisma.assetRelationship.create({
     data: params,
   });

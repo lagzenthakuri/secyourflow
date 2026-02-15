@@ -1,6 +1,52 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma, RemediationPlanStatus } from "@prisma/client";
 
+export class RemediationPlanError extends Error {
+  status: number;
+
+  constructor(message: string, status = 400) {
+    super(message);
+    this.name = "RemediationPlanError";
+    this.status = status;
+  }
+}
+
+function dedupeIds(values: string[]): string[] {
+  return [...new Set(values.map((value) => value.trim()).filter((value) => value.length > 0))];
+}
+
+async function assertOwnerInOrganization(ownerId: string, organizationId: string) {
+  const owner = await prisma.user.findFirst({
+    where: { id: ownerId, organizationId },
+    select: { id: true },
+  });
+
+  if (!owner) {
+    throw new RemediationPlanError("ownerId is invalid for this organization", 400);
+  }
+}
+
+async function assertVulnerabilitiesInOrganization(
+  vulnerabilityIds: string[],
+  organizationId: string,
+) {
+  if (vulnerabilityIds.length === 0) {
+    return;
+  }
+
+  const found = await prisma.vulnerability.findMany({
+    where: {
+      id: { in: vulnerabilityIds },
+      organizationId,
+    },
+    select: { id: true },
+  });
+
+  if (found.length !== vulnerabilityIds.length) {
+    throw new RemediationPlanError("One or more vulnerabilityIds are invalid for this organization", 400);
+  }
+}
+
 export interface CreateRemediationPlanInput {
   organizationId: string;
   ownerId?: string | null;
@@ -12,15 +58,23 @@ export interface CreateRemediationPlanInput {
 }
 
 export async function createRemediationPlan(input: CreateRemediationPlanInput) {
-  const { vulnerabilityIds = [], ...data } = input;
+  const { vulnerabilityIds = [], ownerId, ...data } = input;
+  const normalizedVulnerabilityIds = dedupeIds(vulnerabilityIds);
+
+  if (ownerId) {
+    await assertOwnerInOrganization(ownerId, input.organizationId);
+  }
+
+  await assertVulnerabilitiesInOrganization(normalizedVulnerabilityIds, input.organizationId);
 
   return prisma.remediationPlan.create({
     data: {
       ...data,
-      vulnerabilities: vulnerabilityIds.length
+      ownerId,
+      vulnerabilities: normalizedVulnerabilityIds.length
         ? {
             createMany: {
-              data: vulnerabilityIds.map((vulnerabilityId) => ({
+              data: normalizedVulnerabilityIds.map((vulnerabilityId) => ({
                 vulnerabilityId,
               })),
             },
@@ -115,7 +169,7 @@ export async function getRemediationPlanById(id: string, organizationId: string)
 export async function updateRemediationPlan(
   id: string,
   organizationId: string,
-  data: Prisma.RemediationPlanUpdateInput,
+  data: Prisma.RemediationPlanUncheckedUpdateInput,
 ) {
   const existing = await prisma.remediationPlan.findFirst({
     where: { id, organizationId },
@@ -123,11 +177,15 @@ export async function updateRemediationPlan(
   });
 
   if (!existing) {
-    throw new Error("Remediation plan not found");
+    throw new RemediationPlanError("Remediation plan not found", 404);
+  }
+
+  if (typeof data.ownerId === "string") {
+    await assertOwnerInOrganization(data.ownerId, organizationId);
   }
 
   return prisma.remediationPlan.update({
-    where: { id },
+    where: { id: existing.id },
     data,
   });
 }
@@ -139,11 +197,11 @@ export async function deleteRemediationPlan(id: string, organizationId: string) 
   });
 
   if (!existing) {
-    throw new Error("Remediation plan not found");
+    throw new RemediationPlanError("Remediation plan not found", 404);
   }
 
   return prisma.remediationPlan.delete({
-    where: { id },
+    where: { id: existing.id },
   });
 }
 
@@ -152,20 +210,32 @@ export async function syncPlanVulnerabilities(
   organizationId: string,
   vulnerabilityIds: string[],
 ) {
+  const plan = await prisma.remediationPlan.findFirst({
+    where: { id, organizationId },
+    select: { id: true },
+  });
+
+  if (!plan) {
+    throw new RemediationPlanError("Remediation plan not found", 404);
+  }
+
+  const normalizedVulnerabilityIds = dedupeIds(vulnerabilityIds);
+  await assertVulnerabilitiesInOrganization(normalizedVulnerabilityIds, organizationId);
+
   await prisma.remediationPlanVulnerability.deleteMany({
     where: {
-      planId: id,
+      planId: plan.id,
       plan: { organizationId },
     },
   });
 
-  if (vulnerabilityIds.length === 0) {
+  if (normalizedVulnerabilityIds.length === 0) {
     return;
   }
 
   await prisma.remediationPlanVulnerability.createMany({
-    data: vulnerabilityIds.map((vulnerabilityId) => ({
-      planId: id,
+    data: normalizedVulnerabilityIds.map((vulnerabilityId) => ({
+      planId: plan.id,
       vulnerabilityId,
     })),
     skipDuplicates: true,
@@ -202,6 +272,65 @@ export async function addRemediationEvidence(params: {
   checksum?: string;
   notes?: string;
 }) {
+  if (params.uploadedById) {
+    const uploader = await prisma.user.findFirst({
+      where: {
+        id: params.uploadedById,
+        organizationId: params.organizationId,
+      },
+      select: { id: true },
+    });
+
+    if (!uploader) {
+      throw new RemediationPlanError("uploadedById is invalid for this organization", 400);
+    }
+  }
+
+  if (params.planId) {
+    const plan = await prisma.remediationPlan.findFirst({
+      where: {
+        id: params.planId,
+        organizationId: params.organizationId,
+      },
+      select: { id: true },
+    });
+
+    if (!plan) {
+      throw new RemediationPlanError("Plan not found", 404);
+    }
+  }
+
+  if (params.vulnerabilityId) {
+    const vulnerability = await prisma.vulnerability.findFirst({
+      where: {
+        id: params.vulnerabilityId,
+        organizationId: params.organizationId,
+      },
+      select: { id: true },
+    });
+
+    if (!vulnerability) {
+      throw new RemediationPlanError("vulnerabilityId is invalid for this organization", 400);
+    }
+
+    if (params.planId) {
+      const linked = await prisma.remediationPlanVulnerability.findFirst({
+        where: {
+          planId: params.planId,
+          vulnerabilityId: params.vulnerabilityId,
+          plan: {
+            organizationId: params.organizationId,
+          },
+        },
+        select: { id: true },
+      });
+
+      if (!linked) {
+        throw new RemediationPlanError("vulnerabilityId is not linked to the selected plan", 400);
+      }
+    }
+  }
+
   return prisma.remediationEvidence.create({
     data: params,
   });

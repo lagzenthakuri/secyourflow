@@ -56,6 +56,6 @@ export async function GET(request: NextRequest) {
     ]),
   };
 
-  const rendered = renderTabularExport(data, format, `assets_${data.generatedAt.slice(0, 10)}`);
+  const rendered = await renderTabularExport(data, format, `assets_${data.generatedAt.slice(0, 10)}`);
   return exportResponse(rendered);
 }

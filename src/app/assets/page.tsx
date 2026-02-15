@@ -44,7 +44,7 @@ const AssetTypeChart = dynamic(
     import("@/components/charts/DashboardCharts").then((mod) => mod.AssetTypeChart),
   {
     ssr: false,
-    loading: () => <div className="h-[240px] animate-pulse rounded-xl bg-white/5" />,
+    loading: () => <div className="h-[240px] animate-pulse rounded-xl bg-[var(--bg-tertiary)]" />,
   },
 );
 
@@ -168,18 +168,18 @@ const assetTypeIcons: Record<string, LucideIcon> = {
 };
 
 const statusTones: Record<AssetStatus, string> = {
-  ACTIVE: "border-emerald-400/35 bg-emerald-500/10 text-emerald-200",
-  INACTIVE: "border-slate-400/35 bg-slate-500/10 text-[var(--text-secondary)]",
-  MAINTENANCE: "border-yellow-400/35 bg-yellow-500/10 text-yellow-200",
-  DECOMMISSIONED: "border-red-400/35 bg-red-500/10 text-red-200",
+  ACTIVE: "border-emerald-400/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
+  INACTIVE: "border-[var(--border-hover)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]",
+  MAINTENANCE: "border-yellow-400/35 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200",
+  DECOMMISSIONED: "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200",
 };
 
 const criticalityTones: Record<AssetCriticality, string> = {
-  CRITICAL: "border-red-400/35 bg-red-500/10 text-red-200",
-  HIGH: "border-orange-400/35 bg-orange-500/10 text-orange-200",
-  MEDIUM: "border-yellow-400/35 bg-yellow-500/10 text-yellow-200",
-  LOW: "border-emerald-400/35 bg-emerald-500/10 text-emerald-200",
-  INFORMATIONAL: "border-slate-400/35 bg-slate-500/10 text-[var(--text-secondary)]",
+  CRITICAL: "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200",
+  HIGH: "border-orange-400/35 bg-orange-500/10 text-orange-700 dark:text-orange-200",
+  MEDIUM: "border-yellow-400/35 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200",
+  LOW: "border-emerald-400/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
+  INFORMATIONAL: "border-[var(--border-hover)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]",
 };
 
 const numberFormatter = new Intl.NumberFormat("en-US");
@@ -648,7 +648,7 @@ export default function AssetsPage() {
         />
 
         {actionError ? (
-          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-3 text-sm text-red-200">
+          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-3 text-sm text-red-700 dark:text-red-200">
             {actionError}
           </section>
         ) : null}
@@ -656,7 +656,7 @@ export default function AssetsPage() {
         {selectedAssetIds.length > 0 ? (
           <section className="rounded-2xl border border-sky-300/30 bg-sky-500/10 p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <p className="text-sm text-sky-100">
+              <p className="text-sm text-sky-700 dark:text-sky-100">
                 {selectedAssetIds.length} asset{selectedAssetIds.length > 1 ? "s" : ""} selected
               </p>
               <div className="grid gap-2 sm:grid-cols-[150px_1fr_auto]">
@@ -806,21 +806,21 @@ export default function AssetsPage() {
               <button
                 type="button"
                 onClick={resetFilters}
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-white/15 bg-white/5 px-4 text-sm text-[var(--text-secondary)] transition-all duration-200 hover:bg-white/10 hover:scale-105 active:scale-95"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-4 text-sm text-[var(--text-secondary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95"
               >
                 Reset
               </button>
               <button
                 type="button"
                 onClick={() => void refreshAssets()}
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-white/15 bg-white/5 px-4 text-sm text-[var(--text-secondary)] transition-all duration-200 hover:bg-white/10 hover:scale-105 active:scale-95"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-4 text-sm text-[var(--text-secondary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95"
               >
                 {isRefreshing ? <Loader2 size={15} className="animate-spin" /> : "Refresh"}
               </button>
             </div>
           </div>
 
-          <div className="mt-3 flex w-fit rounded-xl border border-white/10 bg-white/[0.03] p-1">
+          <div className="mt-3 flex w-fit rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-1">
             <button
               type="button"
               onClick={() => setViewMode("list")}
@@ -828,7 +828,7 @@ export default function AssetsPage() {
                 "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-all duration-200",
                 viewMode === "list"
                   ? "bg-sky-300 text-slate-950 shadow-lg shadow-sky-300/20"
-                  : "text-[var(--text-secondary)] hover:bg-white/10 hover:text-[var(--text-primary)]",
+                  : "text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]",
               )}
             >
               <LayoutGrid size={14} />
@@ -841,7 +841,7 @@ export default function AssetsPage() {
                 "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-all duration-200",
                 viewMode === "map"
                   ? "bg-sky-300 text-slate-950 shadow-lg shadow-sky-300/20"
-                  : "text-[var(--text-secondary)] hover:bg-white/10 hover:text-[var(--text-primary)]",
+                  : "text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]",
               )}
             >
               <MapPin size={14} />
@@ -851,7 +851,7 @@ export default function AssetsPage() {
         </section>
 
         {error ? (
-          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-sm text-red-200">
+          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-sm text-red-700 dark:text-red-200">
             {error}
           </section>
         ) : null}
@@ -868,7 +868,7 @@ export default function AssetsPage() {
                   {typeDistribution.length > 0 ? (
                     <AssetTypeChart data={typeDistribution} />
                   ) : (
-                    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-[var(--text-muted)]">
+                    <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
                       No type distribution data available.
                     </div>
                   )}
@@ -887,7 +887,7 @@ export default function AssetsPage() {
                             {env.count} ({env.percentage.toFixed(1)}%)
                           </span>
                         </div>
-                        <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                        <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
                           <div
                             className="h-full rounded-full bg-sky-300 transition-all duration-700 ease-out"
                             style={{ width: `${Math.min(Math.max(env.percentage, 0), 100)}%` }}
@@ -896,7 +896,7 @@ export default function AssetsPage() {
                       </div>
                     ))
                   ) : (
-                    <p className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-[var(--text-muted)]">
+                    <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
                       No environment breakdown available.
                     </p>
                   )}
@@ -907,23 +907,23 @@ export default function AssetsPage() {
         ) : (
           <section className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
             <article className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
-              <header className="flex flex-col gap-3 border-b border-white/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <header className="flex flex-col gap-3 border-b border-[var(--border-color)] p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h2 className="text-lg font-semibold text-[var(--text-primary)]">Asset List</h2>
                   <p className="text-sm text-[var(--text-muted)]">
                     Showing {assets.length} of {numberFormatter.format(pagination.total)} assets
                   </p>
                 </div>
-                <div className="text-xs text-slate-500">Page {pagination.page}</div>
+                <div className="text-xs text-[var(--text-muted)]">Page {pagination.page}</div>
               </header>
 
               {assets.length === 0 ? (
                 <div className="p-16 text-center">
-                  <Server className="mx-auto h-12 w-12 text-slate-600" />
+                  <Server className="mx-auto h-12 w-12 text-[var(--text-muted)]" />
                   <p className="mt-4 text-sm text-[var(--text-muted)]">No assets match current filters.</p>
                 </div>
               ) : (
-                <div className="divide-y divide-white/10">
+                <div className="divide-y divide-[var(--border-color)]">
                   {assets.map((asset, index) => {
                     const Icon = assetTypeIcons[asset.type] || Server;
                     const statusTone = statusTones[(asset.status as AssetStatus) || "ACTIVE"];
@@ -934,24 +934,24 @@ export default function AssetsPage() {
                     return (
                       <div
                         key={asset.id}
-                        className="group p-4 transition-all duration-200 hover:bg-white/[0.03] animate-in fade-in slide-in-from-left-2"
+                        className="group p-4 transition-all duration-200 hover:bg-[var(--bg-elevated)] animate-in fade-in slide-in-from-left-2"
                         style={{ animationDelay: `${index * 30}ms`, animationFillMode: 'backwards' }}
                       >
                         <div className="flex items-start gap-3">
                           <button
                             type="button"
                             onClick={() => toggleAssetSelection(asset.id)}
-                            className="mt-1 inline-flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-[var(--text-muted)] transition hover:bg-white/10 hover:text-[var(--text-secondary)]"
+                            className="mt-1 inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-muted)] transition hover:bg-[var(--bg-elevated)] hover:text-[var(--text-secondary)]"
                           >
                             {selectedAssetIds.includes(asset.id) ? (
-                              <CheckSquare size={14} className="text-sky-200" />
+                              <CheckSquare size={14} className="text-sky-700 dark:text-sky-200" />
                             ) : (
                               <Square size={14} />
                             )}
                           </button>
 
-                          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-2.5 transition-all duration-200 group-hover:border-sky-300/30 group-hover:bg-sky-300/10 group-hover:scale-110">
-                            <Icon size={18} className="text-sky-300 transition-transform duration-200 group-hover:rotate-12" />
+                          <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2.5 transition-all duration-200 group-hover:border-sky-300/30 group-hover:bg-sky-300/10 group-hover:scale-110">
+                            <Icon size={18} className="text-intent-accent transition-transform duration-200 group-hover:rotate-12" />
                           </div>
 
                           <div className="min-w-0 flex-1">
@@ -982,7 +982,7 @@ export default function AssetsPage() {
                               {asset.hostname ? <span>Host {asset.hostname}</span> : null}
                               {asset.location ? (
                                 <span className="inline-flex items-center gap-1">
-                                  <MapPin size={11} className="text-slate-500" />
+                                  <MapPin size={11} className="text-[var(--text-muted)]" />
                                   {asset.location}
                                 </span>
                               ) : null}
@@ -990,7 +990,7 @@ export default function AssetsPage() {
                               <button
                                 type="button"
                                 onClick={() => void fetchImpact(asset.id)}
-                                className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] text-[var(--text-secondary)] transition hover:bg-white/[0.08]"
+                                className="inline-flex items-center gap-1 rounded-md border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)]"
                               >
                                 <Network size={11} />
                                 Impact
@@ -1002,7 +1002,7 @@ export default function AssetsPage() {
                                 {asset.tags.slice(0, 4).map((tag) => (
                                   <span
                                     key={`${asset.id}-${tag}`}
-                                    className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] text-[var(--text-muted)]"
+                                    className="rounded-md border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-[11px] text-[var(--text-muted)]"
                                   >
                                     {tag}
                                   </span>
@@ -1015,12 +1015,12 @@ export default function AssetsPage() {
                             <p
                               className={cn(
                                 "text-sm font-semibold",
-                                vulnerabilityCount > 0 ? "text-orange-300" : "text-emerald-300",
+                                vulnerabilityCount > 0 ? "text-orange-600 dark:text-orange-300" : "text-emerald-600 dark:text-emerald-300",
                               )}
                             >
                               {vulnerabilityCount}
                             </p>
-                            <p className="text-xs text-slate-500">Vulnerabilities</p>
+                            <p className="text-xs text-[var(--text-muted)]">Vulnerabilities</p>
                           </div>
 
                           <AssetActions
@@ -1044,7 +1044,7 @@ export default function AssetsPage() {
                               setLifecycleNotes("");
                               setIsLifecycleModalOpen(true);
                             }}
-                            className="inline-flex items-center rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-[11px] text-[var(--text-secondary)] transition hover:bg-white/[0.08]"
+                            className="inline-flex items-center rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-1 text-[11px] text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)]"
                           >
                             Lifecycle
                           </button>
@@ -1055,8 +1055,8 @@ export default function AssetsPage() {
                 </div>
               )}
 
-              <footer className="flex items-center justify-between border-t border-white/10 p-4">
-                <p className="text-xs text-slate-500">
+              <footer className="flex items-center justify-between border-t border-[var(--border-color)] p-4">
+                <p className="text-xs text-[var(--text-muted)]">
                   Page {pagination.page} of {pagination.totalPages}
                 </p>
                 <div className="flex items-center gap-2">
@@ -1066,7 +1066,7 @@ export default function AssetsPage() {
                     onClick={() =>
                       setPagination((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))
                     }
-                    className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-all duration-200 hover:bg-white/10 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <ChevronLeft size={14} />
                     Prev
@@ -1080,7 +1080,7 @@ export default function AssetsPage() {
                         page: Math.min(prev.totalPages, prev.page + 1),
                       }))
                     }
-                    className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-all duration-200 hover:bg-white/10 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Next
                     <ChevronRight size={14} />
@@ -1097,7 +1097,7 @@ export default function AssetsPage() {
                   {typeDistribution.length > 0 ? (
                     <AssetTypeChart data={typeDistribution} />
                   ) : (
-                    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-[var(--text-muted)]">
+                    <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
                       No type distribution data available.
                     </div>
                   )}
@@ -1116,7 +1116,7 @@ export default function AssetsPage() {
                             {env.count} ({env.percentage.toFixed(1)}%)
                           </span>
                         </div>
-                        <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                        <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
                           <div
                             className="h-full rounded-full bg-sky-300 transition-all duration-700 ease-out"
                             style={{ width: `${Math.min(Math.max(env.percentage, 0), 100)}%` }}
@@ -1125,7 +1125,7 @@ export default function AssetsPage() {
                       </div>
                     ))
                   ) : (
-                    <p className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-[var(--text-muted)]">
+                    <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
                       No environment breakdown available.
                     </p>
                   )}
@@ -1140,16 +1140,16 @@ export default function AssetsPage() {
                     return (
                       <div
                         key={asset.id}
-                        className="rounded-xl border border-white/10 bg-white/[0.03] p-3 transition-all duration-200 hover:bg-white/[0.06] hover:border-sky-300/30 hover:scale-[1.02] animate-in fade-in slide-in-from-right-2"
+                        className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:border-sky-300/30 hover:scale-[1.02] animate-in fade-in slide-in-from-right-2"
                         style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}
                       >
                         <div className="flex items-center gap-2.5">
-                          <div className="rounded-lg border border-white/10 bg-white/[0.03] p-1.5 transition-all duration-200 group-hover:border-sky-300/30">
-                            <Icon size={13} className="text-sky-300" />
+                          <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-1.5 transition-all duration-200 group-hover:border-sky-300/30">
+                            <Icon size={13} className="text-intent-accent" />
                           </div>
                           <div className="min-w-0">
                             <p className="truncate text-sm text-[var(--text-secondary)]">{asset.name}</p>
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-[var(--text-muted)]">
                               {formatLabel(asset.type)} · {formatLabel(asset.environment)}
                             </p>
                           </div>
@@ -1158,7 +1158,7 @@ export default function AssetsPage() {
                     );
                   })}
                   {!assets.length ? (
-                    <p className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-[var(--text-muted)]">
+                    <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
                       No assets available.
                     </p>
                   ) : null}
@@ -1174,7 +1174,7 @@ export default function AssetsPage() {
                   {relationships.slice(0, 6).map((relationship) => (
                     <div
                       key={relationship.id}
-                      className="rounded-lg border border-white/10 bg-white/[0.03] p-2 text-xs text-[var(--text-secondary)]"
+                      className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2 text-xs text-[var(--text-secondary)]"
                     >
                       <p className="font-medium">
                         {relationship.parentAsset.name} {formatLabel(relationship.relationshipType)}{" "}
@@ -1183,7 +1183,7 @@ export default function AssetsPage() {
                     </div>
                   ))}
                   {relationships.length === 0 ? (
-                    <p className="rounded-lg border border-dashed border-white/15 p-3 text-xs text-slate-500">
+                    <p className="rounded-lg border border-dashed border-[var(--border-hover)] p-3 text-xs text-[var(--text-muted)]">
                       No relationships created yet.
                     </p>
                   ) : null}
@@ -1191,7 +1191,7 @@ export default function AssetsPage() {
 
                 {impact ? (
                   <div className="mt-4 rounded-xl border border-sky-300/25 bg-sky-300/10 p-3">
-                    <p className="text-xs text-sky-100">
+                    <p className="text-xs text-sky-700 dark:text-sky-100">
                       Impact Summary {impactAssetId ? `(Asset ${impactAssetId.slice(0, 8)}...)` : ""}
                     </p>
                     <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[var(--text-secondary)]">
@@ -1202,7 +1202,7 @@ export default function AssetsPage() {
                     </div>
                   </div>
                 ) : (
-                  <p className="mt-3 text-xs text-slate-500">
+                  <p className="mt-3 text-xs text-[var(--text-muted)]">
                     Click `Impact` on an asset row to view blast-radius metrics.
                   </p>
                 )}

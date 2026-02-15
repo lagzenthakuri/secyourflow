@@ -2,12 +2,23 @@ import { NextResponse } from "next/server";
 import { requireThreatIntelContext } from "@/modules/threat-intel/auth";
 import { ThreatIntelRepository } from "@/modules/threat-intel/persistence/repository";
 
-function toCsvValue(value: string): string {
-  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
-    return `"${value.replace(/"/g, '""')}"`;
+const CSV_FORMULA_PREFIX = /^[=+\-@\t\r]/;
+
+function neutralizeCsvFormula(value: string): string {
+  if (!CSV_FORMULA_PREFIX.test(value)) {
+    return value;
   }
 
-  return value;
+  return `'${value}`;
+}
+
+function toCsvValue(value: string): string {
+  const normalized = neutralizeCsvFormula(value);
+  if (normalized.includes(",") || normalized.includes('"') || normalized.includes("\n")) {
+    return `"${normalized.replace(/"/g, '""')}"`;
+  }
+
+  return normalized;
 }
 
 export async function GET(request: Request) {

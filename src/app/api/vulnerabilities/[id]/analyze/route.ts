@@ -1,29 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { processRiskAssessment } from "@/lib/risk-engine";
-import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
+import { requireSessionWithOrg } from "@/lib/api-auth";
 
 export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    try {
-        const session = await auth();
-        if (!session || !session.user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        if (!isTwoFactorSatisfied(session)) {
-            return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
-        }
+    const authResult = await requireSessionWithOrg(request);
+    if (!authResult.ok) {
+        return authResult.response;
+    }
 
+    try {
         const { id } = await params;
 
         // Find vulnerability and its first associated asset
-        const vulnerability = await prisma.vulnerability.findUnique({
-            where: { id },
+        const vulnerability = await prisma.vulnerability.findFirst({
+            where: {
+                id,
+                organizationId: authResult.context.organizationId,
+            },
             include: {
                 assets: {
+                    where: {
+                        asset: {
+                            organizationId: authResult.context.organizationId,
+                        },
+                    },
                     take: 1
                 }
             }
@@ -43,7 +47,12 @@ export async function POST(
 
         // Trigger analysis
         // Note: In a real app we might want to wait or return a pending state
-        await processRiskAssessment(vulnerability.id, assetId, vulnerability.organizationId);
+        await processRiskAssessment(
+            vulnerability.id,
+            assetId,
+            authResult.context.organizationId,
+            authResult.context.userId,
+        );
 
         return NextResponse.json({ message: "Analysis triggered and completed" });
 

@@ -30,6 +30,7 @@ import { useSession } from "next-auth/react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useRouter } from "next/navigation";
 import { TwoFactorSettingsPanel } from "@/components/settings/TwoFactorSettingsPanel";
+import { useUiFeedback } from "@/hooks/useUiFeedback";
 
 // Feature flags storage key
 const FEATURE_FLAGS_KEY = "secyourflow.settings.featureFlags.v1";
@@ -44,7 +45,7 @@ function Toast({ message, type, onClose }: { message: string; type: "success" | 
     return (
         <div className={cn(
             "fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-top",
-            type === "success" ? "bg-green-500/20 border border-green-500/50 text-green-400" : "bg-red-500/20 border border-red-500/50 text-red-400"
+            type === "success" ? "bg-green-500/20 border border-green-500/50 text-green-600 dark:text-green-400" : "bg-red-500/20 border border-red-500/50 text-intent-danger"
         )}>
             {type === "success" ? <CheckCircle2 size={18} /> : <XCircle size={18} />}
             <span className="text-sm font-medium">{message}</span>
@@ -430,8 +431,8 @@ export default function SettingsPage() {
                                 className={cn(
                                     "rounded-xl border px-3 py-2 text-xs font-bold uppercase tracking-wide",
                                     isMainOfficer
-                                        ? "border-purple-400/40 bg-purple-500/10 text-purple-200"
-                                        : "border-sky-400/40 bg-sky-500/10 text-sky-100",
+                                        ? "border-purple-400/40 bg-purple-500/10 text-purple-700 dark:text-purple-200"
+                                        : "border-sky-400/40 bg-sky-500/10 text-sky-700 dark:text-sky-100",
                                 )}
                             >
                                 {formatRoleLabel(session?.user?.role)}
@@ -508,23 +509,23 @@ export default function SettingsPage() {
                                             <section.icon
                                                 size={16}
                                                 className={cn(
-                                                    activeSection === section.id ? "text-sky-200" : "text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]",
+                                                    activeSection === section.id ? "text-sky-700 dark:text-sky-200" : "text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]",
                                                 )}
                                             />
                                             <p
                                                 className={cn(
                                                     "text-sm font-medium",
-                                                    activeSection === section.id ? "text-sky-100" : "text-[var(--text-secondary)]",
+                                                    activeSection === section.id ? "text-sky-700 dark:text-sky-100" : "text-[var(--text-secondary)]",
                                                 )}
                                             >
                                                 {section.label}
                                             </p>
                                             {section.mainOfficerOnly ? (
-                                                <span className="ml-auto rounded-md border border-red-400/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-200">
+                                                <span className="ml-auto rounded-md border border-red-400/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-700 dark:text-red-200">
                                                     Officer
                                                 </span>
                                             ) : (
-                                                <ChevronRight size={14} className="ml-auto text-slate-500" />
+                                                <ChevronRight size={14} className="ml-auto text-[var(--text-muted)]" />
                                             )}
                                         </div>
                                         <p className="mt-1 text-xs text-[var(--text-muted)]">{section.description}</p>
@@ -1141,7 +1142,7 @@ function NotificationsSection({ settings, updateSettings, handleSave, isSaving }
                         Route by event type, severity, and exploit context.
                     </p>
                     {rulesError ? (
-                        <p className="mt-2 rounded-md border border-red-500/40 bg-red-500/10 px-2 py-1 text-xs text-red-300">
+                        <p className="mt-2 rounded-md border border-red-500/40 bg-red-500/10 px-2 py-1 text-xs text-red-600 dark:text-red-300">
                             {rulesError}
                         </p>
                     ) : null}
@@ -1469,12 +1470,12 @@ function SystemHealthSection({ settings, fetchSettings }: SystemHealthSectionPro
                         >
                             <span className="text-sm text-[var(--text-primary)]">{env.label}</span>
                             {env.configured ? (
-                                <span className="flex items-center gap-1 text-xs font-medium text-green-400">
+                                <span className="flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400">
                                     <CheckCircle2 size={14} />
                                     Configured
                                 </span>
                             ) : (
-                                <span className="flex items-center gap-1 text-xs font-medium text-red-400">
+                                <span className="flex items-center gap-1 text-xs font-medium text-intent-danger">
                                     <XCircle size={14} />
                                     Missing
                                 </span>
@@ -1569,7 +1570,7 @@ function APIAccessSection() {
                                     <button className="btn btn-ghost text-xs py-1" disabled>
                                         Reveal
                                     </button>
-                                    <button className="btn btn-ghost text-xs py-1 text-red-400" disabled>
+                                    <button className="btn btn-ghost text-xs py-1 text-intent-danger" disabled>
                                         Revoke
                                     </button>
                                 </div>
@@ -1588,6 +1589,7 @@ function APIAccessSection() {
 
 // Users Management Tab
 function UsersManagementTab() {
+    const { showToast } = useUiFeedback();
     const { data: session } = useSession();
     const isMainOfficer = session?.user?.role === MAIN_OFFICER_ROLE;
     interface UserRecord {
@@ -1640,10 +1642,19 @@ function UsersManagementTab() {
                 );
             } else {
                 const err = await response.json() as { error?: string };
-                alert(err.error || "Failed to update role");
+                showToast({
+                    title: "Role update failed",
+                    description: err.error || "Failed to update role",
+                    intent: "error",
+                });
             }
         } catch (error) {
             console.error("Failed to update role:", error);
+            showToast({
+                title: "Role update failed",
+                description: "An unexpected error occurred while updating role.",
+                intent: "error",
+            });
         } finally {
             setIsUpdating(null);
         }
@@ -1653,7 +1664,7 @@ function UsersManagementTab() {
         return (
             <Card title="Restricted Access" subtitle="Permissions required">
                 <div className="flex flex-col items-center justify-center py-10 text-center">
-                    <ShieldCheck size={48} className="text-red-500/50 mb-4" />
+                    <ShieldCheck size={48} className="text-red-600/70 dark:text-red-500/60 mb-4" />
                     <p className="text-[var(--text-secondary)] max-w-md">
                         Only users with the <span className="text-[var(--text-primary)] font-bold">MAIN-OFFICER</span> role can manage user permissions and roles.
                     </p>
@@ -1691,9 +1702,9 @@ function UsersManagementTab() {
                                         <td className="px-4 py-4">
                                             <span className={cn(
                                                 "px-2 py-1 rounded-full text-[10px] font-bold uppercase",
-                                                user.role === MAIN_OFFICER_ROLE ? "bg-purple-500/10 text-purple-400" :
-                                                    user.role === 'ANALYST' ? "bg-blue-500/10 text-blue-400" :
-                                                        "bg-gray-500/10 text-gray-400"
+                                                user.role === MAIN_OFFICER_ROLE ? "bg-purple-500/10 text-purple-600 dark:text-purple-400" :
+                                                    user.role === 'ANALYST' ? "bg-blue-500/10 text-intent-accent" :
+                                                        "bg-gray-500/10 text-gray-600 dark:text-gray-400"
                                             )}>
                                                 {formatRoleLabel(user.role)}
                                             </span>

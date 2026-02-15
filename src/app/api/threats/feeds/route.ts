@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
 import { requireThreatIntelContext } from "@/modules/threat-intel/auth";
 import { ThreatIntelRepository, coerceFeedFormat, coerceFeedType } from "@/modules/threat-intel/persistence/repository";
+import { encryptSecret } from "@/lib/crypto/sealed-secrets";
+
+function sanitizeFeed<T extends { apiKey?: string | null }>(feed: T): Omit<T, "apiKey"> & { hasApiKey: boolean } {
+  const { apiKey, ...rest } = feed;
+  return {
+    ...rest,
+    hasApiKey: Boolean(apiKey),
+  };
+}
 
 export async function GET(request: Request) {
   const authResult = await requireThreatIntelContext(request);
@@ -11,7 +20,7 @@ export async function GET(request: Request) {
   try {
     const repository = new ThreatIntelRepository();
     const feeds = await repository.listFeeds(authResult.context.organizationId);
-    return NextResponse.json({ data: feeds });
+    return NextResponse.json({ data: feeds.map((feed) => sanitizeFeed(feed)) });
   } catch (error) {
     return NextResponse.json(
       {
@@ -39,13 +48,13 @@ export async function POST(request: Request) {
       type: coerceFeedType(String(body.type || "IOC")),
       format: coerceFeedFormat(String(body.format || "JSON")),
       url: body.url ? String(body.url) : null,
-      apiKey: body.apiKey ? String(body.apiKey) : null,
+      apiKey: encryptSecret(body.apiKey ? String(body.apiKey) : null),
       syncInterval: body.syncInterval ? Number(body.syncInterval) : undefined,
       isActive: body.isActive !== undefined ? Boolean(body.isActive) : true,
       metadata: body.metadata && typeof body.metadata === "object" ? body.metadata : null,
     });
 
-    return NextResponse.json({ data: feed }, { status: 201 });
+    return NextResponse.json({ data: sanitizeFeed(feed) }, { status: 201 });
   } catch (error) {
     return NextResponse.json(
       {
@@ -75,12 +84,17 @@ export async function PATCH(request: Request) {
       isActive: body.isActive !== undefined ? Boolean(body.isActive) : undefined,
       syncInterval: body.syncInterval !== undefined ? Number(body.syncInterval) : undefined,
       checkpoint: body.checkpoint !== undefined ? (body.checkpoint === null ? null : String(body.checkpoint)) : undefined,
-      apiKey: body.apiKey !== undefined ? (body.apiKey === null ? null : String(body.apiKey)) : undefined,
+      apiKey:
+        body.apiKey !== undefined
+          ? body.apiKey === null
+            ? null
+            : encryptSecret(String(body.apiKey))
+          : undefined,
       url: body.url !== undefined ? (body.url === null ? null : String(body.url)) : undefined,
       format: body.format !== undefined ? coerceFeedFormat(String(body.format)) : undefined,
     });
 
-    return NextResponse.json({ data: feed });
+    return NextResponse.json({ data: sanitizeFeed(feed) });
   } catch (error) {
     return NextResponse.json(
       {

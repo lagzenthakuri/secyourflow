@@ -181,7 +181,7 @@ export function EvidenceUploadModal({
     >
       <div className="space-y-5">
         {error ? (
-          <div className="rounded-lg border border-red-500/25 bg-red-500/10 p-3 text-sm text-red-300">
+          <div className="rounded-lg border border-red-500/25 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-300">
             <div className="flex items-center gap-2">
               <AlertCircle size={16} />
               <span>{error}</span>
@@ -189,15 +189,15 @@ export function EvidenceUploadModal({
           </div>
         ) : null}
 
-        <form onSubmit={submitEvidence} className="space-y-4 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+        <form onSubmit={submitEvidence} className="space-y-4 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4">
           <div className="flex flex-wrap gap-2 text-xs">
             <button
               type="button"
               onClick={() => setMode("new")}
               className={`rounded-md border px-3 py-1.5 ${
                 mode === "new"
-                  ? "border-sky-300/35 bg-sky-300/10 text-sky-100"
-                  : "border-white/10 bg-white/[0.02] text-slate-300"
+                  ? "border-sky-300/35 bg-sky-300/10 text-sky-700 dark:text-sky-100"
+                  : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]"
               }`}
             >
               New Evidence
@@ -212,8 +212,8 @@ export function EvidenceUploadModal({
               }}
               className={`rounded-md border px-3 py-1.5 ${
                 mode === "version"
-                  ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-100"
-                  : "border-white/10 bg-white/[0.02] text-slate-300"
+                  ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-700 dark:text-emerald-100"
+                  : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]"
               }`}
             >
               New Version
@@ -222,7 +222,7 @@ export function EvidenceUploadModal({
 
           {mode === "version" ? (
             <div>
-              <label className="mb-1 block text-sm text-slate-300">Evidence Record</label>
+              <label className="mb-1 block text-sm text-[var(--text-secondary)]">Evidence Record</label>
               <select
                 className="input w-full"
                 value={selectedEvidenceId}
@@ -240,7 +240,7 @@ export function EvidenceUploadModal({
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm text-slate-300">Title</label>
+              <label className="mb-1 block text-sm text-[var(--text-secondary)]">Title</label>
               <input
                 className="input w-full"
                 placeholder="Evidence title"
@@ -249,7 +249,7 @@ export function EvidenceUploadModal({
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm text-slate-300">Asset ID (optional)</label>
+              <label className="mb-1 block text-sm text-[var(--text-secondary)]">Asset ID (optional)</label>
               <input
                 className="input w-full"
                 placeholder="Asset ID"
@@ -260,7 +260,7 @@ export function EvidenceUploadModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-slate-300">Description</label>
+            <label className="mb-1 block text-sm text-[var(--text-secondary)]">Description</label>
             <textarea
               className="input w-full min-h-[70px]"
               placeholder="Describe what this evidence proves"
@@ -270,7 +270,7 @@ export function EvidenceUploadModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-slate-300">Version Notes</label>
+            <label className="mb-1 block text-sm text-[var(--text-secondary)]">Version Notes</label>
             <textarea
               className="input w-full min-h-[60px]"
               placeholder="What changed in this evidence version"
@@ -280,14 +280,14 @@ export function EvidenceUploadModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-slate-300">File</label>
+            <label className="mb-1 block text-sm text-[var(--text-secondary)]">File</label>
             <input
               type="file"
               className="input w-full"
               accept=".pdf,.png,.jpg,.jpeg,.txt,.log,.csv,.json"
               onChange={(event) => setFile(event.target.files?.[0] || null)}
             />
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
               Supported: PDF, images, txt/log/csv/json. Max file size: 15 MB.
             </p>
           </div>
@@ -314,11 +314,11 @@ export function EvidenceUploadModal({
 
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-white">Evidence History</h4>
+            <h4 className="text-sm font-semibold text-[var(--text-primary)]">Evidence History</h4>
             <button
               type="button"
               onClick={() => void fetchEvidence()}
-              className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-white/[0.03] px-2 py-1 text-xs text-slate-200"
+              className="inline-flex items-center gap-1 rounded-md border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-2 py-1 text-xs text-[var(--text-secondary)]"
               disabled={isLoading}
             >
               <RefreshCw size={12} className={isLoading ? "animate-spin" : ""} />
@@ -327,25 +327,25 @@ export function EvidenceUploadModal({
           </div>
 
           {isLoading ? (
-            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4 text-sm text-slate-400">
+            <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
               Loading evidence...
             </div>
           ) : evidence.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-white/15 bg-white/[0.02] p-4 text-sm text-slate-400">
+            <div className="rounded-lg border border-dashed border-[var(--border-hover)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
               No evidence uploaded yet.
             </div>
           ) : (
             <div className="max-h-[280px] space-y-3 overflow-y-auto pr-1">
               {evidence.map((item) => (
-                <article key={item.id} className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
+                <article key={item.id} className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <p className="text-sm font-semibold text-white">{item.title}</p>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">{item.title}</p>
+                      <p className="text-xs text-[var(--text-muted)]">
                         Current version: v{item.currentVersion} • Updated {new Date(item.updatedAt).toLocaleString()}
                       </p>
                     </div>
-                    <span className="inline-flex items-center gap-1 rounded-md border border-emerald-300/30 bg-emerald-400/10 px-2 py-0.5 text-[11px] text-emerald-200">
+                    <span className="inline-flex items-center gap-1 rounded-md border border-emerald-300/30 bg-emerald-400/10 px-2 py-0.5 text-[11px] text-emerald-700 dark:text-emerald-200">
                       <FileClock size={11} />
                       {item.versions.length} version(s)
                     </span>
@@ -353,12 +353,12 @@ export function EvidenceUploadModal({
 
                   <div className="mt-2 space-y-1 text-xs">
                     {item.versions.map((version) => (
-                      <div key={version.id} className="flex items-center justify-between gap-2 rounded bg-black/20 px-2 py-1">
+                      <div key={version.id} className="flex items-center justify-between gap-2 rounded bg-[var(--code-block-bg)] px-2 py-1">
                         <div className="min-w-0">
-                          <p className="truncate text-slate-200">
+                          <p className="truncate text-[var(--text-secondary)]">
                             v{version.version} • {version.fileName}
                           </p>
-                          <p className="text-slate-500">
+                          <p className="text-[var(--text-muted)]">
                             {new Date(version.createdAt).toLocaleString()} • {formatBytes(version.sizeBytes)}
                           </p>
                         </div>
@@ -366,7 +366,7 @@ export function EvidenceUploadModal({
                           href={version.storagePath}
                           target="_blank"
                           rel="noreferrer"
-                          className="rounded border border-white/15 bg-white/[0.03] px-2 py-1 text-[11px] text-slate-200"
+                          className="rounded border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-2 py-1 text-[11px] text-[var(--text-secondary)]"
                         >
                           View
                         </a>

@@ -112,6 +112,10 @@ model Organization {
   threatIndicators     ThreatIndicator[]
   threatFeedRuns       ThreatFeedRun[]
   threatIndicatorMatch ThreatIndicatorMatch[]
+  auditLogs            AuditLog[]
+  scannerConfigs       ScannerConfig[]
+  scanResults          ScanResult[]
+  riskSnapshots        RiskSnapshot[]
   policies             Policy[]
   reportArtifacts      ReportArtifact[]
   reportRuns           ReportRun[]
@@ -670,14 +674,18 @@ model AuditLog {
   ipAddress  String?
   userAgent  String?
   userId     String
+  organizationId String
   createdAt  DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([entityType, entityId])
   @@index([userId])
+  @@index([organizationId])
   @@index([createdAt(sort: Desc)])
   @@index([entityType, createdAt(sort: Desc)])
   @@index([userId, createdAt(sort: Desc)])
+  @@index([organizationId, createdAt(sort: Desc)])
   @@index([ipAddress])
 }
 
@@ -710,10 +718,13 @@ model ScannerConfig {
   syncInterval Int          @default(86400)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
+  organizationId String
   scanResults  ScanResult[]
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([type])
   @@index([isActive])
+  @@index([organizationId])
 }
 
 model ScanResult {
@@ -726,11 +737,16 @@ model ScanResult {
   totalVulns Int           @default(0)
   rawData    Json?
   scannerId  String
+  organizationId String
   createdAt  DateTime      @default(now())
   scanner    ScannerConfig @relation(fields: [scannerId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([scanId])
   @@index([scannerId])
+  @@index([organizationId])
+  @@index([organizationId, startTime(sort: Desc)])
+  @@index([organizationId, status])
   @@index([status])
 }
 
@@ -749,8 +765,12 @@ model RiskSnapshot {
   overallRiskScore Float
   complianceScore  Float?
   metadata         Json?
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([date])
+  @@index([organizationId])
+  @@index([organizationId, date(sort: Desc)])
 }
 
 model Setting {

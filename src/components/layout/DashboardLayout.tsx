@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
     LayoutDashboard,
@@ -77,7 +77,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             {/* Mobile Overlay */}
             {isOpen && (
                 <div
-                    className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] transition-opacity duration-300 ease-in-out"
+                    className="lg:hidden fixed inset-0 bg-[var(--overlay-scrim)] z-30 transition-opacity duration-300 ease-in-out"
                     onClick={() => setIsOpen(false)}
                 />
             )}
@@ -89,27 +89,18 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                     isOpen ? "translate-x-0" : "-translate-x-full"
                 )}
             >
-                {/* Logo Section */}
-                <div className="px-8 py-10">
-                    <Link href="/dashboard" className="flex items-center gap-4 group">
-                        <div className="relative">
-                            <div className="absolute inset-0 bg-blue-500 blur-xl opacity-20 group-hover:opacity-40 transition-opacity" />
-                            <Image
-                                src="/logo1.png"
-                                alt="SecYourFlow"
-                                width={48}
-                                height={48}
-                                className="relative z-10 drop-shadow-2xl"
-                            />
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-[18px] font-black tracking-[0.15em] text-white leading-tight">
-                                SECYOUR
-                            </span>
-                            <span className="text-[14px] font-medium tracking-[0.4em] text-blue-400">
-                                FLOW
-                            </span>
-                        </div>
+                {/* Logo */}
+                <div className="p-5 border-b border-[var(--border-color)]">
+                    <Link href="/dashboard" className="flex items-center gap-3">
+                        <Image
+                            src="/logo1.png"
+                            alt="SecYourFlow"
+                            width={40}
+                            height={40}
+                        />
+                        <span className="text-[14px] font-bold tracking-[0.22em] text-[var(--text-primary)]">
+                            SECYOUR<span className="text-intent-accent">FLOW</span>
+                        </span>
                     </Link>
                 </div>
 
@@ -183,8 +174,8 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                                     {userInitials}
                                 </div>
                             </div>
-                            <div className="flex-1 min-w-0 text-left">
-                                <p className="text-sm font-bold text-white truncate leading-tight mb-0.5">
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-[var(--text-primary)] truncate">
                                     {userName}
                                 </p>
                                 <p className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider">
@@ -199,7 +190,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                                 <div className="bg-[var(--bg-elevated)] backdrop-blur-xl border border-[var(--border-color)] rounded-2xl shadow-2xl p-2 overflow-hidden">
                                     <button
                                         onClick={() => signOut({ callbackUrl: "/" })}
-                                        className="w-full flex items-center gap-3 p-3 text-sm font-bold text-red-400 rounded-xl hover:bg-red-500/10 transition-colors"
+                                        className="w-full flex items-center gap-2 p-2.5 text-sm text-intent-danger rounded-lg hover:bg-red-500/10 transition-colors"
                                     >
                                         <LogOut size={18} />
                                         Sign Out
@@ -234,13 +225,41 @@ function getApiErrorMessage(payload: unknown): string | null {
 }
 
 export function TopBar({ onToggleSidebar }: TopBarProps) {
+    const { data: session } = useSession();
     const { theme, toggleTheme } = useTheme();
     const router = useRouter();
     const [threatsCount, setThreatsCount] = useState(0);
     const [notificationsCount, setNotificationsCount] = useState(0);
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     const [showNotifications, setShowNotifications] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [showSearchResults, setShowSearchResults] = useState(false);
+    const [activeResultIndex, setActiveResultIndex] = useState(0);
     const redirectedForTwoFactorRef = useRef(false);
+    const searchContainerRef = useRef<HTMLDivElement>(null);
+    const searchListId = "topbar-route-search-results";
+
+    const userRole = session?.user?.role || "ANALYST";
+    const searchableRoutes = useMemo(
+        () =>
+            [...navigation, ...secondaryNav]
+                .filter((item) => item.roles.includes(userRole))
+                .map((item) => ({
+                    name: item.name,
+                    href: item.href,
+                    keywords: `${item.name} ${item.href}`.toLowerCase(),
+                })),
+        [userRole],
+    );
+
+    const filteredSearchResults = useMemo(() => {
+        const query = searchQuery.trim().toLowerCase();
+        if (!query) {
+            return searchableRoutes.slice(0, 7);
+        }
+
+        return searchableRoutes.filter((item) => item.keywords.includes(query)).slice(0, 7);
+    }, [searchQuery, searchableRoutes]);
 
     // ... (logic remains same, just redesigning the return)
 
@@ -311,6 +330,21 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
         return () => clearInterval(interval);
     }, [handleAuthFailure]);
 
+    useEffect(() => {
+        const handleDocumentClick = (event: MouseEvent) => {
+            if (!searchContainerRef.current?.contains(event.target as Node)) {
+                setShowSearchResults(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleDocumentClick);
+        return () => document.removeEventListener("mousedown", handleDocumentClick);
+    }, []);
+
+    useEffect(() => {
+        setActiveResultIndex(0);
+    }, [searchQuery]);
+
     const markAsRead = async () => {
         try {
             const response = await fetch("/api/notifications", {
@@ -364,6 +398,12 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
         }
     };
 
+    const navigateToSearchResult = (href: string) => {
+        setShowSearchResults(false);
+        setSearchQuery("");
+        router.push(href);
+    };
+
     return (
         <header className="h-20 topbar px-10 flex items-center justify-between sticky top-0 z-[40]">
             <div className="flex items-center gap-8 flex-1 max-w-2xl">
@@ -375,35 +415,115 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                     <Menu size={22} />
                 </button>
 
-                <div className="relative flex-1 group">
+                <div className="relative flex-1" ref={searchContainerRef}>
                     <Search
                         size={18}
                         className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-blue-400 transition-colors"
                     />
                     <input
                         type="text"
-                        placeholder="Search assets, threats, or vulnerabilities..."
-                        className="input !pl-12 !py-3.5 bg-[var(--bg-tertiary)]/30 border-[var(--border-color)] hover:bg-[var(--bg-tertiary)]/50 focus:bg-[var(--bg-secondary)] transition-all"
+                        role="combobox"
+                        aria-expanded={showSearchResults}
+                        aria-controls={searchListId}
+                        aria-autocomplete="list"
+                        aria-activedescendant={
+                            showSearchResults && filteredSearchResults[activeResultIndex]
+                                ? `topbar-search-option-${activeResultIndex}`
+                                : undefined
+                        }
+                        value={searchQuery}
+                        onChange={(event) => {
+                            setSearchQuery(event.target.value);
+                            setShowSearchResults(true);
+                        }}
+                        onFocus={() => setShowSearchResults(true)}
+                        onKeyDown={(event) => {
+                            if (!showSearchResults) {
+                                return;
+                            }
+
+                            if (event.key === "ArrowDown") {
+                                event.preventDefault();
+                                setActiveResultIndex((current) =>
+                                    Math.min(current + 1, Math.max(0, filteredSearchResults.length - 1)),
+                                );
+                                return;
+                            }
+
+                            if (event.key === "ArrowUp") {
+                                event.preventDefault();
+                                setActiveResultIndex((current) => Math.max(current - 1, 0));
+                                return;
+                            }
+
+                            if (event.key === "Enter") {
+                                const result = filteredSearchResults[activeResultIndex];
+                                if (result) {
+                                    event.preventDefault();
+                                    navigateToSearchResult(result.href);
+                                }
+                                return;
+                            }
+
+                            if (event.key === "Escape") {
+                                event.preventDefault();
+                                setShowSearchResults(false);
+                            }
+                        }}
+                        placeholder="Search assets, vulnerabilities, or CVEs..."
+                        className="input !pl-10 py-2.5 text-sm bg-[var(--bg-tertiary)]"
                     />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2 py-1 rounded bg-[var(--bg-elevated)] border border-[var(--border-color)] text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
-                        <span>⌘</span>
-                        <span>K</span>
-                    </div>
+                    {showSearchResults && (
+                        <div className="absolute left-0 right-0 top-full mt-2 overflow-hidden rounded-xl border border-[var(--overlay-border,var(--border-color))] bg-[var(--overlay-surface,var(--bg-elevated))] shadow-[var(--overlay-shadow,var(--shadow-lg))]">
+                            <ul id={searchListId} role="listbox" className="max-h-72 overflow-y-auto p-1">
+                                {filteredSearchResults.length > 0 ? (
+                                    filteredSearchResults.map((result, index) => (
+                                        <li key={result.href} id={`topbar-search-option-${index}`} role="option" aria-selected={index === activeResultIndex}>
+                                            <button
+                                                type="button"
+                                                onMouseEnter={() => setActiveResultIndex(index)}
+                                                onClick={() => navigateToSearchResult(result.href)}
+                                                className={cn(
+                                                    "w-full rounded-lg px-3 py-2 text-left text-sm transition",
+                                                    index === activeResultIndex
+                                                        ? "bg-[var(--bg-tertiary)] text-[var(--text-primary)]"
+                                                        : "text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]",
+                                                )}
+                                            >
+                                                <span className="block font-medium">{result.name}</span>
+                                                <span className="mt-0.5 block text-xs text-[var(--text-muted)]">{result.href}</span>
+                                            </button>
+                                        </li>
+                                    ))
+                                ) : (
+                                    <li className="px-3 py-2 text-sm text-[var(--text-muted)]">No route matches found.</li>
+                                )}
+                            </ul>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            <div className="flex items-center gap-4 ml-8">
-                {/* Live Threats Badge */}
-                <Link href="/threats" className="hidden xl:flex">
-                    <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-red-500/5 border border-red-500/20 hover:bg-red-500/10 hover:border-red-500/40 transition-all group cursor-pointer shadow-lg shadow-red-500/5">
-                        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                        <span className="text-xs font-bold text-red-500 uppercase tracking-widest group-hover:drop-shadow-[0_0_8px_rgba(239,68,68,0.5)] transition-all">
+            {/* Right Section */}
+            <div className="flex items-center gap-3 ml-4">
+                {/* Live Threats Indicator */}
+                <Link href="/threats">
+                    <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all duration-300 ease-in-out cursor-pointer">
+                        <span className="live-indicator text-xs font-medium text-intent-danger">
                             {threatsCount} Active Threats
                         </span>
                     </div>
                 </Link>
 
-                <div className="h-8 w-px bg-[var(--border-color)] mx-2 hidden md:block" />
+                <button
+                    type="button"
+                    onClick={toggleTheme}
+                    aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+                    title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+                    className="relative p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all duration-300 ease-in-out"
+                >
+                    {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+                </button>
 
                 <div className="flex items-center gap-2">
                     <button
@@ -414,48 +534,34 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                         {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
                     </button>
 
-                    <div className="relative">
-                        <button
-                            onClick={() => setShowNotifications(!showNotifications)}
-                            className="p-3 rounded-xl bg-[var(--bg-tertiary)]/50 border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-white hover:border-blue-500/50 transition-all active:scale-95 relative"
-                        >
-                            <Bell size={20} />
-                            {notificationsCount > 0 && (
-                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white text-[10px] font-black flex items-center justify-center rounded-lg border-2 border-[var(--bg-secondary)] shadow-lg shadow-blue-500/20">
-                                    {notificationsCount}
-                                </span>
-                            )}
-                        </button>
-
-                        {showNotifications && (
-                            <div className="absolute right-0 top-full mt-4 w-[400px] bg-[var(--bg-elevated)] backdrop-blur-2xl border border-[var(--border-color)] rounded-2xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] z-[100] overflow-hidden animate-fade-in origin-top-right">
-                                <div className="p-5 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-tertiary)]/30">
-                                    <h3 className="font-bold text-sm tracking-tight">Notifications</h3>
-                                    {notificationsCount > 0 && (
-                                        <button onClick={markAsRead} className="text-xs font-bold text-blue-400 hover:text-blue-300 transition-colors">
-                                            Clear All
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="max-h-[480px] overflow-y-auto custom-scrollbar">
-                                    {notifications.length === 0 ? (
-                                        <div className="p-10 text-center flex flex-col items-center gap-3">
-                                            <div className="w-12 h-12 rounded-2xl bg-[var(--bg-tertiary)] flex items-center justify-center text-[var(--text-muted)]">
-                                                <Bell size={24} />
-                                            </div>
-                                            <p className="text-sm font-medium text-[var(--text-muted)]">Everything is clear!</p>
-                                        </div>
-                                    ) : (
-                                        notifications.map(notif => (
-                                            <button
-                                                key={notif.id}
-                                                type="button"
-                                                onClick={() => void handleNotificationClick(notif)}
-                                                className={cn(
-                                                    "w-full p-4 border-b border-[var(--border-color)] text-left hover:bg-white/[0.02] transition-colors relative group",
-                                                    !notif.isRead && "bg-blue-500/[0.02]"
-                                                )}
-                                            >
+                    {/* Dropdown */}
+                    {showNotifications && (
+                        <div className="absolute right-0 top-full mt-2 w-80 bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-xl shadow-2xl z-50 overflow-hidden animate-fade-in">
+                            <div className="p-3 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-tertiary)]">
+                                <h3 className="font-semibold text-sm">Notifications</h3>
+                                {notificationsCount > 0 && (
+                                    <button onClick={markAsRead} className="text-xs text-intent-accent hover:text-intent-accent-strong transition-all duration-300 ease-in-out">
+                                        Mark all read
+                                    </button>
+                                )}
+                            </div>
+                            <div className="max-h-80 overflow-y-auto">
+                                {notifications.length === 0 ? (
+                                    <div className="p-4 text-center text-sm text-[var(--text-muted)]">
+                                        No notifications
+                                    </div>
+                                ) : (
+                                    notifications.map(notif => (
+                                        <button
+                                            key={notif.id}
+                                            type="button"
+                                            onClick={() => {
+                                                void handleNotificationClick(notif);
+                                            }}
+                                            className={`w-full p-3 border-b border-[var(--border-color)] text-left hover:bg-[var(--bg-tertiary)] transition-all duration-300 ease-in-out ${!notif.isRead ? "bg-[var(--bg-tertiary)]/50" : ""}`}
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <p className="text-sm font-medium">{notif.title}</p>
                                                 {!notif.isRead && (
                                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.5)]" />
                                                 )}
@@ -503,17 +609,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     }, []);
 
     return (
-        <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
-            <div className="bg-mesh" />
+        <div className="min-h-screen bg-[var(--bg-primary)] bg-grid">
             <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
             <div className={cn(
                 "transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1)",
                 isSidebarOpen ? "lg:ml-[280px]" : "lg:ml-0"
             )}>
                 <TopBar onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
-                <main className="p-8 min-h-[calc(100vh-4rem)] relative animate-fade-in">
-                    {children}
-                </main>
+                <main className="min-h-[calc(100vh-4rem)] p-4 sm:p-6">{children}</main>
             </div>
         </div>
     );

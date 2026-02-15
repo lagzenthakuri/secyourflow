@@ -53,8 +53,8 @@ export function ControlActions({
                 className={cn(
                     "p-2 rounded-lg transition-all duration-300 ease-in-out border",
                     isOpen 
-                        ? "bg-[var(--bg-elevated)] text-white border-[var(--border-color)]" 
-                        : "bg-transparent text-[var(--text-muted)] border-transparent hover:bg-[var(--bg-tertiary)] hover:text-white"
+                        ? "bg-[var(--bg-elevated)] text-[var(--text-primary)] border-[var(--border-color)]" 
+                        : "bg-transparent text-[var(--text-muted)] border-transparent hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
                 )}
                 disabled={isDeleting}
             >
@@ -79,9 +79,9 @@ export function ControlActions({
                                     onAssess();
                                     setIsOpen(false);
                                 }}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-[var(--text-secondary)] hover:text-white hover:bg-white/5 rounded-lg transition-all duration-300 ease-in-out text-left"
+                                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] rounded-lg transition-all duration-300 ease-in-out text-left"
                             >
-                                <ClipboardCheck size={14} className="text-blue-400" />
+                                <ClipboardCheck size={14} className="text-intent-accent" />
                                 Assess Control
                             </button>
                             {onEvidence ? (
@@ -93,9 +93,9 @@ export function ControlActions({
                                         onEvidence();
                                         setIsOpen(false);
                                     }}
-                                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-[var(--text-secondary)] hover:text-white hover:bg-white/5 rounded-lg transition-all duration-300 ease-in-out text-left"
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] rounded-lg transition-all duration-300 ease-in-out text-left"
                                 >
-                                    <FileUp size={14} className="text-emerald-400" />
+                                    <FileUp size={14} className="text-emerald-600 dark:text-emerald-400" />
                                     Manage Evidence
                                 </button>
                             ) : null}
@@ -114,7 +114,7 @@ export function ControlActions({
                         </div>
                     ) : (
                         <div className="p-4 bg-red-500/5">
-                            <p className="text-sm font-bold text-white mb-2">Delete Control?</p>
+                            <p className="text-sm font-bold text-[var(--text-primary)] mb-2">Delete Control?</p>
                             <div className="flex flex-col gap-2">
                                 <button
                                     type="button"
@@ -135,7 +135,7 @@ export function ControlActions({
                                         e.stopPropagation();
                                         setIsConfirming(false);
                                     }}
-                                    className="w-full py-2 bg-[var(--bg-tertiary)] text-white rounded-lg text-xs transition-all duration-300 ease-in-out"
+                                    className="w-full py-2 bg-[var(--bg-tertiary)] text-[var(--text-primary)] rounded-lg text-xs transition-all duration-300 ease-in-out"
                                 >
                                     Cancel
                                 </button>

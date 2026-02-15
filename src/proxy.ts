@@ -4,32 +4,30 @@ import { NextResponse } from "next/server";
 
 const { auth } = NextAuth(authConfig);
 
-const PUBLIC_API_PREFIXES = ["/api/auth", "/api/health", "/api/webhooks"];
+const PUBLIC_API_PREFIXES = [
+    "/api/auth",
+    "/api/health",
+    "/api/webhooks/wazuh",
+    // Explicit external automation routes that perform their own token auth.
+    "/api/admin/ingest",
+    "/api/admin/threat-intel/sync",
+    "/api/compliance/assessments/run",
+    "/api/compliance/monitor",
+];
 
 function isPublicApiPath(pathname: string): boolean {
     return PUBLIC_API_PREFIXES.some((prefix) => pathname.startsWith(prefix));
-}
-
-function hasValidAuthorizationHeader(request: Request): boolean {
-    const authorizationHeader = request.headers.get("authorization");
-    if (!authorizationHeader) {
-        return false;
-    }
-
-    const [scheme, token] = authorizationHeader.split(/\s+/, 2);
-    return scheme === "Bearer" && typeof token === "string" && token.trim().length > 0;
 }
 
 export default auth((request) => {
     const pathname = request.nextUrl.pathname;
 
     if (pathname.startsWith("/api/") && !isPublicApiPath(pathname) && request.method !== "OPTIONS") {
-        const hasApiToken = hasValidAuthorizationHeader(request);
         const hasSession = Boolean(request.auth?.user);
 
-        if (!hasApiToken && !hasSession) {
+        if (!hasSession) {
             return NextResponse.json(
-                { error: "Unauthorized. Sign in or use Authorization: Bearer <token>." },
+                { error: "Unauthorized. Sign in required." },
                 { status: 401 },
             );
         }

@@ -19,19 +19,18 @@ export function hasTrustedOrigin(request: NextRequest): boolean {
     }
 
     const allowedOrigins = new Set<string>();
-    const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-    const inferredProto = host?.startsWith("localhost") || host?.startsWith("127.0.0.1")
-        ? "http"
-        : "https";
-    const proto = request.headers.get("x-forwarded-proto") ?? inferredProto;
 
-    if (host) {
-        allowedOrigins.add(`${proto}://${host}`);
-    }
+    // Prefer trusted application origins over proxy-forwarded headers.
+    allowedOrigins.add(request.nextUrl.origin);
 
     const nextAuthUrl = normalizeOrigin(process.env.NEXTAUTH_URL ?? null);
     if (nextAuthUrl) {
         allowedOrigins.add(nextAuthUrl);
+    }
+
+    const appBaseUrl = normalizeOrigin(process.env.APP_BASE_URL ?? null);
+    if (appBaseUrl) {
+        allowedOrigins.add(appBaseUrl);
     }
 
     return allowedOrigins.has(requestOrigin);
