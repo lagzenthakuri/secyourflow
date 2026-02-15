@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { validateOutboundUrl } from "../src/lib/security/outbound-url";
 
 function fail(message: string): never {
@@ -55,4 +54,3 @@ void main().catch((error) => {
   console.error("SECURITY VERIFY ERROR:", error);
   process.exit(1);
 });
-
