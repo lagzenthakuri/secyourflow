@@ -9,6 +9,8 @@
     "start": "node .next/standalone/server.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "security:secrets": "bash scripts/gitleaks.sh",
+    "security:verify": "tsx scripts/security-verify.ts",
     "import:framework": "tsx scripts/import-framework-template.ts",
     "import:iso27001": "tsx scripts/import-iso27001-template.ts",
     "import:nistcsf": "tsx scripts/import-nistcsf-template.ts",
