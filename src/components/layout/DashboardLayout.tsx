@@ -526,13 +526,6 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                 </button>
 
                 <div className="flex items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={toggleTheme}
-                        className="p-3 rounded-xl bg-[var(--bg-tertiary)]/50 border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-white hover:border-blue-500/50 transition-all active:scale-95"
-                    >
-                        {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
-                    </button>
 
                     {/* Dropdown */}
                     {showNotifications && (
@@ -572,16 +565,17 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                                                         <p className="text-[10px] font-medium text-[var(--text-muted)] mt-2 uppercase tracking-wider">{new Date(notif.createdAt).toLocaleDateString()} • {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                                     </div>
                                                 </div>
-                                            </button>
-                                        ))
-                                    )}
-                                </div>
+                                            </div>
+                                        </button>
+                                    ))
+                                )}
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             </div>
-        </header>
+
+        </header >
     );
 }
 
