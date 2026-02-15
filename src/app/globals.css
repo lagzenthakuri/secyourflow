@@ -142,18 +142,18 @@ html.theme-dark {
 }
 
 html.theme-light {
-  --bg-primary: #f8fafc;
+  --bg-primary: #ffffff;
   --bg-secondary: #ffffff;
   --bg-tertiary: #f1f5f9;
-  --bg-card: rgba(255, 255, 255, 0.8);
+  --bg-card: rgba(255, 255, 255, 0.95);
   --bg-elevated: #ffffff;
 
-  --border-color: rgba(15, 23, 42, 0.16);
-  --border-hover: rgba(15, 23, 42, 0.3);
+  --border-color: rgba(15, 23, 42, 0.1);
+  --border-hover: rgba(15, 23, 42, 0.2);
 
   --text-primary: #0f172a;
-  --text-secondary: #334155;
-  --text-muted: #475569;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
 
   --marketing-nav-bg: rgba(255, 255, 255, 0.88);
   --marketing-section-bg: rgba(241, 245, 249, 0.82);
@@ -275,11 +275,6 @@ html.theme-light .text-blue-500\/50,
 html.theme-light .text-sky-500\/50 {
   color: rgb(30 64 175 / 0.72) !important;
 }
-
-  --glass-bg: rgba(255, 255, 255, 0.6);
-  --glass-border: rgba(0, 0, 0, 0.05);
-}
-
 /* Base Styles */
 body {
   background: var(--bg-primary);
@@ -707,6 +702,11 @@ html.theme-light .bg-gradient-radial {
   background: rgba(12, 12, 20, 0.8);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-color);
+}
+
+html.theme-light .topbar {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
 }
 
 /* Advanced Animations */
