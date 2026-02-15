@@ -164,7 +164,14 @@ export async function POST(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request);
   if (!authResult.ok) return authResult.response;
 
-  const parsed = createAssetSchema.safeParse(await request.json());
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parsed = createAssetSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid payload", details: parsed.error.flatten() },

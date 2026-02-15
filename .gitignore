@@ -53,3 +53,6 @@ TODO.md
 
 
 .kiro
+# security scan artifacts
+/.artifacts/
+/VAPT-report.md

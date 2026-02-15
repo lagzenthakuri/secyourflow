@@ -36,10 +36,14 @@ function getWebhookSecret(): string | null {
     return typeof secret === "string" && secret.trim().length > 0 ? secret.trim() : null;
 }
 
+function allowUnsignedWebhookInDev(): boolean {
+    return process.env.NODE_ENV !== "production" && process.env.WAZUH_WEBHOOK_ALLOW_UNSIGNED_DEV === "true";
+}
+
 function hasValidSignature(req: Request, rawBody: string): boolean {
     const secret = getWebhookSecret();
     if (!secret) {
-        return process.env.NODE_ENV !== "production";
+        return allowUnsignedWebhookInDev();
     }
 
     const signatureHeader = req.headers.get("x-secyourflow-signature");

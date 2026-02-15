@@ -20,8 +20,8 @@ async function loadExcelJs(): Promise<ExcelJsModule> {
       "specifier",
       "return import(specifier);",
     ) as (specifier: string) => Promise<ExcelJsModule & { default?: ExcelJsModule }>;
-    const module = await runtimeImport("exceljs");
-    return module.default ?? module;
+    const excelModule = await runtimeImport("exceljs");
+    return excelModule.default ?? excelModule;
   } catch {
     throw new Error(
       'XLSX export dependency is missing. Install it with "npm install exceljs" and restart the server.',
