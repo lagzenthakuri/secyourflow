@@ -7,7 +7,7 @@ import { useSession } from "next-auth/react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
-import { getTimeAgo } from "@/lib/utils";
+import { cn, getTimeAgo } from "@/lib/utils";
 import {
   Activity,
   AlertTriangle,
@@ -585,480 +585,319 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-8 animate-fade-in max-w-[1600px] mx-auto">
         <PageHeader
-          title="Security Dashboard"
-          description="Centralized view for risk, threat activity, and remediation progress. Built to keep triage and action fast for SOC teams."
+          title="Command Surface"
+          description="Operational intelligence across your cyber risk perimeter. Real-time signals from assets, threats, and compliance frameworks."
           badge={
-            <>
-              <Siren size={13} className="mr-2" />
-              SOC Command Surface
-            </>
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-widest">
+              <Activity size={12} className="animate-pulse" />
+              Live Intelligence
+            </div>
           }
           actions={
-            <>
+            <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => {
                   void fetchDashboardData({ silent: true });
                   void fetchRecentActivity();
                 }}
-                className="btn btn-secondary !px-4 !py-2.5"
+                className="btn btn-secondary !bg-transparent hover:!bg-white/5"
               >
-                <RefreshCw size={15} className={isRefreshing ? "animate-spin mr-2" : "mr-2"} />
-                <span className="text-[var(--text-primary)]">Refresh</span>
+                <RefreshCw size={16} className={cn("transition-transform", isRefreshing && "animate-spin")} />
+                Sync
               </button>
               <Link
-                href="/risk-register"
-                className="btn btn-secondary !px-4 !py-2.5"
-              >
-                <span className="text-[var(--text-primary)]">Risk Register</span>
-                <ArrowRight size={14} className="ml-2 text-[var(--text-primary)]" />
-              </Link>
-              <Link
                 href="/threats"
-                className="btn btn-primary !px-5 !py-2.5 bg-gradient-to-r from-sky-500 to-sky-400 hover:from-sky-400 hover:to-sky-300 border-none shadow-lg shadow-sky-500/20"
+                className="btn btn-primary"
               >
-                Threat Queue
-                <ChevronRight size={14} className="ml-2" />
+                Triage Queue
+                <ArrowRight size={16} />
               </Link>
-            </>
+            </div>
           }
           stats={[
             {
-              label: "Last updated",
-              value: lastUpdatedLabel,
-              icon: Activity
+              label: "Assets",
+              value: stats.totalAssets,
+              icon: Server
             },
             {
-              label: "Open Vulnerabilities",
-              value: stats.openVulnerabilities,
-              icon: ShieldAlert,
-              trend: { value: `${stats.criticalVulnerabilities} critical`, isUp: false }
-            },
-            {
-              label: "Active Threats",
-              value: activeThreats,
-              icon: Siren,
-              trend: { value: "Live signals", neutral: true }
-            },
-            {
-              label: "Overall Risk",
-              value: `${stats.overallRiskScore.toFixed(1)}/100`,
+              label: "Risk Score",
+              value: stats.overallRiskScore.toFixed(1),
               icon: Gauge,
               trend: { value: riskBand.label, neutral: true }
+            },
+            {
+              label: "CISA KEV",
+              value: stats.cisaKevCount,
+              icon: ShieldAlert,
+              trend: { value: "Exploitable", isUp: true }
             }
           ]}
         />
 
-        {error ? (
-          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-sm text-red-500 theme-dark:text-red-200">
+        {error && (
+          <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/5 text-red-400 text-sm flex items-center gap-3">
+            <AlertCircle size={18} />
             {error}
-          </section>
-        ) : null}
+          </div>
+        )}
 
-        {/* HIGH PRIORITY SECTION */}
-        {activeThreats > 0 ? (
-          <section className="rounded-2xl border border-red-400/20 bg-red-500/5 p-4 animate-slide-in-up transition-all duration-300 hover:border-red-400/30 hover:bg-red-500/10">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 rounded-lg border border-red-400/25 bg-red-500/10 p-2 animate-pulse-subtle">
-                  <AlertTriangle size={16} className="text-red-500 theme-dark:text-red-300" />
+        {/* HIGH PRIORITY ALERTS */}
+        {activeThreats > 0 && (
+          <div className="relative group overflow-hidden rounded-2xl border border-red-500/30 bg-red-500/5 p-6 transition-all hover:bg-red-500/10 hover:border-red-500/50">
+            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Siren size={120} className="text-red-500" />
+            </div>
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-500 shadow-lg shadow-red-500/20">
+                  <AlertTriangle size={24} className="animate-pulse" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-semibold text-red-600 theme-dark:text-red-100">Active Exploitation Signals</h2>
-                    <span className="rounded-full bg-red-400 px-2 py-0.5 text-[10px] font-bold text-[var(--text-primary)]">HIGH PRIORITY</span>
-                  </div>
-                  <p className="mt-1 text-sm text-red-600/80 theme-dark:text-red-100/80">
-                    {stats.exploitedVulnerabilities} exploited vulnerabilities and{" "}
-                    {stats.cisaKevCount} KEV-listed issues require attention.
+                  <h2 className="text-xl font-bold text-white mb-1">Critical Exploitation Detected</h2>
+                  <p className="text-red-300/70 text-sm max-w-xl leading-relaxed">
+                    {stats.exploitedVulnerabilities} assets are currently targeted by known exploits. {stats.cisaKevCount} vulnerabilities are listed on the CISA KEV catalog. Immediate triage recommended.
                   </p>
                 </div>
               </div>
-              <Link
-                href="/vulnerabilities?filter=exploited"
-                className="inline-flex items-center gap-2 self-start rounded-lg border border-red-300/35 bg-red-400/10 px-3 py-1.5 text-sm text-red-600 theme-dark:text-red-100 transition-all duration-200 hover:bg-red-400/20 hover:scale-105 sm:self-auto"
-              >
-                Review now
-                <ArrowRight size={14} />
+              <Link href="/vulnerabilities?filter=exploited" className="btn !bg-red-500 !text-white hover:!bg-red-600 shadow-xl shadow-red-500/20 !px-8">
+                Start Triage
               </Link>
             </div>
-          </section>
-        ) : null}
+          </div>
+        )}
 
-        {/* KEY METRICS */}
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {/* MAIN KPIS */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             {
-              label: "Overall Risk Score",
-              value: stats.overallRiskScore.toFixed(1),
-              hint: `${riskBand.label} risk posture`,
-              icon: Gauge,
-              bar: stats.overallRiskScore,
-              priority: stats.overallRiskScore >= 60 ? "high" : "low",
-            },
-            {
-              label: "Open Vulnerabilities",
-              value: numberFormatter.format(stats.openVulnerabilities),
-              hint: `${stats.criticalVulnerabilities} critical · ${stats.highVulnerabilities} high`,
+              label: "Vulnerability Stance",
+              value: stats.openVulnerabilities,
+              hint: `${stats.criticalVulnerabilities} Critical Issues`,
               icon: ShieldAlert,
-              bar: stats.totalVulnerabilities
-                ? (stats.openVulnerabilities / stats.totalVulnerabilities) * 100
-                : 0,
-              priority: stats.criticalVulnerabilities > 0 ? "high" : "low",
+              color: "from-blue-500 to-cyan-400",
+              percent: stats.totalVulnerabilities ? (stats.openVulnerabilities / stats.totalVulnerabilities) * 100 : 0
             },
             {
-              label: "Active Threat Signals",
-              value: numberFormatter.format(activeThreats),
-              hint: `${stats.exploitedVulnerabilities} exploited · ${stats.threatIndicatorCount} indicators`,
-              icon: Siren,
-              bar: Math.min(activeThreats, 100),
-              priority: activeThreats > 0 ? "high" : "low",
+              label: "Risk Posture",
+              value: stats.overallRiskScore.toFixed(1),
+              hint: `${riskBand.label} Exposure`,
+              icon: Gauge,
+              color: "from-purple-500 to-indigo-400",
+              percent: stats.overallRiskScore
             },
             {
-              label: "Compliance Score",
+              label: "Compliance Delta",
               value: `${stats.complianceScore.toFixed(0)}%`,
-              hint: "Framework coverage health",
-              icon: FileCheck2,
-              bar: stats.complianceScore,
-              priority: stats.complianceScore < 80 ? "high" : "low",
+              hint: "Framework Coverage",
+              icon: CheckCircle2,
+              color: "from-emerald-500 to-teal-400",
+              percent: stats.complianceScore
             },
-          ].map((metric, idx) => {
-            const Icon = metric.icon;
-
-            return (
-              <article
-                key={metric.label}
-                className="group rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-300/35 hover:shadow-lg hover:shadow-sky-500/10 animate-fade-in"
-                style={{ animationDelay: `${idx * 100}ms` }}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm text-[var(--text-secondary)]">{metric.label}</p>
-                    {metric.priority === "high" && (
-                      <span className="mt-1 inline-block rounded-full bg-orange-400/10 px-2 py-0.5 text-[10px] font-semibold text-orange-500 theme-dark:text-orange-300">
-                        NEEDS ATTENTION
-                      </span>
-                    )}
-                  </div>
-                  <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2 transition-all duration-300 group-hover:scale-110 group-hover:bg-sky-300/10">
-                    <Icon size={15} className="text-[var(--text-muted)] transition-colors group-hover:text-sky-500 theme-dark:group-hover:text-sky-300" />
-                  </div>
+            {
+              label: "Remediation Velocity",
+              value: stats.fixedThisMonth,
+              hint: "Resolved this month",
+              icon: Activity,
+              color: "from-orange-500 to-amber-400",
+              percent: 100
+            }
+          ].map((kpi, idx) => (
+            <div key={kpi.label} className="card group hover:scale-[1.02]" style={{ animationDelay: `${idx * 100}ms` }}>
+              <div className="flex justify-between items-start mb-6">
+                <div className={cn(
+                  "w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center text-white shadow-lg transition-transform group-hover:rotate-6",
+                  kpi.color
+                )}>
+                  <kpi.icon size={22} />
                 </div>
-                <p className="mt-4 text-3xl font-semibold text-[var(--text-primary)] transition-all duration-300 group-hover:text-sky-500 theme-dark:group-hover:text-sky-300">{metric.value}</p>
-                <p className="mt-1 text-sm text-[var(--text-muted)]">{metric.hint}</p>
-                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
-                  <div
-                    className="h-full rounded-full bg-sky-400 transition-all duration-700 ease-out"
-                    style={{ width: `${Math.min(Math.max(metric.bar, 0), 100)}%` }}
-                  />
+                <div className="text-[10px] font-black tracking-widest text-[var(--text-muted)] uppercase">
+                  Real-time
                 </div>
-              </article>
-            );
-          })}
-        </section>
-
-        {/* TOP PRIORITY SECTION */}
-        <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-          <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:border-orange-300/30 animate-slide-in-left">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">Priority Queue</h2>
-                  <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-[var(--text-primary)] animate-pulse-subtle">
-                    TOP PRIORITY
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                  Exploited vulnerabilities ranked for immediate SOC action.
-                </p>
               </div>
-              <Link
-                href="/vulnerabilities?filter=exploited"
-                className="text-sm text-sky-500 theme-dark:text-sky-300 transition-all duration-200 hover:text-sky-600 theme-dark:hover:text-sky-200 hover:scale-105"
-              >
-                View all
+              <div>
+                <h3 className="text-[var(--text-secondary)] text-sm font-semibold mb-1">{kpi.label}</h3>
+                <div className="flex items-baseline gap-2">
+                  <span className="stat-value">{kpi.value}</span>
+                  <span className="text-[10px] font-bold text-[var(--text-muted)]">{kpi.hint}</span>
+                </div>
+              </div>
+              <div className="mt-6 h-1 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
+                <div
+                  className={cn("h-full transition-all duration-1000 bg-gradient-to-r", kpi.color)}
+                  style={{ width: `${Math.min(kpi.percent, 100)}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* SECONDARY ROW - TRIAGE & RISK */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+          {/* PRIORITY QUEUE */}
+          <div className="card !p-0 overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-[var(--border-color)] flex justify-between items-center bg-white/[0.01]">
+              <div>
+                <h2 className="text-lg font-bold text-white mb-1">Priority Triage</h2>
+                <p className="text-xs text-[var(--text-muted)] font-medium uppercase tracking-wider">Top Exploited Targets</p>
+              </div>
+              <Link href="/vulnerabilities?filter=exploited" className="text-xs font-black text-blue-400 hover:text-blue-300 uppercase tracking-widest transition-colors">
+                View All
               </Link>
             </div>
-
-            {priorityQueue.length > 0 ? (
-              <div className="mt-5 space-y-3">
-                {priorityQueue.map((vuln, index) => (
-                  <div
-                    key={vuln.id}
-                    className="group rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 transition-all duration-300 hover:border-orange-300/40 hover:bg-[var(--bg-elevated)] hover:-translate-y-0.5 hover:shadow-lg animate-fade-in"
-                    style={{ animationDelay: `${index * 50}ms` }}
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-md bg-orange-400/20 px-2 py-0.5 text-xs font-semibold text-orange-500 theme-dark:text-orange-300 transition-all duration-200 group-hover:bg-orange-400/30">
-                            #{index + 1}
-                          </span>
-                          <span className="font-mono text-xs text-sky-500 theme-dark:text-sky-300 transition-all duration-200 group-hover:text-sky-600 theme-dark:group-hover:text-sky-200">
-                            {vuln.cveId || "No CVE ID"}
-                          </span>
-                          <span
-                            className={`rounded-full border px-2 py-0.5 text-[11px] transition-all duration-200 ${getSeverityBadgeTone(vuln.severity)}`}
-                          >
-                            {vuln.severity}
-                          </span>
-                          {vuln.cisaKev ? (
-                            <span className="rounded-full border border-red-400/35 bg-red-500/10 px-2 py-0.5 text-[11px] text-red-500 theme-dark:text-red-200 animate-pulse-subtle">
-                              KEV
-                            </span>
-                          ) : null}
-                        </div>
-                        <p className="mt-2 truncate text-sm text-[var(--text-secondary)] transition-colors duration-200 group-hover:text-[var(--text-primary)]">{vuln.title}</p>
-                      </div>
-
-                      <div className="flex items-center gap-5 text-right">
-                        <div>
-                          <p className="text-sm font-medium text-[var(--text-primary)] transition-all duration-200 group-hover:text-orange-500 theme-dark:group-hover:text-orange-300">
-                            {((vuln.epssScore || 0) * 100).toFixed(1)}%
-                          </p>
-                          <p className="text-xs text-[var(--text-muted)]">EPSS</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-[var(--text-primary)] transition-all duration-200 group-hover:text-orange-500 theme-dark:group-hover:text-orange-300">{vuln.affectedAssets || 0}</p>
-                          <p className="text-xs text-[var(--text-muted)]">Assets</p>
+            <div className="p-4 space-y-4">
+              {priorityQueue.length > 0 ? (
+                priorityQueue.map((vuln, idx) => (
+                  <div key={vuln.id} className="group flex items-center gap-4 p-4 rounded-xl hover:bg-white/[0.02] transition-all border border-transparent hover:border-white/[0.05]">
+                    <div className="w-10 h-10 rounded-lg bg-[var(--bg-tertiary)] flex items-center justify-center text-sm font-black text-[var(--text-muted)] group-hover:text-blue-400 group-hover:scale-110 transition-all">
+                      0{idx + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-black text-blue-400 uppercase tracking-tighter">{vuln.cveId || "CVE-PENDING"}</span>
+                        <div className={cn(
+                          "px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider",
+                          vuln.severity === "CRITICAL" ? "bg-red-500/10 text-red-400 border border-red-500/20" :
+                            vuln.severity === "HIGH" ? "bg-orange-500/10 text-orange-400 border border-orange-500/20" :
+                              "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                        )}>
+                          {vuln.severity}
                         </div>
                       </div>
+                      <p className="text-sm font-bold text-white truncate leading-tight">{vuln.title}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-sm font-black text-white">{((vuln.epssScore || 0) * 100).toFixed(1)}%</div>
+                      <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">EPSS</div>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="mt-5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-5 text-sm text-[var(--text-muted)]">
-                No exploited vulnerabilities are currently tracked.
-              </div>
-            )}
-          </article>
+                ))
+              ) : (
+                <div className="p-10 text-center text-[var(--text-muted)] text-sm font-medium">No critical vulnerabilities detected.</div>
+              )}
+            </div>
+          </div>
 
-          <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:border-sky-300/30 animate-slide-in-right">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">SOC Risk Snapshot</h2>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-              Distribution of vulnerability severity and current risk pressure.
-            </p>
-
-            <div className="mt-6 flex items-center justify-center">
-              <div
-                className="h-32 w-32 rounded-full p-[10px]"
-                style={{
-                  background: `conic-gradient(rgba(125,211,252,1) ${riskMeter}%, rgba(125,125,125,0.12) ${riskMeter}% 100%)`,
-                }}
-              >
-                <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-[var(--bg-card)]">
-                  <p className="text-2xl font-semibold text-[var(--text-primary)]">{stats.overallRiskScore.toFixed(1)}</p>
-                  <p className={`text-xs ${riskBand.color}`}>{riskBand.label}</p>
-                </div>
+          {/* RISK SNAPSHOT */}
+          <div className="card flex flex-col items-center justify-center py-12 px-8 text-center bg-gradient-to-b from-[var(--bg-card)] to-[var(--bg-primary)]">
+            <div className="relative mb-8">
+              <svg className="w-48 h-48 transform -rotate-90">
+                <circle cx="96" cy="96" r="88" fill="none" stroke="currentColor" strokeWidth="8" className="text-[var(--bg-tertiary)]" />
+                <circle
+                  cx="96" cy="96" r="88" fill="none" stroke="url(#riskGradient)" strokeWidth="12"
+                  strokeDasharray={2 * Math.PI * 88}
+                  strokeDashoffset={2 * Math.PI * 88 * (1 - riskMeter / 100)}
+                  strokeLinecap="round"
+                  className="transition-all duration-1000 ease-out drop-shadow-[0_0_12px_rgba(59,130,246,0.5)]"
+                />
+                <defs>
+                  <linearGradient id="riskGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#3b82f6" />
+                    <stop offset="100%" stopColor="#22d3ee" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-5xl font-black text-white tracking-tighter">{stats.overallRiskScore.toFixed(1)}</span>
+                <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] mt-1">System Risk</span>
               </div>
             </div>
-
-            <div className="mt-6 space-y-3">
+            <div className="grid grid-cols-2 gap-x-8 gap-y-4 w-full max-w-md mx-auto">
               {severityRows.map((entry) => (
-                <div key={entry.severity}>
-                  <div className="mb-1.5 flex items-center justify-between text-xs">
-                    <span className="text-[var(--text-secondary)]">{entry.severity}</span>
-                    <span className="text-[var(--text-muted)]">
-                      {entry.count} ({entry.percentage.toFixed(1)}%)
-                    </span>
+                <div key={entry.severity} className="text-left group">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">{entry.severity}</span>
+                    <span className="text-xs font-black text-white">{entry.count}</span>
                   </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
+                  <div className="h-1 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full ${getSeverityRailTone(entry.severity)}`}
-                      style={{ width: `${Math.min(Math.max(entry.percentage, 0), 100)}%` }}
+                      className={cn(
+                        "h-full transition-all duration-1000",
+                        entry.severity === "CRITICAL" ? "bg-red-500" :
+                          entry.severity === "HIGH" ? "bg-orange-500" :
+                            entry.severity === "MEDIUM" ? "bg-yellow-500" : "bg-blue-500"
+                      )}
+                      style={{ width: `${entry.percentage}%` }}
                     />
                   </div>
                 </div>
               ))}
             </div>
-          </article>
-        </section>
+          </div>
+        </div>
 
-        {/* LOWER PRIORITY SECTION */}
-        <section className="grid gap-4 xl:grid-cols-2">
-          <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:border-sky-300/30 animate-fade-in" style={{ animationDelay: "200ms" }}>
-            <div className="flex items-center justify-between gap-4">
+        {/* THIRD ROW - ANALYTICS & ACTIVITY */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* ANALYTICS */}
+          <div className="lg:col-span-2 card">
+            <div className="flex items-center justify-between mb-8">
               <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">Compliance Overview</h2>
-                  <span className="rounded-full bg-slate-500/20 px-2 py-0.5 text-[10px] font-semibold text-[var(--text-muted)]">
-                    MONITOR
-                  </span>
+                <h2 className="text-lg font-bold text-white mb-1">Exposure Analytics</h2>
+                <p className="text-xs text-[var(--text-muted)] font-medium uppercase tracking-wider">Historical Progression</p>
+              </div>
+            </div>
+            <div className="h-[300px]">
+              <RiskTrendChart data={riskTrends} />
+            </div>
+            <div className="mt-8 pt-8 border-t border-[var(--border-color)]">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h2 className="text-lg font-bold text-white mb-1">Remediation Velocity</h2>
+                  <p className="text-xs text-[var(--text-muted)] font-medium uppercase tracking-wider">Resolution Efficiency</p>
                 </div>
-                <p className="mt-1 text-sm text-[var(--text-secondary)]">Framework posture by control status.</p>
               </div>
-              <Link
-                href="/compliance"
-                className="text-sm text-sky-500 theme-dark:text-sky-300 transition-all duration-200 hover:text-sky-600 theme-dark:hover:text-sky-200 hover:scale-105"
-              >
-                Open module
-              </Link>
-            </div>
-
-            <div className="mt-5 space-y-4">
-              {complianceRows.length > 0 ? (
-                complianceRows.map((framework) => (
-                  <div key={framework.frameworkId}>
-                    <div className="mb-1.5 flex items-center justify-between">
-                      <p className="text-sm text-[var(--text-secondary)]">{framework.frameworkName}</p>
-                      <p className="text-sm font-medium text-[var(--text-primary)]">
-                        {framework.compliancePercentage.toFixed(0)}%
-                      </p>
-                    </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
-                      <div
-                        className={`h-full rounded-full ${getComplianceTone(framework.compliancePercentage)}`}
-                        style={{
-                          width: `${Math.min(Math.max(framework.compliancePercentage, 0), 100)}%`,
-                        }}
-                      />
-                    </div>
-                    <p className="mt-1.5 text-xs text-[var(--text-muted)]">
-                      {framework.compliant} compliant · {framework.nonCompliant} non-compliant
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
-                  Compliance frameworks are not configured yet.
-                </p>
-              )}
-            </div>
-          </article>
-
-          <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:border-sky-300/30 animate-fade-in" style={{ animationDelay: "300ms" }}>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">Top Risky Assets</h2>
-                  <span className="rounded-full bg-yellow-400/20 px-2 py-0.5 text-[10px] font-semibold text-yellow-500 theme-dark:text-yellow-300">
-                    REVIEW
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-[var(--text-secondary)]">Assets with highest security exposure.</p>
-              </div>
-              <Link href="/assets" className="text-sm text-sky-500 theme-dark:text-sky-300 transition-all duration-200 hover:text-sky-600 theme-dark:hover:text-sky-200 hover:scale-105">
-                View assets
-              </Link>
-            </div>
-
-            <div className="mt-5 space-y-3">
-              {riskyAssets.length > 0 ? (
-                riskyAssets.map((asset, idx) => (
-                  <div
-                    key={asset.id}
-                    className="group rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 transition-all duration-300 hover:border-sky-300/30 hover:bg-[var(--bg-elevated)] hover:-translate-y-0.5 animate-fade-in"
-                    style={{ animationDelay: `${idx * 50}ms` }}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-[var(--text-secondary)] transition-colors duration-200 group-hover:text-[var(--text-primary)]">{asset.name}</p>
-                        <p className="mt-0.5 text-xs text-[var(--text-muted)]">{formatAssetType(asset.type)}</p>
-                      </div>
-                      <p className="text-sm font-medium text-[var(--text-primary)] transition-all duration-200 group-hover:text-sky-500 theme-dark:group-hover:text-sky-300">{asset.riskScore.toFixed(1)}</p>
-                    </div>
-                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]/50">
-                      <div
-                        className={`h-full rounded-full transition-all duration-700 ease-out ${getRiskBand(asset.riskScore).rail}`}
-                        style={{ width: `${Math.min(Math.max(asset.riskScore, 0), 100)}%` }}
-                      />
-                    </div>
-                    <p className="mt-1.5 text-xs text-[var(--text-muted)]">
-                      {asset.vulnerabilityCount} vulnerabilities · {asset.criticalVulnCount} critical
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
-                  No asset risk data is available yet.
-                </p>
-              )}
-            </div>
-          </article>
-        </section>
-
-        <section className={`grid gap-4 ${isMainOfficer ? 'xl:grid-cols-[1.15fr_0.85fr]' : 'xl:grid-cols-1'}`}>
-          <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Risk and Remediation Trends</h2>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-              Weekly risk evolution and monthly fix velocity.
-            </p>
-
-            <div className="mt-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                Risk Trend
-              </p>
-              <div className="mt-2">
-                <RiskTrendChart data={riskTrends} />
-              </div>
-            </div>
-
-            <div className="mt-6 border-t border-[var(--border-color)] pt-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                Remediation Velocity
-              </p>
-              <div className="mt-2">
+              <div className="h-[200px]">
                 <VulnStatusChart data={remediationTrends} />
               </div>
             </div>
-          </article>
+          </div>
 
-          {isMainOfficer && (
-            <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">Recent Activity</h2>
-                  <p className="mt-1 text-sm text-[var(--text-secondary)]">Latest high-signal events and updates.</p>
-                </div>
-                <Link
-                  href="/reports/activity"
-                  className="text-sm text-sky-500 theme-dark:text-sky-300 transition hover:text-sky-600 theme-dark:hover:text-sky-200"
-                >
-                  Full log
-                </Link>
+          {/* ACTIVITY */}
+          <div className="card !p-0 overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-[var(--border-color)] flex justify-between items-center bg-white/[0.01]">
+              <div>
+                <h2 className="text-lg font-bold text-white mb-1">Intelligence Feed</h2>
+                <p className="text-xs text-[var(--text-muted)] font-medium uppercase tracking-wider">Latest Security Signals</p>
               </div>
-
-              <div className="mt-5 space-y-3">
-                {activityRows.length > 0 ? (
-                  activityRows.map((activity) => {
-                    const activityTone = getActivityTone(activity.entityType, activity.action);
-                    const Icon = activityTone.icon;
-
-                    return (
-                      <div
-                        key={activity.id}
-                        className="group rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 transition-all duration-300 hover:border-sky-300/20 hover:bg-[var(--bg-elevated)]"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div
-                            className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-300 group-hover:scale-110 ${activityTone.shell}`}
-                          >
-                            <Icon size={14} className={`${activityTone.iconColor} transition-all duration-300`} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm text-[var(--text-secondary)] transition-colors duration-200 group-hover:text-[var(--text-primary)]">{activity.action}</p>
-                            <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{activity.entityName}</p>
-                          </div>
-                          <p className="text-xs text-[var(--text-muted)]">
-                            {getTimeAgo(activity.timestamp)}
-                          </p>
-                        </div>
+              <Link href="/reports/activity" className="p-2 rounded-lg hover:bg-white/5 transition-colors text-[var(--text-muted)]">
+                <ArrowRight size={18} />
+              </Link>
+            </div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+              {activityRows.length > 0 ? (
+                activityRows.map((activity) => {
+                  const activityTone = getActivityTone(activity.entityType, activity.action);
+                  const Icon = activityTone.icon;
+                  return (
+                    <div key={activity.id} className="flex items-start gap-4 p-4 rounded-xl hover:bg-white/[0.02] transition-all group">
+                      <div className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-white/5 transition-transform group-hover:scale-110 shadow-lg",
+                        activityTone.shell
+                      )}>
+                        <Icon size={16} className={activityTone.iconColor} />
                       </div>
-                    );
-                  })
-                ) : (
-                  <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
-                    No recent activities were recorded.
-                  </p>
-                )}
-              </div>
-            </article>
-          )}
-        </section>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex justify-between items-start gap-2 mb-1">
+                          <p className="text-sm font-bold text-white leading-tight">{activity.action}</p>
+                          <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase shrink-0">
+                            {getTimeAgo(activity.timestamp)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-[var(--text-muted)] truncate font-mono">{activity.entityName}</p>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="p-10 text-center text-[var(--text-muted)] text-sm font-medium">No recent signals detected.</div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
-    </DashboardLayout >
+    </DashboardLayout>
   );
 }

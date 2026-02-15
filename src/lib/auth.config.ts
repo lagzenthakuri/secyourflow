@@ -125,7 +125,7 @@ export const authConfig = {
                 TWO_FACTOR_REVERIFY_INTERVAL_MS,
             );
 
-            if (!hasTotpEnabled || !hasFreshTwoFactor) {
+            if (hasTotpEnabled && !hasFreshTwoFactor) {
                 if (isTwoFactorPage) {
                     return true;
                 }

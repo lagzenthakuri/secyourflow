@@ -763,7 +763,7 @@ model Setting {
   notifyCompliance        Boolean      @default(true)
   notifyScan              Boolean      @default(false)
   notifyWeekly            Boolean      @default(true)
-  require2FA              Boolean      @default(true)
+  require2FA              Boolean      @default(false)
   sessionTimeout          Int          @default(30)
   passwordPolicy          String       @default("STRONG")
   updatedAt               DateTime     @updatedAt
