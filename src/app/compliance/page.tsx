@@ -787,7 +787,7 @@ export default function CompliancePage() {
             return (
               <article
                 key={metric.label}
-                className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-300/35 hover:shadow-lg hover:shadow-sky-300/10 animate-in fade-in slide-in-from-bottom-4"
+                className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-400/50 hover:shadow-lg hover:shadow-sky-300/10 dark:hover:border-sky-300/35 animate-in fade-in slide-in-from-bottom-4"
                 style={{ animationDelay: `${index * 90}ms`, animationFillMode: "backwards" }}
               >
                 <div className="flex items-start justify-between">
@@ -849,7 +849,7 @@ export default function CompliancePage() {
                       "group relative cursor-pointer rounded-xl border p-4 transition-all duration-300 animate-in fade-in zoom-in-95",
                       isSelected
                         ? "border-sky-300/35 bg-sky-400/10 shadow-lg shadow-sky-400/10"
-                        : "border-[var(--border-color)] bg-[var(--bg-tertiary)] hover:border-sky-300/30 hover:bg-[var(--bg-tertiary)] hover:scale-[1.02]",
+                        : "border-[var(--border-color)] bg-[var(--bg-tertiary)] hover:border-sky-400/40 hover:bg-sky-50/50 dark:hover:border-sky-300/30 dark:hover:bg-[var(--bg-tertiary)] hover:scale-[1.02]",
                     )}
                     style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}
                   >
@@ -901,7 +901,7 @@ export default function CompliancePage() {
                         size={13}
                         className={cn(
                           "transition-transform duration-300",
-                          isSelected ? "translate-x-0 text-sky-700 dark:text-sky-200" : "text-[var(--text-muted)] group-hover:translate-x-0.5",
+                          isSelected ? "translate-x-0 text-sky-800 dark:text-sky-200" : "text-[var(--text-muted)] group-hover:translate-x-0.5",
                         )}
                       />
                     </div>
@@ -1108,7 +1108,7 @@ export default function CompliancePage() {
 
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="rounded-md border border-sky-300/35 bg-sky-300/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-sky-700 dark:text-sky-200">
+                                <span className="rounded-md border border-sky-400/50 bg-sky-100/90 px-2 py-0.5 font-mono text-[11px] font-semibold text-sky-900 dark:border-sky-300/35 dark:bg-sky-300/10 dark:text-sky-200">
                                   {control.controlId}
                                 </span>
                                 <span
@@ -1141,7 +1141,7 @@ export default function CompliancePage() {
                                 ) : null}
                               </div>
 
-                              <h3 className="mt-2 text-sm font-semibold text-[var(--text-primary)] transition-colors duration-200 group-hover:text-sky-800 dark:group-hover:text-sky-100 sm:text-base">
+                              <h3 className="mt-2 text-sm font-semibold text-[var(--text-primary)] transition-colors duration-200 group-hover:text-sky-900 dark:group-hover:text-sky-100 sm:text-base">
                                 {control.title}
                               </h3>
 
@@ -1230,7 +1230,7 @@ export default function CompliancePage() {
                     {
                       label: "Maturity",
                       value: `L${selectedFramework.avgMaturityLevel.toFixed(1)}`,
-                      color: "text-sky-700 dark:text-sky-200",
+                      color: "text-sky-800 dark:text-sky-200",
                     },
                     {
                       label: "Compliant",

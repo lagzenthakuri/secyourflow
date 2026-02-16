@@ -177,7 +177,7 @@ const statusTones: Record<AssetStatus, string> = {
 const criticalityTones: Record<AssetCriticality, string> = {
   CRITICAL: "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200",
   HIGH: "border-orange-400/35 bg-orange-500/10 text-orange-700 dark:text-orange-200",
-  MEDIUM: "border-yellow-400/35 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200",
+  MEDIUM: "border-yellow-400 bg-yellow-100 text-yellow-800 dark:bg-yellow-500/10 dark:text-yellow-200 dark:border-yellow-400/35",
   LOW: "border-emerald-400/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
   INFORMATIONAL: "border-[var(--border-hover)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]",
 };
@@ -950,7 +950,7 @@ export default function AssetsPage() {
                             )}
                           </button>
 
-                          <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2.5 transition-all duration-200 group-hover:border-sky-300/30 group-hover:bg-sky-300/10 group-hover:scale-110">
+                          <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2.5 transition-all duration-200 group-hover:border-sky-400/40 group-hover:bg-sky-100/80 dark:group-hover:border-sky-300/30 dark:group-hover:bg-sky-300/10 group-hover:scale-110">
                             <Icon size={18} className="text-intent-accent transition-transform duration-200 group-hover:rotate-12" />
                           </div>
 
@@ -1140,11 +1140,11 @@ export default function AssetsPage() {
                     return (
                       <div
                         key={asset.id}
-                        className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:border-sky-300/30 hover:scale-[1.02] animate-in fade-in slide-in-from-right-2"
+                        className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:border-sky-400/40 dark:hover:border-sky-300/30 hover:scale-[1.02] animate-in fade-in slide-in-from-right-2"
                         style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}
                       >
                         <div className="flex items-center gap-2.5">
-                          <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-1.5 transition-all duration-200 group-hover:border-sky-300/30">
+                          <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-1.5 transition-all duration-200 group-hover:border-sky-400/40 dark:group-hover:border-sky-300/30">
                             <Icon size={13} className="text-intent-accent" />
                           </div>
                           <div className="min-w-0">

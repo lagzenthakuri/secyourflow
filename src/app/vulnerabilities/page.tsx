@@ -117,7 +117,7 @@ const numberFormatter = new Intl.NumberFormat("en-US");
 const severityColor: Record<string, string> = {
   CRITICAL: "text-red-700 dark:text-red-200 border-red-400/35 bg-red-500/10",
   HIGH: "text-orange-700 dark:text-orange-200 border-orange-400/35 bg-orange-500/10",
-  MEDIUM: "text-yellow-700 dark:text-yellow-200 border-yellow-400/35 bg-yellow-500/10",
+  MEDIUM: "text-yellow-800 dark:text-yellow-200 border-yellow-400 bg-yellow-100 dark:bg-yellow-500/10 dark:border-yellow-400/35",
   LOW: "text-emerald-700 dark:text-emerald-200 border-emerald-400/35 bg-emerald-500/10",
   INFORMATIONAL: "text-[var(--text-secondary)] border-[var(--border-hover)] bg-[var(--bg-tertiary)]",
 };
@@ -126,7 +126,7 @@ const statusColor: Record<string, string> = {
   OPEN: "text-red-700 dark:text-red-200 border-red-400/35 bg-red-500/10",
   IN_PROGRESS: "text-sky-700 dark:text-sky-200 border-sky-400/35 bg-sky-500/10",
   MITIGATED: "text-violet-700 dark:text-violet-200 border-violet-400/35 bg-violet-500/10",
-  FIXED: "text-emerald-700 dark:text-emerald-200 border-emerald-400/35 bg-emerald-500/10",
+  FIXED: "text-emerald-800 dark:text-emerald-200 border-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-400/35",
   ACCEPTED: "text-[var(--text-secondary)] border-[var(--border-hover)] bg-[var(--bg-tertiary)]",
   FALSE_POSITIVE: "text-[var(--text-secondary)] border-[var(--border-hover)] bg-[var(--bg-tertiary)]",
 };
@@ -730,7 +730,7 @@ function VulnerabilitiesContent() {
                                 href={`https://nvd.nist.gov/vuln/detail/${vuln.cveId}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 font-mono text-xs text-sky-700 dark:text-sky-300 hover:text-sky-600 dark:hover:text-sky-200"
+                                className="inline-flex items-center gap-1 font-mono text-xs text-sky-800 dark:text-sky-300 hover:text-sky-900 dark:hover:text-sky-200"
                                 onClick={(event) => event.stopPropagation()}
                               >
                                 {vuln.cveId}
@@ -749,7 +749,7 @@ function VulnerabilitiesContent() {
                             </span>
 
                             {vuln.workflowState ? (
-                              <span className="rounded-full border border-sky-400/35 bg-sky-500/10 px-2 py-0.5 text-[11px] text-sky-700 dark:text-sky-200">
+                              <span className="rounded-full border border-sky-300 bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-800 dark:border-sky-400/35 dark:bg-sky-500/10 dark:text-sky-200">
                                 {formatLabel(vuln.workflowState)}
                               </span>
                             ) : null}
@@ -839,7 +839,7 @@ function VulnerabilitiesContent() {
                                 type="button"
                                 disabled={workflowUpdatingId === vuln.id}
                                 onClick={() => void transitionWorkflow(vuln, state)}
-                                className="inline-flex items-center gap-1 rounded-md border border-sky-400/35 bg-sky-500/10 px-2.5 py-1 text-[11px] text-sky-700 dark:text-sky-200 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="inline-flex items-center gap-1 rounded-md border border-sky-400/50 bg-sky-100/80 px-2.5 py-1 text-[11px] text-sky-900 dark:border-sky-400/35 dark:bg-sky-500/10 dark:text-sky-200 transition hover:bg-sky-200/80 dark:hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 {workflowUpdatingId === vuln.id ? "Updating..." : `Move to ${formatLabel(state)}`}
                               </button>
