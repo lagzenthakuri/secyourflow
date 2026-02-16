@@ -9,7 +9,7 @@ export default function Resources() {
       <div className="max-w-5xl mx-auto px-6 py-12">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-sm text-sky-600 dark:text-sky-400 hover:text-intent-accent-strong transition-colors mb-8"
+          className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-400 hover:text-intent-accent-strong transition-colors mb-8"
         >
           <ArrowLeft size={16} />
           Back to Home
@@ -24,7 +24,7 @@ export default function Resources() {
           {/* Documentation */}
           <section>
             <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-6 flex items-center gap-3">
-              <BookOpen size={24} className="text-sky-600 dark:text-sky-400" />
+              <BookOpen size={24} className="text-sky-700 dark:text-sky-400" />
               Documentation
             </h2>
             <div className="grid gap-4 md:grid-cols-2">
@@ -34,7 +34,7 @@ export default function Resources() {
               >
                 <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2 flex items-center justify-between">
                   Getting Started Guide
-                  <ExternalLink size={16} className="text-[var(--text-muted)] group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors" />
+                  <ExternalLink size={16} className="text-[var(--text-muted)] group-hover:text-sky-700 dark:group-hover:text-sky-400 transition-colors" />
                 </h3>
                 <p className="text-sm text-[var(--text-muted)]">
                   Learn the basics of SecYourFlow and set up your first security workspace.
@@ -48,7 +48,7 @@ export default function Resources() {
               >
                 <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2 flex items-center justify-between">
                   API Documentation
-                  <ExternalLink size={16} className="text-[var(--text-muted)] group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors" />
+                  <ExternalLink size={16} className="text-[var(--text-muted)] group-hover:text-sky-700 dark:group-hover:text-sky-400 transition-colors" />
                 </h3>
                 <p className="text-sm text-[var(--text-muted)]">
                   Complete API reference for integrating SecYourFlow with your tools.
@@ -62,7 +62,7 @@ export default function Resources() {
               >
                 <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2 flex items-center justify-between">
                   User Manual
-                  <ExternalLink size={16} className="text-[var(--text-muted)] group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors" />
+                  <ExternalLink size={16} className="text-[var(--text-muted)] group-hover:text-sky-700 dark:group-hover:text-sky-400 transition-colors" />
                 </h3>
                 <p className="text-sm text-[var(--text-muted)]">
                   Comprehensive guide covering all features and workflows.
@@ -76,7 +76,7 @@ export default function Resources() {
               >
                 <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2 flex items-center justify-between">
                   Best Practices
-                  <ExternalLink size={16} className="text-[var(--text-muted)] group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors" />
+                  <ExternalLink size={16} className="text-[var(--text-muted)] group-hover:text-sky-700 dark:group-hover:text-sky-400 transition-colors" />
                 </h3>
                 <p className="text-sm text-[var(--text-muted)]">
                   Security operations best practices and recommended workflows.

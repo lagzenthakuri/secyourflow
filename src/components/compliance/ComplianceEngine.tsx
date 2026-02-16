@@ -207,7 +207,7 @@ export function ComplianceEngine() {
                                 <>
                                     {evidenceTasks.map((task) => (
                                         <div
-                                            key={task.id}
+                                            key={`${task.id}-${task.controlId}`}
                                             className="p-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] group hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer"
                                         >
                                             <p className="text-sm font-medium text-[var(--text-primary)] group-hover:text-indigo-400 transition-colors">

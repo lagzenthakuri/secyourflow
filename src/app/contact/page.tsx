@@ -198,7 +198,7 @@ export default function Contact() {
                   <div
                     className={`p-4 rounded-lg border ${
                       submitStatus.type === "success"
-                        ? "bg-green-500/10 border-green-500/50 text-green-600 dark:text-green-400"
+                        ? "bg-green-500/10 border-green-500/50 text-green-700 dark:text-green-400"
                         : "bg-red-500/10 border-red-500/50 text-intent-danger"
                     }`}
                   >
