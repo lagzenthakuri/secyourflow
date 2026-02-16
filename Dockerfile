@@ -1,5 +1,5 @@
 
-FROM node:18-alpine AS base
+FROM node:22-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -8,7 +8,7 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json* .npmrc* ./
 RUN \
     if [ -f package-lock.json ]; then npm ci; \
     else echo "Lockfile not found." && exit 1; \
@@ -19,6 +19,9 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+ARG DATABASE_URL=postgresql://postgres:postgres@localhost:5432/secyourflow
+ENV DATABASE_URL=${DATABASE_URL}
 
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
