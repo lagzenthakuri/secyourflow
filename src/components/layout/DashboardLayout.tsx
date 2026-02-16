@@ -35,6 +35,7 @@ import {
     type NotificationsResponse,
 } from "@/lib/notification-state";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
 
 const ALL_ROLES = ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"];
 
@@ -526,6 +527,19 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                 </button>
 
                 <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setShowNotifications((current) => !current)}
+                        aria-label="Toggle notifications"
+                        className="relative p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all duration-300 ease-in-out"
+                    >
+                        <Bell size={20} />
+                        {notificationsCount > 0 ? (
+                            <span className="absolute -right-1 -top-1 min-w-[1.1rem] rounded-full bg-red-500 px-1 text-center text-[10px] font-semibold leading-[1.1rem] text-white">
+                                {notificationsCount > 99 ? "99+" : notificationsCount}
+                            </span>
+                        ) : null}
+                    </button>
 
                     {/* Dropdown */}
                     {showNotifications && (
@@ -580,10 +594,54 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
 }
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
+    const { data: session, status } = useSession();
+    const router = useRouter();
+    const pathname = usePathname();
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isLicenseCheckLoading, setIsLicenseCheckLoading] = useState(true);
 
     // Audit login events with IP and user agent
     useLoginAudit();
+
+    useEffect(() => {
+        if (status === "loading") {
+            return;
+        }
+
+        if (status !== "authenticated") {
+            setIsLicenseCheckLoading(false);
+            return;
+        }
+
+        if (session?.user?.role === "MAIN_OFFICER") {
+            setIsLicenseCheckLoading(false);
+            return;
+        }
+
+        let isSubscribed = true;
+        const verifyProductKeyAccess = async () => {
+            try {
+                const response = await fetch("/api/product-keys/status", { cache: "no-store" });
+                const payload = (await response.json()) as { isActive?: boolean };
+
+                if (response.ok && payload.isActive === false && pathname !== "/activate-key") {
+                    router.replace("/activate-key");
+                }
+            } catch (error) {
+                console.error("Failed to verify product key access", error);
+            } finally {
+                if (isSubscribed) {
+                    setIsLicenseCheckLoading(false);
+                }
+            }
+        };
+
+        void verifyProductKeyAccess();
+
+        return () => {
+            isSubscribed = false;
+        };
+    }, [pathname, router, session?.user?.role, status]);
 
     // Close sidebar on initial mobile load
     useEffect(() => {
@@ -601,6 +659,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    if (status === "authenticated" && session?.user?.role !== "MAIN_OFFICER" && isLicenseCheckLoading) {
+        return (
+            <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
+                <ShieldLoader size="lg" variant="cyber" />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-[var(--bg-primary)] bg-grid">

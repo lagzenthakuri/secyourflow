@@ -15,6 +15,7 @@ const PROTECTED_PREFIXES = [
     "/scanners",
     "/risk-register",
     "/cves",
+    "/activate-key",
 ];
 
 function startsWithAny(pathname: string, prefixes: string[]): boolean {
@@ -115,6 +116,7 @@ export const authConfig = {
 
             const user = auth?.user as { totpEnabled?: boolean } | undefined;
             const hasTotpEnabled = Boolean(user?.totpEnabled);
+            const isMainOfficer = auth?.user?.role === "MAIN_OFFICER";
             const twoFactorState = auth as {
                 twoFactorVerified?: boolean;
                 twoFactorVerifiedAt?: number | null;
@@ -125,7 +127,7 @@ export const authConfig = {
                 TWO_FACTOR_REVERIFY_INTERVAL_MS,
             );
 
-            if (hasTotpEnabled && !hasFreshTwoFactor) {
+            if (!isMainOfficer && hasTotpEnabled && !hasFreshTwoFactor) {
                 if (isTwoFactorPage) {
                     return true;
                 }
