@@ -494,7 +494,7 @@ function VulnerabilitiesContent() {
               <button
                 type="button"
                 onClick={() => setIsAddModalOpen(true)}
-                className="btn btn-primary !px-5 !py-2.5 bg-gradient-to-r from-sky-500 to-sky-400 border-none shadow-lg shadow-sky-500/20"
+                className="btn btn-primary !px-5 !py-2.5"
               >
                 <Plus size={14} className="mr-2" />
                 Add Vulnerability
