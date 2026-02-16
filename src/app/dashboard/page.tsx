@@ -590,7 +590,7 @@ export default function DashboardPage() {
           title="Command Surface"
           description="Operational intelligence across your cyber risk perimeter. Real-time signals from assets, threats, and compliance frameworks."
           badge={
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-widest">
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-400 text-[10px] font-bold uppercase tracking-widest">
               <Activity size={12} className="animate-pulse" />
               Live Intelligence
             </div>
@@ -665,7 +665,7 @@ export default function DashboardPage() {
               </div>
               <Link
                 href="/vulnerabilities?filter=exploited"
-                className="inline-flex items-center gap-2 self-start rounded-lg border border-red-300/45 bg-red-100/90 px-3 py-1.5 text-sm text-red-800 transition-all duration-200 hover:bg-red-200/80 hover:scale-105 dark:border-red-300/35 dark:bg-red-400/10 dark:text-red-100 dark:hover:bg-red-400/20 sm:self-auto"
+                className="inline-flex items-center gap-2 self-start rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-semibold text-red-700 shadow-sm transition-all duration-200 hover:bg-red-50 hover:border-red-300 hover:scale-105 dark:border-red-300/35 dark:bg-red-400/10 dark:text-red-100 dark:hover:bg-red-400/20 sm:self-auto"
               >
                 Review now
                 <ArrowRight size={14} />
@@ -707,15 +707,15 @@ export default function DashboardPage() {
             return (
               <article
                 key={metric.label}
-                className="group rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-300/35 hover:shadow-lg hover:shadow-sky-500/10 animate-fade-in"
+                className="group rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-400/50 hover:shadow-lg hover:shadow-sky-500/10 dark:hover:border-sky-300/35 animate-fade-in"
                 style={{ animationDelay: `${idx * 100}ms` }}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <p className="text-sm text-[var(--text-secondary)]">{metric.label}</p>
                   </div>
-                  <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2 transition-all duration-300 group-hover:scale-110 group-hover:bg-sky-300/10">
-                    <Icon size={15} className="text-[var(--text-muted)] transition-colors group-hover:text-sky-500 dark:group-hover:text-sky-300" />
+                  <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2 transition-all duration-300 group-hover:scale-110 group-hover:bg-sky-100/90 dark:group-hover:bg-sky-300/10">
+                    <Icon size={15} className="text-[var(--text-muted)] transition-colors group-hover:text-sky-700 dark:group-hover:text-sky-300" />
                   </div>
                 </div>
                 <p className="mt-4 text-3xl font-semibold text-[var(--text-primary)] transition-all duration-300 group-hover:text-sky-500 dark:group-hover:text-sky-300">{metric.value}</p>
@@ -804,7 +804,7 @@ export default function DashboardPage() {
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-5xl font-black text-[var(--text-primary)] tracking-tighter">{stats.overallRiskScore.toFixed(1)}</span>
-        <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.3em] mt-1">System Risk</span>
+        <span className="text-[10px] font-black text-blue-700 dark:text-blue-400 uppercase tracking-[0.3em] mt-1">System Risk</span>
       </div>
     </div>
     <div className="grid grid-cols-2 gap-x-8 gap-y-4 w-full max-w-md mx-auto">

@@ -366,7 +366,7 @@ export default function Home() {
                 return (
                   <article
                     key={item.title}
-                    className={`marketing-card-surface group rounded-2xl border p-6 transition-all duration-700 hover:-translate-y-1 hover:border-sky-300/35 hover:bg-[var(--marketing-card-bg-strong)] ${sectionsVisible.features ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+                    className={`marketing-card-surface group rounded-2xl border p-6 transition-all duration-700 hover:-translate-y-1 hover:border-sky-400/50 dark:hover:border-sky-300/35 hover:bg-[var(--marketing-card-bg-strong)] ${sectionsVisible.features ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
                     style={{ transitionDelay: `${idx * 100}ms` }}
                   >
                     <div className="inline-flex rounded-lg border border-sky-300/35 bg-sky-300/10 p-2.5 text-sky-700 dark:text-sky-200 transition-all duration-300 group-hover:scale-110">
@@ -400,7 +400,7 @@ export default function Home() {
               </div>
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-2 text-sm font-medium text-sky-700 dark:text-sky-200 transition hover:text-sky-800 dark:hover:text-sky-100"
+                className="inline-flex items-center gap-2 text-sm font-medium text-sky-800 dark:text-sky-200 transition hover:text-sky-900 dark:hover:text-sky-100"
               >
                 See it in dashboard
                 <ArrowRight size={15} />
@@ -411,7 +411,7 @@ export default function Home() {
               {workflowSteps.map((item, idx) => (
                 <article
                   key={item.step}
-                  className={`marketing-card-surface group rounded-2xl border p-6 transition-all duration-700 hover:border-sky-300/30 hover:bg-[var(--marketing-card-bg-strong)] hover:-translate-y-1 ${sectionsVisible.workflow ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+                  className={`marketing-card-surface group rounded-2xl border p-6 transition-all duration-700 hover:border-sky-400/40 dark:hover:border-sky-300/30 hover:bg-[var(--marketing-card-bg-strong)] hover:-translate-y-1 ${sectionsVisible.workflow ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
                   style={{ transitionDelay: `${idx * 100}ms` }}
                 >
                   <div className="text-xs font-semibold tracking-[0.22em] text-intent-accent">
@@ -454,7 +454,7 @@ export default function Home() {
               </div>
             </div>
 
-            <aside className={`group relative overflow-hidden rounded-xl border border-sky-400/20 bg-gradient-to-br from-sky-400/10 to-[var(--bg-tertiary)] p-7 backdrop-blur-sm transition-all duration-700 hover:border-sky-400/30 ${sectionsVisible.outcomes ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`} style={{ transitionDelay: '300ms' }}>
+            <aside className={`group relative overflow-hidden rounded-xl border border-sky-400/30 bg-gradient-to-br from-sky-100/60 to-[var(--bg-tertiary)] dark:border-sky-400/20 dark:from-sky-400/10 p-7 backdrop-blur-sm transition-all duration-700 hover:border-sky-400/50 dark:hover:border-sky-400/30 ${sectionsVisible.outcomes ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`} style={{ transitionDelay: '300ms' }}>
               <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-sky-500/10 blur-3xl transition-all duration-700 group-hover:bg-sky-500/20" />
               <div className="relative inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-intent-accent transition-all duration-300 group-hover:scale-110">
                 <LockKeyhole size={18} />
