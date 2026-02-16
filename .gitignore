@@ -56,3 +56,4 @@ TODO.md
 # security scan artifacts
 /.artifacts/
 /VAPT-report.md
+*.iso
