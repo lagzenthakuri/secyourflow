@@ -7,47 +7,49 @@ datasource db {
 }
 
 model User {
-  id                    String         @id @default(cuid())
-  email                 String         @unique
-  emailVerified         DateTime?
-  name                  String?
-  password              String?
-  image                 String?
-  role                  Role           @default(ANALYST)
-  avatar                String?
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
-  lastLogin             DateTime?
-  activeSessionId       String?
-  activeSessionIp       String?
-  organizationId        String?
-  totpEnabled           Boolean        @default(false)
-  totpSecretEnc         String?
-  totpVerifiedAt        DateTime?
-  totpRecoveryCodesHash Json?
-  totpLastUsedStep      Int?
-  accounts              Account[]
-  auditLogs             AuditLog[]
-  assetChangeLogs       AssetChangeLog[]               @relation("AssetChangeActor")
-  assetLifecycleEvents  AssetLifecycleEvent[]          @relation("AssetLifecycleActor")
-  assignedVulnerabilities Vulnerability[]              @relation("VulnerabilityAssignee")
-  comments              Comment[]
-  notifications         Notification[]
-  notificationRules     NotificationRule[]
-  dashboardViewSharesReceived DashboardViewShare[]     @relation("DashboardViewSharedWith")
-  dashboardViews        DashboardView[]
-  createdAssetGroups    AssetGroup[]                   @relation("AssetGroupCreatedBy")
-  externalTickets       ExternalTicket[]
-  remediationNotesAuthored RemediationNote[]           @relation("RemediationNoteAuthor")
-  remediationEvidenceUploaded RemediationEvidence[]    @relation("RemediationEvidenceUploadedBy")
-  remediationPlansOwned RemediationPlan[]              @relation("RemediationPlanOwner")
-  reports               Report[]
-  reportSchedules       ReportSchedule[]
-  sessions              Session[]
-  vulnerabilityTransitionsChanged VulnerabilityWorkflowTransition[] @relation("WorkflowChangedBy")
-  complianceEvidenceUploaded         ComplianceEvidence[]        @relation("EvidenceUploadedBy")
-  complianceEvidenceVersionsUploaded ComplianceEvidenceVersion[] @relation("EvidenceVersionUploadedBy")
-  organization          Organization?  @relation(fields: [organizationId], references: [id])
+  id                                 String                            @id @default(cuid())
+  email                              String                            @unique
+  emailVerified                      DateTime?
+  name                               String?
+  password                           String?
+  image                              String?
+  role                               Role                              @default(ANALYST)
+  avatar                             String?
+  createdAt                          DateTime                          @default(now())
+  updatedAt                          DateTime                          @updatedAt
+  lastLogin                          DateTime?
+  organizationId                     String?
+  totpEnabled                        Boolean                           @default(false)
+  totpSecretEnc                      String?
+  totpVerifiedAt                     DateTime?
+  totpRecoveryCodesHash              Json?
+  totpLastUsedStep                   Int?
+  activeSessionId                    String?
+  activeSessionIp                    String?
+  accounts                           Account[]
+  assetChangeLogs                    AssetChangeLog[]                  @relation("AssetChangeActor")
+  createdAssetGroups                 AssetGroup[]                      @relation("AssetGroupCreatedBy")
+  assetLifecycleEvents               AssetLifecycleEvent[]             @relation("AssetLifecycleActor")
+  auditLogs                          AuditLog[]
+  comments                           Comment[]
+  complianceEvidenceUploaded         ComplianceEvidence[]              @relation("EvidenceUploadedBy")
+  complianceEvidenceVersionsUploaded ComplianceEvidenceVersion[]       @relation("EvidenceVersionUploadedBy")
+  dashboardViews                     DashboardView[]
+  dashboardViewSharesReceived        DashboardViewShare[]              @relation("DashboardViewSharedWith")
+  externalTickets                    ExternalTicket[]
+  notifications                      Notification[]
+  notificationRules                  NotificationRule[]
+  ProductKey                         ProductKey[]
+  ProductKeyActivation               ProductKeyActivation[]
+  remediationEvidenceUploaded        RemediationEvidence[]             @relation("RemediationEvidenceUploadedBy")
+  remediationNotesAuthored           RemediationNote[]                 @relation("RemediationNoteAuthor")
+  remediationPlansOwned              RemediationPlan[]                 @relation("RemediationPlanOwner")
+  reports                            Report[]
+  reportSchedules                    ReportSchedule[]
+  sessions                           Session[]
+  organization                       Organization?                     @relation(fields: [organizationId], references: [id])
+  assignedVulnerabilities            Vulnerability[]                   @relation("VulnerabilityAssignee")
+  vulnerabilityTransitionsChanged    VulnerabilityWorkflowTransition[] @relation("WorkflowChangedBy")
 
   @@index([email])
   @@index([organizationId])
@@ -91,90 +93,90 @@ model VerificationToken {
 }
 
 model Organization {
-  id                   String                @id @default(cuid())
-  name                 String
-  domain               String?
-  logo                 String?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  assets               Asset[]
-  audits               Audit[]
-  complianceFrameworks ComplianceFramework[]
-  complianceEvidence   ComplianceEvidence[]
+  id                       String                            @id @default(cuid())
+  name                     String
+  domain                   String?
+  logo                     String?
+  createdAt                DateTime                          @default(now())
+  updatedAt                DateTime                          @updatedAt
+  assets                   Asset[]
+  assetChangeLogs          AssetChangeLog[]
+  discoveryRuns            AssetDiscoveryRun[]
+  assetGroups              AssetGroup[]
+  assetLifecycleEvents     AssetLifecycleEvent[]
+  assetRelationships       AssetRelationship[]
+  audits                   Audit[]
+  auditLogs                AuditLog[]
+  complianceEvidence       ComplianceEvidence[]
+  complianceFrameworks     ComplianceFramework[]
   complianceTrendSnapshots ComplianceTrendSnapshot[]
-  dashboardViewShares  DashboardViewShare[]
-  dashboardViews       DashboardView[]
-  discoveryRuns        AssetDiscoveryRun[]
-  externalTickets      ExternalTicket[]
-  notificationRules    NotificationRule[]
-  threatFeeds          ThreatFeed[]
-  threatIndicators     ThreatIndicator[]
-  threatFeedRuns       ThreatFeedRun[]
-  threatIndicatorMatch ThreatIndicatorMatch[]
-  auditLogs            AuditLog[]
-  scannerConfigs       ScannerConfig[]
-  scanResults          ScanResult[]
-  riskSnapshots        RiskSnapshot[]
-  policies             Policy[]
-  reportArtifacts      ReportArtifact[]
-  reportRuns           ReportRun[]
-  reportSchedules      ReportSchedule[]
-  reports              Report[]
-  remediationEvidence  RemediationEvidence[]
-  remediationNotes     RemediationNote[]
-  remediationPlans     RemediationPlan[]
-  riskEntries          RiskRegister[]
-  settings             Setting?
+  dashboardViews           DashboardView[]
+  dashboardViewShares      DashboardViewShare[]
+  externalTickets          ExternalTicket[]
+  notificationRules        NotificationRule[]
+  policies                 Policy[]
+  ProductKey               ProductKey[]
+  ProductKeyActivation     ProductKeyActivation[]
+  remediationEvidence      RemediationEvidence[]
+  remediationNotes         RemediationNote[]
+  remediationPlans         RemediationPlan[]
+  reports                  Report[]
+  reportArtifacts          ReportArtifact[]
+  reportRuns               ReportRun[]
+  reportSchedules          ReportSchedule[]
+  riskEntries              RiskRegister[]
+  riskSnapshots            RiskSnapshot[]
+  scanResults              ScanResult[]
+  scannerConfigs           ScannerConfig[]
+  settings                 Setting?
+  threatFeeds              ThreatFeed[]
+  threatFeedRuns           ThreatFeedRun[]
+  threatIndicators         ThreatIndicator[]
+  threatIndicatorMatch     ThreatIndicatorMatch[]
+  users                    User[]
+  vulnerabilities          Vulnerability[]
   vulnerabilityTransitions VulnerabilityWorkflowTransition[]
-  users                User[]
-  vulnerabilities      Vulnerability[]
-  assetRelationships   AssetRelationship[]
-  assetGroups          AssetGroup[]
-  assetLifecycleEvents AssetLifecycleEvent[]
-  assetChangeLogs      AssetChangeLog[]
-  wazuhAlerts          WazuhAlert[]
-
+  wazuhAlerts              WazuhAlert[]
 
   @@index([name])
 }
 
-
 model Asset {
-  id                 String                   @id @default(cuid())
-  name               String
-  type               AssetType
-  hostname           String?
-  ipAddress          String?
-  macAddress         String?
-  operatingSystem    String?
-  version            String?
-  environment        Environment              @default(PRODUCTION)
-  criticality        Criticality              @default(MEDIUM)
-  status             AssetStatus              @default(ACTIVE)
-  owner              String?
-  department         String?
-  location           String?
-  cloudProvider      CloudProvider?
-  cloudRegion        String?
-  cloudAccountId     String?
-  tags               String[]
-  metadata           Json?
-  lastSeen           DateTime?
-  createdAt          DateTime                 @default(now())
-  updatedAt          DateTime                 @updatedAt
-  organizationId     String
-  organization       Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  childRelationships AssetRelationship[]      @relation("AssetParent")
-  parentRelationships AssetRelationship[]     @relation("AssetChild")
-  changeLogs         AssetChangeLog[]
-  complianceControls AssetComplianceControl[]
-  complianceEvidence ComplianceEvidence[]
-  discoveryLinks     AssetDiscoveryRunAsset[]
-  groupMembers       AssetGroupMember[]
-  lifecycleEvents    AssetLifecycleEvent[]
-  vulnerabilities    AssetVulnerability[]
-  indicatorMatches   ThreatIndicatorMatch[]
-  riskEntries        RiskRegister[]
+  id                  String                   @id @default(cuid())
+  name                String
+  type                AssetType
+  hostname            String?
+  ipAddress           String?
+  macAddress          String?
+  operatingSystem     String?
+  version             String?
+  environment         Environment              @default(PRODUCTION)
+  criticality         Criticality              @default(MEDIUM)
+  status              AssetStatus              @default(ACTIVE)
+  owner               String?
+  department          String?
+  location            String?
+  cloudProvider       CloudProvider?
+  cloudRegion         String?
+  cloudAccountId      String?
+  tags                String[]
+  metadata            Json?
+  lastSeen            DateTime?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  organizationId      String
+  organization        Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  changeLogs          AssetChangeLog[]
+  complianceControls  AssetComplianceControl[]
+  discoveryLinks      AssetDiscoveryRunAsset[]
+  groupMembers        AssetGroupMember[]
+  lifecycleEvents     AssetLifecycleEvent[]
+  parentRelationships AssetRelationship[]      @relation("AssetChild")
+  childRelationships  AssetRelationship[]      @relation("AssetParent")
+  vulnerabilities     AssetVulnerability[]
+  complianceEvidence  ComplianceEvidence[]
+  riskEntries         RiskRegister[]
+  indicatorMatches    ThreatIndicatorMatch[]
 
   @@index([name])
   @@index([type])
@@ -190,56 +192,56 @@ model Asset {
 }
 
 model Vulnerability {
-  id                 String                           @id @default(cuid())
-  cveId              String?
-  title              String
-  description        String?
-  severity           Severity
-  cvssScore          Float?
-  cvssVector         String?
-  epssScore          Float?
-  epssPercentile     Float?
-  cweId              String?
-  cweDescription     String?
-  isExploited        Boolean                          @default(false)
-  exploitMaturity    ExploitMaturity?
-  cisaKev            Boolean                          @default(false)
-  source             VulnSource
-  scannerId          String?
-  scannerName        String?
-  firstDetected      DateTime                         @default(now())
-  lastSeen           DateTime                         @default(now())
-  status             VulnStatus                       @default(OPEN)
-  workflowState      WorkflowState                    @default(NEW)
-  assignedUserId     String?
-  assignedTeam       String?
-  slaDueAt           DateTime?
-  triagedAt          DateTime?
-  resolvedAt         DateTime?
-  closedAt           DateTime?
-  solution           String?
-  references         String[]
-  patchAvailable     Boolean                          @default(false)
-  dueDate            DateTime?
-  fixedAt            DateTime?
-  riskScore          Float?
-  businessImpact     String?
-  metadata           Json?
-  createdAt          DateTime                         @default(now())
-  updatedAt          DateTime                         @updatedAt
-  organizationId     String
-  assignedUser       User?                            @relation("VulnerabilityAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
-  assets             AssetVulnerability[]
-  comments           Comment[]
-  externalTickets    ExternalTicket[]
+  id                  String                            @id @default(cuid())
+  cveId               String?
+  title               String
+  description         String?
+  severity            Severity
+  cvssScore           Float?
+  cvssVector          String?
+  epssScore           Float?
+  epssPercentile      Float?
+  cweId               String?
+  cweDescription      String?
+  isExploited         Boolean                           @default(false)
+  exploitMaturity     ExploitMaturity?
+  cisaKev             Boolean                           @default(false)
+  source              VulnSource
+  scannerId           String?
+  scannerName         String?
+  firstDetected       DateTime                          @default(now())
+  lastSeen            DateTime                          @default(now())
+  status              VulnStatus                        @default(OPEN)
+  solution            String?
+  references          String[]
+  patchAvailable      Boolean                           @default(false)
+  dueDate             DateTime?
+  fixedAt             DateTime?
+  riskScore           Float?
+  businessImpact      String?
+  metadata            Json?
+  createdAt           DateTime                          @default(now())
+  updatedAt           DateTime                          @updatedAt
+  organizationId      String
+  assignedTeam        String?
+  assignedUserId      String?
+  closedAt            DateTime?
+  resolvedAt          DateTime?
+  slaDueAt            DateTime?
+  triagedAt           DateTime?
+  workflowState       WorkflowState                     @default(NEW)
+  assets              AssetVulnerability[]
+  comments            Comment[]
+  externalTickets     ExternalTicket[]
   remediationEvidence RemediationEvidence[]
-  remediationNotes   RemediationNote[]
-  remediationPlans   RemediationPlanVulnerability[]
-  riskEntries        RiskRegister[]
-  organization       Organization                     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  complianceControls VulnerabilityComplianceControl[]
-  attackTechniques   VulnerabilityAttackTechnique[]
-  threatActors       VulnerabilityThreatActor[]
+  remediationNotes    RemediationNote[]
+  remediationPlans    RemediationPlanVulnerability[]
+  riskEntries         RiskRegister[]
+  assignedUser        User?                             @relation("VulnerabilityAssignee", fields: [assignedUserId], references: [id])
+  organization        Organization                      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  attackTechniques    VulnerabilityAttackTechnique[]
+  complianceControls  VulnerabilityComplianceControl[]
+  threatActors        VulnerabilityThreatActor[]
   workflowTransitions VulnerabilityWorkflowTransition[]
 
   @@index([cveId])
@@ -284,17 +286,17 @@ model AssetVulnerability {
 }
 
 model ComplianceFramework {
-  id             String              @id @default(cuid())
+  id             String                    @id @default(cuid())
   name           String
   version        String?
   description    String?
-  isActive       Boolean             @default(true)
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
+  isActive       Boolean                   @default(true)
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
   organizationId String
   controls       ComplianceControl[]
+  organization   Organization              @relation(fields: [organizationId], references: [id])
   trendSnapshots ComplianceTrendSnapshot[]
-  organization   Organization        @relation(fields: [organizationId], references: [id])
 
   @@index([name])
   @@index([organizationId])
@@ -325,8 +327,8 @@ model ComplianceControl {
   ownerRole            String?
   riskCategory         String?
   assets               AssetComplianceControl[]
-  evidenceFiles        ComplianceEvidence[]
   framework            ComplianceFramework              @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  evidenceFiles        ComplianceEvidence[]
   vulnerabilities      VulnerabilityComplianceControl[]
 
   @@unique([frameworkId, controlId])
@@ -364,10 +366,10 @@ model ComplianceEvidence {
   currentVersion Int                         @default(1)
   createdAt      DateTime                    @default(now())
   updatedAt      DateTime                    @updatedAt
-  asset          Asset?                      @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  asset          Asset?                      @relation(fields: [assetId], references: [id])
   control        ComplianceControl           @relation(fields: [controlId], references: [id], onDelete: Cascade)
   organization   Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  uploadedBy     User?                       @relation("EvidenceUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+  uploadedBy     User?                       @relation("EvidenceUploadedBy", fields: [uploadedById], references: [id])
   versions       ComplianceEvidenceVersion[]
 
   @@index([controlId])
@@ -377,7 +379,7 @@ model ComplianceEvidence {
 }
 
 model ComplianceEvidenceVersion {
-  id           String              @id @default(cuid())
+  id           String             @id @default(cuid())
   evidenceId   String
   version      Int
   fileName     String
@@ -387,9 +389,9 @@ model ComplianceEvidenceVersion {
   checksum     String?
   notes        String?
   uploadedById String?
-  createdAt    DateTime            @default(now())
-  evidence     ComplianceEvidence  @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
-  uploadedBy   User?               @relation("EvidenceVersionUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime           @default(now())
+  evidence     ComplianceEvidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  uploadedBy   User?              @relation("EvidenceVersionUploadedBy", fields: [uploadedById], references: [id])
 
   @@unique([evidenceId, version])
   @@index([evidenceId])
@@ -443,14 +445,14 @@ model ThreatFeed {
   organizationId String
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
-  indicators     ThreatIndicator[]
-  runs           ThreatFeedRun[]
   organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  runs           ThreatFeedRun[]
+  indicators     ThreatIndicator[]
 
+  @@unique([organizationId, name])
   @@index([name])
   @@index([isActive])
   @@index([organizationId])
-  @@unique([organizationId, name])
 }
 
 model ThreatIndicator {
@@ -477,13 +479,13 @@ model ThreatIndicator {
   organization    Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   matches         ThreatIndicatorMatch[]
 
+  @@unique([organizationId, type, normalizedValue, feedId])
   @@index([type])
   @@index([value])
   @@index([normalizedValue])
   @@index([feedId])
   @@index([organizationId])
   @@index([expiresAt])
-  @@unique([organizationId, type, normalizedValue, feedId])
 }
 
 model ThreatFeedRun {
@@ -509,33 +511,33 @@ model ThreatFeedRun {
 }
 
 model AttackTactic {
-  id           String                  @id @default(cuid())
-  externalId   String                  @unique
-  name         String
-  shortName    String?
-  description  String?
-  platforms    String[]
-  createdAt    DateTime                @default(now())
-  updatedAt    DateTime                @updatedAt
-  techniques   AttackTechniqueTactic[]
+  id          String                  @id @default(cuid())
+  externalId  String                  @unique
+  name        String
+  shortName   String?
+  description String?
+  platforms   String[]
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  techniques  AttackTechniqueTactic[]
 
   @@index([name])
 }
 
 model AttackTechnique {
-  id                 String                          @id @default(cuid())
-  externalId         String                          @unique
+  id                 String                         @id @default(cuid())
+  externalId         String                         @unique
   name               String
   description        String?
-  isSubTechnique     Boolean                         @default(false)
-  revoked            Boolean                         @default(false)
+  isSubTechnique     Boolean                        @default(false)
+  revoked            Boolean                        @default(false)
   platforms          String[]
-  createdAt          DateTime                        @default(now())
-  updatedAt          DateTime                        @updatedAt
+  createdAt          DateTime                       @default(now())
+  updatedAt          DateTime                       @updatedAt
   tactics            AttackTechniqueTactic[]
-  vulnerabilityLinks VulnerabilityAttackTechnique[]
   actorLinks         ThreatActorTechnique[]
   campaignLinks      ThreatCampaignTechnique[]
+  vulnerabilityLinks VulnerabilityAttackTechnique[]
 
   @@index([name])
 }
@@ -545,8 +547,8 @@ model AttackTechniqueTactic {
   techniqueId String
   tacticId    String
   createdAt   DateTime        @default(now())
-  technique   AttackTechnique @relation(fields: [techniqueId], references: [id], onDelete: Cascade)
   tactic      AttackTactic    @relation(fields: [tacticId], references: [id], onDelete: Cascade)
+  technique   AttackTechnique @relation(fields: [techniqueId], references: [id], onDelete: Cascade)
 
   @@unique([techniqueId, tacticId])
   @@index([tacticId])
@@ -561,15 +563,15 @@ model VulnerabilityAttackTechnique {
   notes           String?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
-  vulnerability   Vulnerability       @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
   technique       AttackTechnique     @relation(fields: [techniqueId], references: [id], onDelete: Cascade)
+  vulnerability   Vulnerability       @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
 
   @@unique([vulnerabilityId, techniqueId, mappingSource])
   @@index([techniqueId])
 }
 
 model ThreatIndicatorMatch {
-  id             String          @id @default(cuid())
+  id             String            @id @default(cuid())
   indicatorId    String
   assetId        String
   organizationId String
@@ -577,15 +579,15 @@ model ThreatIndicatorMatch {
   matchValue     String
   status         ThreatMatchStatus @default(ACTIVE)
   confidence     Int?
-  firstMatchedAt DateTime        @default(now())
-  lastMatchedAt  DateTime        @default(now())
+  firstMatchedAt DateTime          @default(now())
+  lastMatchedAt  DateTime          @default(now())
   resolvedAt     DateTime?
   notes          String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  indicator      ThreatIndicator @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
-  asset          Asset           @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  asset          Asset             @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  indicator      ThreatIndicator   @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([indicatorId, assetId, matchField])
   @@index([organizationId, status])
@@ -593,33 +595,33 @@ model ThreatIndicatorMatch {
 }
 
 model ThreatActor {
-  id                  String                  @id @default(cuid())
-  externalId          String?                 @unique
-  name                String
-  description         String?
-  aliases             String[]
-  source              String?
-  lastSeen            DateTime?
-  createdAt           DateTime                @default(now())
-  updatedAt           DateTime                @updatedAt
-  techniques          ThreatActorTechnique[]
-  campaigns           ThreatCampaign[]
-  vulnerabilityLinks  VulnerabilityThreatActor[]
+  id                 String                     @id @default(cuid())
+  externalId         String?                    @unique
+  name               String
+  description        String?
+  aliases            String[]
+  source             String?
+  lastSeen           DateTime?
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  techniques         ThreatActorTechnique[]
+  campaigns          ThreatCampaign[]
+  vulnerabilityLinks VulnerabilityThreatActor[]
 
   @@index([name])
 }
 
 model ThreatCampaign {
-  id          String                  @id @default(cuid())
-  externalId  String?                 @unique
+  id          String                    @id @default(cuid())
+  externalId  String?                   @unique
   name        String
   description String?
   firstSeen   DateTime?
   lastSeen    DateTime?
   actorId     String?
-  createdAt   DateTime                @default(now())
-  updatedAt   DateTime                @updatedAt
-  actor       ThreatActor?            @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+  actor       ThreatActor?              @relation(fields: [actorId], references: [id])
   techniques  ThreatCampaignTechnique[]
 
   @@index([name])
@@ -658,27 +660,27 @@ model VulnerabilityThreatActor {
   notes           String?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
-  vulnerability   Vulnerability       @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
   actor           ThreatActor         @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  vulnerability   Vulnerability       @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
 
   @@unique([vulnerabilityId, actorId, source])
   @@index([actorId])
 }
 
 model AuditLog {
-  id         String   @id @default(cuid())
-  action     String
-  entityType String
-  entityId   String
-  oldValue   Json?
-  newValue   Json?
-  ipAddress  String?
-  userAgent  String?
-  userId     String
+  id             String       @id @default(cuid())
+  action         String
+  entityType     String
+  entityId       String
+  oldValue       Json?
+  newValue       Json?
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  createdAt      DateTime     @default(now())
   organizationId String
-  createdAt  DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([entityType, entityId])
   @@index([userId])
@@ -707,21 +709,21 @@ model Comment {
 }
 
 model ScannerConfig {
-  id           String       @id @default(cuid())
-  name         String
-  type         VulnSource
-  endpoint     String?
-  apiKey       String?
-  username     String?
-  password     String?
-  isActive     Boolean      @default(true)
-  lastSync     DateTime?
-  syncInterval Int          @default(86400)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id             String       @id @default(cuid())
+  name           String
+  type           VulnSource
+  endpoint       String?
+  apiKey         String?
+  username       String?
+  password       String?
+  isActive       Boolean      @default(true)
+  lastSync       DateTime?
+  syncInterval   Int          @default(86400)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   organizationId String
-  scanResults  ScanResult[]
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  scanResults    ScanResult[]
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([type])
   @@index([isActive])
@@ -729,19 +731,19 @@ model ScannerConfig {
 }
 
 model ScanResult {
-  id         String        @id @default(cuid())
-  scanId     String
-  startTime  DateTime
-  endTime    DateTime?
-  status     ScanStatus    @default(RUNNING)
-  totalHosts Int           @default(0)
-  totalVulns Int           @default(0)
-  rawData    Json?
-  scannerId  String
+  id             String        @id @default(cuid())
+  scanId         String
+  startTime      DateTime
+  endTime        DateTime?
+  status         ScanStatus    @default(RUNNING)
+  totalHosts     Int           @default(0)
+  totalVulns     Int           @default(0)
+  rawData        Json?
+  scannerId      String
+  createdAt      DateTime      @default(now())
   organizationId String
-  createdAt  DateTime      @default(now())
-  scanner    ScannerConfig @relation(fields: [scannerId], references: [id], onDelete: Cascade)
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  scanner        ScannerConfig @relation(fields: [scannerId], references: [id], onDelete: Cascade)
 
   @@index([scanId])
   @@index([scannerId])
@@ -752,8 +754,8 @@ model ScanResult {
 }
 
 model RiskSnapshot {
-  id               String   @id @default(cuid())
-  date             DateTime @default(now())
+  id               String       @id @default(cuid())
+  date             DateTime     @default(now())
   totalAssets      Int
   criticalAssets   Int
   totalVulns       Int
@@ -793,25 +795,25 @@ model Setting {
 }
 
 model Report {
-  id             String       @id @default(cuid())
+  id             String              @id @default(cuid())
   name           String
   type           String
-  templateKey    ReportTemplateKey?
   description    String?
-  format         String       @default("PDF")
-  outputFormat   ReportOutputFormat?
+  format         String              @default("PDF")
   frequency      String?
-  status         String       @default("PENDING")
+  status         String              @default("PENDING")
   url            String?
   size           String?
-  scheduleId     String?
   organizationId String
   userId         String
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  schedule       ReportSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  outputFormat   ReportOutputFormat?
+  scheduleId     String?
+  templateKey    ReportTemplateKey?
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  schedule       ReportSchedule?     @relation(fields: [scheduleId], references: [id])
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   runs           ReportRun[]
 
   @@index([organizationId])
@@ -872,18 +874,18 @@ model RiskRegister {
 }
 
 model VulnerabilityWorkflowTransition {
-  id              String        @id @default(cuid())
+  id              String         @id @default(cuid())
   vulnerabilityId String
   organizationId  String
   fromState       WorkflowState?
   toState         WorkflowState
   changedById     String?
   note            String?
-  changedAt       DateTime      @default(now())
-  createdAt       DateTime      @default(now())
-  changedBy       User?         @relation("WorkflowChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
-  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  vulnerability   Vulnerability @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+  changedAt       DateTime       @default(now())
+  createdAt       DateTime       @default(now())
+  changedBy       User?          @relation("WorkflowChangedBy", fields: [changedById], references: [id])
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vulnerability   Vulnerability  @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
 
   @@index([vulnerabilityId, changedAt(sort: Desc)])
   @@index([organizationId, changedAt(sort: Desc)])
@@ -891,23 +893,23 @@ model VulnerabilityWorkflowTransition {
 }
 
 model RemediationPlan {
-  id             String                 @id @default(cuid())
-  organizationId String
-  ownerId        String?
-  name           String
-  description    String?
-  status         RemediationPlanStatus  @default(DRAFT)
-  dueDate        DateTime?
-  completedAt    DateTime?
-  metadata       Json?
-  createdAt      DateTime               @default(now())
-  updatedAt      DateTime               @updatedAt
-  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  owner          User?                  @relation("RemediationPlanOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  id              String                         @id @default(cuid())
+  organizationId  String
+  ownerId         String?
+  name            String
+  description     String?
+  status          RemediationPlanStatus          @default(DRAFT)
+  dueDate         DateTime?
+  completedAt     DateTime?
+  metadata        Json?
+  createdAt       DateTime                       @default(now())
+  updatedAt       DateTime                       @updatedAt
+  tickets         ExternalTicket[]
+  evidence        RemediationEvidence[]
+  notes           RemediationNote[]
+  organization    Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner           User?                          @relation("RemediationPlanOwner", fields: [ownerId], references: [id])
   vulnerabilities RemediationPlanVulnerability[]
-  notes          RemediationNote[]
-  evidence       RemediationEvidence[]
-  tickets        ExternalTicket[]
 
   @@index([organizationId, status])
   @@index([organizationId, dueDate])
@@ -915,31 +917,31 @@ model RemediationPlan {
 }
 
 model RemediationPlanVulnerability {
-  id              String        @id @default(cuid())
+  id              String          @id @default(cuid())
   planId          String
   vulnerabilityId String
-  progress        Int           @default(0)
-  createdAt       DateTime      @default(now())
+  progress        Int             @default(0)
+  createdAt       DateTime        @default(now())
   plan            RemediationPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
-  vulnerability   Vulnerability @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+  vulnerability   Vulnerability   @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
 
   @@unique([planId, vulnerabilityId])
   @@index([vulnerabilityId])
 }
 
 model RemediationNote {
-  id              String          @id @default(cuid())
+  id              String           @id @default(cuid())
   organizationId  String
   planId          String?
   vulnerabilityId String?
   authorId        String?
   content         String
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  author          User?           @relation("RemediationNoteAuthor", fields: [authorId], references: [id], onDelete: SetNull)
-  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  author          User?            @relation("RemediationNoteAuthor", fields: [authorId], references: [id])
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   plan            RemediationPlan? @relation(fields: [planId], references: [id], onDelete: Cascade)
-  vulnerability   Vulnerability?  @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+  vulnerability   Vulnerability?   @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([planId])
@@ -948,7 +950,7 @@ model RemediationNote {
 }
 
 model RemediationEvidence {
-  id              String          @id @default(cuid())
+  id              String           @id @default(cuid())
   organizationId  String
   planId          String?
   vulnerabilityId String?
@@ -960,11 +962,11 @@ model RemediationEvidence {
   storagePath     String
   checksum        String?
   notes           String?
-  createdAt       DateTime        @default(now())
-  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt       DateTime         @default(now())
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   plan            RemediationPlan? @relation(fields: [planId], references: [id], onDelete: Cascade)
-  uploadedBy      User?           @relation("RemediationEvidenceUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
-  vulnerability   Vulnerability?  @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+  uploadedBy      User?            @relation("RemediationEvidenceUploadedBy", fields: [uploadedById], references: [id])
+  vulnerability   Vulnerability?   @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([planId])
@@ -973,7 +975,7 @@ model RemediationEvidence {
 }
 
 model ExternalTicket {
-  id              String         @id @default(cuid())
+  id              String           @id @default(cuid())
   organizationId  String
   provider        TicketProvider
   syncStatus      TicketSyncStatus @default(LINKED)
@@ -988,12 +990,12 @@ model ExternalTicket {
   userId          String?
   lastSyncedAt    DateTime?
   lastSyncError   String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   plan            RemediationPlan? @relation(fields: [planId], references: [id], onDelete: Cascade)
-  user            User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
-  vulnerability   Vulnerability? @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+  user            User?            @relation(fields: [userId], references: [id])
+  vulnerability   Vulnerability?   @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
 
   @@unique([provider, externalId])
   @@index([organizationId, provider])
@@ -1003,24 +1005,24 @@ model ExternalTicket {
 }
 
 model ReportSchedule {
-  id             String            @id @default(cuid())
+  id             String             @id @default(cuid())
   organizationId String
   userId         String
   name           String
   templateKey    ReportTemplateKey
   frequency      ReportFrequency
   outputFormat   ReportOutputFormat @default(PDF)
-  recipients     String[]          @default([])
+  recipients     String[]           @default([])
   filters        Json?
-  isActive       Boolean           @default(true)
+  isActive       Boolean            @default(true)
   nextRunAt      DateTime
   lastRunAt      DateTime?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
   reports        Report[]
   runs           ReportRun[]
-  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, isActive])
   @@index([nextRunAt, isActive])
@@ -1028,21 +1030,21 @@ model ReportSchedule {
 }
 
 model ReportRun {
-  id             String       @id @default(cuid())
+  id             String           @id @default(cuid())
   organizationId String
   scheduleId     String?
   reportId       String?
-  status         String       @default("PENDING")
-  startedAt      DateTime     @default(now())
+  status         String           @default("PENDING")
+  startedAt      DateTime         @default(now())
   completedAt    DateTime?
   errorMessage   String?
   metadata       Json?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
   artifacts      ReportArtifact[]
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  report         Report?      @relation(fields: [reportId], references: [id], onDelete: SetNull)
-  schedule       ReportSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  report         Report?          @relation(fields: [reportId], references: [id])
+  schedule       ReportSchedule?  @relation(fields: [scheduleId], references: [id])
 
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([scheduleId, createdAt(sort: Desc)])
@@ -1077,8 +1079,8 @@ model DashboardView {
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
   organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  shares         DashboardViewShare[]
   user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shares         DashboardViewShare[]
 
   @@index([organizationId, userId])
   @@index([organizationId, isDefault])
@@ -1096,9 +1098,9 @@ model DashboardViewShare {
   organization     Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   sharedWithUser   User?         @relation("DashboardViewSharedWith", fields: [sharedWithUserId], references: [id], onDelete: Cascade)
 
+  @@unique([dashboardViewId, sharedWithUserId, sharedWithRole])
   @@index([organizationId, sharedWithRole])
   @@index([sharedWithUserId])
-  @@unique([dashboardViewId, sharedWithUserId, sharedWithRole])
 }
 
 model AssetRelationship {
@@ -1120,17 +1122,17 @@ model AssetRelationship {
 }
 
 model AssetGroup {
-  id             String            @id @default(cuid())
+  id             String             @id @default(cuid())
   organizationId String
   createdById    String?
   name           String
   description    String?
   color          String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  createdBy      User?             @relation("AssetGroupCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  createdBy      User?              @relation("AssetGroupCreatedBy", fields: [createdById], references: [id])
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   members        AssetGroupMember[]
-  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, name])
   @@index([organizationId])
@@ -1161,7 +1163,7 @@ model AssetLifecycleEvent {
   notes           String?
   occurredAt      DateTime           @default(now())
   createdAt       DateTime           @default(now())
-  actor           User?              @relation("AssetLifecycleActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actor           User?              @relation("AssetLifecycleActor", fields: [actorId], references: [id])
   asset           Asset              @relation(fields: [assetId], references: [id], onDelete: Cascade)
   organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -1179,7 +1181,7 @@ model AssetChangeLog {
   newValue       Json?
   changedAt      DateTime     @default(now())
   asset          Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  changedBy      User?        @relation("AssetChangeActor", fields: [changedById], references: [id], onDelete: SetNull)
+  changedBy      User?        @relation("AssetChangeActor", fields: [changedById], references: [id])
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([assetId, changedAt(sort: Desc)])
@@ -1187,22 +1189,22 @@ model AssetChangeLog {
 }
 
 model AssetDiscoveryRun {
-  id             String                 @id @default(cuid())
-  organizationId String
-  source         String
-  status         String                 @default("PENDING")
-  startedAt      DateTime               @default(now())
-  finishedAt     DateTime?
-  discoveredCount Int                   @default(0)
-  createdCount   Int                    @default(0)
-  updatedCount   Int                    @default(0)
-  rawInput       Json?
-  errorMessage   String?
-  metadata       Json?
-  createdAt      DateTime               @default(now())
-  updatedAt      DateTime               @updatedAt
-  assets         AssetDiscoveryRunAsset[]
-  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id              String                   @id @default(cuid())
+  organizationId  String
+  source          String
+  status          String                   @default("PENDING")
+  startedAt       DateTime                 @default(now())
+  finishedAt      DateTime?
+  discoveredCount Int                      @default(0)
+  createdCount    Int                      @default(0)
+  updatedCount    Int                      @default(0)
+  rawInput        Json?
+  errorMessage    String?
+  metadata        Json?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  organization    Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assets          AssetDiscoveryRunAsset[]
 
   @@index([organizationId, startedAt(sort: Desc)])
   @@index([source, status])
@@ -1401,6 +1403,60 @@ model Audit {
   @@index([organizationId])
   @@index([status])
   @@index([type])
+}
+
+model WazuhAlert {
+  id             String       @id
+  level          Int
+  ruleId         String
+  agentId        String
+  timestamp      DateTime
+  raw            Json
+  organizationId String
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([level])
+  @@index([ruleId])
+  @@index([agentId])
+  @@index([timestamp])
+}
+
+model ProductKey {
+  id                   String                 @id
+  organizationId       String
+  createdById          String
+  codeHash             String
+  codePrefix           String
+  targetRole           Role
+  expiresAt            DateTime
+  revokedAt            DateTime?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime
+  User                 User                   @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  Organization         Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  ProductKeyActivation ProductKeyActivation[]
+
+  @@unique([organizationId, codeHash])
+  @@index([organizationId, expiresAt])
+  @@index([organizationId, revokedAt])
+  @@index([organizationId, targetRole])
+}
+
+model ProductKeyActivation {
+  id             String       @id
+  organizationId String
+  productKeyId   String
+  userId         String
+  activatedAt    DateTime     @default(now())
+  Organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  ProductKey     ProductKey   @relation(fields: [productKeyId], references: [id], onDelete: Cascade)
+  User           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([productKeyId, userId])
+  @@index([organizationId, activatedAt])
+  @@index([organizationId, userId])
 }
 
 enum Role {
@@ -1687,22 +1743,4 @@ enum AuditStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
-}
-
-model WazuhAlert {
-  id             String       @id
-  level          Int
-  ruleId         String
-  agentId        String
-  timestamp      DateTime
-  raw            Json
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdAt      DateTime     @default(now())
-
-  @@index([organizationId])
-  @@index([level])
-  @@index([ruleId])
-  @@index([agentId])
-  @@index([timestamp])
 }
