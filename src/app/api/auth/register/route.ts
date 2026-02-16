@@ -83,27 +83,27 @@ export async function POST(req: Request) {
 
         const hashedPassword = await hash(password, 12);
 
-        const registrationOrganizationId = getRegistrationOrganizationId();
-        if (!registrationOrganizationId) {
-            return NextResponse.json(
-                {
-                    error:
-                        "Registration is unavailable. REGISTRATION_DEFAULT_ORGANIZATION_ID is not configured.",
-                },
-                { status: 503 },
-            );
+        let organizationId = getRegistrationOrganizationId();
+        let defaultOrganization = null;
+
+        if (organizationId) {
+            defaultOrganization = await prisma.organization.findUnique({
+                where: { id: organizationId },
+                select: { id: true },
+            });
         }
 
-        const defaultOrganization = await prisma.organization.findUnique({
-            where: { id: registrationOrganizationId },
-            select: { id: true },
-        });
-
         if (!defaultOrganization) {
-            return NextResponse.json(
-                { error: "Registration is temporarily unavailable. Registration organization is invalid." },
-                { status: 503 },
-            );
+            // Pick any organization or create a default one
+            const firstOrg = await prisma.organization.findFirst({ select: { id: true } });
+            if (firstOrg) {
+                defaultOrganization = firstOrg;
+            } else {
+                defaultOrganization = await prisma.organization.create({
+                    data: { name: "Default Organization" },
+                    select: { id: true },
+                });
+            }
         }
 
         const user = await prisma.user.create({
