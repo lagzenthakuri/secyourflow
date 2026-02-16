@@ -603,50 +603,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-    const [isLicenseCheckLoading, setIsLicenseCheckLoading] = useState(true);
 
     // Audit login events with IP and user agent
     useLoginAudit();
-
-    useEffect(() => {
-        if (status === "loading") {
-            return;
-        }
-
-        if (status !== "authenticated") {
-            setIsLicenseCheckLoading(false);
-            return;
-        }
-
-        if (session?.user?.role === "MAIN_OFFICER") {
-            setIsLicenseCheckLoading(false);
-            return;
-        }
-
-        let isSubscribed = true;
-        const verifyProductKeyAccess = async () => {
-            try {
-                const response = await fetch("/api/product-keys/status", { cache: "no-store" });
-                const payload = (await response.json()) as { isActive?: boolean };
-
-                if (response.ok && payload.isActive === false && pathname !== "/activate-key") {
-                    router.replace("/activate-key");
-                }
-            } catch (error) {
-                console.error("Failed to verify product key access", error);
-            } finally {
-                if (isSubscribed) {
-                    setIsLicenseCheckLoading(false);
-                }
-            }
-        };
-
-        void verifyProductKeyAccess();
-
-        return () => {
-            isSubscribed = false;
-        };
-    }, [pathname, router, session?.user?.role, status]);
 
     // Close sidebar on initial mobile load
     useEffect(() => {
@@ -664,14 +623,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
-
-    if (status === "authenticated" && session?.user?.role !== "MAIN_OFFICER" && isLicenseCheckLoading) {
-        return (
-            <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
-                <ShieldLoader size="lg" variant="cyber" />
-            </div>
-        );
-    }
 
     return (
         <div className="min-h-screen bg-[var(--bg-primary)] bg-grid">

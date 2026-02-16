@@ -52,6 +52,5 @@ export const config = {
         "/scanners/:path*",
         "/risk-register/:path*",
         "/cves/:path*",
-        "/activate-key",
     ],
 };
