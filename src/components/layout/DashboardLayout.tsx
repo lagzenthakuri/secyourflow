@@ -170,7 +170,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                         >
                             <div className="relative shrink-0">
                                 <div className="absolute inset-0 bg-blue-500/20 rounded-xl blur-lg group-hover:bg-blue-500/30 transition-all" />
-                                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white text-base font-bold relative z-10 shadow-lg border border-white/10">
+                                <div className="w-11 h-11 rounded-xl bg-[var(--color-primary-600)] flex items-center justify-center text-white text-base font-bold relative z-10 shadow-lg border border-white/10">
                                     {userInitials}
                                 </div>
                             </div>
