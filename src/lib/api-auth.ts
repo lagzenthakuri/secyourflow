@@ -12,7 +12,6 @@ export interface SessionOrgContext {
 
 type RequireSessionOptions = {
   allowedRoles?: readonly string[];
-  requireProductKey?: boolean;
 };
 
 export async function requireSessionWithOrg(
@@ -64,63 +63,6 @@ export async function requireSessionWithOrg(
       ok: false,
       response: NextResponse.json({ error: "Forbidden: insufficient role permissions" }, { status: 403 }),
     };
-  }
-
-  const shouldRequireProductKey = options.requireProductKey ?? true;
-  if (shouldRequireProductKey && user.role?.toUpperCase() !== "MAIN_OFFICER") {
-    const now = new Date();
-    let activeProductKeyActivation: { id: string } | null = null;
-    try {
-      activeProductKeyActivation = await prisma.productKeyActivation.findFirst({
-        where: {
-          organizationId: user.organizationId,
-          userId: user.id,
-          productKey: {
-            targetRole: user.role,
-            revokedAt: null,
-            expiresAt: {
-              gt: now,
-            },
-          },
-        },
-        select: {
-          id: true,
-        },
-      });
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        (error.code === "P2021" || error.code === "P2022")
-      ) {
-        return {
-          ok: false,
-          response: NextResponse.json(
-            {
-              error:
-                "Product key tables are missing. Run Prisma migrations before using protected routes.",
-              migrationRequired: true,
-            },
-            { status: 503 },
-          ),
-        };
-      }
-
-      throw error;
-    }
-
-    if (!activeProductKeyActivation) {
-      return {
-        ok: false,
-        response: NextResponse.json(
-          {
-            error: `Product key required. Activate a valid key to use features. (Current Role: ${user.role})`,
-            productKeyRequired: true,
-            role: user.role,
-          },
-          { status: 403 },
-        ),
-      };
-    }
   }
 
   return {

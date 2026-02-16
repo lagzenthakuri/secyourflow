@@ -15,7 +15,6 @@ const PROTECTED_PREFIXES = [
     "/scanners",
     "/risk-register",
     "/cves",
-    "/activate-key",
 ];
 
 function startsWithAny(pathname: string, prefixes: string[]): boolean {

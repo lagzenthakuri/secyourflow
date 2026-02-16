@@ -43,8 +43,6 @@ model User {
   remediationPlansOwned RemediationPlan[]              @relation("RemediationPlanOwner")
   reports               Report[]
   reportSchedules       ReportSchedule[]
-  createdProductKeys    ProductKey[]                   @relation("ProductKeyCreatedBy")
-  productKeyActivations ProductKeyActivation[]         @relation("ProductKeyActivatedBy")
   sessions              Session[]
   vulnerabilityTransitionsChanged VulnerabilityWorkflowTransition[] @relation("WorkflowChangedBy")
   complianceEvidenceUploaded         ComplianceEvidence[]        @relation("EvidenceUploadedBy")
@@ -135,47 +133,11 @@ model Organization {
   assetLifecycleEvents AssetLifecycleEvent[]
   assetChangeLogs      AssetChangeLog[]
   wazuhAlerts          WazuhAlert[]
-  productKeys          ProductKey[]
-  productKeyActivations ProductKeyActivation[]
+
 
   @@index([name])
 }
 
-model ProductKey {
-  id             String                 @id @default(cuid())
-  organizationId String
-  createdById    String
-  codeHash       String
-  codePrefix     String
-  targetRole     Role
-  expiresAt      DateTime
-  revokedAt      DateTime?
-  createdAt      DateTime               @default(now())
-  updatedAt      DateTime               @updatedAt
-  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdBy      User                   @relation("ProductKeyCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
-  activations    ProductKeyActivation[]
-
-  @@index([organizationId, targetRole])
-  @@index([organizationId, expiresAt])
-  @@index([organizationId, revokedAt])
-  @@unique([organizationId, codeHash])
-}
-
-model ProductKeyActivation {
-  id             String       @id @default(cuid())
-  organizationId String
-  productKeyId   String
-  userId         String
-  activatedAt    DateTime     @default(now())
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  productKey     ProductKey   @relation(fields: [productKeyId], references: [id], onDelete: Cascade)
-  user           User         @relation("ProductKeyActivatedBy", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([productKeyId, userId])
-  @@index([organizationId, userId])
-  @@index([organizationId, activatedAt])
-}
 
 model Asset {
   id                 String                   @id @default(cuid())
