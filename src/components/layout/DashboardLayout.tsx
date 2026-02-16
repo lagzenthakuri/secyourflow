@@ -126,7 +126,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                                             if (window.innerWidth < 1024) setIsOpen(false);
                                         }}
                                     >
-                                        <item.icon size={20} className={cn("transition-colors", isActive ? "text-blue-400" : "text-[var(--text-muted)]")} />
+                                        <item.icon size={20} className={cn("transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-[var(--text-muted)]")} />
                                         <span className="font-semibold">{item.name}</span>
                                     </Link>
                                 );
@@ -153,7 +153,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                                             if (window.innerWidth < 1024) setIsOpen(false);
                                         }}
                                     >
-                                        <item.icon size={20} className={cn("transition-colors", isActive ? "text-blue-400" : "text-[var(--text-muted)]")} />
+                                        <item.icon size={20} className={cn("transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-[var(--text-muted)]")} />
                                         <span className="font-semibold">{item.name}</span>
                                     </Link>
                                 );
@@ -171,7 +171,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                         >
                             <div className="relative shrink-0">
                                 <div className="absolute inset-0 bg-blue-500/20 rounded-xl blur-lg group-hover:bg-blue-500/30 transition-all" />
-                                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white text-base font-bold relative z-10 shadow-lg border border-white/10">
+                                <div className="w-11 h-11 rounded-xl bg-[var(--color-primary-600)] flex items-center justify-center text-white text-base font-bold relative z-10 shadow-lg border border-white/10">
                                     {userInitials}
                                 </div>
                             </div>
@@ -179,7 +179,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                                 <p className="text-sm font-medium text-[var(--text-primary)] truncate">
                                     {userName}
                                 </p>
-                                <p className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider">
+                                <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
                                     {userRole.replace('_', ' ')}
                                 </p>
                             </div>
@@ -236,9 +236,14 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [showSearchResults, setShowSearchResults] = useState(false);
     const [activeResultIndex, setActiveResultIndex] = useState(0);
+    const [mounted, setMounted] = useState(false);
     const redirectedForTwoFactorRef = useRef(false);
     const searchContainerRef = useRef<HTMLDivElement>(null);
     const searchListId = "topbar-route-search-results";
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const userRole = session?.user?.role || "ANALYST";
     const searchableRoutes = useMemo(
@@ -419,7 +424,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                 <div className="relative flex-1" ref={searchContainerRef}>
                     <Search
                         size={18}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-blue-400 transition-colors"
+                        className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-blue-600 dark:group-focus-within:text-blue-400 transition-colors"
                     />
                     <input
                         type="text"
@@ -519,11 +524,11 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                 <button
                     type="button"
                     onClick={toggleTheme}
-                    aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-                    title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+                    aria-label={mounted ? `Switch to ${theme === "dark" ? "light" : "dark"} mode` : "Toggle theme"}
+                    title={mounted ? `Switch to ${theme === "dark" ? "light" : "dark"} mode` : "Toggle theme"}
                     className="relative p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all duration-300 ease-in-out"
                 >
-                    {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+                    {mounted ? (theme === "dark" ? <Sun size={20} /> : <Moon size={20} />) : <Sun size={20} />}
                 </button>
 
                 <div className="flex items-center gap-2">

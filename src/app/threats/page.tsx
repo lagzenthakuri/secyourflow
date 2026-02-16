@@ -480,7 +480,7 @@ export default function ThreatsPage() {
               <button
                 type="button"
                 onClick={runCorrelation}
-                className="inline-flex items-center gap-2 rounded-xl border border-red-300/45 bg-red-100/90 px-4 py-2 text-sm font-medium text-red-800 transition hover:bg-red-200/80 dark:border-red-300/35 dark:bg-red-400/10 dark:text-red-100 dark:hover:bg-red-400/20"
+                className="inline-flex items-center gap-2 rounded-xl border border-red-300 bg-red-100 px-4 py-2 text-sm font-semibold text-red-900 transition hover:bg-red-200 hover:border-red-400 dark:border-red-300/35 dark:bg-red-400/10 dark:text-red-100 dark:hover:bg-red-400/20"
               >
                 <Target size={14} />
                 Run Correlation
@@ -567,7 +567,7 @@ export default function ThreatsPage() {
                             href={`https://nvd.nist.gov/vuln/detail/${vulnerability.cveId}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 font-mono text-xs text-sky-700 hover:text-sky-800 dark:text-sky-300 dark:hover:text-sky-200"
+                            className="inline-flex items-center gap-1 font-mono text-xs text-sky-800 hover:text-sky-900 dark:text-sky-300 dark:hover:text-sky-200"
                           >
                             {vulnerability.cveId}
                             <ExternalLink size={11} />
@@ -594,7 +594,7 @@ export default function ThreatsPage() {
                 )}
               </div>
               <div className="border-t border-[var(--border-color)] p-4">
-                <Link href="/vulnerabilities?filter=exploited" className="inline-flex items-center gap-2 text-sm text-sky-700 hover:text-sky-800 dark:text-sky-300 dark:hover:text-sky-200">
+                <Link href="/vulnerabilities?filter=exploited" className="inline-flex items-center gap-2 text-sm text-sky-800 hover:text-sky-900 dark:text-sky-300 dark:hover:text-sky-200">
                   Open vulnerability queue <ArrowRight size={14} />
                 </Link>
               </div>
@@ -760,7 +760,7 @@ export default function ThreatsPage() {
                 <button
                   type="button"
                   onClick={addManualIoc}
-                  className="rounded-lg border border-sky-300/35 bg-sky-400/15 px-3 text-sm text-sky-700 dark:text-sky-100 transition hover:bg-sky-400/20"
+                  className="rounded-lg border border-sky-400/50 bg-sky-100/80 px-3 text-sm text-sky-900 dark:border-sky-300/35 dark:bg-sky-400/15 dark:text-sky-100 transition hover:bg-sky-200/80 dark:hover:bg-sky-400/20"
                 >
                   Add IOC
                 </button>

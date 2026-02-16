@@ -392,7 +392,7 @@ export function RiskRegisterTable() {
                                                         </button>
                                                     </>
                                                 ) : (
-                                                    <button onClick={() => handleEdit(risk)} className="p-1.5 text-[var(--text-muted)] hover:text-blue-600 dark:hover:text-blue-400 hover:bg-[var(--bg-elevated)] rounded transition-all">
+                                                    <button onClick={() => handleEdit(risk)} className="p-1.5 text-[var(--text-muted)] hover:text-blue-700 dark:hover:text-blue-400 hover:bg-[var(--bg-elevated)] rounded transition-all">
                                                         <Edit2 size={16} />
                                                     </button>
                                                 )}

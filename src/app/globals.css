@@ -64,15 +64,26 @@
   --glass-border: rgba(255, 255, 255, 0.08);
 
   /* Gradients */
-  --gradient-cyber: linear-gradient(135deg, #3b82f6 0%, #06b6d4 50%, #8b5cf6 100%);
+  --gradient-cyber: linear-gradient(
+    135deg,
+    #3b82f6 0%,
+    #06b6d4 50%,
+    #8b5cf6 100%
+  );
   --gradient-risk: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
   --gradient-success: linear-gradient(135deg, #22c55e 0%, #10b981 100%);
-  --gradient-card: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
+  --gradient-card: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0) 100%
+  );
 
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+  --shadow-md:
+    0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg:
+    0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
   --shadow-glow: 0 0 28px rgba(59, 130, 246, 0.12);
   --shadow-glow-cyan: 0 0 28px rgba(6, 182, 212, 0.08);
 
@@ -148,12 +159,12 @@ html.theme-light {
   --bg-card: rgba(255, 255, 255, 0.95);
   --bg-elevated: #ffffff;
 
-  --border-color: rgba(15, 23, 42, 0.1);
-  --border-hover: rgba(15, 23, 42, 0.2);
+  --border-color: rgba(15, 23, 42, 0.15);
+  --border-hover: rgba(15, 23, 42, 0.3);
 
   --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
+  --text-secondary: #334155;
+  --text-muted: #475569;
 
   --marketing-nav-bg: rgba(255, 255, 255, 0.88);
   --marketing-section-bg: rgba(241, 245, 249, 0.82);
@@ -172,7 +183,11 @@ html.theme-light {
   --glass-bg: rgba(255, 255, 255, 0.86);
   --glass-border: rgba(15, 23, 42, 0.1);
 
-  --gradient-card: linear-gradient(180deg, rgba(15, 23, 42, 0.04) 0%, rgba(15, 23, 42, 0) 100%);
+  --gradient-card: linear-gradient(
+    180deg,
+    rgba(15, 23, 42, 0.04) 0%,
+    rgba(15, 23, 42, 0) 100%
+  );
 
   --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.08);
   --shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.12);
@@ -199,55 +214,55 @@ html.theme-light {
   --btn-ghost-hover-text: #1e293b;
 
   --badge-critical-bg: #fee2e2;
-  --badge-critical-text: #991b1b;
-  --badge-critical-border: #fca5a5;
+  --badge-critical-text: #7f1d1d;
+  --badge-critical-border: #f87171;
 
   --badge-high-bg: #ffedd5;
-  --badge-high-text: #9a3412;
-  --badge-high-border: #fdba74;
+  --badge-high-text: #7c2d12;
+  --badge-high-border: #fb923c;
 
   --badge-medium-bg: #fef9c3;
   --badge-medium-text: #713f12;
   --badge-medium-border: #facc15;
 
   --badge-low-bg: #f0fdf4;
-  --badge-low-text: #16a34a;
-  --badge-low-border: #bbf7d0;
+  --badge-low-text: #14532d;
+  --badge-low-border: #86efac;
 
   --badge-info-bg: #f1f5f9;
-  --badge-info-text: #475569;
-  --badge-info-border: #cbd5e1;
+  --badge-info-text: #334155;
+  --badge-info-border: #94a3b8;
 
-  --compliance-info-bg: #e0f2fe;
-  --compliance-info-border: #7dd3fc;
-  --compliance-info-text: #0c4a6e;
-  --compliance-info-hover-bg: #bae6fd;
+  --compliance-info-bg: #dbeafe;
+  --compliance-info-border: #60a5fa;
+  --compliance-info-text: #1e3a8a;
+  --compliance-info-hover-bg: #bfdbfe;
 
-  --compliance-success-bg: #dcfce7;
-  --compliance-success-border: #86efac;
+  --compliance-success-bg: #d1fae5;
+  --compliance-success-border: #4ade80;
   --compliance-success-text: #14532d;
-  --compliance-success-hover-bg: #bbf7d0;
+  --compliance-success-hover-bg: #a7f3d0;
 
   --compliance-cyan-bg: #cffafe;
-  --compliance-cyan-border: #67e8f9;
+  --compliance-cyan-border: #22d3ee;
   --compliance-cyan-text: #164e63;
   --compliance-cyan-hover-bg: #a5f3fc;
 
   --intent-accent: #1e40af;
   --intent-accent-strong: #1e3a8a;
-  --intent-danger: #b91c1c;
-  --intent-danger-strong: #991b1b;
-  --intent-success: #166534;
+  --intent-danger: #991b1b;
+  --intent-danger-strong: #7f1d1d;
+  --intent-success: #14532d;
 
   /* Accent contrast boosts for light mode */
   --contrast-blue: #1e40af;
   --contrast-sky: #075985;
-  --contrast-red: #991b1b;
-  --contrast-green: #166534;
+  --contrast-red: #7f1d1d;
+  --contrast-green: #14532d;
   --contrast-emerald: #065f46;
-  --contrast-yellow: #854d0e;
-  --contrast-amber: #92400e;
-  --contrast-orange: #9a3412;
+  --contrast-yellow: #713f12;
+  --contrast-amber: #78350f;
+  --contrast-orange: #7c2d12;
   --contrast-cyan: #155e75;
   --contrast-indigo: #312e81;
   --contrast-violet: #5b21b6;
@@ -260,7 +275,9 @@ html.theme-transitioning,
 html.theme-transitioning *,
 html.theme-transitioning *::before,
 html.theme-transitioning *::after {
-  transition-property: color, background-color, border-color, fill, stroke, box-shadow, outline-color, text-decoration-color !important;
+  transition-property:
+    color, background-color, border-color, fill, stroke, box-shadow,
+    outline-color, text-decoration-color !important;
   transition-duration: 220ms !important;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
   transition-delay: 0ms !important;
@@ -279,14 +296,28 @@ html.theme-light .text-sky-500\/50 {
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   line-height: 1.6;
   overflow-x: hidden;
   transition: background 0.3s ease;
 }
 
-:where(button, a, input, select, textarea, [role="button"], [tabindex]):focus-visible {
+:where(
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  [role="button"],
+  [tabindex]
+):focus-visible {
   outline: 2px solid var(--color-primary-500);
   outline-offset: 2px;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
@@ -356,15 +387,27 @@ body {
 }
 
 .hero-radial-primary {
-  background: radial-gradient(circle_at_center, var(--hero-radial-primary), var(--hero-radial-fade) 64%);
+  background: radial-gradient(
+    circle_at_center,
+    var(--hero-radial-primary),
+    var(--hero-radial-fade) 64%
+  );
 }
 
 .hero-radial-secondary {
-  background: radial-gradient(circle, var(--hero-radial-secondary), var(--hero-radial-fade) 72%);
+  background: radial-gradient(
+    circle,
+    var(--hero-radial-secondary),
+    var(--hero-radial-fade) 72%
+  );
 }
 
 .hero-radial-soft {
-  background: radial-gradient(circle_at_center, var(--hero-radial-soft), var(--hero-radial-fade) 64%);
+  background: radial-gradient(
+    circle_at_center,
+    var(--hero-radial-soft),
+    var(--hero-radial-fade) 64%
+  );
 }
 
 html.theme-light .bg-grid {
@@ -375,9 +418,21 @@ html.theme-light .bg-grid {
 
 html.theme-light .bg-gradient-radial {
   background:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(37, 99, 235, 0.14), transparent),
-    radial-gradient(ellipse 60% 40% at 80% 50%, rgba(6, 182, 212, 0.1), transparent),
-    radial-gradient(ellipse 50% 30% at 20% 80%, rgba(14, 165, 233, 0.1), transparent);
+    radial-gradient(
+      ellipse 80% 50% at 50% -20%,
+      rgba(37, 99, 235, 0.14),
+      transparent
+    ),
+    radial-gradient(
+      ellipse 60% 40% at 80% 50%,
+      rgba(6, 182, 212, 0.1),
+      transparent
+    ),
+    radial-gradient(
+      ellipse 50% 30% at 20% 80%,
+      rgba(14, 165, 233, 0.1),
+      transparent
+    );
 }
 
 /* Animated Background Grid */
@@ -402,9 +457,21 @@ html.theme-light .bg-gradient-radial {
 /* Subtle Gradient Backdrop */
 .bg-gradient-radial {
   background:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59, 130, 246, 0.15), transparent),
-    radial-gradient(ellipse 60% 40% at 80% 50%, rgba(139, 92, 246, 0.08), transparent),
-    radial-gradient(ellipse 50% 30% at 20% 80%, rgba(6, 182, 212, 0.08), transparent);
+    radial-gradient(
+      ellipse 80% 50% at 50% -20%,
+      rgba(59, 130, 246, 0.15),
+      transparent
+    ),
+    radial-gradient(
+      ellipse 60% 40% at 80% 50%,
+      rgba(139, 92, 246, 0.08),
+      transparent
+    ),
+    radial-gradient(
+      ellipse 50% 30% at 20% 80%,
+      rgba(6, 182, 212, 0.08),
+      transparent
+    );
 }
 
 /* Redesigned Premium Cards */
@@ -421,7 +488,7 @@ html.theme-light .bg-gradient-radial {
 }
 
 .card::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   background: var(--gradient-surface);
@@ -451,15 +518,18 @@ html.theme-light .bg-gradient-radial {
 }
 
 .btn-primary {
-  background: var(--gradient-cyber);
+  background: var(--color-primary-600);
+  border-color: var(--color-primary-500);
   color: #fff;
   box-shadow: 0 8px 16px -4px rgba(59, 130, 246, 0.3);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
+  background: var(--color-primary-500);
+  border-color: var(--color-primary-400);
   box-shadow: 0 12px 24px -6px rgba(59, 130, 246, 0.4);
-  filter: brightness(1.1);
+  filter: none;
 }
 
 .btn-secondary {
@@ -523,7 +593,7 @@ html.theme-light .bg-gradient-radial {
 }
 
 .sidebar-link.active::after {
-  content: '';
+  content: "";
   position: absolute;
   left: -16px;
   top: 50%;
@@ -555,13 +625,17 @@ html.theme-light .bg-gradient-radial {
 }
 
 .bg-mesh::after {
-  content: '';
+  content: "";
   position: absolute;
   top: -20%;
   left: -10%;
   width: 60%;
   height: 60%;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(59, 130, 246, 0.15) 0%,
+    transparent 70%
+  );
   filter: blur(100px);
   animation: float 20s infinite alternate;
 }
@@ -816,10 +890,12 @@ html.theme-light .topbar {
 
 /* Shimmer Loading Premium */
 .shimmer {
-  background: linear-gradient(90deg,
-      var(--bg-tertiary) 25%,
-      var(--bg-elevated) 50%,
-      var(--bg-tertiary) 75%);
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--bg-elevated) 50%,
+    var(--bg-tertiary) 75%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
@@ -852,7 +928,6 @@ html.theme-light .topbar {
 }
 
 @keyframes live-pulse {
-
   0%,
   100% {
     box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
@@ -901,7 +976,9 @@ html.theme-light .topbar {
 
 /* Smooth Colors */
 .transition-colors-smooth {
-  transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Loading Bar Animations */
@@ -921,7 +998,6 @@ html.theme-light .topbar {
 
 /* Pulse with scale */
 @keyframes pulse-scale {
-
   0%,
   100% {
     transform: scale(1);
@@ -983,7 +1059,6 @@ html.theme-light .topbar {
 }
 
 @keyframes pulse-subtle {
-
   0%,
   100% {
     opacity: 1;
@@ -1016,7 +1091,7 @@ select:focus {
 }
 
 /* Custom dropdown arrow animation */
-select:focus+.dropdown-arrow {
+select:focus + .dropdown-arrow {
   transform: translateY(-50%) rotate(180deg);
 }
 
@@ -1058,7 +1133,6 @@ select:focus+.dropdown-arrow {
 }
 
 @keyframes shield-pulse {
-
   0%,
   100% {
     transform: scale(1);
@@ -1072,7 +1146,6 @@ select:focus+.dropdown-arrow {
 }
 
 @keyframes pulse-glow {
-
   0%,
   100% {
     opacity: 0.15;
@@ -1167,12 +1240,12 @@ select:focus+.dropdown-arrow {
   }
 
   70% {
-    transform: scale(0.0);
+    transform: scale(0);
     opacity: 1;
   }
 
   100% {
-    transform: scale(0.0);
+    transform: scale(0);
     opacity: 1;
   }
 }
@@ -1216,4 +1289,261 @@ select:focus+.dropdown-arrow {
     stroke-dashoffset: 0;
     opacity: 0.5;
   }
+}
+
+/* =============================================
+   Light Mode Visibility Enhancements
+   ============================================= */
+
+/* Fix sidebar link visibility in light mode
+   Previous issue: White text on white background during hover/active states
+*/
+html.theme-light .sidebar-link:hover {
+  color: var(--color-primary-700) !important;
+  background: rgba(15, 23, 42, 0.05) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  transform: translateX(4px);
+}
+
+html.theme-light .sidebar-link.active {
+  color: var(--color-primary-800) !important;
+  background: rgba(37, 99, 235, 0.12) !important;
+  border-color: rgba(37, 99, 235, 0.25) !important;
+  box-shadow: inset 0 0 20px rgba(37, 99, 235, 0.08) !important;
+}
+
+/* Fix table row hover visibility in light mode
+   Previous issue: Background change was too subtle (white on white)
+*/
+html.theme-light .table tbody tr:hover td {
+  color: var(--text-primary) !important;
+  background: rgba(15, 23, 42, 0.03) !important;
+}
+
+/* Ensure minimal background for tables */
+html.theme-light .table-container {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+/* Enhance dropdown option visibility in light mode */
+html.theme-light select option {
+  background-color: #ffffff;
+  color: var(--text-primary);
+}
+
+/* =============================================
+   Light Mode Badge & Button Fixes
+   ============================================= */
+
+/* Fix MEDIUM severity badge visibility - was yellow on yellow */
+html.theme-light .severity-medium,
+html.theme-light [class*="border-yellow-400"][class*="bg-yellow"] {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+  border-color: #fbbf24 !important;
+}
+
+/* Fix status badges in light mode */
+html.theme-light [class*="border-emerald-400"][class*="bg-emerald"] {
+  background: #d1fae5 !important;
+  color: #065f46 !important;
+  border-color: #34d399 !important;
+}
+
+html.theme-light [class*="border-red-400"][class*="bg-red"] {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+  border-color: #f87171 !important;
+}
+
+html.theme-light [class*="border-orange-400"][class*="bg-orange"] {
+  background: #ffedd5 !important;
+  color: #9a3412 !important;
+  border-color: #fb923c !important;
+}
+
+html.theme-light [class*="border-sky-400"][class*="bg-sky"],
+html.theme-light [class*="border-sky-300"][class*="bg-sky"] {
+  background: #e0f2fe !important;
+  color: #075985 !important;
+  border-color: #38bdf8 !important;
+}
+
+html.theme-light [class*="border-violet-400"][class*="bg-violet"] {
+  background: #ede9fe !important;
+  color: #5b21b6 !important;
+  border-color: #a78bfa !important;
+}
+
+/* Fix "Run Correlation" button in /threats */
+html.theme-light button[class*="border-red-300"][class*="bg-red-100"] {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+  border-color: #f87171 !important;
+}
+
+html.theme-light button[class*="border-red-300"][class*="bg-red-100"]:hover {
+  background: #fecaca !important;
+  border-color: #ef4444 !important;
+}
+
+/* Fix "Threat Console" badge and similar badges */
+html.theme-light [class*="border-sky-600"][class*="bg-sky-100"] {
+  background: #dbeafe !important;
+  color: #1e3a8a !important;
+  border-color: #2563eb !important;
+}
+
+/* Fix action buttons with sky/blue tones */
+html.theme-light button[class*="bg-sky-100"],
+html.theme-light a[class*="bg-sky-100"] {
+  background: #dbeafe !important;
+  color: #1e40af !important;
+  border-color: #60a5fa !important;
+}
+
+html.theme-light button[class*="bg-sky-100"]:hover,
+html.theme-light a[class*="bg-sky-100"]:hover {
+  background: #bfdbfe !important;
+  border-color: #3b82f6 !important;
+}
+
+/* Fix "Revive now" and similar action buttons in dashboard */
+html.theme-light button[class*="bg-red-600"],
+html.theme-light a[class*="bg-red-600"] {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border-color: #b91c1c !important;
+}
+
+html.theme-light button[class*="bg-red-600"]:hover,
+html.theme-light a[class*="bg-red-600"]:hover {
+  background: #b91c1c !important;
+  border-color: #991b1b !important;
+}
+
+/* Fix priority/hot badges */
+html.theme-light [class*="bg-red-600"][class*="text-white"] {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+}
+
+/* Fix amber/yellow warning badges */
+html.theme-light [class*="border-amber-300"][class*="bg-amber-100"] {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+  border-color: #fbbf24 !important;
+}
+
+/* Fix text visibility on colored backgrounds */
+html.theme-light [class*="text-red-700"],
+html.theme-light [class*="text-red-800"],
+html.theme-light [class*="text-red-900"] {
+  color: #991b1b !important;
+}
+
+html.theme-light [class*="text-orange-700"],
+html.theme-light [class*="text-orange-800"],
+html.theme-light [class*="text-orange-900"] {
+  color: #9a3412 !important;
+}
+
+html.theme-light [class*="text-yellow-700"],
+html.theme-light [class*="text-yellow-800"],
+html.theme-light [class*="text-yellow-900"] {
+  color: #92400e !important;
+}
+
+html.theme-light [class*="text-emerald-700"],
+html.theme-light [class*="text-emerald-800"],
+html.theme-light [class*="text-emerald-900"] {
+  color: #065f46 !important;
+}
+
+html.theme-light [class*="text-sky-700"],
+html.theme-light [class*="text-sky-800"],
+html.theme-light [class*="text-sky-900"] {
+  color: #075985 !important;
+}
+
+/* Fix CVE list items and threat indicators */
+html.theme-light [class*="border-[var(--border-color)]"][class*="bg-[var(--bg-card)]"] {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+/* Fix hover states on cards */
+html.theme-light [class*="hover:bg-[var(--bg-elevated)]"]:hover {
+  background: rgba(241, 245, 249, 0.8) !important;
+}
+
+/* Fix input and select backgrounds in light mode */
+html.theme-light input[class*="bg-[var(--bg-secondary)]"],
+html.theme-light select[class*="bg-[var(--bg-secondary)]"],
+html.theme-light textarea[class*="bg-[var(--bg-secondary)]"] {
+  background: #f8fafc !important;
+  border-color: rgba(15, 23, 42, 0.15) !important;
+  color: #0f172a !important;
+}
+
+html.theme-light input[class*="bg-[var(--bg-tertiary)]"],
+html.theme-light select[class*="bg-[var(--bg-tertiary)]"],
+html.theme-light textarea[class*="bg-[var(--bg-tertiary)]"] {
+  background: #f1f5f9 !important;
+  border-color: rgba(15, 23, 42, 0.15) !important;
+  color: #0f172a !important;
+}
+
+/* Fix placeholder text visibility */
+html.theme-light input::placeholder,
+html.theme-light textarea::placeholder {
+  color: #64748b !important;
+  opacity: 1 !important;
+}
+
+/* Fix button backgrounds in light mode */
+html.theme-light button[class*="bg-[var(--bg-tertiary)]"] {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.15) !important;
+}
+
+html.theme-light button[class*="bg-[var(--bg-tertiary)]"]:hover {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* Fix section backgrounds */
+html.theme-light section[class*="bg-[var(--bg-card)]"] {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+/* Fix article/card backgrounds */
+html.theme-light article[class*="bg-[var(--bg-card)]"] {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+/* Fix divider visibility */
+html.theme-light [class*="divide-[var(--border-color)]"] > * + * {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+html.theme-light [class*="border-[var(--border-color)]"] {
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+/* Fix muted text visibility */
+html.theme-light [class*="text-[var(--text-muted)]"] {
+  color: #64748b !important;
+}
+
+html.theme-light [class*="text-[var(--text-secondary)]"] {
+  color: #475569 !important;
+}
+
+html.theme-light [class*="text-[var(--text-primary)]"] {
+  color: #0f172a !important;
 }
