@@ -1543,45 +1543,338 @@ function IntegrationsSection() {
 
 // API Access Section
 function APIAccessSection() {
+    type MainOfficerProductKeyRecord = {
+        id: string;
+        codePrefix: string;
+        targetRole: string;
+        expiresAt: string;
+        revokedAt: string | null;
+        createdAt: string;
+        activationCount: number;
+        isExpired: boolean;
+        createdBy: {
+            name: string | null;
+            email: string;
+        };
+    };
+
+    type UserProductKeyState = {
+        role: string;
+        isActive: boolean;
+        activation?: {
+            activatedAt: string;
+            productKey: {
+                codePrefix: string;
+                targetRole: string;
+                expiresAt: string;
+            };
+        } | null;
+    };
+
+    const { data: session } = useSession();
+    const { showToast } = useUiFeedback();
+    const isMainOfficer = session?.user?.role === MAIN_OFFICER_ROLE;
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [productKey, setProductKey] = useState("");
+    const [expiryInput, setExpiryInput] = useState(() => {
+        const nextDay = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        const localIso = new Date(nextDay.getTime() - nextDay.getTimezoneOffset() * 60000).toISOString();
+        return localIso.slice(0, 16);
+    });
+    const [targetRole, setTargetRole] = useState<"ANALYST" | "IT_OFFICER" | "PENTESTER">("ANALYST");
+    const [lastGenerated, setLastGenerated] = useState<string | null>(null);
+    const [mainOfficerKeys, setMainOfficerKeys] = useState<MainOfficerProductKeyRecord[]>([]);
+    const [userAccessState, setUserAccessState] = useState<UserProductKeyState | null>(null);
+
+    const loadProductKeys = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const response = await fetch("/api/product-keys", { cache: "no-store" });
+            const data = await response.json() as
+                | { mode: "MAIN_OFFICER"; keys: MainOfficerProductKeyRecord[] }
+                | (UserProductKeyState & { mode: "USER" })
+                | { error?: string };
+
+            if (!response.ok) {
+                showToast({
+                    title: "Product key",
+                    description: typeof (data as { error?: unknown }).error === "string" ? (data as { error: string }).error : "Failed to load product key data.",
+                    intent: "error",
+                });
+                return;
+            }
+
+            if ((data as { mode?: string }).mode === "MAIN_OFFICER") {
+                const parsed = data as { mode: "MAIN_OFFICER"; keys: MainOfficerProductKeyRecord[] };
+                setMainOfficerKeys(parsed.keys);
+                setUserAccessState(null);
+                return;
+            }
+
+            const parsed = data as UserProductKeyState & { mode: "USER" };
+            setUserAccessState({
+                role: parsed.role,
+                isActive: parsed.isActive,
+                activation: parsed.activation ?? null,
+            });
+            setMainOfficerKeys([]);
+        } catch {
+            showToast({
+                title: "Product key",
+                description: "Failed to load product key data.",
+                intent: "error",
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [showToast]);
+
+    useEffect(() => {
+        void loadProductKeys();
+    }, [loadProductKeys]);
+
+    const handleGenerateKey = async () => {
+        if (!expiryInput) {
+            showToast({
+                title: "Missing expiry date",
+                description: "Select an expiry date and time.",
+                intent: "error",
+            });
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const expiresAtIso = new Date(expiryInput).toISOString();
+            const response = await fetch("/api/product-keys", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    targetRole,
+                    expiresAt: expiresAtIso,
+                }),
+            });
+            const data = await response.json() as { productKey?: string; error?: string };
+
+            if (!response.ok || !data.productKey) {
+                showToast({
+                    title: "Key generation failed",
+                    description: data.error || "Unable to generate product key.",
+                    intent: "error",
+                });
+                return;
+            }
+
+            setLastGenerated(data.productKey);
+            showToast({
+                title: "Product key generated",
+                description: `Generated for ${targetRole}. Share it securely.`,
+                intent: "success",
+            });
+            await loadProductKeys();
+        } catch {
+            showToast({
+                title: "Key generation failed",
+                description: "Unable to generate product key.",
+                intent: "error",
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleActivateKey = async () => {
+        if (!productKey.trim()) {
+            showToast({
+                title: "Missing key",
+                description: "Enter the product key to activate access.",
+                intent: "error",
+            });
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const response = await fetch("/api/product-keys/activate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ productKey: productKey.trim().toUpperCase() }),
+            });
+            const data = await response.json() as { error?: string };
+            if (!response.ok) {
+                showToast({
+                    title: "Activation failed",
+                    description: data.error || "Unable to activate product key.",
+                    intent: "error",
+                });
+                return;
+            }
+
+            setProductKey("");
+            showToast({
+                title: "Product key activated",
+                description: "Feature access is now enabled for your role.",
+                intent: "success",
+            });
+            await loadProductKeys();
+        } catch {
+            showToast({
+                title: "Activation failed",
+                description: "Unable to activate product key.",
+                intent: "error",
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     return (
-        <Card title="API Access" subtitle="Manage API keys and access tokens">
+        <Card title="Product Keys" subtitle="License-based access control for non-main-officer roles">
             <div className="space-y-6">
-                <p className="text-sm text-[var(--text-muted)] p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
-                    Configured via ENV variables. Check System Health for status.
-                </p>
-                <div className="p-4 rounded-lg bg-[var(--bg-tertiary)]">
-                    <h4 className="text-sm font-medium text-[var(--text-primary)] mb-3">API Keys</h4>
-                    <div className="space-y-3">
-                        {[
-                            { name: "Production API Key", created: "Jan 1, 2024", lastUsed: "Today" },
-                            { name: "Development Key", created: "Dec 15, 2023", lastUsed: "3 days ago" },
-                        ].map((key) => (
-                            <div
-                                key={key.name}
-                                className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-elevated)]"
-                            >
-                                <div>
-                                    <p className="text-sm text-[var(--text-primary)]">{key.name}</p>
-                                    <p className="text-xs text-[var(--text-muted)]">
-                                        Created: {key.created} • Last used: {key.lastUsed}
+                {isMainOfficer ? (
+                    <>
+                        <div className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
+                            MAIN_OFFICER can generate product keys for `ANALYST`, `IT_OFFICER`, and `PENTESTER`.
+                        </div>
+
+                        <div className="grid gap-4 rounded-lg bg-[var(--bg-tertiary)] p-4 md:grid-cols-3">
+                            <div>
+                                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                                    Target Role
+                                </label>
+                                <select
+                                    value={targetRole}
+                                    onChange={(event) => setTargetRole(event.target.value as "ANALYST" | "IT_OFFICER" | "PENTESTER")}
+                                    className="input"
+                                >
+                                    <option value="ANALYST">ANALYST</option>
+                                    <option value="IT_OFFICER">IT_OFFICER</option>
+                                    <option value="PENTESTER">PENTESTER</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                                    Expiry Date
+                                </label>
+                                <input
+                                    type="datetime-local"
+                                    value={expiryInput}
+                                    onChange={(event) => setExpiryInput(event.target.value)}
+                                    className="input"
+                                />
+                            </div>
+
+                            <div className="flex items-end">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        void handleGenerateKey();
+                                    }}
+                                    disabled={isSubmitting}
+                                    className="btn btn-primary w-full justify-center"
+                                >
+                                    <Key size={14} />
+                                    {isSubmitting ? "Generating..." : "Generate Key"}
+                                </button>
+                            </div>
+                        </div>
+
+                        {lastGenerated ? (
+                            <div className="rounded-lg border border-blue-400/30 bg-blue-500/10 p-4">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Generated Product Key</p>
+                                <p className="mt-2 font-mono text-sm text-[var(--text-primary)]">{lastGenerated}</p>
+                                <p className="mt-2 text-xs text-[var(--text-secondary)]">Copy and share this key securely. It is shown only once.</p>
+                            </div>
+                        ) : null}
+
+                        <div className="rounded-lg bg-[var(--bg-tertiary)] p-4">
+                            <h4 className="mb-3 text-sm font-medium text-[var(--text-primary)]">Issued Keys</h4>
+                            {isLoading ? (
+                                <p className="text-sm text-[var(--text-muted)]">Loading keys...</p>
+                            ) : mainOfficerKeys.length === 0 ? (
+                                <p className="text-sm text-[var(--text-muted)]">No product keys issued yet.</p>
+                            ) : (
+                                <div className="space-y-3">
+                                    {mainOfficerKeys.map((issuedKey) => (
+                                        <div key={issuedKey.id} className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-elevated)] p-3">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <p className="font-mono text-sm text-[var(--text-primary)]">{issuedKey.codePrefix}*******</p>
+                                                    <p className="mt-1 text-xs text-[var(--text-muted)]">
+                                                        Role: {issuedKey.targetRole} • Activations: {issuedKey.activationCount}
+                                                    </p>
+                                                </div>
+                                                <span
+                                                    className={cn(
+                                                        "rounded-full px-2 py-1 text-[10px] font-semibold uppercase",
+                                                        issuedKey.revokedAt
+                                                            ? "bg-red-500/15 text-red-700 dark:text-red-300"
+                                                            : issuedKey.isExpired
+                                                                ? "bg-orange-500/15 text-orange-700 dark:text-orange-300"
+                                                                : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+                                                    )}
+                                                >
+                                                    {issuedKey.revokedAt ? "Revoked" : issuedKey.isExpired ? "Expired" : "Active"}
+                                                </span>
+                                            </div>
+                                            <p className="mt-2 text-xs text-[var(--text-muted)]">
+                                                Expires: {new Date(issuedKey.expiresAt).toLocaleString()} • Created: {new Date(issuedKey.createdAt).toLocaleString()}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </>
+                ) : (
+                    <div className="space-y-4">
+                        <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+                            Your role requires an active product key before using platform features.
+                        </div>
+
+                        <div className="rounded-lg bg-[var(--bg-tertiary)] p-4">
+                            <h4 className="mb-3 text-sm font-medium text-[var(--text-primary)]">Activation Status</h4>
+                            {isLoading ? (
+                                <p className="text-sm text-[var(--text-muted)]">Checking status...</p>
+                            ) : userAccessState?.isActive ? (
+                                <div className="space-y-1 text-sm text-emerald-700 dark:text-emerald-300">
+                                    <p>Active for role: {userAccessState.role}</p>
+                                    <p className="text-xs text-[var(--text-secondary)]">
+                                        Expires on {userAccessState.activation?.productKey?.expiresAt ? new Date(userAccessState.activation.productKey.expiresAt).toLocaleString() : "N/A"}
                                     </p>
                                 </div>
-                                <div className="flex gap-2">
-                                    <button className="btn btn-ghost text-xs py-1" disabled>
-                                        Reveal
-                                    </button>
-                                    <button className="btn btn-ghost text-xs py-1 text-intent-danger" disabled>
-                                        Revoke
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
+                            ) : (
+                                <p className="text-sm text-[var(--text-muted)]">No active key found for your role.</p>
+                            )}
+                        </div>
+
+                        <div className="rounded-lg bg-[var(--bg-tertiary)] p-4">
+                            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                                Product Key
+                            </label>
+                            <input
+                                type="text"
+                                value={productKey}
+                                onChange={(event) => setProductKey(event.target.value)}
+                                className="input font-mono uppercase"
+                                placeholder="SYF-XXXX-XXXX-XXXX-XXXX-XXXX"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    void handleActivateKey();
+                                }}
+                                disabled={isSubmitting}
+                                className="btn btn-primary mt-3"
+                            >
+                                <Key size={14} />
+                                {isSubmitting ? "Activating..." : "Activate Key"}
+                            </button>
+                        </div>
                     </div>
-                    <button className="btn btn-ghost mt-3" disabled>
-                        <Key size={14} />
-                        Generate New Key (Coming soon)
-                    </button>
-                </div>
+                )}
             </div>
         </Card>
     );
