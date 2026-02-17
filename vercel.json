@@ -1,12 +1,5 @@
 {
   "buildCommand": "prisma generate && next build",
   "installCommand": "npm ci",
-  "framework": "nextjs",
-  "regions": ["iad1"],
-  "env": {
-    "DATABASE_URL": "@database_url",
-    "AUTH_SECRET": "@auth_secret",
-    "NEXTAUTH_SECRET": "@nextauth_secret",
-    "NEXTAUTH_URL": "@nextauth_url"
-  }
+  "framework": "nextjs"
 }
