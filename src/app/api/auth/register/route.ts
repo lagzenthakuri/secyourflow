@@ -11,25 +11,19 @@ const registerSchema = z.object({
 
 /**
  * Check if public registration is allowed
- * SECURITY: Public registration is DISABLED in production for banking-grade security
+ * Public registration is only allowed when explicitly enabled via env var.
  */
 function isPublicRegistrationAllowed(): boolean {
-    // In production, public registration is ALWAYS disabled
-    if (process.env.NODE_ENV === "production") {
-        return false;
-    }
-    
-    // In development/testing, check environment variable
+    // Explicit opt-in across all environments
     return process.env.ALLOW_PUBLIC_REGISTRATION === "true";
 }
 
 export async function POST(req: Request) {
     try {
-        // SECURITY: Block public registration in production
         if (!isPublicRegistrationAllowed()) {
             return NextResponse.json(
                 { 
-                    error: "Public registration is disabled. Please contact your administrator for an invitation.",
+                    error: "Public registration is disabled.",
                     code: "REGISTRATION_DISABLED"
                 },
                 { status: 403 },

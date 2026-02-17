@@ -19,44 +19,8 @@ type RefreshableToken = Record<string, unknown> & {
 };
 
 async function refreshAccessToken(token: RefreshableToken): Promise<RefreshableToken> {
-    try {
-        const url = "https://oauth2.googleapis.com/token";
-        if (token.provider === "google") {
-            const response = await fetch(url, {
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: new URLSearchParams({
-                    client_id: process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID || "",
-                    client_secret: process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET || "",
-                    grant_type: "refresh_token",
-                    refresh_token: typeof token.refreshToken === "string" ? token.refreshToken : "",
-                }),
-                method: "POST",
-            });
-
-            const refreshedTokens = await response.json();
-
-            if (!response.ok) {
-                throw refreshedTokens;
-            }
-
-            return {
-                ...token,
-                accessToken: refreshedTokens.access_token,
-                expiresAt: Date.now() + refreshedTokens.expires_in * 1000,
-                // Fall back to old refresh token, but use the new one if provided
-                refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
-            };
-        }
-
-        // Add other providers if needed (GitHub usually doesn't need refresh or doesn't provide refresh_token)
-        return token;
-    } catch (error) {
-        console.error("Error refreshing access token", error);
-        return {
-            ...token,
-            error: "RefreshAccessTokenError",
-        };
-    }
+    // No refresh flow is configured for current OAuth providers.
+    return token;
 }
 
 const authSecret =
