@@ -50,8 +50,9 @@ const nextConfig: NextConfig = {
   // Enable compression
   compress: true,
 
-  // Standalone output for Docker
-  output: "standalone",
+  // Standalone output for Docker (disabled for Vercel)
+  // Uncomment for Docker deployments
+  // output: "standalone",
 
   poweredByHeader: false,
 
