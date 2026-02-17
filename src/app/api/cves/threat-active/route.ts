@@ -10,11 +10,14 @@ export const revalidate = 0;
 
 const CISA_KEV_URL =
   "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json";
+const EPSS_API_URL = "https://api.first.org/data/v1/epss";
 const TOP_N_RESULTS = 10;
 const RECENT_DAYS_THRESHOLD = 90;
 const BATCH_SIZE = 15;
 const CACHE_TTL_MS = 5 * 60_000;
-const MIN_CVSS_SCORE = 7.0;
+const TRENDING_KEV_RECENCY_DAYS = 21;
+const TRENDING_EPSS_PERCENTILE_THRESHOLD = 85;
+const TRENDING_CVSS_THRESHOLD = 9.0;
 const CRITICAL_ZERO_DAY_THRESHOLD = 9.0;
 
 const kevFeedSchema = z
@@ -59,6 +62,9 @@ interface ThreatActiveItem {
   cvssScore: number;
   dateAdded: string;
   link: string;
+  epssScore: number;
+  epssPercentile: number;
+  trendScore: number;
 }
 
 interface ThreatActiveCacheEntry {
@@ -108,6 +114,108 @@ function buildProductSummary(
   }
   
   return parts.length > 0 ? parts.join(" - ") : "Unknown Product";
+}
+
+interface EpssData {
+  epss: number;
+  percentile: number;
+}
+
+async function fetchEpssBatch(cveIds: string[]): Promise<Map<string, EpssData>> {
+  const result = new Map<string, EpssData>();
+  
+  if (cveIds.length === 0) {
+    return result;
+  }
+
+  try {
+    const cveList = cveIds.join(",");
+    const url = `${EPSS_API_URL}?cve=${cveList}`;
+    
+    const response = await fetch(url, {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      console.warn(`EPSS API returned ${response.status}, using defaults`);
+      return result;
+    }
+
+    const payload = await response.json();
+    
+    if (payload?.data && Array.isArray(payload.data)) {
+      for (const entry of payload.data) {
+        if (entry.cve && typeof entry.epss === "string" && typeof entry.percentile === "string") {
+          const epssScore = parseFloat(entry.epss);
+          const percentile = parseFloat(entry.percentile) * 100; // Convert to 0-100 scale
+          
+          if (!isNaN(epssScore) && !isNaN(percentile)) {
+            result.set(entry.cve.toUpperCase(), {
+              epss: epssScore,
+              percentile,
+            });
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.warn("EPSS batch fetch failed, using defaults:", error);
+  }
+
+  return result;
+}
+
+function computeTrendScore(
+  cvssScore: number,
+  epssPercentile: number,
+  dateAddedMs: number
+): number {
+  const now = Date.now();
+  const daysSinceKev = Math.floor((now - dateAddedMs) / (24 * 60 * 60 * 1000));
+  
+  let recencyScore = 0;
+  if (daysSinceKev <= 7) {
+    recencyScore = 100;
+  } else if (daysSinceKev <= 30) {
+    recencyScore = 70;
+  } else if (daysSinceKev <= 90) {
+    recencyScore = 40;
+  } else {
+    recencyScore = 10;
+  }
+  
+  // Weighted formula: CVSS (35%), EPSS percentile (45%), Recency (20%)
+  return (cvssScore * 10 * 0.35) + (epssPercentile * 0.45) + (recencyScore * 0.20);
+}
+
+function isTrendingCve(
+  cvssScore: number,
+  epssPercentile: number,
+  dateAddedMs: number
+): boolean {
+  const now = Date.now();
+  const daysSinceKevAdded = Math.floor((now - dateAddedMs) / (24 * 60 * 60 * 1000));
+  
+  // Mandatory KEV recency gate: must be added within last 90 days
+  if (daysSinceKevAdded > 90) {
+    return false;
+  }
+  
+  // Must meet at least ONE of these trending criteria:
+  // 1. High EPSS percentile (>= 85th percentile)
+  // 2. Critical CVSS score (>= 9.0)
+  // 3. Recently added to KEV (<= 21 days)
+  const passesTrending =
+    epssPercentile >= TRENDING_EPSS_PERCENTILE_THRESHOLD ||
+    cvssScore >= TRENDING_CVSS_THRESHOLD ||
+    daysSinceKevAdded <= TRENDING_KEV_RECENCY_DAYS;
+  
+  // Final rule: in KEV (implicit) AND passes trending AND within 90 days
+  return passesTrending && daysSinceKevAdded <= 90;
 }
 
 function isRecentCve(cveId: string, dateAdded: string | undefined, cvssScore: number): boolean {
@@ -168,7 +276,7 @@ async function fetchThreatActiveCriticalCves(): Promise<Omit<ThreatActiveCacheEn
       return parseDateToMs(b.dateAdded) - parseDateToMs(a.dateAdded);
     });
 
-  // Step 2: Fetch NVD details and filter by recency + CVSS
+  // Step 2: Fetch NVD details and EPSS data, filter by trending criteria
   const config = getCveSearchConfig();
   const nvdAdapter = new NvdAdapter({
     config: {
@@ -184,15 +292,17 @@ async function fetchThreatActiveCriticalCves(): Promise<Omit<ThreatActiveCacheEn
     },
   });
 
-  const rankedItems: Array<ThreatActiveItem & { cvss: number; dateAddedMs: number }> = [];
+  const rankedItems: Array<ThreatActiveItem & { dateAddedMs: number }> = [];
   const seen = new Set<string>();
   let processedCount = 0;
 
-  // Process in batches until we have TOP_N_RESULTS or exhaust candidates
+  // Process in batches until we have enough candidates
   for (let index = 0; index < allCandidates.length && rankedItems.length < TOP_N_RESULTS * 3; index += BATCH_SIZE) {
     const batch = allCandidates.slice(index, index + BATCH_SIZE);
+    const batchCveIds = batch.map((entry) => entry.cveId);
 
-    const resolved = await Promise.all(
+    // Fetch NVD details for batch
+    const nvdResolved = await Promise.all(
       batch.map(async (entry) => {
         try {
           const detail = await nvdAdapter.getById(entry.cveId);
@@ -200,47 +310,59 @@ async function fetchThreatActiveCriticalCves(): Promise<Omit<ThreatActiveCacheEn
             return null;
           }
 
-          const cvssScore = detail.cve.cvss.baseScore;
-
-          // Filter: Must meet minimum CVSS OR be recent/critical
-          if (cvssScore < MIN_CVSS_SCORE && !isRecentCve(entry.cveId, entry.dateAdded, cvssScore)) {
-            return null;
-          }
-
-          // Filter: Must be recent (last 90 days) OR 2025+ OR critical zero-day
-          if (!isRecentCve(entry.cveId, entry.dateAdded, cvssScore)) {
-            return null;
-          }
-
-          const productSummary = buildProductSummary(
-            entry.product,
-            entry.vendorProject,
-            entry.shortDescription
-          );
-
           return {
             cveId: entry.cveId,
-            name: pickName(entry.vulnerabilityName, detail.cve.title, detail.cve.description),
-            productSummary,
-            cvssScore,
-            dateAdded: entry.dateAdded || "Unknown",
-            link: `https://nvd.nist.gov/vuln/detail/${entry.cveId}`,
-            cvss: cvssScore,
-            dateAddedMs: parseDateToMs(entry.dateAdded),
-          } satisfies ThreatActiveItem & { cvss: number; dateAddedMs: number };
+            cvssScore: detail.cve.cvss.baseScore,
+            title: detail.cve.title,
+            description: detail.cve.description,
+            entry,
+          };
         } catch {
           return null;
         }
       }),
     );
 
-    for (const item of resolved) {
-      if (!item || seen.has(item.cveId)) {
+    // Fetch EPSS data for batch
+    const epssMap = await fetchEpssBatch(batchCveIds);
+
+    // Combine NVD + EPSS and apply trending filter
+    for (const nvdData of nvdResolved) {
+      if (!nvdData || seen.has(nvdData.cveId)) {
         continue;
       }
 
-      seen.add(item.cveId);
-      rankedItems.push(item);
+      // Ensure EPSS defaults are always set (never undefined or null)
+      const epssData = epssMap.get(nvdData.cveId);
+      const epssScore = epssData?.epss ?? 0;
+      const epssPercentile = epssData?.percentile ?? 0;
+      const dateAddedMs = parseDateToMs(nvdData.entry.dateAdded);
+
+      // Apply trending filter: must pass 90-day KEV recency gate and trending criteria
+      if (!isTrendingCve(nvdData.cvssScore, epssPercentile, dateAddedMs)) {
+        continue;
+      }
+
+      const trendScore = computeTrendScore(nvdData.cvssScore, epssPercentile, dateAddedMs);
+      const productSummary = buildProductSummary(
+        nvdData.entry.product,
+        nvdData.entry.vendorProject,
+        nvdData.entry.shortDescription
+      );
+
+      seen.add(nvdData.cveId);
+      rankedItems.push({
+        cveId: nvdData.cveId,
+        name: pickName(nvdData.entry.vulnerabilityName, nvdData.title, nvdData.description),
+        productSummary,
+        cvssScore: nvdData.cvssScore,
+        dateAdded: nvdData.entry.dateAdded || "Unknown",
+        link: `https://nvd.nist.gov/vuln/detail/${nvdData.cveId}`,
+        epssScore,
+        epssPercentile,
+        trendScore,
+        dateAddedMs,
+      });
     }
 
     processedCount += batch.length;
@@ -251,15 +373,20 @@ async function fetchThreatActiveCriticalCves(): Promise<Omit<ThreatActiveCacheEn
     }
   }
 
-  // Step 3: Sort by severity (Critical/High CVSS first), then by dateAdded
+  // Step 3: Sort by trend score (highest first), then EPSS percentile, then CVSS
   rankedItems.sort((a, b) => {
-    // Primary: CVSS score DESCENDING (highest severity first)
-    const cvssWeight = b.cvss - a.cvss;
-    if (Math.abs(cvssWeight) > 0.1) {
-      return cvssWeight;
+    // Primary: Trend score DESCENDING
+    const trendDiff = b.trendScore - a.trendScore;
+    if (Math.abs(trendDiff) > 0.01) {
+      return trendDiff;
     }
-    // Secondary: dateAdded DESCENDING (newest first)
-    return b.dateAddedMs - a.dateAddedMs;
+    // Secondary: EPSS percentile DESCENDING
+    const epssDiff = b.epssPercentile - a.epssPercentile;
+    if (Math.abs(epssDiff) > 0.01) {
+      return epssDiff;
+    }
+    // Tertiary: CVSS score DESCENDING
+    return b.cvssScore - a.cvssScore;
   });
 
   // Step 4: Take TOP 10
@@ -270,6 +397,9 @@ async function fetchThreatActiveCriticalCves(): Promise<Omit<ThreatActiveCacheEn
     cvssScore: item.cvssScore,
     dateAdded: item.dateAdded,
     link: item.link,
+    epssScore: item.epssScore,
+    epssPercentile: item.epssPercentile,
+    trendScore: item.trendScore,
   }));
 
   return {
@@ -306,8 +436,8 @@ export async function GET(request: Request) {
     const result = await getThreatActiveCriticalCves();
 
     const displayTitle = result.data.length > 0
-      ? `Top ${result.data.length} Actively Exploited CVEs`
-      : "0 Active - No recent threat-active CVEs in results";
+      ? `Top ${result.data.length} Trending Exploited CVEs`
+      : "0 Active - No trending threat-active CVEs in results";
 
     return jsonResponse({
       meta: {
@@ -318,8 +448,8 @@ export async function GET(request: Request) {
         count: result.data.length,
         displayTitle,
         description: result.data.length > 0
-          ? `Showing ${result.data.length} most recent CISA KEV entries (last ${RECENT_DAYS_THRESHOLD} days preferred, sorted by severity)`
-          : "No recent threat-active CVEs found matching criteria (last 90 days, CVSS >= 7.0, or 2025+ critical)",
+          ? `Showing ${result.data.length} highest trending CISA KEV entries (ranked by EPSS, CVSS, and recency)`
+          : "No trending threat-active CVEs found (requires high EPSS percentile, critical CVSS, or recent KEV addition)",
       },
       data: result.data,
     });

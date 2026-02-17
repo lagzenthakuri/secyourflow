@@ -1,91 +1,110 @@
+<div align="center">
+
 # SecYourFlow
 
-SecYourFlow consolidates security posture signals from scanners, CVE feeds, and compliance frameworks into a single platform so teams can quickly answer:
+**Unified Security Posture Management Platform**
 
-* What assets are exposed and most critical?
-* What vulnerabilities are actively exploited and should be prioritized now?
-* Which compliance controls are impacted (ISO 27001, NIST, PCI, etc.)?
-* What actions reduce business risk fastest?
+Consolidate security signals from scanners, CVE feeds, and compliance frameworks into actionable intelligence
 
 ---
 
-## Core Capabilities
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=for-the-badge&logo=postgresql)](https://www.postgresql.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?style=for-the-badge&logo=prisma)](https://www.prisma.io/)
 
-### 1. Asset Inventory
-
-* Centralized inventory for servers, applications, domains, and cloud resources
-* Asset criticality scoring and exposure classification
-* Environment tagging (production, staging, internal, etc.)
-
-### 2. Vulnerability Management
-
-* Import findings from scanners such as Nessus, OpenVAS, Nmap, and Trivy
-* Normalize scanner outputs into a unified vulnerability model
-* De-duplicate and track remediation lifecycle
-
-### 3. Threat Context
-
-CVE enrichment including:
-
-* EPSS exploit probability
-* Known exploited vulnerability indicators (e.g., CISA KEV)
-* Source references and publication timelines
-
-### 4. Risk Scoring
-
-Composite risk scoring based on:
-
-* CVSS severity
-* Asset criticality
-* Exposure context
-* Threat signals (EPSS, KEV, exploitation status)
-
-### 5. Compliance Mapping
-
-* Map vulnerabilities and risks to compliance frameworks:
-
-  * ISO 27001
-  * NIST
-  * PCI DSS
-* Identify control coverage gaps
-* Generate audit-ready compliance reporting
-
-### 6. Executive Dashboard
-
-* Clear visibility into exposed, exploited, and non-compliant assets
-* Risk trend analysis
-* Prioritized remediation views
-* Business-focused reporting
+</div>
 
 ---
 
-## Tech Stack
+## What is SecYourFlow?
 
-### Frontend
+SecYourFlow empowers security teams to make data-driven decisions by providing clear answers to critical questions:
 
-* Next.js + React + TypeScript
-* TailwindCSS (or internal component system)
-* Recharts or Chart.js
-* Fully responsive (desktop + mobile)
+```
+→ What assets are exposed and most critical?
+→ Which vulnerabilities are actively exploited and require immediate attention?
+→ How do current risks affect compliance frameworks (ISO 27001, NIST, PCI DSS)?
+→ What actions will reduce business risk most effectively?
+```
 
-### Backend
+---
 
-* Next.js API routes
-* REST-style APIs
-* Authentication: NextAuth.js (JWT strategy) + RBAC
+## Key Features
 
-### Database and Cache
+### Asset Inventory
+Centralized inventory management for comprehensive asset visibility across your infrastructure.
 
-* PostgreSQL (system of record) + Prisma ORM
-* Redis (optional: caching and computed risk scoring)
+- Servers, applications, domains, and cloud resources
+- Asset criticality scoring and exposure classification
+- Environment tagging (production, staging, internal)
 
-### Security Data Sources
+### Vulnerability Management
+Unified vulnerability tracking across multiple security scanners.
 
-* NVD CVE feeds
-* EPSS
-* CISA KEV
-* MITRE CVE Program API
-* Scanner JSON imports and manual findings
+- Import from Nessus, OpenVAS, Nmap, Trivy, and more
+- Normalized vulnerability model for consistent analysis
+- De-duplication and remediation lifecycle tracking
+
+### Threat Intelligence
+Real-time CVE enrichment with actionable threat context.
+
+- EPSS exploit probability scoring
+- CISA KEV integration for known exploited vulnerabilities
+- Source references and publication timelines
+
+### Risk Scoring
+Intelligent composite risk assessment based on multiple factors.
+
+- CVSS severity analysis
+- Asset criticality weighting
+- Exposure context evaluation
+- Threat signal integration (EPSS, KEV, exploitation status)
+
+### Compliance Mapping
+Framework alignment and automated gap analysis.
+
+- ISO 27001, NIST, PCI DSS support
+- Automated control coverage mapping
+- Audit-ready compliance reporting
+
+### Executive Dashboard
+Business-focused security insights for leadership.
+
+- Real-time exposure and exploitation visibility
+- Risk trend analysis and forecasting
+- Prioritized remediation recommendations
+
+---
+
+## Technology Stack
+
+**Frontend**
+- Next.js 15 with React 19
+- TypeScript for type safety
+- TailwindCSS for styling
+- Recharts for data visualization
+- Fully responsive design
+
+**Backend**
+- Next.js API Routes
+- RESTful API architecture
+- NextAuth.js with JWT authentication
+- Role-Based Access Control (RBAC)
+- Comprehensive audit logging
+
+**Data Layer**
+- PostgreSQL 16 as primary database
+- Prisma ORM for type-safe queries
+- Redis for caching and performance
+- Real-time data synchronization
+
+**Security Data Sources**
+- NVD CVE Feeds
+- EPSS (Exploit Prediction Scoring System)
+- CISA KEV (Known Exploited Vulnerabilities)
+- MITRE CVE Program API
+- Scanner integrations (JSON import + manual findings)
 
 ---
 
@@ -93,79 +112,84 @@ Composite risk scoring based on:
 
 ### Prerequisites
 
-* Node.js 20+
-* PostgreSQL
-* Optional: Redis
+Before you begin, ensure you have:
 
-### Setup
+- Node.js 20 or higher
+- PostgreSQL 16 or higher
+- Redis (optional, recommended for production)
 
-1. Clone the repository
+### Installation
+
+Clone the repository:
 
 ```bash
-git clone https://github.com/lagzenthakuri/secyourflow.git
+git clone <repository-url>
 cd secyourflow
 ```
 
-2. Install dependencies
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-3. Create environment file
+Configure environment variables:
 
 ```bash
 cp .env.example .env.local
 ```
 
-4. Configure `.env.local` (see Environment Variables section)
+Edit `.env.local` with your configuration settings.
 
-5. Generate Prisma client
+Initialize the database:
 
 ```bash
+# Generate Prisma client
 npx prisma generate
-```
 
-6. Apply database migrations
-
-```bash
+# Apply database migrations
 npx prisma migrate deploy
-```
 
-7. Optional: Seed database
-
-```bash
+# Seed database with initial data (optional)
 npx prisma db seed
 ```
 
-8. Start development server
+Start the development server:
 
 ```bash
 npm run dev
 ```
 
-Application runs at:
-[http://localhost:3000](http://localhost:3000)
+Open your browser and navigate to `http://localhost:3000`
 
 ---
 
-## Environment Variables
+## Configuration
 
-Minimum required:
+### Required Environment Variables
 
-* AUTH_SECRET
-* NEXTAUTH_URL
-* DATABASE_URL
-* TOTP_ENCRYPTION_KEY
+| Variable | Description |
+|----------|-------------|
+| `AUTH_SECRET` | Secret key for JWT token signing |
+| `NEXTAUTH_URL` | Application URL (e.g., http://localhost:3000) |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `TOTP_ENCRYPTION_KEY` | Encryption key for 2FA secrets |
 
-Optional:
+### Optional Environment Variables
 
-* REDIS_URL
-* REAL_API_TESTS
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `REDIS_URL` | Redis connection string for caching | - |
+| `REAL_API_TESTS` | Enable real API testing | `false` |
 
-Testing mode:
+### Example Configuration
 
 ```env
+AUTH_SECRET=your-secret-key-here
+NEXTAUTH_URL=http://localhost:3000
+DATABASE_URL=postgresql://user:password@localhost:5432/secyourflow
+TOTP_ENCRYPTION_KEY=your-encryption-key-here
+REDIS_URL=redis://localhost:6379
 REAL_API_TESTS=false
 ```
 
@@ -173,33 +197,42 @@ REAL_API_TESTS=false
 
 ## Security Architecture
 
-* Authentication: NextAuth.js (JWT strategy)
-* Role-Based Access Control (RBAC)
+SecYourFlow implements enterprise-grade security controls to protect your data and operations.
 
-Example roles:
+### Authentication & Authorization
 
-* IT_OFFICER — asset and infrastructure management
-* PENTESTER — vulnerability assessment and testing
-* ANALYST — risk analysis and reporting
-* MAIN_OFFICER — executive oversight
+- NextAuth.js with JWT strategy
+- Role-Based Access Control (RBAC) with granular permissions
+- Two-Factor Authentication (2FA/TOTP) with encrypted secrets at rest
 
-Additional controls:
+### Access Roles
 
-* 2FA/TOTP with encrypted secrets at rest
-* Audit logging for critical actions
-* Secure secret handling (no secrets in repository)
+| Role | Description |
+|------|-------------|
+| `MAIN_OFFICER` | Executive oversight with full system access |
+| `IT_OFFICER` | Asset and infrastructure management |
+| `PENTESTER` | Vulnerability assessment and penetration testing |
+| `ANALYST` | Risk analysis and security reporting |
+
+### Security Controls
+
+- Comprehensive audit logging for all critical actions
+- Secure secret handling (no credentials stored in repository)
+- Session management with automatic expiration
+- Input validation and sanitization across all endpoints
+- SQL injection prevention via Prisma ORM
 
 ---
 
 ## Testing
 
-Run unit and integration tests:
+Run the complete test suite:
 
 ```bash
 npm test
 ```
 
-Run integration tests against real APIs:
+Run integration tests with real API endpoints:
 
 ```bash
 REAL_API_TESTS=true npm test
@@ -209,20 +242,21 @@ REAL_API_TESTS=true npm test
 
 ## Deployment
 
-### Build
+### Standard Deployment
+
+Build the application for production:
 
 ```bash
 npm run build
 ```
 
-### Apply Migrations
+Apply database migrations:
 
 ```bash
 npx prisma migrate deploy
 ```
 
-
-### Start Production Server
+Start the production server:
 
 ```bash
 npm start
@@ -230,35 +264,68 @@ npm start
 
 ### Docker Deployment
 
-1. **Prerequisites**: Ensure Docker and Docker Compose are installed.
+Ensure Docker and Docker Compose are installed on your system.
 
-2. **Configuration**: 
-   - Ensure your `.env` file is configured.
-   - The `docker-compose.yml` uses your `.env` file but overrides `DATABASE_URL` and `REDIS_URL` to point to the containerized services.
+Configure your `.env` file with the required variables. The `docker-compose.yml` automatically configures database and Redis connections for containerized services.
 
-3. **Build and Run**:
-   ```bash
-   docker-compose up --build -d
-   ```
+Build and start all services:
 
-4. **Initialize Database**:
-   Run these commands to apply migrations and seed the database:
-   ```bash
-   # Apply migrations
-   docker-compose run --rm web npx prisma migrate deploy
+```bash
+docker-compose up --build -d
+```
 
-   # Seed database (optional)
-   docker-compose run --rm web npx prisma db seed
-   ```
+Initialize the database:
 
-5. **Access**:
-   The application will be available at [http://localhost:3000](http://localhost:3000).
+```bash
+# Apply migrations
+docker-compose run --rm web npx prisma migrate deploy
 
-6. **Stop**:
-   ```bash
-   docker-compose down
-   ```
+# Seed database (optional)
+docker-compose run --rm web npx prisma db seed
+```
 
-### Maintained By SHYENA
+Access the application at `http://localhost:3000`
 
-Private and proprietary. All rights reserved.
+Stop all services:
+
+```bash
+docker-compose down
+```
+
+---
+
+## Project Structure
+
+```
+secyourflow/
+├── prisma/              # Database schema and migrations
+├── public/              # Static assets
+├── src/
+│   ├── app/            # Next.js app directory
+│   ├── components/     # React components
+│   ├── lib/            # Utility functions and helpers
+│   └── types/          # TypeScript type definitions
+├── .env.example        # Environment variable template
+├── docker-compose.yml  # Docker configuration
+└── package.json        # Project dependencies
+```
+
+---
+
+## Contributing
+
+This is a private and proprietary project. Contributions are limited to authorized team members only.
+
+---
+
+<div align="center">
+
+**Maintained by SHYENA**
+
+*Private and proprietary. All rights reserved.*
+
+---
+
+Built with precision for security professionals
+
+</div>
