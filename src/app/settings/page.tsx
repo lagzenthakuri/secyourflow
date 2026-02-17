@@ -22,6 +22,7 @@ import {
     FileText,
     Zap,
     Activity,
+    User,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -120,7 +121,8 @@ type SettingsSectionId =
     | "system-health"
     | "integrations"
     | "api"
-    | "users";
+    | "users"
+    | "profile";
 
 interface SettingsSectionItem {
     id: SettingsSectionId;
@@ -131,6 +133,7 @@ interface SettingsSectionItem {
 }
 
 const settingsSections: SettingsSectionItem[] = [
+    { id: "profile", label: "Profile", description: "Personal details and account preferences", icon: User },
     { id: "general", label: "General", description: "Organization profile and baseline preferences", icon: Settings },
     { id: "governance", label: "Governance", description: "Change control, retention, and audit guardrails", icon: FileText },
     { id: "notifications", label: "Notifications", description: "Alert channels and summary signals", icon: Bell },
@@ -175,7 +178,7 @@ function formatRoleLabel(role?: string) {
 export default function SettingsPage() {
     const router = useRouter();
     const { data: session } = useSession();
-    const [activeSection, setActiveSection] = useState<SettingsSectionId>("general");
+    const [activeSection, setActiveSection] = useState<SettingsSectionId>("profile");
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [settings, setSettings] = useState<PlatformSettings | null>(null);
@@ -551,6 +554,13 @@ export default function SettingsPage() {
                         </div>
 
                         <div className="animate-in fade-in slide-in-from-bottom-3 duration-500" style={{ animationDelay: '450ms', animationFillMode: 'backwards' }}>
+                            {activeSection === "profile" && (
+                                <ProfileSection
+                                    session={session}
+                                    setToast={setToast}
+                                />
+                            )}
+
                             {activeSection === "general" && (
                                 <GeneralSection
                                     settings={settings}
@@ -694,6 +704,78 @@ interface SecuritySectionProps {
 interface SystemHealthSectionProps {
     settings: PlatformSettings | null;
     fetchSettings: () => Promise<void>;
+}
+
+// Profile Section
+function ProfileSection({ session, setToast }: { session: any, setToast: any }) {
+    const [name, setName] = useState(session?.user?.name || "");
+    const [isSaving, setIsSaving] = useState(false);
+    const { update } = useSession();
+
+    const handleSaveProfile = async () => {
+        if (!name.trim()) return;
+        try {
+            setIsSaving(true);
+            const res = await fetch("/api/profile", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name }),
+            });
+            if (res.ok) {
+                // Update next-auth session
+                await update({ name });
+                setToast({ message: "Profile updated successfully!", type: "success" });
+            } else {
+                const data = await res.json();
+                setToast({ message: data.error || "Failed to update profile", type: "error" });
+            }
+        } catch (e) {
+            setToast({ message: "Failed to update profile", type: "error" });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <Card title="Personal Profile" subtitle="Manage your personal account details">
+            <div className="space-y-6">
+                <div>
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                        Full Name
+                    </label>
+                    <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
+                        placeholder="Your Full Name"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                        Email Address (Read-only)
+                    </label>
+                    <input
+                        type="email"
+                        value={session?.user?.email || ""}
+                        className="input bg-[var(--bg-tertiary)] border-[var(--border-color)] text-[var(--text-muted)] cursor-not-allowed"
+                        disabled
+                    />
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">Email changes must be requested through your administrator.</p>
+                </div>
+                <div className="pt-4 border-t border-[var(--border-color)]">
+                    <button
+                        onClick={handleSaveProfile}
+                        disabled={isSaving || name === session?.user?.name}
+                        className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <Save size={16} />
+                        {isSaving ? "Saving..." : "Save Profile"}
+                    </button>
+                </div>
+            </div>
+        </Card>
+    );
 }
 
 // General Section

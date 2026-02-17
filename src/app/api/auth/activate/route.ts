@@ -7,12 +7,13 @@ const activateSchema = z.object({
     token: z.string().min(1, "Token is required"),
     password: z.string().min(8, "Password must be at least 8 characters"),
     productKey: z.string().min(1, "Product key is required"),
+    name: z.string().min(1, "Full name is required"),
 });
 
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { token, password, productKey } = activateSchema.parse(body);
+        const { token, password, productKey, name } = activateSchema.parse(body);
 
         const dbToken = await prisma.passwordToken.findFirst({
             where: {
@@ -80,6 +81,7 @@ export async function POST(req: Request) {
             prisma.user.update({
                 where: { id: user.id },
                 data: {
+                    name,
                     password: hashedPassword,
                     status: "ACTIVE",
                     emailVerified: new Date(),

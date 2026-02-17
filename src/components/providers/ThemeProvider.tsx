@@ -34,6 +34,7 @@ const APP_SHELL_PREFIXES = [
   "/scanners",
   "/risk-register",
   "/cves",
+  "/super-admin",
 ];
 
 function isAppShellPath(pathname: string): boolean {
@@ -119,7 +120,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     if (typeof mediaQuery.addEventListener === "function") {
       mediaQuery.addEventListener("change", handleSystemThemeChange);
       return () => mediaQuery.removeEventListener("change", handleSystemThemeChange);
-    } 
+    }
 
     mediaQuery.addListener(handleSystemThemeChange);
     return () => mediaQuery.removeListener(handleSystemThemeChange);

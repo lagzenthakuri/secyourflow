@@ -252,6 +252,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 };
 
                 token.id = user.id;
+                token.name = user.name;
                 token.role = signInUser.role || "ANALYST";
                 token.totpEnabled = Boolean(signInUser.totpEnabled);
 
@@ -293,6 +294,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                     twoFactorVerifiedAt?: number | null;
                     authenticatedAt?: number;
                     totpEnabled?: boolean;
+                    name?: string;
                     user?: {
                         totpEnabled?: boolean;
                     };
@@ -325,6 +327,11 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                     if (typeof updateSession.authenticatedAt === "number") {
                         token.authenticatedAt = updateSession.authenticatedAt;
                     }
+                }
+
+                // Allow name updates from client (handled separately to avoid type narrowing issues)
+                if (typeof updateSession.name === "string") {
+                    token.name = updateSession.name;
                 }
             }
 
@@ -376,6 +383,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
         async session({ session, token }) {
             if (token && session.user) {
                 session.user.id = token.id as string;
+                session.user.name = token.name as string | null | undefined;
                 session.user.role = (token.role as string) || "ANALYST";
                 session.user.totpEnabled = Boolean(token.totpEnabled);
                 session.twoFactorVerified = token.twoFactorVerified === true;

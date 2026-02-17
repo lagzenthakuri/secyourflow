@@ -4,13 +4,14 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Lock, Eye, EyeOff, ShieldCheck, Key, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
+import { Lock, Eye, EyeOff, ShieldCheck, Key, ArrowRight, CheckCircle2, AlertCircle, User } from "lucide-react";
 
 function ActivateContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const token = searchParams.get("token");
 
+    const [name, setName] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [productKey, setProductKey] = useState("");
@@ -33,7 +34,7 @@ function ActivateContent() {
             const response = await fetch("/api/auth/activate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ token, password, productKey }),
+                body: JSON.stringify({ token, password, productKey, name }),
             });
 
             const data = await response.json();
@@ -126,6 +127,27 @@ function ActivateContent() {
                                 onChange={(e) => setProductKey(e.target.value.toUpperCase())}
                                 placeholder="SYF-XXXX-XXXX-XXXX"
                                 className="input !pl-10 font-mono tracking-wider"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    {/* Full Name */}
+                    <div>
+                        <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                            Full Name
+                        </label>
+                        <div className="relative">
+                            <User
+                                size={18}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+                            />
+                            <input
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="Your Full Name"
+                                className="input !pl-10"
                                 required
                             />
                         </div>
