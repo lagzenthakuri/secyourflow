@@ -1,6 +1,4 @@
 import type { NextAuthConfig } from "next-auth";
-import GitHub from "next-auth/providers/github";
-import Google from "next-auth/providers/google";
 import { hasRecentTwoFactorVerification, TWO_FACTOR_REVERIFY_INTERVAL_MS } from "@/lib/security/two-factor";
 
 const PROTECTED_PREFIXES = [
@@ -32,30 +30,7 @@ function pickEnv(...keys: string[]): string | undefined {
     return undefined;
 }
 
-const githubClientId = pickEnv("AUTH_GITHUB_ID", "GITHUB_CLIENT_ID");
-const githubClientSecret = pickEnv("AUTH_GITHUB_SECRET", "GITHUB_CLIENT_SECRET");
-const googleClientId = pickEnv("AUTH_GOOGLE_ID", "GOOGLE_CLIENT_ID");
-const googleClientSecret = pickEnv("AUTH_GOOGLE_SECRET", "GOOGLE_CLIENT_SECRET");
-
-const oauthProviders = [];
-
-if (githubClientId && githubClientSecret) {
-    oauthProviders.push(
-        GitHub({
-            clientId: githubClientId,
-            clientSecret: githubClientSecret,
-        }),
-    );
-}
-
-if (googleClientId && googleClientSecret) {
-    oauthProviders.push(
-        Google({
-            clientId: googleClientId,
-            clientSecret: googleClientSecret,
-        }),
-    );
-}
+const oauthProviders: any[] = [];
 
 export const authConfig = {
     providers: oauthProviders,
@@ -141,7 +116,8 @@ export const authConfig = {
             }
 
             if (isLoginPage) {
-                return Response.redirect(new URL("/dashboard", nextUrl));
+                const target = auth?.user?.role === "SUPER_ADMIN" ? "/super-admin" : "/dashboard";
+                return Response.redirect(new URL(target, nextUrl));
             }
 
             return true;

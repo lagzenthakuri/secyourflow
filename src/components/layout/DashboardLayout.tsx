@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useTheme } from "@/components/providers/ThemeProvider";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -21,6 +22,7 @@ import {
     LogOut,
     ClipboardList,
     Database,
+    Building2,
     Sun,
     Moon,
 } from "lucide-react";
@@ -34,10 +36,9 @@ import {
     type NotificationItem,
     type NotificationsResponse,
 } from "@/lib/notification-state";
-import { useTheme } from "@/components/providers/ThemeProvider";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 
-const ALL_ROLES = ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"];
+const ALL_ROLES = ["SUPER_ADMIN", "MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"];
 
 const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ALL_ROLES },
@@ -52,8 +53,12 @@ const navigation = [
 ];
 
 const secondaryNav = [
-    { name: "Users", href: "/users", icon: Users, roles: ["MAIN_OFFICER"] },
-    { name: "Settings", href: "/settings", icon: Settings, roles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"] },
+    { name: "Users", href: "/users", icon: Users, roles: ["MAIN_OFFICER", "SUPER_ADMIN"] },
+    { name: "Settings", href: "/settings", icon: Settings, roles: ALL_ROLES },
+];
+
+const platformNav = [
+    { name: "Organizations", href: "/super-admin", icon: Building2, roles: ["SUPER_ADMIN"] },
 ];
 
 interface SidebarProps {
@@ -72,6 +77,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
 
     const filteredNav = navigation.filter(item => item.roles.includes(userRole));
     const filteredSecondaryNav = secondaryNav.filter(item => item.roles.includes(userRole));
+    const filteredPlatformNav = platformNav.filter(item => item.roles.includes(userRole));
 
     return (
         <>
@@ -107,6 +113,35 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
 
                 {/* Navigation */}
                 <nav className="flex-1 px-4 py-6 space-y-8 overflow-y-auto custom-scrollbar">
+                    {/* Platform Section (Super Admin Only) */}
+                    {filteredPlatformNav.length > 0 && (
+                        <div>
+                            <div className="px-5 mb-4">
+                                <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                                    Platform
+                                </span>
+                            </div>
+                            <div className="space-y-1">
+                                {filteredPlatformNav.map((item) => {
+                                    const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                                    return (
+                                        <Link
+                                            key={item.href}
+                                            href={item.href}
+                                            className={cn("sidebar-link", isActive && "active")}
+                                            onClick={() => {
+                                                if (window.innerWidth < 1024) setIsOpen(false);
+                                            }}
+                                        >
+                                            <item.icon size={20} className={cn("transition-colors", isActive ? "text-[var(--color-primary-600)] dark:text-blue-400" : "text-[var(--text-muted)]")} />
+                                            <span className="font-semibold">{item.name}</span>
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Main Menu */}
                     <div>
                         <div className="px-5 mb-4">
@@ -116,11 +151,12 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                         </div>
                         <div className="space-y-1">
                             {filteredNav.map((item) => {
-                                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                                const href = (userRole === "SUPER_ADMIN" && item.name === "Dashboard") ? "/super-admin" : item.href;
+                                const isActive = pathname === href || pathname.startsWith(`${href}/`);
                                 return (
                                     <Link
-                                        key={item.href}
-                                        href={item.href}
+                                        key={item.name}
+                                        href={href}
                                         className={cn("sidebar-link", isActive && "active")}
                                         onClick={() => {
                                             if (window.innerWidth < 1024) setIsOpen(false);
@@ -227,7 +263,6 @@ function getApiErrorMessage(payload: unknown): string | null {
 
 export function TopBar({ onToggleSidebar }: TopBarProps) {
     const { data: session } = useSession();
-    const { theme, toggleTheme } = useTheme();
     const router = useRouter();
     const [threatsCount, setThreatsCount] = useState(0);
     const [notificationsCount, setNotificationsCount] = useState(0);
@@ -236,15 +271,15 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [showSearchResults, setShowSearchResults] = useState(false);
     const [activeResultIndex, setActiveResultIndex] = useState(0);
-    const [mounted, setMounted] = useState(false);
     const redirectedForTwoFactorRef = useRef(false);
     const searchContainerRef = useRef<HTMLDivElement>(null);
     const searchListId = "topbar-route-search-results";
+    const { theme, toggleTheme } = useTheme();
+    const [mounted, setMounted] = useState(false);
 
-    useEffect(() => {
+     useEffect(() => {
         setMounted(true);
     }, []);
-
     const userRole = session?.user?.role || "ANALYST";
     const searchableRoutes = useMemo(
         () =>
@@ -521,7 +556,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                     </div>
                 </Link>
 
-                <button
+                 <button
                     type="button"
                     onClick={toggleTheme}
                     aria-label={mounted ? `Switch to ${theme === "dark" ? "light" : "dark"} mode` : "Toggle theme"}

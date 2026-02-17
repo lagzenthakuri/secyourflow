@@ -94,3 +94,8 @@ export function requireMainOfficer(role: string) {
 
   return null;
 }
+
+export async function requireSuperAdmin(request: Request) {
+  const authResult = await requireSessionWithOrg(request, { allowedRoles: ["SUPER_ADMIN"] });
+  return authResult;
+}

@@ -85,6 +85,9 @@ export async function GET(request: NextRequest) {
             return noStoreJson(buildFallbackDashboardData());
         }
 
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
         const [
             totalAssets,
             criticalAssets,
@@ -93,7 +96,7 @@ export async function GET(request: NextRequest) {
             highVulnerabilities,
             mediumVulnerabilities,
             lowVulnerabilities,
-            exploitedVulnerabilities,
+            exploitedVulnerabilityCount,
             cisaKevCount,
             openVulnerabilities,
             threatIndicatorCount,
@@ -103,6 +106,9 @@ export async function GET(request: NextRequest) {
             assetTypeDistribution,
             riskSnapshots,
             complianceFrameworks,
+            fixedThisMonth,
+            remediatedVulns,
+            exploitedVulnerabilities,
         ] = await Promise.all([
             prisma.asset.count({ where: { organizationId } }),
             prisma.asset.count({ where: { organizationId, criticality: "CRITICAL" } }),
@@ -178,7 +184,51 @@ export async function GET(request: NextRequest) {
                     },
                 },
             }),
+            prisma.vulnerability.count({
+                where: {
+                    organizationId,
+                    status: "FIXED",
+                    fixedAt: { gte: startOfMonth },
+                },
+            }),
+            prisma.vulnerability.findMany({
+                where: {
+                    organizationId,
+                    status: "FIXED",
+                    fixedAt: { not: null },
+                },
+                select: { createdAt: true, fixedAt: true },
+                take: 50,
+            }),
+            prisma.vulnerability.findMany({
+                where: {
+                    organizationId,
+                    OR: [{ isExploited: true }, { cisaKev: true }],
+                    status: "OPEN",
+                },
+                take: 6,
+                orderBy: { epssScore: "desc" },
+                select: {
+                    id: true,
+                    cveId: true,
+                    title: true,
+                    severity: true,
+                    epssScore: true,
+                    cisaKev: true,
+                },
+            }),
         ]);
+
+        // Calculate MTTR
+        let meanTimeToRemediate = 0;
+        if (remediatedVulns.length > 0) {
+            const totalMs = remediatedVulns.reduce((acc, v) => {
+                const diff = new Date(v.fixedAt!).getTime() - new Date(v.createdAt).getTime();
+                return acc + diff;
+            }, 0);
+            const avgDays = totalMs / (1000 * 60 * 60 * 24 * remediatedVulns.length);
+            meanTimeToRemediate = Math.round(avgDays);
+        }
 
         const remediationTrends = [...riskSnapshots].reverse().map((snapshot) => ({
             month: new Date(snapshot.date).toLocaleDateString("en-US", { month: "short" }),
@@ -196,14 +246,14 @@ export async function GET(request: NextRequest) {
                 highVulnerabilities,
                 mediumVulnerabilities,
                 lowVulnerabilities,
-                exploitedVulnerabilities,
+                exploitedVulnerabilities: exploitedVulnerabilityCount,
                 cisaKevCount,
                 openVulnerabilities,
                 threatIndicatorCount,
                 overallRiskScore: riskSnapshots[0]?.overallRiskScore || 0,
                 complianceScore: riskSnapshots[0]?.complianceScore || 0,
-                fixedThisMonth: 0,
-                meanTimeToRemediate: 0,
+                fixedThisMonth,
+                meanTimeToRemediate,
             },
             riskTrends:
                 riskSnapshots.length > 0
@@ -222,14 +272,24 @@ export async function GET(request: NextRequest) {
                         percentage: totalVulnerabilities > 0 ? (entry._count._all / totalVulnerabilities) * 100 : 0,
                     }))
                     : buildFallbackDashboardData().severityDistribution,
-            topRiskyAssets: topRiskyAssets.map((asset) => ({
-                id: asset.id,
-                name: asset.name,
-                type: asset.type,
-                criticality: asset.criticality,
-                vulnerabilityCount: asset._count.vulnerabilities,
-                criticalVulnCount: 0,
-                riskScore: 0,
+            topRiskyAssets: await Promise.all(topRiskyAssets.map(async (asset) => {
+                const criticalCount = await prisma.vulnerability.count({
+                    where: {
+                        organizationId,
+                        assets: { some: { assetId: asset.id } },
+                        severity: "CRITICAL",
+                        status: "OPEN",
+                    }
+                });
+                return {
+                    id: asset.id,
+                    name: asset.name,
+                    type: asset.type,
+                    criticality: asset.criticality,
+                    vulnerabilityCount: asset._count.vulnerabilities,
+                    criticalVulnCount: criticalCount,
+                    riskScore: (criticalCount * 10) + (asset._count.vulnerabilities * 1), // Simple calculation for now
+                };
             })),
             recentActivities: recentActivities.map((activity) => ({
                 id: activity.id,
@@ -239,7 +299,14 @@ export async function GET(request: NextRequest) {
                 userName: activity.user?.name || "System",
                 timestamp: activity.createdAt,
             })),
-            exploitedVulnerabilities: [],
+            exploitedVulnerabilities: exploitedVulnerabilities.map(v => ({
+                id: v.id,
+                cveId: v.cveId,
+                title: v.title,
+                severity: v.severity,
+                epssScore: v.epssScore,
+                cisaKev: v.cisaKev,
+            })),
             complianceOverview: complianceFrameworks.map((framework) => {
                 const total = framework.controls.length;
                 const compliant = framework.controls.filter((control) => control.status === "COMPLIANT").length;
@@ -252,7 +319,26 @@ export async function GET(request: NextRequest) {
                     compliancePercentage: total > 0 ? (compliant / total) * 100 : 0,
                 };
             }),
-            remediationTrends,
+            remediationTrends: await Promise.all(Array.from({ length: 6 }, (_, i) => {
+                const d = new Date();
+                d.setMonth(d.getMonth() - (5 - i));
+                const monthStart = new Date(d.getFullYear(), d.getMonth(), 1);
+                const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+
+                return Promise.all([
+                    prisma.vulnerability.count({
+                        where: { organizationId, createdAt: { gte: monthStart, lte: monthEnd } }
+                    }),
+                    prisma.vulnerability.count({
+                        where: { organizationId, fixedAt: { gte: monthStart, lte: monthEnd }, status: "FIXED" }
+                    })
+                ]).then(([opened, closed]) => ({
+                    month: d.toLocaleDateString("en-US", { month: "short" }),
+                    opened,
+                    closed,
+                    net: opened - closed
+                }));
+            })),
             assetTypeDistribution: assetTypeDistribution.map((entry) => ({
                 type: entry.type,
                 count: entry._count._all,

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/logger";
 import { extractRequestContext } from "@/lib/request-utils";
 import { requireSessionWithOrg } from "@/lib/api-auth";
+import { sendRoleInvitationEmail } from "@/lib/mail";
 
 export async function GET(request: NextRequest) {
     try {
@@ -107,6 +108,113 @@ export async function PUT(request: NextRequest) {
     } catch (error) {
         console.error("Update User Error:", error);
         return NextResponse.json({ error: "Failed to update user" }, { status: 500 });
+    }
+}
+
+export async function POST(request: NextRequest) {
+    try {
+        const authResult = await requireSessionWithOrg(request, { allowedRoles: ["MAIN_OFFICER"] });
+        if (!authResult.ok) return authResult.response;
+
+        const body = await request.json();
+        const { email, role } = body;
+        const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+
+        if (!normalizedEmail || !role) {
+            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+        }
+
+        const validRoles = new Set(["ANALYST", "IT_OFFICER", "PENTESTER", "MAIN_OFFICER"]);
+        if (!validRoles.has(role)) {
+            return NextResponse.json({ error: "Invalid role value" }, { status: 400 });
+        }
+
+        // Check license limits
+        const org = await prisma.organization.findUnique({
+            where: { id: authResult.context.organizationId },
+            include: {
+                productKey: true,
+                _count: { select: { users: true } }
+            }
+        });
+
+        if (org?.productKey) {
+            const currentUsers = org._count.users;
+            const pendingInvitations = await prisma.invitation.count({
+                where: {
+                    organizationId: org.id,
+                    isUsed: false,
+                    expires: { gt: new Date() }
+                }
+            });
+
+            if (currentUsers + pendingInvitations >= org.productKey.userLimit) {
+                return NextResponse.json(
+                    { error: "User limit exceeded for your license" },
+                    { status: 403 }
+                );
+            }
+        }
+
+        const existingUser = await prisma.user.findFirst({
+            where: {
+                email: normalizedEmail,
+                organizationId: authResult.context.organizationId,
+            },
+            select: { id: true },
+        });
+
+        if (existingUser) {
+            return NextResponse.json({ error: "User already exists in your organization" }, { status: 409 });
+        }
+
+        const token = crypto.randomUUID();
+        const expires = new Date(Date.now() + 7 * 24 * 3600 * 1000); // 7 days
+
+        await prisma.invitation.upsert({
+            where: {
+                email_organizationId: {
+                    email: normalizedEmail,
+                    organizationId: authResult.context.organizationId,
+                },
+            },
+            update: {
+                role,
+                token,
+                expires,
+                isUsed: false,
+            },
+            create: {
+                email: normalizedEmail,
+                organizationId: authResult.context.organizationId,
+                role,
+                token,
+                expires,
+            },
+        });
+
+        const inviteLink = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/set-password?token=${token}`;
+
+        const mailResult = await sendRoleInvitationEmail({
+            to: normalizedEmail,
+            role,
+            inviteLink,
+        });
+
+        if (!mailResult.sent) {
+            console.log(`[USER INVITATION] Email: ${normalizedEmail}, Link: ${inviteLink}, EmailStatus: not_configured`);
+            return NextResponse.json({
+                message: "Invitation created, but email service is not configured",
+                emailStatus: "not_configured",
+                emailError: mailResult.reason || null,
+                inviteLink,
+            });
+        }
+
+        return NextResponse.json({ message: "Invitation sent successfully", emailStatus: "sent" });
+    } catch (error) {
+        console.error("Invite User Error:", error);
+        return NextResponse.json({ error: "Failed to invite user" }, { status: 500 });
     }
 }
 

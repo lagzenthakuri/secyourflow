@@ -13,50 +13,24 @@ import {
 } from "@/lib/security/two-factor-session";
 import { hasRecentTwoFactorVerification, TWO_FACTOR_REVERIFY_INTERVAL_MS } from "@/lib/security/two-factor";
 
-type RefreshableToken = Record<string, unknown> & {
-    provider?: string;
-    refreshToken?: string;
-};
+class AccountSuspendedError extends CredentialsSignin {
+    code = "account_suspended";
+}
 
-async function refreshAccessToken(token: RefreshableToken): Promise<RefreshableToken> {
-    try {
-        const url = "https://oauth2.googleapis.com/token";
-        if (token.provider === "google") {
-            const response = await fetch(url, {
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: new URLSearchParams({
-                    client_id: process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID || "",
-                    client_secret: process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET || "",
-                    grant_type: "refresh_token",
-                    refresh_token: typeof token.refreshToken === "string" ? token.refreshToken : "",
-                }),
-                method: "POST",
-            });
+class OrgInactiveError extends CredentialsSignin {
+    code = "org_inactive";
+}
 
-            const refreshedTokens = await response.json();
+class LicenseExpiredError extends CredentialsSignin {
+    code = "license_expired";
+}
 
-            if (!response.ok) {
-                throw refreshedTokens;
-            }
+class UserLimitExceededError extends CredentialsSignin {
+    code = "user_limit_exceeded";
+}
 
-            return {
-                ...token,
-                accessToken: refreshedTokens.access_token,
-                expiresAt: Date.now() + refreshedTokens.expires_in * 1000,
-                // Fall back to old refresh token, but use the new one if provided
-                refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
-            };
-        }
-
-        // Add other providers if needed (GitHub usually doesn't need refresh or doesn't provide refresh_token)
-        return token;
-    } catch (error) {
-        console.error("Error refreshing access token", error);
-        return {
-            ...token,
-            error: "RefreshAccessTokenError",
-        };
-    }
+class AccountNotActivatedError extends CredentialsSignin {
+    code = "account_not_activated";
 }
 
 const authSecret =
@@ -64,9 +38,6 @@ const authSecret =
     process.env.NEXTAUTH_SECRET ||
     (process.env.NODE_ENV !== "production" ? "local-dev-auth-secret" : undefined);
 
-class OAuthOnlyCredentialsSigninError extends CredentialsSignin {
-    code = "oauth_only";
-}
 
 function extractIpFromForwardedHeader(headerValue: string): string | null {
     const forwardedEntries = headerValue.split(",");
@@ -150,30 +121,99 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
 
                 const loginIp = extractLoginIpFromRequest(request);
 
-                const user = await prisma.user.findFirst({
+                let user = await prisma.user.findFirst({
                     where: {
                         email: {
                             equals: email,
                             mode: "insensitive",
                         },
                     },
-                    select: {
-                        id: true,
-                        email: true,
-                        name: true,
-                        role: true,
-                        password: true,
-                        image: true,
-                        totpEnabled: true,
-                    },
+                    include: {
+                        organization: {
+                            include: {
+                                productKey: true,
+                                _count: {
+                                    select: { users: true }
+                                }
+                            }
+                        }
+                    }
                 });
 
                 if (!user) {
                     return null;
                 }
 
+                const bootstrapSuperAdminEmail = process.env.SUPER_ADMIN_EMAIL?.trim().toLowerCase();
+                if (
+                    bootstrapSuperAdminEmail &&
+                    user.email.toLowerCase() === bootstrapSuperAdminEmail &&
+                    (user.role !== "SUPER_ADMIN" || user.status !== "ACTIVE")
+                ) {
+                    const recovered = await prisma.user.update({
+                        where: { id: user.id },
+                        data: {
+                            role: "SUPER_ADMIN",
+                            status: "ACTIVE",
+                            emailVerified: user.emailVerified ?? new Date(),
+                        },
+                        include: {
+                            organization: {
+                                include: {
+                                    productKey: true,
+                                    _count: {
+                                        select: { users: true },
+                                    },
+                                },
+                            },
+                        },
+                    });
+                    user = recovered;
+                }
+
+                if (user.status === "PENDING") {
+                    throw new AccountNotActivatedError();
+                }
+
+                if (user.status === "SUSPENDED") {
+                    throw new AccountSuspendedError();
+                }
+
+
+
+                // License validation
+                const isSuperAdmin = user.role === "SUPER_ADMIN";
+                const isMainOfficer = user.role === "MAIN_OFFICER";
+
+                if (isSuperAdmin) {
+                    // Super Admins bypass license checks
+                } else if (!user.organization || !user.organization.isActive) {
+                    throw new OrgInactiveError();
+                } else {
+                    const organization = user.organization;
+                    const license = organization.productKey;
+                    if (!license || license.status !== "ACTIVATED") {
+                        if (!isMainOfficer) {
+                            throw new LicenseExpiredError();
+                        }
+                    } else {
+                        const now = new Date();
+                        if (license.expiry < now) {
+                            if (!isMainOfficer) {
+                                throw new LicenseExpiredError();
+                            }
+                        }
+
+                        if (organization._count.users > license.userLimit) {
+                            if (!isMainOfficer) {
+                                throw new UserLimitExceededError();
+                            }
+                        }
+                    }
+                }
+
                 if (!user.password) {
-                    throw new OAuthOnlyCredentialsSigninError();
+                    return null;
                 }
 
                 let isValidPassword = false;
@@ -214,12 +254,6 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 token.id = user.id;
                 token.role = signInUser.role || "ANALYST";
                 token.totpEnabled = Boolean(signInUser.totpEnabled);
-
-                // OAuth specific tokens
-                token.accessToken = account.access_token;
-                token.refreshToken = account.refresh_token;
-                token.expiresAt = (account.expires_at ?? 0) * 1000;
-                token.provider = account.provider;
 
                 const activeSessionId = randomUUID();
                 const activeSessionIp = normalizeIpAddress(signInUser.loginIp);
@@ -335,16 +369,6 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
 
             if (typeof token.authenticatedAt !== "number") {
                 token.authenticatedAt = Date.now();
-            }
-
-            // Return previous token if the access token has not expired yet
-            if (token.expiresAt && Date.now() < (token.expiresAt as number)) {
-                return token;
-            }
-
-            // Access token has expired, try to update it
-            if (token.refreshToken) {
-                return refreshAccessToken(token);
             }
 
             return token;

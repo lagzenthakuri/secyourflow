@@ -24,9 +24,9 @@ model User {
   totpVerifiedAt                     DateTime?
   totpRecoveryCodesHash              Json?
   totpLastUsedStep                   Int?
+  status                             UserStatus                        @default(PENDING)
   activeSessionId                    String?
   activeSessionIp                    String?
-  accounts                           Account[]
   assetChangeLogs                    AssetChangeLog[]                  @relation("AssetChangeActor")
   createdAssetGroups                 AssetGroup[]                      @relation("AssetGroupCreatedBy")
   assetLifecycleEvents               AssetLifecycleEvent[]             @relation("AssetLifecycleActor")
@@ -39,8 +39,6 @@ model User {
   externalTickets                    ExternalTicket[]
   notifications                      Notification[]
   notificationRules                  NotificationRule[]
-  ProductKey                         ProductKey[]
-  ProductKeyActivation               ProductKeyActivation[]
   remediationEvidenceUploaded        RemediationEvidence[]             @relation("RemediationEvidenceUploadedBy")
   remediationNotesAuthored           RemediationNote[]                 @relation("RemediationNoteAuthor")
   remediationPlansOwned              RemediationPlan[]                 @relation("RemediationPlanOwner")
@@ -55,24 +53,6 @@ model User {
   @@index([organizationId])
 }
 
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@index([userId])
-}
 
 model Session {
   id           String   @id @default(cuid())
@@ -98,6 +78,8 @@ model Organization {
   domain                   String?
   logo                     String?
   createdAt                DateTime                          @default(now())
+  isActive                 Boolean                           @default(true)
+  activatedAt              DateTime?
   updatedAt                DateTime                          @updatedAt
   assets                   Asset[]
   assetChangeLogs          AssetChangeLog[]
@@ -115,8 +97,7 @@ model Organization {
   externalTickets          ExternalTicket[]
   notificationRules        NotificationRule[]
   policies                 Policy[]
-  ProductKey               ProductKey[]
-  ProductKeyActivation     ProductKeyActivation[]
+  productKey               ProductKey?
   remediationEvidence      RemediationEvidence[]
   remediationNotes         RemediationNote[]
   remediationPlans         RemediationPlan[]
@@ -136,6 +117,7 @@ model Organization {
   users                    User[]
   vulnerabilities          Vulnerability[]
   vulnerabilityTransitions VulnerabilityWorkflowTransition[]
+  invitations             Invitation[]
   wazuhAlerts              WazuhAlert[]
 
   @@index([name])
@@ -1277,7 +1259,7 @@ model Cve {
   @@index([status, lastModifiedAt])
   @@index([status, publishedAt])
   @@index([status, severity, publishedAt(sort: Desc)], map: "Cve_status_severity_published_idx")
-  @@index([cveId(ops: raw("gin_trgm_ops"))], map: "Cve_cveId_trgm_idx", type: Gin)
+//  @@index([cveId(ops: raw("gin_trgm_ops"))], map: "Cve_cveId_trgm_idx", type: Gin)
   @@index([searchVector], type: Gin)
 }
 
@@ -1424,39 +1406,60 @@ model WazuhAlert {
 }
 
 model ProductKey {
-  id                   String                 @id
-  organizationId       String
-  createdById          String
-  codeHash             String
-  codePrefix           String
-  targetRole           Role
-  expiresAt            DateTime
-  revokedAt            DateTime?
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime
-  User                 User                   @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  Organization         Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  ProductKeyActivation ProductKeyActivation[]
-
-  @@unique([organizationId, codeHash])
-  @@index([organizationId, expiresAt])
-  @@index([organizationId, revokedAt])
-  @@index([organizationId, targetRole])
+  id             String           @id @default(cuid())
+  organizationId String           @unique
+  key            String           @unique
+  type           String           @default("Standard")
+  expiry         DateTime
+  userLimit      Int              @default(10)
+  status         ProductKeyStatus @default(UNUSED)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
 
-model ProductKeyActivation {
-  id             String       @id
+model Invitation {
+  id             String       @id @default(cuid())
+  email          String
   organizationId String
-  productKeyId   String
-  userId         String
-  activatedAt    DateTime     @default(now())
-  Organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  ProductKey     ProductKey   @relation(fields: [productKeyId], references: [id], onDelete: Cascade)
-  User           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           Role         @default(ANALYST)
+  token          String       @unique
+  expires        DateTime
+  isUsed         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  @@unique([productKeyId, userId])
-  @@index([organizationId, activatedAt])
-  @@index([organizationId, userId])
+  @@unique([email, organizationId])
+}
+
+model PasswordToken {
+  id        String            @id @default(cuid())
+  email     String
+  token     String            @unique
+  expires   DateTime
+  type      PasswordTokenType
+  createdAt DateTime          @default(now())
+
+  @@index([token])
+  @@index([email])
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum PasswordTokenType {
+  ACTIVATION
+  RESET
+  INVITE
+}
+
+enum ProductKeyStatus {
+  UNUSED
+  ACTIVATED
+  REVOKED
 }
 
 enum Role {
@@ -1464,6 +1467,7 @@ enum Role {
   PENTESTER
   ANALYST
   MAIN_OFFICER
+  SUPER_ADMIN
 }
 
 enum AssetType {

@@ -4,7 +4,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/Cards";
 import {
     Plus,
-    Search,                                                                                                                                                                                         
+    Search,
     MoreVertical,
     Shield,
     Mail,
@@ -26,10 +26,37 @@ const roleColors = {
 export default function UsersPage() {
     const { data: session, status } = useSession();
     const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; role: string; lastActive: string; status: string; department?: string }>>([]);
-    const [logs, setLogs] = useState<Array<{ id: string; action: string; createdAt: string | Date; user?: { name?: string }; [key: string]: unknown }>>([]);
+    const [logs, setLogs] = useState<Array<{ id: string; action: string; createdAt: string | Date; user?: { name?: string };[key: string]: unknown }>>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [editingUser, setEditingUser] = useState<string | null>(null);
+    const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const router = useRouter();
+
+    const handleInviteUser = async (email: string, role: string) => {
+        try {
+            setIsLoading(true);
+            const response = await fetch("/api/users", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, role }),
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+                setIsInviteModalOpen(false);
+                if (data?.emailStatus !== "sent") {
+                    alert(data?.message || "Invitation created, but email is not configured.");
+                }
+                fetchData();
+            } else {
+                alert(data.error || "Failed to invite user");
+            }
+        } catch (error) {
+            console.error("Failed to invite user:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const fetchData = async () => {
         try {
@@ -103,12 +130,82 @@ export default function UsersPage() {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button className="btn btn-primary">
+                        <button
+                            className="btn btn-primary"
+                            onClick={() => setIsInviteModalOpen(true)}
+                        >
                             <Plus size={16} />
                             Invite User
                         </button>
                     </div>
                 </div>
+
+                {/* Invite Modal */}
+                {isInviteModalOpen && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                        <div className="card w-full max-w-md p-6 border-t-4 border-intent-accent animate-in fade-in zoom-in duration-200">
+                            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-2">Invite New User</h2>
+                            <p className="text-sm text-[var(--text-secondary)] mb-6">
+                                Send an invitation link to a new team member.
+                            </p>
+
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                const formData = new FormData(e.currentTarget);
+                                handleInviteUser(
+                                    formData.get("email") as string,
+                                    formData.get("role") as string
+                                );
+                            }} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">
+                                        Email Address
+                                    </label>
+                                    <input
+                                        name="email"
+                                        type="email"
+                                        placeholder="colleague@company.com"
+                                        className="input"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">
+                                        Assign Role
+                                    </label>
+                                    <select
+                                        name="role"
+                                        className="input"
+                                        required
+                                        defaultValue="ANALYST"
+                                    >
+                                        <option value="ANALYST">Analyst</option>
+                                        <option value="IT_OFFICER">IT Officer</option>
+                                        <option value="PENTESTER">Pentester</option>
+                                        <option value="MAIN_OFFICER">Main Officer</option>
+                                    </select>
+                                </div>
+
+                                <div className="flex items-center gap-3 pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsInviteModalOpen(false)}
+                                        className="btn btn-secondary flex-1"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isLoading}
+                                        className="btn btn-primary flex-1"
+                                    >
+                                        {isLoading ? "Sending..." : "Send Invitation"}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

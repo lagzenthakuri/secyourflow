@@ -119,7 +119,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     if (typeof mediaQuery.addEventListener === "function") {
       mediaQuery.addEventListener("change", handleSystemThemeChange);
       return () => mediaQuery.removeEventListener("change", handleSystemThemeChange);
-    }
+    } 
 
     mediaQuery.addListener(handleSystemThemeChange);
     return () => mediaQuery.removeListener(handleSystemThemeChange);
