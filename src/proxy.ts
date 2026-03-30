@@ -8,6 +8,7 @@ const PUBLIC_API_PREFIXES = [
     "/api/auth",
     "/api/health",
     "/api/webhooks/wazuh",
+    "/api/setup",
     // Explicit external automation routes that perform their own token auth.
     "/api/admin/ingest",
     "/api/admin/threat-intel/sync",

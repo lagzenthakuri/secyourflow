@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Activity,
   ArrowRight,
@@ -111,11 +112,26 @@ function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: str
 }
 
 export default function Home() {
+  const router = useRouter();
   const [isVisible, setIsVisible] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const [sectionsVisible, setSectionsVisible] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
+    // Check if setup is required
+    const checkSetup = async () => {
+      try {
+        const res = await fetch("/api/setup");
+        const data = await res.json();
+        if (data.setupRequired) {
+          router.push("/setup");
+        }
+      } catch (err) {
+        console.error("Setup check fail:", err);
+      }
+    };
+    checkSetup();
+
     // Set visibility after mount to trigger animations
     const timer = setTimeout(() => setIsVisible(true), 0);
     

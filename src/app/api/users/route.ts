@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
         const authResult = await requireSessionWithOrg(
             request,
-            isBasicScope ? {} : { allowedRoles: ["MAIN_OFFICER"] },
+            isBasicScope ? {} : { allowedRoles: ["MAIN_OFFICER", "SUPER_ADMIN"] },
         );
         if (!authResult.ok) return authResult.response;
 
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
     try {
-        const authResult = await requireSessionWithOrg(request, { allowedRoles: ["MAIN_OFFICER"] });
+        const authResult = await requireSessionWithOrg(request, { allowedRoles: ["MAIN_OFFICER", "SUPER_ADMIN"] });
         if (!authResult.ok) return authResult.response;
 
         const ctx = extractRequestContext(request);
@@ -113,7 +113,7 @@ export async function PUT(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        const authResult = await requireSessionWithOrg(request, { allowedRoles: ["MAIN_OFFICER"] });
+        const authResult = await requireSessionWithOrg(request, { allowedRoles: ["MAIN_OFFICER", "SUPER_ADMIN"] });
         if (!authResult.ok) return authResult.response;
 
         const body = await request.json();

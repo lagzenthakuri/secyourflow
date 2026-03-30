@@ -102,14 +102,14 @@ export default function UsersPage() {
     useEffect(() => {
         if (status === "unauthenticated") {
             router.push("/login");
-        } else if (status === "authenticated" && session?.user?.role !== "MAIN_OFFICER") {
+        } else if (status === "authenticated" && !["MAIN_OFFICER", "SUPER_ADMIN"].includes(session?.user?.role as string)) {
             router.push("/dashboard");
         } else if (status === "authenticated") {
             fetchData();
         }
     }, [session, status, router]);
 
-    if (status === "loading" || isLoading || (status === "authenticated" && session?.user?.role !== "MAIN_OFFICER")) {
+    if (status === "loading" || isLoading || (status === "authenticated" && !["MAIN_OFFICER", "SUPER_ADMIN"].includes(session?.user?.role as string))) {
         return (
             <DashboardLayout>
                 <div className="flex items-center justify-center min-h-[60vh]">
