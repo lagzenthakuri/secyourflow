@@ -112,7 +112,7 @@ export async function runTenableScan(assetId: string, scannerId: string, organiz
 
         for (const finding of tenableFindings) {
             // 2. Use AI for giving details of the result (AS REQUESTED)
-            const aiDetails = await getAIDetailsForResult(finding, asset);
+            const aiDetails = await getAIDetailsForResult(finding, asset, organizationId);
             const externalFindingId = String(finding.id ?? `${finding.title}:${finding.cveId ?? "unknown"}`);
             const vulnerabilityId = buildScannerVulnerabilityId(organizationId, scannerId, externalFindingId);
 
@@ -197,16 +197,16 @@ export async function runTenableScan(assetId: string, scannerId: string, organiz
     }
 }
 
+import { askAI } from "@/lib/ai/provider";
+
 /**
  * Uses AI to provide deep insights and context for a specific scan finding.
  */
 async function getAIDetailsForResult(
     finding: Pick<FoundVulnerability, "title" | "description" | "cveId">,
-    asset: { name: string; type: string; operatingSystem?: string | null; environment?: string | null }
+    asset: { name: string; type: string; operatingSystem?: string | null; environment?: string | null },
+    organizationId: string
 ) {
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) return { description: finding.description, remediation: "" };
-
     const prompt = `
     Analyze this security finding from Tenable for this specific asset.
     Asset: ${asset.name} (${asset.type}, ${asset.operatingSystem || 'Unknown OS'})
@@ -228,25 +228,27 @@ async function getAIDetailsForResult(
     `;
 
     try {
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${apiKey}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                "model": "google/gemini-2.0-flash-001",
-                "messages": [{ "role": "user", "content": prompt }],
-                "response_format": { "type": "json_object" }
-            })
-        });
-        const data = await response.json();
-        const content = data?.choices?.[0]?.message?.content;
+        const content = await askAI(organizationId, prompt, "You are a specialized Cybersecurity Analyst. Output only valid JSON.");
+
         if (typeof content !== "string") {
             return { description: finding.description, remediation: "" };
         }
 
-        return JSON.parse(content) as AiFindingDetails;
+        // Handle Ollama which sometimes returns a structured response or just content
+        let parsed;
+        try {
+            parsed = JSON.parse(content);
+        } catch (e) {
+            // Some models wrap JSON in markdown blocks
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                parsed = JSON.parse(jsonMatch[0]);
+            } else {
+                throw e;
+            }
+        }
+
+        return parsed as AiFindingDetails;
     } catch (error) {
         console.error("[ScannerEngine] Failed to enrich finding with AI:", error);
         return { description: finding.description, remediation: "" };

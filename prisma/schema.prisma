@@ -773,7 +773,18 @@ model Setting {
   passwordPolicy          String       @default("STRONG")
   updatedAt               DateTime     @updatedAt
   aiRiskAssessmentEnabled Boolean      @default(true)
+  aiProvider              AIProvider   @default(OLLAMA)
+  aiModel                 String       @default("llama3")
+  aiApiKey                String?
+  aiBaseUrl               String?      @default("http://localhost:11434")
   organization            Organization @relation(fields: [organizationId], references: [id])
+}
+
+enum AIProvider {
+  OLLAMA
+  OPENAI
+  ANTHROPIC
+  OPENROUTER
 }
 
 model Report {
@@ -1548,6 +1559,11 @@ enum VulnSource {
   API
   OTHER
   TENABLE
+  ACUNETIX
+  ZAP
+  OPENSCAP
+  QUALYSGUARD
+  INSIGHTVM
 }
 
 enum ExploitMaturity {

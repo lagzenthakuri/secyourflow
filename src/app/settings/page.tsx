@@ -76,6 +76,10 @@ interface PlatformSettings {
     sessionTimeout?: number;
     passwordPolicy?: string;
     aiRiskAssessmentEnabled?: boolean;
+    aiProvider?: "OLLAMA" | "OPENAI" | "ANTHROPIC" | "OPENROUTER";
+    aiModel?: string;
+    aiApiKey?: string;
+    aiBaseUrl?: string;
     systemHealth?: SettingSystemHealth;
     serverTimestamp?: string;
     [key: string]: unknown;
@@ -162,6 +166,10 @@ const MAIN_OFFICER_ONLY_SAVE_FIELDS: Array<keyof PlatformSettings> = [
     "sessionTimeout",
     "passwordPolicy",
     "aiRiskAssessmentEnabled",
+    "aiProvider",
+    "aiModel",
+    "aiApiKey",
+    "aiBaseUrl",
 ];
 
 function isTwoFactorRequiredError(error?: string) {
@@ -609,6 +617,10 @@ export default function SettingsPage() {
 
                             {activeSection === "ai-assist" && (
                                 <AIAssistSection
+                                    settings={settings}
+                                    updateSettings={updateSettings}
+                                    handleSave={handleSave}
+                                    isSaving={isSaving}
                                     featureFlags={featureFlags}
                                     updateFeatureFlags={updateFeatureFlags}
                                     handleSaveFeatureFlags={handleSaveFeatureFlags}
@@ -1422,16 +1434,111 @@ function SecuritySection({ settings, updateSettings, handleSave, isSaving }: Sec
     );
 }
 
-// AI Assist Section
-function AIAssistSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFlags }: FeatureFlagSectionProps) {
+function AIAssistSection({ 
+    settings, 
+    updateSettings, 
+    handleSave, 
+    isSaving,
+    featureFlags, 
+    updateFeatureFlags, 
+    handleSaveFeatureFlags 
+}: { 
+    settings: PlatformSettings | null; 
+    updateSettings: (updates: Partial<PlatformSettings>) => void; 
+    handleSave: () => Promise<void>; 
+    isSaving: boolean;
+    featureFlags: FeatureFlags; 
+    updateFeatureFlags: (updates: Partial<FeatureFlags>) => void; 
+    handleSaveFeatureFlags: () => void;
+}) {
+    const aiProvider = settings?.aiProvider || "OLLAMA";
+
     return (
-        <Card title="AI Assist" subtitle="Guardrails for OpenRouter and risk autofill">
+        <Card title="AI Intelligence" subtitle="Configure AI analysis engine and guardrails">
             <div className="space-y-6">
+                <div className="p-4 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-color)]">
+                    <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Core AI Engine Configuration</h4>
+                    <div className="grid gap-4">
+                        <div>
+                            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5 uppercase">AI Provider</label>
+                            <select
+                                className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
+                                value={aiProvider}
+                                onChange={(e) => updateSettings({ aiProvider: e.target.value as any })}
+                            >
+                                <option value="OLLAMA">Ollama (Local Hosted - Default)</option>
+                                <option value="OPENAI">OpenAI (SaaS)</option>
+                                <option value="ANTHROPIC">Anthropic (Claude)</option>
+                                <option value="OPENROUTER">OpenRouter (Unified API)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5 uppercase">Model Name</label>
+                            <input
+                                type="text"
+                                className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
+                                placeholder={aiProvider === "OLLAMA" ? "llama3" : "gpt-4o-mini"}
+                                value={settings?.aiModel || ""}
+                                onChange={(e) => updateSettings({ aiModel: e.target.value })}
+                            />
+                        </div>
+
+                        {aiProvider === "OLLAMA" ? (
+                            <div>
+                                <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5 uppercase">Ollama Base URL</label>
+                                <input
+                                    type="text"
+                                    className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
+                                    placeholder="http://localhost:11434"
+                                    value={settings?.aiBaseUrl || ""}
+                                    onChange={(e) => updateSettings({ aiBaseUrl: e.target.value })}
+                                />
+                            </div>
+                        ) : (
+                            <div>
+                                <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5 uppercase">API Key</label>
+                                <input
+                                    type="password"
+                                    className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
+                                    placeholder="sk-..."
+                                    value={settings?.aiApiKey || ""}
+                                    onChange={(e) => updateSettings({ aiApiKey: e.target.value })}
+                                />
+                            </div>
+                        )}
+
+                        <div className="pt-2">
+                             <button
+                                className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                onClick={handleSave}
+                                disabled={isSaving}
+                            >
+                                <Save size={16} />
+                                {isSaving ? "Saving..." : "Apply AI Engine Settings"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
                     <div>
-                        <h4 className="text-sm font-medium text-[var(--text-primary)]">Enable AI Assist</h4>
+                        <h4 className="text-sm font-medium text-[var(--text-primary)]">Enable AI Risk Analysis</h4>
                         <p className="text-xs text-[var(--text-muted)]">
-                            Master switch for all AI-powered features
+                            Automatically analyze vulnerabilities using the engine above
+                        </p>
+                    </div>
+                    <Toggle
+                        checked={settings?.aiRiskAssessmentEnabled !== false}
+                        onChange={(checked) => updateSettings({ aiRiskAssessmentEnabled: checked })}
+                    />
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
+                    <div>
+                        <h4 className="text-sm font-medium text-[var(--text-primary)]">Enable AI UI Assistant</h4>
+                        <p className="text-xs text-[var(--text-muted)]">
+                            Master switch for in-browser AI features
                         </p>
                     </div>
                     <Toggle
@@ -1442,24 +1549,7 @@ function AIAssistSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFl
 
                 <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
                     <div>
-                        <h4 className="text-sm font-medium text-[var(--text-primary)]">
-                            Risk Register Autofill
-                        </h4>
-                        <p className="text-xs text-[var(--text-muted)]">
-                            When users enter Threat + CIA impacts, AI suggests remaining fields
-                        </p>
-                    </div>
-                    <Toggle
-                        checked={featureFlags.aiRiskAutofillEnabled || false}
-                        onChange={(checked) => updateFeatureFlags({ aiRiskAutofillEnabled: checked })}
-                    />
-                </div>
-
-                <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
-                    <div>
-                        <h4 className="text-sm font-medium text-[var(--text-primary)]">
-                            Require human review
-                        </h4>
+                        <h4 className="text-sm font-medium text-[var(--text-primary)]">Require human review</h4>
                         <p className="text-xs text-[var(--text-muted)]">
                             Prevent automatic acceptance of AI-generated content
                         </p>
@@ -1470,56 +1560,14 @@ function AIAssistSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFl
                     />
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        Data Redaction
-                    </label>
-                    <select
-                        className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                        value={featureFlags.aiDataRedactionMode || "STRICT"}
-                        onChange={(e) => updateFeatureFlags({ aiDataRedactionMode: e.target.value })}
-                    >
-                        <option value="STRICT">Strict (no PII, no internal hostnames)</option>
-                        <option value="STANDARD">Standard</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        Allowed Models
-                    </label>
-                    <div className="space-y-2">
-                        {["openai/gpt-4o-mini", "openai/gpt-4.1-mini", "anthropic/claude-3.5-sonnet", "google/gemini-1.5-pro"].map((model) => (
-                            <label key={model} className="flex items-center gap-2 p-2 rounded bg-[var(--bg-tertiary)] cursor-pointer hover:bg-[var(--bg-elevated)] transition-colors">
-                                <input
-                                    type="checkbox"
-                                    checked={(featureFlags.aiModelAllowlist || []).includes(model)}
-                                    onChange={(e) => {
-                                        const current = featureFlags.aiModelAllowlist || [];
-                                        const updated = e.target.checked
-                                            ? [...current, model]
-                                            : current.filter((m) => m !== model);
-                                        updateFeatureFlags({ aiModelAllowlist: updated });
-                                    }}
-                                    className="rounded border-[var(--border-color)]"
-                                />
-                                <span className="text-sm text-[var(--text-primary)]">{model}</span>
-                            </label>
-                        ))}
-                    </div>
-                </div>
-
                 <div className="pt-4 border-t border-[var(--border-color)]">
                     <button
-                        className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={handleSaveFeatureFlags}
                     >
                         <Save size={16} />
-                        Save (Feature Flags)
+                        Save Guardrail Preferences
                     </button>
-                    <p className="text-xs text-[var(--text-muted)] mt-2">
-                        Note: Stored in localStorage (no DB schema changes)
-                    </p>
                 </div>
             </div>
         </Card>

@@ -114,21 +114,17 @@ function normalizeRiskAnalysis(raw: unknown, fallback: RiskAnalysis): RiskAnalys
     };
 }
 
+import { askAI } from "@/lib/ai/provider";
+
 /**
- * Calls the OpenRouter LLM API to analyze risk.
+ * Calls the selected LLM API to analyze risk.
  */
 async function analyzeRiskWithAI(
     vulnerability: RiskInputVulnerability,
-    asset: RiskInputAsset
+    asset: RiskInputAsset,
+    organizationId: string
 ): Promise<RiskAnalysis> {
     const fallback = mockAnalysis(vulnerability, asset);
-    const apiKey = process.env.OPENROUTER_API_KEY;
-
-    if (!apiKey) {
-        console.warn("[RiskEngine] OPENROUTER_API_KEY is not set. Falling back to mock analysis.");
-        return fallback;
-    }
-
     const cia = parseCVSSVector(vulnerability.cvssVector);
 
     const prompt = `
@@ -183,33 +179,28 @@ Return ONLY structured JSON in this format:
 `;
 
     try {
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${apiKey}`,
-                "HTTP-Referer": `https://secyourflow.com`, // Optional, for OpenRouter rankings
-                "X-Title": `SecYourFlow`, // Optional
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                "model": "google/gemini-2.0-flash-001", // Using a fast and capable model
-                "messages": [
-                    { "role": "system", "content": "You are a specialized Cybersecurity Risk Analyst. Output only valid JSON." },
-                    { "role": "user", "content": prompt }
-                ],
-                "response_format": { "type": "json_object" }
-            })
-        });
+        const content = await askAI(organizationId, prompt, "You are a specialized Cybersecurity Risk Analyst. Output only valid JSON.");
 
-        const data = await response.json();
-        const content = data?.choices?.[0]?.message?.content;
         if (typeof content !== "string") {
             return fallback;
         }
 
-        return normalizeRiskAnalysis(JSON.parse(content), fallback);
+        // Handle models that wrap JSON in markdown blocks
+        let parsed;
+        try {
+            parsed = JSON.parse(content);
+        } catch (e) {
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                parsed = JSON.parse(jsonMatch[0]);
+            } else {
+                throw e;
+            }
+        }
+
+        return normalizeRiskAnalysis(parsed, fallback);
     } catch (error) {
-        console.error("[RiskEngine] OpenRouter API call failed:", error);
+        console.error("[RiskEngine] AI call failed:", error);
         return fallback;
     }
 }
@@ -328,7 +319,8 @@ export async function processRiskAssessment(
                 criticality: asset.criticality,
                 environment: asset.environment,
                 owner: asset.owner ?? undefined,
-            }
+            },
+            organizationId
         );
 
         // 3. Calculate Impact Score = (C + I + A) / 3

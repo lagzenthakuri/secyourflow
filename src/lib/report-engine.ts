@@ -1,16 +1,11 @@
-
 import { prisma } from "@/lib/prisma";
+import { askAI } from "@/lib/ai/provider";
 
 /**
  * Generates an AI-powered human-friendly summary for reports.
  * Fulfills Step 5: CEO view, CISO view, Auditor view.
  */
 export async function generateAIReportSummary(reportId: string) {
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) {
-        return "Manual report summary available in detailed view.";
-    }
-
     const report = await prisma.report.findUnique({
         where: { id: reportId },
         include: { organization: true }
@@ -64,23 +59,7 @@ Return the response in professional markdown format.
 `;
 
     try {
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${apiKey}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                "model": "google/gemini-2.0-flash-001",
-                "messages": [
-                    { "role": "system", "content": "You are a professional Cybersecurity Advisor." },
-                    { "role": "user", "content": prompt }
-                ]
-            })
-        });
-
-        const data = await response.json();
-        const content = data.choices?.[0]?.message?.content;
+        const content = await askAI(report.organizationId, prompt, "You are a professional Cybersecurity Advisor.");
 
         if (content) {
             // Update report with the summary

@@ -12,6 +12,9 @@ const DEFAULT_SETTING_VALUES = {
     sessionTimeout: 30,
     passwordPolicy: "STRONG",
     aiRiskAssessmentEnabled: true,
+    aiProvider: "OLLAMA",
+    aiModel: "llama3",
+    aiBaseUrl: "http://localhost:11434",
 };
 
 export async function GET(request: NextRequest) {
@@ -131,6 +134,10 @@ type SettingWriteData = Partial<
         | "sessionTimeout"
         | "passwordPolicy"
         | "aiRiskAssessmentEnabled"
+        | "aiProvider"
+        | "aiModel"
+        | "aiApiKey"
+        | "aiBaseUrl"
     >
 >;
 
@@ -260,6 +267,12 @@ function buildSettingsUpdateData(
 
     applyMandatoryTwoFactorRequirement();
     applyRestrictedBoolean("aiRiskAssessmentEnabled");
+    
+    if ("aiProvider" in input) settingsData.aiProvider = input.aiProvider as any;
+    if ("aiModel" in input) settingsData.aiModel = parseStringField(input.aiModel);
+    if ("aiApiKey" in input) settingsData.aiApiKey = parseStringField(input.aiApiKey);
+    if ("aiBaseUrl" in input) settingsData.aiBaseUrl = parseStringField(input.aiBaseUrl);
+
     applyRestrictedSessionTimeout();
     applyRestrictedPasswordPolicy();
 
