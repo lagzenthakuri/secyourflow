@@ -1,10 +1,12 @@
 import nodemailer from "nodemailer";
+import { prisma } from "./prisma";
 
 type SendMailInput = {
   to: string;
   subject: string;
   text: string;
   html?: string;
+  organizationId?: string;
 };
 
 type SendMailResult = {
@@ -13,11 +15,38 @@ type SendMailResult = {
 };
 
 type MailConfig =
-  | { provider: "smtp"; host: string; port: number; user: string; pass: string; from: string }
+  | { provider: "smtp"; host: string; port: number; user: string; pass: string; from: string; secure: boolean }
   | { provider: "sendgrid-api"; apiKey: string; from: string };
 
-function getMailConfig(): MailConfig | null {
-  // Try SMTP first if host is provided
+async function getMailConfig(organizationId?: string): Promise<MailConfig | null> {
+  // If organizationId is provided, try to get SMTP from database
+  if (organizationId) {
+    try {
+      const setting = await prisma.setting.findUnique({
+        where: { organizationId },
+      });
+
+      if (setting && setting.smtpHost && setting.smtpUser && setting.smtpPass && setting.smtpFrom) {
+        const port = setting.smtpPort || 587;
+        const encryption = setting.smtpEncryption || "TLS";
+        const secure = port === 465 || encryption === "SSL";
+
+        return {
+          provider: "smtp",
+          host: setting.smtpHost,
+          port,
+          user: setting.smtpUser,
+          pass: setting.smtpPass, // Use encryption/decryption for pass here if you want it secured.
+          from: setting.smtpFrom,
+          secure,
+        };
+      }
+    } catch (e) {
+      console.error("Error fetching organization SMTP settings:", e);
+    }
+  }
+
+  // Fallback to system config
   const smtpHost = process.env.SMTP_HOST?.trim();
   const smtpPort = parseInt(process.env.SMTP_PORT || "587");
   const smtpUser = process.env.SMTP_USER?.trim() || process.env.SENDGRID_USERNAME?.trim();
@@ -25,13 +54,15 @@ function getMailConfig(): MailConfig | null {
   const smtpFrom = process.env.SMTP_FROM?.trim();
 
   if (smtpHost && smtpUser && smtpPass && smtpFrom) {
+    const port = parseInt(process.env.SMTP_PORT || "587");
     return {
       provider: "smtp",
       host: smtpHost,
-      port: smtpPort,
+      port,
       user: smtpUser,
       pass: smtpPass,
       from: smtpFrom,
+      secure: port === 465,
     };
   }
 
@@ -45,10 +76,8 @@ function getMailConfig(): MailConfig | null {
     };
   }
 
-  // If we have some credentials but not enough for either, we can try to guess for SendGrid SMTP
-  // since many users think SENDGRID_USERNAME/PASSWORD works for SMTP
+  // ... (SendGrid SMTP guessing left intentionally same)
   if (smtpUser && smtpPass && smtpFrom && !smtpHost) {
-    // If no host but we have user/pass/from, and user looks like 'apikey' or we have SENDGRID_USERNAME
     const isSendGrid = smtpUser === 'apikey' || process.env.SENDGRID_USERNAME;
     if (isSendGrid) {
       return {
@@ -58,6 +87,7 @@ function getMailConfig(): MailConfig | null {
         user: smtpUser,
         pass: smtpPass,
         from: smtpFrom,
+        secure: false,
       };
     }
   }
@@ -66,7 +96,7 @@ function getMailConfig(): MailConfig | null {
 }
 
 export async function sendMail(input: SendMailInput): Promise<SendMailResult> {
-  const config = getMailConfig();
+  const config = await getMailConfig(input.organizationId);
 
   if (!config) {
     return {
@@ -80,7 +110,7 @@ export async function sendMail(input: SendMailInput): Promise<SendMailResult> {
       const transporter = nodemailer.createTransport({
         host: config.host,
         port: config.port,
-        secure: config.port === 465,
+        secure: config.secure,
         auth: {
           user: config.user,
           pass: config.pass,
@@ -147,6 +177,7 @@ export async function sendOrganizationActivationEmail(params: {
   organizationName: string;
   productKey: string;
   activationLink: string;
+  organizationId?: string;
 }): Promise<SendMailResult> {
   const subject = `SecYourFlow access for ${params.organizationName}`;
   const text = [
@@ -165,13 +196,14 @@ export async function sendOrganizationActivationEmail(params: {
     "<p>Use the activation link to set your password and activate your officer account.</p>",
   ].join("");
 
-  return sendMail({ to: params.to, subject, text, html });
+  return sendMail({ to: params.to, subject, text, html, organizationId: params.organizationId });
 }
 
 export async function sendRoleInvitationEmail(params: {
   to: string;
   role: string;
   inviteLink: string;
+  organizationId?: string;
 }): Promise<SendMailResult> {
   const roleLabel = params.role.replaceAll("_", " ");
   const subject = `SecYourFlow invitation - ${roleLabel}`;
@@ -189,5 +221,31 @@ export async function sendRoleInvitationEmail(params: {
     "<p>This invitation link expires in 7 days.</p>",
   ].join("");
 
-  return sendMail({ to: params.to, subject, text, html });
+  return sendMail({ to: params.to, subject, text, html, organizationId: params.organizationId });
 }
+
+export async function sendPasswordResetEmail(params: {
+  to: string;
+  resetLink: string;
+  organizationId?: string;
+}): Promise<SendMailResult> {
+  const subject = "SecYourFlow password reset";
+  const text = [
+    "A password reset was requested for your SecYourFlow account.",
+    "",
+    `Reset Link: ${params.resetLink}`,
+    "",
+    "This link expires in 1 hour.",
+    "If you did not request this, please ignore this email.",
+  ].join("\n");
+
+  const html = [
+    "<p>A password reset was requested for your SecYourFlow account.</p>",
+    `<p><a href="${params.resetLink}">Reset Password</a></p>`,
+    "<p>This link expires in 1 hour.</p>",
+    "<p>If you did not request this, please ignore this email.</p>",
+  ].join("");
+
+  return sendMail({ to: params.to, subject, text, html, organizationId: params.organizationId });
+}
+

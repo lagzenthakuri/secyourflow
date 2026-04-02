@@ -2,139 +2,55 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Card } from "@/components/ui/Cards";
 import {
     Settings,
     Bell,
     Shield,
     Database,
-    Key,
-    ChevronRight,
-    Save,
-    Search,
-    AlertTriangle,
-    CheckCircle2,
-    XCircle,
-    Plus,
-    Trash2,
-    Users as UsersIcon,
-    ShieldCheck,
-    FileText,
     Zap,
     Activity,
     User,
+    ShieldCheck,
+    FileText,
+    Key,
+    CheckCircle2,
+    XCircle,
+    RefreshCw,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { useSession } from "next-auth/react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useRouter } from "next/navigation";
-import { TwoFactorSettingsPanel } from "@/components/settings/TwoFactorSettingsPanel";
 import { useUiFeedback } from "@/hooks/useUiFeedback";
+
+// New Components
+import { SettingsSidebar } from "@/components/settings/SettingsSidebar";
+import { ProfileSection } from "@/components/settings/ProfileSection";
+import { GeneralSection } from "@/components/settings/GeneralSection";
+import { GovernanceSection } from "@/components/settings/GovernanceSection";
+import { NotificationsSection } from "@/components/settings/NotificationsSection";
+import { AIAssistSection } from "@/components/settings/AIAssistSection";
+import { 
+    SOCRoutingSection, 
+    SecuritySection, 
+    SystemHealthSection, 
+    MailSection, 
+    UsersManagementTab 
+} from "@/components/settings/SettingsSections";
+
+// Types
+import { 
+    PlatformSettings, 
+    FeatureFlags, 
+    SettingsSectionId, 
+    SettingsSectionItem 
+} from "@/components/settings/types";
 
 // Feature flags storage key
 const FEATURE_FLAGS_KEY = "secyourflow.settings.featureFlags.v1";
-
-// Toast notification component (simple, no external deps)
-function Toast({ message, type, onClose }: { message: string; type: "success" | "error"; onClose: () => void }) {
-    useEffect(() => {
-        const timer = setTimeout(onClose, 3000);
-        return () => clearTimeout(timer);
-    }, [onClose]);
-
-    return (
-        <div className={cn(
-            "fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-top",
-            type === "success" ? "bg-green-500/20 border border-green-500/50 text-green-600 dark:text-green-400" : "bg-red-500/20 border border-red-500/50 text-intent-danger"
-        )}>
-            {type === "success" ? <CheckCircle2 size={18} /> : <XCircle size={18} />}
-            <span className="text-sm font-medium">{message}</span>
-        </div>
-    );
-}
-
-interface SettingSystemHealth {
-    nvdApiKeyConfigured?: boolean;
-    githubTokenConfigured?: boolean;
-    openrouterConfigured?: boolean;
-    nextauthSecretConfigured?: boolean;
-    databaseUrlConfigured?: boolean;
-}
-
-interface PlatformSettings {
-    organizationName?: string;
-    domain?: string;
-    timezone?: string;
-    dateFormat?: string;
-    notifyCritical?: boolean;
-    notifyExploited?: boolean;
-    notifyCompliance?: boolean;
-    notifyScan?: boolean;
-    notifyWeekly?: boolean;
-    require2FA?: boolean;
-    sessionTimeout?: number;
-    passwordPolicy?: string;
-    aiRiskAssessmentEnabled?: boolean;
-    aiProvider?: "OLLAMA" | "OPENAI" | "ANTHROPIC" | "OPENROUTER";
-    aiModel?: string;
-    aiApiKey?: string;
-    aiBaseUrl?: string;
-    systemHealth?: SettingSystemHealth;
-    serverTimestamp?: string;
-    [key: string]: unknown;
-}
-
-interface FeatureFlags {
-    changeControlMode: string;
-    settingsChangeReasonRequired: boolean;
-    auditLogRetentionDays: number;
-    dataRetentionDays: number;
-    quietHoursEnabled: boolean;
-    quietHoursStart: string;
-    quietHoursEnd: string;
-    notifyKevOnly: boolean;
-    epssAlertThreshold: number;
-    aiAssistEnabled: boolean;
-    aiRiskAutofillEnabled: boolean;
-    aiHumanReviewRequired: boolean;
-    aiDataRedactionMode: string;
-    aiModelAllowlist: string[];
-    [key: string]: unknown;
-}
-
-interface NotificationRuleRecord {
-    id: string;
-    name: string;
-    channel: "IN_APP";
-    eventType: string;
-    minimumSeverity?: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFORMATIONAL" | null;
-    includeExploited: boolean;
-    includeKev: boolean;
-    recipients: string[];
-    isActive: boolean;
-}
-
-type SettingsSectionId =
-    | "general"
-    | "governance"
-    | "notifications"
-    | "soc-notifications"
-    | "security"
-    | "ai-assist"
-    | "system-health"
-    | "integrations"
-    | "api"
-    | "users"
-    | "profile";
-
-interface SettingsSectionItem {
-    id: SettingsSectionId;
-    label: string;
-    description: string;
-    icon: LucideIcon;
-    mainOfficerOnly?: boolean;
-}
+const MAIN_OFFICER_ROLE = "MAIN_OFFICER";
+const ADMIN_ROLE = "ADMIN";
 
 const settingsSections: SettingsSectionItem[] = [
     { id: "profile", label: "Profile", description: "Personal details and account preferences", icon: User },
@@ -144,12 +60,10 @@ const settingsSections: SettingsSectionItem[] = [
     { id: "soc-notifications", label: "SOC Routing", description: "Quiet hours and incident-routing thresholds", icon: Activity },
     { id: "security", label: "Security", description: "Identity, sessions, password and 2FA controls", icon: Shield },
     { id: "ai-assist", label: "AI Assist", description: "Model governance and human-review policies", icon: Zap },
+    { id: "mail", label: "Mail Server", description: "SMTP configuration for outbound alerts and reports", icon: Bell },
     { id: "system-health", label: "System Health", description: "Runtime configuration and dependency checks", icon: Activity },
-    { id: "integrations", label: "Integrations", description: "Third-party connectors and workflow links", icon: Database },
-    { id: "users", label: "Users & Roles", description: "Role assignment and access administration", icon: UsersIcon },
+    { id: "users", label: "Users & Roles", description: "Role assignment and access administration", icon: User },
 ];
-
-const MAIN_OFFICER_ROLE = "MAIN_OFFICER";
 
 const COMMON_SAVE_FIELDS: Array<keyof PlatformSettings> = [
     "timezone",
@@ -170,6 +84,12 @@ const MAIN_OFFICER_ONLY_SAVE_FIELDS: Array<keyof PlatformSettings> = [
     "aiModel",
     "aiApiKey",
     "aiBaseUrl",
+    "smtpHost",
+    "smtpPort",
+    "smtpUser",
+    "smtpPass",
+    "smtpFrom",
+    "smtpEncryption",
 ];
 
 function isTwoFactorRequiredError(error?: string) {
@@ -180,6 +100,7 @@ function isTwoFactorRequiredError(error?: string) {
 function formatRoleLabel(role?: string) {
     if (!role) return "";
     if (role === MAIN_OFFICER_ROLE) return "MAIN-OFFICER";
+    if (role === ADMIN_ROLE) return "ADMIN";
     return role;
 }
 
@@ -197,8 +118,9 @@ export default function SettingsPage() {
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
     const isMainOfficer = session?.user?.role === MAIN_OFFICER_ROLE;
+    const isAdmin = session?.user?.role === ADMIN_ROLE;
+    const canManageUsers = isMainOfficer || isAdmin;
 
-    // Load feature flags from localStorage.
     const loadFeatureFlags = useCallback(() => {
         if (typeof window !== 'undefined') {
             const stored = localStorage.getItem(FEATURE_FLAGS_KEY);
@@ -220,7 +142,6 @@ export default function SettingsPage() {
         return getDefaultFeatureFlags();
     }, []);
 
-    // Save feature flags to localStorage
     const saveFeatureFlags = useCallback((flags: FeatureFlags) => {
         if (typeof window !== 'undefined') {
             localStorage.setItem(FEATURE_FLAGS_KEY, JSON.stringify(flags));
@@ -233,16 +154,13 @@ export default function SettingsPage() {
             const response = await fetch("/api/settings", { cache: "no-store" });
             const data = await response.json() as PlatformSettings | { error?: string };
             if (!response.ok) {
-                const errorMessage =
-                    typeof (data as { error?: unknown }).error === "string"
-                        ? (data as { error: string }).error
-                        : "Failed to load settings";
+                const errorMessage = typeof (data as any).error === "string" ? (data as any).error : "Failed to load settings";
                 if (response.status === 401) {
                     router.replace("/login");
                     return;
                 }
                 if (response.status === 403 && isTwoFactorRequiredError(errorMessage)) {
-                    setToast({ message: "Please complete two-factor verification to continue", type: "error" });
+                    setToast({ message: "Two-factor verification required", type: "error" });
                     router.replace("/auth/2fa");
                     return;
                 }
@@ -253,7 +171,6 @@ export default function SettingsPage() {
             setFeatureFlags(loadFeatureFlags());
             setHasUnsavedChanges(false);
         } catch (error) {
-            console.error("Failed to fetch settings:", error);
             setToast({ message: "Failed to load settings", type: "error" });
         } finally {
             setIsLoading(false);
@@ -264,75 +181,33 @@ export default function SettingsPage() {
         void fetchSettings();
     }, [fetchSettings]);
 
-    useEffect(() => {
-        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (hasUnsavedChanges) {
-                e.preventDefault();
-                e.returnValue = '';
-            }
-        };
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [hasUnsavedChanges]);
-
     const handleSave = async () => {
-        if (!settings) {
-            setToast({ message: "Settings are not loaded yet", type: "error" });
-            return;
-        }
-
+        if (!settings) return;
         try {
             setIsSaving(true);
             const payload: Partial<PlatformSettings> = {};
-
-            for (const field of COMMON_SAVE_FIELDS) {
-                if (settings[field] !== undefined) {
-                    payload[field] = settings[field];
-                }
-            }
-
+            for (const field of COMMON_SAVE_FIELDS) if (settings[field] !== undefined) payload[field] = settings[field];
             if (isMainOfficer) {
-                for (const field of MAIN_OFFICER_ONLY_SAVE_FIELDS) {
-                    if (settings[field] !== undefined) {
-                        payload[field] = settings[field];
-                    }
-                }
-                if (settings.organizationName !== undefined) {
-                    payload.organizationName = settings.organizationName;
-                }
-                if (settings.domain !== undefined) {
-                    payload.domain = settings.domain;
-                }
+                for (const field of MAIN_OFFICER_ONLY_SAVE_FIELDS) if (settings[field] !== undefined) payload[field] = settings[field];
+                if (settings.organizationName !== undefined) payload.organizationName = settings.organizationName;
+                if (settings.domain !== undefined) payload.domain = settings.domain;
             }
-
             const response = await fetch("/api/settings", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             });
-
             if (response.ok) {
                 const data = await response.json() as PlatformSettings;
                 setSettings((prev) => ({ ...(prev ?? {}), ...data }));
                 setHasUnsavedChanges(false);
-                setToast({ message: "Settings saved successfully!", type: "success" });
+                setToast({ message: "Settings finalized successfully!", type: "success" });
             } else {
                 const error = await response.json() as { error?: string };
-                const errorMessage = error.error || "Failed to save settings";
-                if (response.status === 401) {
-                    router.replace("/login");
-                    return;
-                }
-                if (response.status === 403 && isTwoFactorRequiredError(errorMessage)) {
-                    setToast({ message: "Please complete two-factor verification to continue", type: "error" });
-                    router.replace("/auth/2fa");
-                    return;
-                }
-                setToast({ message: errorMessage, type: "error" });
+                setToast({ message: error.error || "Failed to save settings", type: "error" });
             }
         } catch (error) {
-            console.error("Failed to save settings:", error);
-            setToast({ message: "Failed to save settings", type: "error" });
+            setToast({ message: "System error while saving", type: "error" });
         } finally {
             setIsSaving(false);
         }
@@ -340,7 +215,7 @@ export default function SettingsPage() {
 
     const handleSaveFeatureFlags = () => {
         saveFeatureFlags(featureFlags);
-        setToast({ message: "Feature flags saved!", type: "success" });
+        setToast({ message: "Feature flags updated!", type: "success" });
     };
 
     const updateSettings = (updates: Partial<PlatformSettings>) => {
@@ -352,64 +227,11 @@ export default function SettingsPage() {
         setFeatureFlags((prev) => ({ ...prev, ...updates }));
     };
 
-    const accessibleSections = useMemo(
-        () => settingsSections,
-        [],
-    );
-
     const filteredSections = useMemo(
-        () =>
-            accessibleSections.filter((section) =>
-                `${section.label} ${section.description}`.toLowerCase().includes(searchQuery.toLowerCase()),
-            ),
-        [accessibleSections, searchQuery],
-    );
-
-    useEffect(() => {
-        if (filteredSections.length === 0) return;
-        if (!filteredSections.some((section) => section.id === activeSection)) {
-            setActiveSection(filteredSections[0].id);
-        }
-    }, [activeSection, filteredSections]);
-
-    const activeSectionInfo = useMemo(
-        () =>
-            filteredSections.find((section) => section.id === activeSection)
-            ?? accessibleSections.find((section) => section.id === activeSection),
-        [activeSection, filteredSections, accessibleSections],
-    );
-
-    const notificationsEnabledCount = useMemo(() => {
-        const notificationKeys: Array<keyof PlatformSettings> = [
-            "notifyCritical",
-            "notifyExploited",
-            "notifyCompliance",
-            "notifyScan",
-            "notifyWeekly",
-        ];
-        return notificationKeys.filter((key) => Boolean(settings?.[key])).length;
-    }, [settings]);
-
-    const configuredEnvCount = useMemo(() => {
-        const health = settings?.systemHealth;
-        if (!health) return 0;
-        return [
-            health.nvdApiKeyConfigured,
-            health.githubTokenConfigured,
-            health.openrouterConfigured,
-            health.nextauthSecretConfigured,
-            health.databaseUrlConfigured,
-        ].filter(Boolean).length;
-    }, [settings]);
-
-    const enabledFeatureFlagCount = useMemo(
-        () =>
-            Object.values(featureFlags).filter((value) => {
-                if (typeof value === "boolean") return value;
-                if (Array.isArray(value)) return value.length > 0;
-                return false;
-            }).length,
-        [featureFlags],
+        () => settingsSections.filter((section) =>
+            `${section.label} ${section.description}`.toLowerCase().includes(searchQuery.toLowerCase()),
+        ),
+        [searchQuery],
     );
 
     if (isLoading) {
@@ -424,152 +246,64 @@ export default function SettingsPage() {
 
     return (
         <DashboardLayout>
-            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-            <div className="space-y-5">
+            {toast && (
+                <div className={cn(
+                    "fixed top-6 right-6 z-[100] px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-10 transition-all cursor-pointer",
+                    toast.type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white"
+                )} onClick={() => setToast(null)}>
+                    {toast.type === "success" ? <CheckCircle2 size={20} /> : <XCircle size={20} />}
+                    <span className="text-sm font-bold uppercase tracking-wider">{toast.message}</span>
+                </div>
+            )}
+            
+            <div className="space-y-8 max-w-7xl mx-auto">
                 <PageHeader
-                    title="Settings"
-                    description="Configure security controls, governance policy, operational alerts, and platform integrations in one auditable workspace."
+                    title="Control Center"
+                    description="Advanced workspace configuration for organization governance and risk orchestration."
                     badge={
-                        <>
-                            <Settings size={13} />
-                            Configuration Center
-                        </>
+                        <div className="flex items-center gap-2">
+                            <Settings size={13} className="text-sky-500" />
+                            <span className="text-sky-600 dark:text-sky-400 font-bold tracking-tighter">SEC-LEVEL-1</span>
+                        </div>
                     }
                     actions={
-                        <>
-                            <div
-                                className={cn(
-                                    "rounded-xl border px-3 py-2 text-xs font-bold uppercase tracking-wide",
-                                    isMainOfficer
-                                        ? "border-purple-400/40 bg-purple-500/10 text-purple-700 dark:text-purple-200"
-                                        : "border-sky-400/40 bg-sky-500/10 text-sky-700 dark:text-sky-100",
-                                )}
-                            >
+                        <div className="flex items-center gap-3">
+                            <div className={cn(
+                                "px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-sm",
+                                isMainOfficer ? "bg-purple-500/10 border-purple-500/30 text-purple-600 dark:text-purple-400" : "bg-sky-500/10 border-sky-500/30 text-sky-600 dark:text-sky-400"
+                            )}>
+                                <Shield size={12} />
                                 {formatRoleLabel(session?.user?.role)}
                             </div>
                             <button
-                                type="button"
-                                onClick={fetchSettings}
-                                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95"
+                                onClick={() => void fetchSettings()}
+                                className="p-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-elevated)] transition-all transform active:scale-95 group shadow-sm"
                             >
-                                <Activity size={14} />
-                                Refresh
+                                <RefreshCw size={16} className="group-hover:rotate-180 transition-transform duration-500" />
                             </button>
-                        </>
+                        </div>
                     }
                     stats={[
-                        {
-                            label: "Alerts Enabled",
-                            value: notificationsEnabledCount,
-                            trend: { value: "Notification channels currently active", neutral: true },
-                            icon: Bell,
-                        },
-                        {
-                            label: "Session Timeout",
-                            value: `${settings?.sessionTimeout ?? 30} min`,
-                            trend: { value: "Current authentication session policy", neutral: true },
-                            icon: Shield,
-                        },
-                        {
-                            label: "Password Policy",
-                            value: String(settings?.passwordPolicy ?? "STRONG"),
-                            trend: { value: "Credential complexity baseline", neutral: true },
-                            icon: Key,
-                        },
-                        {
-                            label: "2FA Requirement",
-                            value: settings?.require2FA ? "Required" : "Optional",
-                            trend: { value: "Global multi-factor enforcement state", neutral: true },
-                            icon: ShieldCheck,
-                        },
+                        { label: "SOC Signals", value: String([settings?.notifyCritical, settings?.notifyExploited, settings?.notifyCompliance].filter(Boolean).length), icon: Bell },
+                        { label: "Policy", value: String(settings?.passwordPolicy || "STRONG"), icon: Key },
+                        { label: "Auth Guard", value: settings?.require2FA ? "ENFORCED" : "HYBRID", icon: ShieldCheck },
+                        { label: "Inference", value: String(settings?.aiProvider || "OLLAMA"), icon: Zap },
                     ]}
                 />
 
-                <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-                    <aside className="lg:col-span-4 xl:col-span-3">
-                        <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4 animate-in fade-in slide-in-from-left-4 duration-500" style={{ animationDelay: '350ms', animationFillMode: 'backwards' }}>
-                            <div className="relative mb-3">
-                                <Search
-                                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
-                                    size={16}
-                                />
-                                <input
-                                    type="text"
-                                    placeholder="Search settings..."
-                                    value={searchQuery}
-                                    onChange={(event) => setSearchQuery(event.target.value)}
-                                    className="h-10 w-full rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] pl-9 pr-3 text-sm text-[var(--text-primary)] outline-none transition-colors duration-200 placeholder:[var(--text-muted)] focus:border-sky-300/45"
-                                />
-                            </div>
+                <div className="flex flex-col lg:flex-row gap-8 items-start">
+                    <SettingsSidebar 
+                        sections={filteredSections}
+                        activeSection={activeSection}
+                        setActiveSection={setActiveSection}
+                        searchQuery={searchQuery}
+                        setSearchQuery={setSearchQuery}
+                    />
 
-                            <div className="space-y-1.5">
-                                {filteredSections.map((section, index) => (
-                                    <button
-                                        key={section.id}
-                                        onClick={() => setActiveSection(section.id)}
-                                        className={cn(
-                                            "group w-full rounded-xl border px-3 py-3 text-left transition-all duration-200 animate-in fade-in slide-in-from-left-2",
-                                            activeSection === section.id
-                                                ? "border-sky-300/30 bg-sky-500/10 shadow-lg shadow-sky-300/10"
-                                                : "border-transparent bg-[var(--bg-tertiary)] hover:bg-[var(--bg-elevated)] hover:scale-[1.02]",
-                                        )}
-                                        style={{ animationDelay: `${index * 30}ms`, animationFillMode: 'backwards' }}
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <section.icon
-                                                size={16}
-                                                className={cn(
-                                                    activeSection === section.id ? "text-sky-700 dark:text-sky-200" : "text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]",
-                                                )}
-                                            />
-                                            <p
-                                                className={cn(
-                                                    "text-sm font-medium",
-                                                    activeSection === section.id ? "text-sky-700 dark:text-sky-100" : "text-[var(--text-secondary)]",
-                                                )}
-                                            >
-                                                {section.label}
-                                            </p>
-                                            {section.mainOfficerOnly ? (
-                                                <span className="ml-auto rounded-md border border-red-400/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-700 dark:text-red-200">
-                                                    Officer
-                                                </span>
-                                            ) : (
-                                                <ChevronRight size={14} className="ml-auto text-[var(--text-muted)]" />
-                                            )}
-                                        </div>
-                                        <p className="mt-1 text-xs text-[var(--text-muted)]">{section.description}</p>
-                                    </button>
-                                ))}
-                                {filteredSections.length === 0 ? (
-                                    <div className="rounded-xl border border-dashed border-[var(--border-color)] px-3 py-4 text-xs text-[var(--text-muted)]">
-                                        No settings sections match your search.
-                                    </div>
-                                ) : null}
-                            </div>
-                        </div>
-                    </aside>
-
-                    <div className="lg:col-span-8 xl:col-span-9 space-y-4">
-                        <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] px-5 py-4 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '350ms', animationFillMode: 'backwards' }}>
-                            <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">Active Section</p>
-                            <h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
-                                {activeSectionInfo?.label ?? "Settings"}
-                            </h2>
-                            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                                {activeSectionInfo?.description ?? "Manage platform configuration"}
-                            </p>
-                        </div>
-
-                        <div className="animate-in fade-in slide-in-from-bottom-3 duration-500" style={{ animationDelay: '450ms', animationFillMode: 'backwards' }}>
-                            {activeSection === "profile" && (
-                                <ProfileSection
-                                    session={session}
-                                    setToast={setToast}
-                                />
-                            )}
-
-                            {activeSection === "general" && (
+                    <main className="flex-1 w-full min-w-0">
+                        <div className="min-h-[500px] animate-in fade-in duration-500">
+                             {activeSection === "profile" && <ProfileSection setToast={setToast} />}
+                             {activeSection === "general" && (
                                 <GeneralSection
                                     settings={settings}
                                     updateSettings={updateSettings}
@@ -580,16 +314,14 @@ export default function SettingsPage() {
                                     isSaving={isSaving}
                                 />
                             )}
-
-                            {activeSection === "governance" && (
+                             {activeSection === "governance" && (
                                 <GovernanceSection
                                     featureFlags={featureFlags}
                                     updateFeatureFlags={updateFeatureFlags}
                                     handleSaveFeatureFlags={handleSaveFeatureFlags}
                                 />
                             )}
-
-                            {activeSection === "notifications" && (
+                             {activeSection === "notifications" && (
                                 <NotificationsSection
                                     settings={settings}
                                     updateSettings={updateSettings}
@@ -597,16 +329,14 @@ export default function SettingsPage() {
                                     isSaving={isSaving}
                                 />
                             )}
-
-                            {activeSection === "soc-notifications" && (
+                             {activeSection === "soc-notifications" && (
                                 <SOCRoutingSection
                                     featureFlags={featureFlags}
                                     updateFeatureFlags={updateFeatureFlags}
                                     handleSaveFeatureFlags={handleSaveFeatureFlags}
                                 />
                             )}
-
-                            {activeSection === "security" && (
+                             {activeSection === "security" && (
                                 <SecuritySection
                                     settings={settings}
                                     updateSettings={updateSettings}
@@ -614,8 +344,7 @@ export default function SettingsPage() {
                                     isSaving={isSaving}
                                 />
                             )}
-
-                            {activeSection === "ai-assist" && (
+                             {activeSection === "ai-assist" && (
                                 <AIAssistSection
                                     settings={settings}
                                     updateSettings={updateSettings}
@@ -626,23 +355,33 @@ export default function SettingsPage() {
                                     handleSaveFeatureFlags={handleSaveFeatureFlags}
                                 />
                             )}
-
-                            {activeSection === "system-health" && (
+                             {activeSection === "mail" && (
+                                <MailSection
+                                    settings={settings}
+                                    updateSettings={updateSettings}
+                                    handleSave={handleSave}
+                                    isSaving={isSaving}
+                                />
+                            )}
+                             {activeSection === "system-health" && (
                                 <SystemHealthSection settings={settings} fetchSettings={fetchSettings} />
                             )}
-
-                            {activeSection === "integrations" && <IntegrationsSection />}
-
-                            {activeSection === "users" && <UsersManagementTab />}
+                             {activeSection === "users" && (
+                                <UsersManagementTab 
+                                    isAuthorized={canManageUsers} 
+                                    formatRoleLabel={formatRoleLabel} 
+                                    MAIN_OFFICER_ROLE={MAIN_OFFICER_ROLE} 
+                                    ADMIN_ROLE={ADMIN_ROLE}
+                                />
+                            )}
                         </div>
-                    </div>
-                </section>
+                    </main>
+                </div>
             </div>
         </DashboardLayout>
     );
 }
 
-// Helper function for default feature flags
 function getDefaultFeatureFlags(): FeatureFlags {
     return {
         changeControlMode: "SINGLE_APPROVER",
@@ -660,1162 +399,4 @@ function getDefaultFeatureFlags(): FeatureFlags {
         aiDataRedactionMode: "STRICT",
         aiModelAllowlist: ["openai/gpt-4o-mini"],
     };
-}
-
-// Toggle component
-function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean }) {
-    return (
-        <label className={cn("relative inline-flex items-center", disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer")}>
-            <input
-                type="checkbox"
-                checked={checked}
-                onChange={(e) => onChange(e.target.checked)}
-                disabled={disabled}
-                className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-[var(--bg-elevated)] peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all duration-200 peer-checked:bg-blue-500" />
-        </label>
-    );
-}
-
-// Restricted field wrapper
-function RestrictedField({ isMainOfficer, children }: { isMainOfficer: boolean; children: React.ReactNode }) {
-    return <>{children}</>;
-}
-
-interface GeneralSectionProps {
-    settings: PlatformSettings | null;
-    updateSettings: (updates: Partial<PlatformSettings>) => void;
-    isEditingGeneral: boolean;
-    setIsEditingGeneral: React.Dispatch<React.SetStateAction<boolean>>;
-    handleSave: () => Promise<void>;
-    fetchSettings: () => Promise<void>;
-    isSaving: boolean;
-}
-
-interface FeatureFlagSectionProps {
-    featureFlags: FeatureFlags;
-    updateFeatureFlags: (updates: Partial<FeatureFlags>) => void;
-    handleSaveFeatureFlags: () => void;
-}
-
-interface NotificationSectionProps {
-    settings: PlatformSettings | null;
-    updateSettings: (updates: Partial<PlatformSettings>) => void;
-    handleSave: () => Promise<void>;
-    isSaving: boolean;
-}
-
-interface SecuritySectionProps {
-    settings: PlatformSettings | null;
-    updateSettings: (updates: Partial<PlatformSettings>) => void;
-    handleSave: () => Promise<void>;
-    isSaving: boolean;
-}
-
-interface SystemHealthSectionProps {
-    settings: PlatformSettings | null;
-    fetchSettings: () => Promise<void>;
-}
-
-// Profile Section
-function ProfileSection({ session, setToast }: { session: any, setToast: any }) {
-    const [name, setName] = useState(session?.user?.name || "");
-    const [isSaving, setIsSaving] = useState(false);
-    const { update } = useSession();
-
-    const handleSaveProfile = async () => {
-        if (!name.trim()) return;
-        try {
-            setIsSaving(true);
-            const res = await fetch("/api/profile", {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name }),
-            });
-            if (res.ok) {
-                // Update next-auth session
-                await update({ name });
-                setToast({ message: "Profile updated successfully!", type: "success" });
-            } else {
-                const data = await res.json();
-                setToast({ message: data.error || "Failed to update profile", type: "error" });
-            }
-        } catch (e) {
-            setToast({ message: "Failed to update profile", type: "error" });
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    return (
-        <Card title="Personal Profile" subtitle="Manage your personal account details">
-            <div className="space-y-6">
-                <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        Full Name
-                    </label>
-                    <input
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                        placeholder="Your Full Name"
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        Email Address (Read-only)
-                    </label>
-                    <input
-                        type="email"
-                        value={session?.user?.email || ""}
-                        className="input bg-[var(--bg-tertiary)] border-[var(--border-color)] text-[var(--text-muted)] cursor-not-allowed"
-                        disabled
-                    />
-                    <p className="mt-1 text-xs text-[var(--text-muted)]">Email changes must be requested through your administrator.</p>
-                </div>
-                <div className="pt-4 border-t border-[var(--border-color)]">
-                    <button
-                        onClick={handleSaveProfile}
-                        disabled={isSaving || name === session?.user?.name}
-                        className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <Save size={16} />
-                        {isSaving ? "Saving..." : "Save Profile"}
-                    </button>
-                </div>
-            </div>
-        </Card>
-    );
-}
-
-// General Section
-function GeneralSection({ settings, updateSettings, isEditingGeneral, setIsEditingGeneral, handleSave, fetchSettings, isSaving }: GeneralSectionProps) {
-    return (
-        <Card title="General Settings" subtitle="Basic platform configuration">
-            <div className="space-y-6">
-                <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        Organization Name
-                    </label>
-                    <input
-                        type="text"
-                        value={settings?.organizationName || ""}
-                        onChange={(e) => updateSettings({ organizationName: e.target.value })}
-                        className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                        disabled={!isEditingGeneral}
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        Primary Domain
-                    </label>
-                    <input
-                        type="text"
-                        value={settings?.domain || ""}
-                        onChange={(e) => updateSettings({ domain: e.target.value })}
-                        className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                        disabled={!isEditingGeneral}
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        Timezone
-                    </label>
-                    <select
-                        className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                        value={settings?.timezone || "UTC"}
-                        onChange={(e) => updateSettings({ timezone: e.target.value })}
-                    >
-                        <option>UTC</option>
-                        <option>America/New_York</option>
-                        <option>Europe/London</option>
-                        <option>Asia/Tokyo</option>
-                        <option>Asia/Kathmandu</option>
-                    </select>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        Date Format
-                    </label>
-                    <select
-                        className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                        value={settings?.dateFormat || "MMM DD, YYYY"}
-                        onChange={(e) => updateSettings({ dateFormat: e.target.value })}
-                    >
-                        <option>MMM DD, YYYY</option>
-                        <option>DD/MM/YYYY</option>
-                        <option>YYYY-MM-DD</option>
-                    </select>
-                </div>
-                <div className="pt-4 border-t border-[var(--border-color)] flex gap-3">
-                    {!isEditingGeneral ? (
-                        <button
-                            className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95"
-                            onClick={() => setIsEditingGeneral(true)}
-                        >
-                            <Settings size={16} />
-                            Edit Organization Info
-                        </button>
-                    ) : (
-                        <>
-                            <button
-                                onClick={async () => {
-                                    await handleSave();
-                                    setIsEditingGeneral(false);
-                                }}
-                                disabled={isSaving}
-                                className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                            >
-                                <Save size={16} />
-                                {isSaving ? "Saving..." : "Save Changes"}
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setIsEditingGeneral(false);
-                                    void fetchSettings();
-                                }}
-                                disabled={isSaving}
-                                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Cancel
-                            </button>
-                        </>
-                    )}
-                </div>
-            </div>
-        </Card>
-    );
-}
-
-// Governance Section
-function GovernanceSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFlags }: FeatureFlagSectionProps) {
-    return (
-        <Card title="Governance & Compliance" subtitle="Bank-grade change control, audit, and retention">
-            <div className="space-y-6">
-                <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        Change Control
-                    </label>
-                    <select
-                        className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                        value={featureFlags.changeControlMode || "SINGLE_APPROVER"}
-                        onChange={(e) => updateFeatureFlags({ changeControlMode: e.target.value })}
-                    >
-                        <option value="SINGLE_APPROVER">Single approver</option>
-                        <option value="TWO_PERSON_RULE">Two-person rule (recommended for banks)</option>
-                    </select>
-                </div>
-
-                <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
-                    <div>
-                        <h4 className="text-sm font-medium text-[var(--text-primary)]">
-                            Require reason for settings changes
-                        </h4>
-                        <p className="text-xs text-[var(--text-muted)]">
-                            Enforce change justification for audit trail
-                        </p>
-                    </div>
-                    <Toggle
-                        checked={featureFlags.settingsChangeReasonRequired ?? true}
-                        onChange={(checked) => updateFeatureFlags({ settingsChangeReasonRequired: checked })}
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        Audit Log Retention (days)
-                    </label>
-                    <input
-                        type="number"
-                        min="30"
-                        max="3650"
-                        value={featureFlags.auditLogRetentionDays || 365}
-                        onChange={(e) => updateFeatureFlags({ auditLogRetentionDays: parseInt(e.target.value) })}
-                        className="input w-32 bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                    />
-                    <p className="text-xs text-[var(--text-muted)] mt-1">Min: 30 days, Max: 3650 days</p>
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        Vulnerability Data Retention (days)
-                    </label>
-                    <input
-                        type="number"
-                        min="30"
-                        max="3650"
-                        value={featureFlags.dataRetentionDays || 730}
-                        onChange={(e) => updateFeatureFlags({ dataRetentionDays: parseInt(e.target.value) })}
-                        className="input w-32 bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                    />
-                    <p className="text-xs text-[var(--text-muted)] mt-1">Min: 30 days, Max: 3650 days</p>
-                </div>
-
-                <div className="pt-4 border-t border-[var(--border-color)]">
-                    <button
-                        className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                        onClick={handleSaveFeatureFlags}
-                    >
-                        <Save size={16} />
-                        Save (Feature Flags)
-                    </button>
-                    <p className="text-xs text-[var(--text-muted)] mt-2">
-                        Note: Stored in localStorage (no DB schema changes)
-                    </p>
-                </div>
-            </div>
-        </Card>
-    );
-}
-
-// SOC Routing Section
-function SOCRoutingSection({ featureFlags, updateFeatureFlags, handleSaveFeatureFlags }: FeatureFlagSectionProps) {
-    return (
-        <Card title="SOC Routing" subtitle="Alert thresholds, quiet hours, and escalation">
-            <div className="space-y-6">
-                <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
-                    <div>
-                        <h4 className="text-sm font-medium text-[var(--text-primary)]">Quiet Hours</h4>
-                        <p className="text-xs text-[var(--text-muted)]">
-                            Suppress non-critical alerts during specified hours
-                        </p>
-                    </div>
-                    <Toggle
-                        checked={featureFlags.quietHoursEnabled || false}
-                        onChange={(checked) => updateFeatureFlags({ quietHoursEnabled: checked })}
-                    />
-                </div>
-
-                {featureFlags.quietHoursEnabled && (
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                                Quiet Hours Start
-                            </label>
-                            <input
-                                type="time"
-                                value={featureFlags.quietHoursStart || "22:00"}
-                                onChange={(e) => updateFeatureFlags({ quietHoursStart: e.target.value })}
-                                className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                                Quiet Hours End
-                            </label>
-                            <input
-                                type="time"
-                                value={featureFlags.quietHoursEnd || "06:00"}
-                                onChange={(e) => updateFeatureFlags({ quietHoursEnd: e.target.value })}
-                                className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                            />
-                        </div>
-                    </div>
-                )}
-
-                <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
-                    <div>
-                        <h4 className="text-sm font-medium text-[var(--text-primary)]">
-                            Only alert on KEV when enabled
-                        </h4>
-                        <p className="text-xs text-[var(--text-muted)]">
-                            Limit alerts to CISA Known Exploited Vulnerabilities
-                        </p>
-                    </div>
-                    <Toggle
-                        checked={featureFlags.notifyKevOnly || false}
-                        onChange={(checked) => updateFeatureFlags({ notifyKevOnly: checked })}
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        EPSS Alert Threshold (0.0–1.0)
-                    </label>
-                    <input
-                        type="number"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        value={featureFlags.epssAlertThreshold || 0.5}
-                        onChange={(e) => updateFeatureFlags({ epssAlertThreshold: parseFloat(e.target.value) })}
-                        className="input w-32 bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                    />
-                    <p className="text-xs text-[var(--text-muted)] mt-1">
-                        Alert when EPSS score exceeds this threshold
-                    </p>
-                </div>
-
-                <div className="pt-4 border-t border-[var(--border-color)]">
-                    <button
-                        className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                        onClick={handleSaveFeatureFlags}
-                    >
-                        <Save size={16} />
-                        Save (Feature Flags)
-                    </button>
-                    <p className="text-xs text-[var(--text-muted)] mt-2">
-                        Note: Stored in localStorage (no DB schema changes)
-                    </p>
-                </div>
-            </div>
-        </Card>
-    );
-}
-
-// Notifications Section
-function NotificationsSection({ settings, updateSettings, handleSave, isSaving }: NotificationSectionProps) {
-    const notifications: Array<{
-        id: "notifyCritical" | "notifyExploited" | "notifyCompliance" | "notifyScan" | "notifyWeekly";
-        title: string;
-        description: string;
-    }> = [
-            {
-                id: "notifyCritical",
-                title: "Critical Vulnerability Alerts",
-                description: "Get notified when critical vulnerabilities are detected",
-            },
-            {
-                id: "notifyExploited",
-                title: "Exploitation Alerts",
-                description: "Alert when a vulnerability in your environment is being exploited",
-            },
-            {
-                id: "notifyCompliance",
-                title: "Compliance Drift",
-                description: "Notify when compliance status changes",
-            },
-            {
-                id: "notifyScan",
-                title: "Scan Completion",
-                description: "Alert when vulnerability scans complete",
-            },
-            {
-                id: "notifyWeekly",
-                title: "Weekly Summary",
-                description: "Receive weekly risk summary via email",
-            },
-        ];
-
-    const [rules, setRules] = useState<NotificationRuleRecord[]>([]);
-    const [isLoadingRules, setIsLoadingRules] = useState(false);
-    const [rulesError, setRulesError] = useState<string | null>(null);
-    const [newRule, setNewRule] = useState({
-        name: "",
-        channel: "IN_APP" as NotificationRuleRecord["channel"],
-        eventType: "VULNERABILITY_CREATED",
-        minimumSeverity: "HIGH",
-        includeExploited: false,
-        includeKev: false,
-    });
-
-    const fetchRules = useCallback(async () => {
-        try {
-            setIsLoadingRules(true);
-            setRulesError(null);
-            const response = await fetch("/api/notification-rules", { cache: "no-store" });
-            const payload = await response.json() as { data?: NotificationRuleRecord[]; error?: string };
-            if (!response.ok) {
-                throw new Error(payload.error || "Failed to load notification rules");
-            }
-            setRules(Array.isArray(payload.data) ? payload.data : []);
-        } catch (error) {
-            setRulesError(error instanceof Error ? error.message : "Failed to load notification rules");
-        } finally {
-            setIsLoadingRules(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        void fetchRules();
-    }, [fetchRules]);
-
-    const createRule = useCallback(async () => {
-        try {
-            setRulesError(null);
-            const response = await fetch("/api/notification-rules", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: newRule.name,
-                    channel: newRule.channel,
-                    eventType: newRule.eventType,
-                    minimumSeverity: newRule.minimumSeverity || undefined,
-                    includeExploited: newRule.includeExploited,
-                    includeKev: newRule.includeKev,
-                    isActive: true,
-                }),
-            });
-            const payload = await response.json() as { error?: string };
-            if (!response.ok) {
-                throw new Error(payload.error || "Failed to create notification rule");
-            }
-
-            setNewRule({
-                name: "",
-                channel: "IN_APP",
-                eventType: "VULNERABILITY_CREATED",
-                minimumSeverity: "HIGH",
-                includeExploited: false,
-                includeKev: false,
-            });
-            await fetchRules();
-        } catch (error) {
-            setRulesError(error instanceof Error ? error.message : "Failed to create notification rule");
-        }
-    }, [fetchRules, newRule]);
-
-    const toggleRule = useCallback(async (rule: NotificationRuleRecord) => {
-        try {
-            setRulesError(null);
-            const response = await fetch("/api/notification-rules", {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    id: rule.id,
-                    isActive: !rule.isActive,
-                }),
-            });
-            const payload = await response.json() as { error?: string };
-            if (!response.ok) {
-                throw new Error(payload.error || "Failed to update notification rule");
-            }
-            await fetchRules();
-        } catch (error) {
-            setRulesError(error instanceof Error ? error.message : "Failed to update notification rule");
-        }
-    }, [fetchRules]);
-
-    const deleteRule = useCallback(async (id: string) => {
-        try {
-            setRulesError(null);
-            const response = await fetch(`/api/notification-rules?id=${id}`, {
-                method: "DELETE",
-            });
-            const payload = await response.json() as { error?: string };
-            if (!response.ok) {
-                throw new Error(payload.error || "Failed to delete notification rule");
-            }
-            await fetchRules();
-        } catch (error) {
-            setRulesError(error instanceof Error ? error.message : "Failed to delete notification rule");
-        }
-    }, [fetchRules]);
-
-    return (
-        <Card title="Notification Settings" subtitle="Configure alerts and notification routing">
-            <div className="space-y-5">
-                {notifications.map((notification) => (
-                    <div
-                        key={notification.id}
-                        className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]"
-                    >
-                        <div>
-                            <h4 className="text-sm font-medium text-[var(--text-primary)]">
-                                {notification.title}
-                            </h4>
-                            <p className="text-xs text-[var(--text-muted)]">
-                                {notification.description}
-                            </p>
-                        </div>
-                        <Toggle
-                            checked={Boolean(settings?.[notification.id])}
-                            onChange={(checked) => updateSettings({ [notification.id]: checked })}
-                        />
-                    </div>
-                ))}
-
-                <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4">
-                    <h4 className="text-sm font-semibold text-[var(--text-primary)]">Rule-Based Notification Routing</h4>
-                    <p className="mt-1 text-xs text-[var(--text-muted)]">
-                        Route by event type, severity, and exploit context.
-                    </p>
-                    {rulesError ? (
-                        <p className="mt-2 rounded-md border border-red-500/40 bg-red-500/10 px-2 py-1 text-xs text-red-600 dark:text-red-300">
-                            {rulesError}
-                        </p>
-                    ) : null}
-
-                    <div className="mt-3 grid gap-3 md:grid-cols-2">
-                        <input
-                            className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                            placeholder="Rule name"
-                            value={newRule.name}
-                            onChange={(e) => setNewRule((prev) => ({ ...prev, name: e.target.value }))}
-                        />
-                        <div className="input flex items-center text-sm text-[var(--text-muted)] bg-[var(--bg-secondary)] border-[var(--border-color)]">Channel: IN_APP</div>
-                        <input
-                            className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                            placeholder="Event type (e.g. VULNERABILITY_CREATED)"
-                            value={newRule.eventType}
-                            onChange={(e) => setNewRule((prev) => ({ ...prev, eventType: e.target.value }))}
-                        />
-                        <select
-                            className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                            value={newRule.minimumSeverity}
-                            onChange={(e) => setNewRule((prev) => ({ ...prev, minimumSeverity: e.target.value }))}
-                        >
-                            <option value="">No minimum severity</option>
-                            <option value="CRITICAL">CRITICAL</option>
-                            <option value="HIGH">HIGH</option>
-                            <option value="MEDIUM">MEDIUM</option>
-                            <option value="LOW">LOW</option>
-                            <option value="INFORMATIONAL">INFORMATIONAL</option>
-                        </select>
-                    </div>
-
-                    <div className="mt-3 flex flex-wrap items-center gap-4">
-                        <label className="inline-flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-                            <input
-                                type="checkbox"
-                                checked={newRule.includeExploited}
-                                onChange={(e) => setNewRule((prev) => ({ ...prev, includeExploited: e.target.checked }))}
-                            />
-                            Include exploited vulnerabilities
-                        </label>
-                        <label className="inline-flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-                            <input
-                                type="checkbox"
-                                checked={newRule.includeKev}
-                                onChange={(e) => setNewRule((prev) => ({ ...prev, includeKev: e.target.checked }))}
-                            />
-                            Include CISA KEV only
-                        </label>
-                        <button
-                            className="inline-flex items-center gap-2 rounded-lg border border-sky-300/40 bg-sky-300/10 px-3 py-1.5 text-xs font-semibold text-sky-500 transition hover:bg-sky-300/20 dark:text-sky-100"
-                            onClick={() => void createRule()}
-                            disabled={!newRule.name.trim()}
-                        >
-                            <Plus size={14} />
-                            Add Rule
-                        </button>
-                    </div>
-
-                    <div className="mt-4 space-y-2">
-                        {isLoadingRules ? (
-                            <p className="text-xs text-[var(--text-muted)]">Loading rules...</p>
-                        ) : rules.length === 0 ? (
-                            <p className="text-xs text-[var(--text-muted)]">No notification rules yet.</p>
-                        ) : (
-                            rules.map((rule) => (
-                                <div
-                                    key={rule.id}
-                                    className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] px-3 py-2"
-                                >
-                                    <div className="min-w-0">
-                                        <p className="truncate text-xs font-semibold text-[var(--text-primary)]">
-                                            {rule.name}
-                                        </p>
-                                        <p className="truncate text-[11px] text-[var(--text-secondary)]">
-                                            {rule.channel} • {rule.eventType}
-                                            {rule.minimumSeverity ? ` • ${rule.minimumSeverity}+` : ""}
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Toggle checked={rule.isActive} onChange={() => void toggleRule(rule)} />
-                                        <button
-                                            className="inline-flex items-center gap-1 rounded-md border border-red-400/40 bg-red-500/10 px-2 py-1 text-[11px] text-red-500 transition hover:bg-red-500/20 dark:text-red-200"
-                                            onClick={() => void deleteRule(rule.id)}
-                                        >
-                                            <Trash2 size={12} />
-                                            Delete
-                                        </button>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-
-                <div className="pt-4 border-t border-[var(--border-color)]">
-                    <button
-                        className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                        onClick={handleSave}
-                        disabled={isSaving}
-                    >
-                        <Save size={16} />
-                        {isSaving ? "Saving..." : "Save Core Notification Preferences"}
-                    </button>
-                </div>
-            </div>
-        </Card>
-    );
-}
-
-// Security Section
-function SecuritySection({ settings, updateSettings, handleSave, isSaving }: SecuritySectionProps) {
-    return (
-        <Card title="Security Settings" subtitle="Authentication and access control">
-            <div className="space-y-6">
-                <p className="text-sm text-[var(--text-muted)] p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
-                    Bank-grade defaults: require2FA=true, sessionTimeout=15–30 min, passwordPolicy=STRONG
-                </p>
-
-                <div className="p-4 rounded-lg bg-[var(--bg-tertiary)]">
-                    <div className="flex items-center justify-between mb-3">
-                        <div>
-                            <h4 className="text-sm font-medium text-[var(--text-primary)]">
-                                AI Risk Intelligence
-                            </h4>
-                            <p className="text-xs text-[var(--text-muted)]">
-                                Automatically analyze new vulnerabilities with AI
-                            </p>
-                        </div>
-                        <Toggle
-                            checked={settings?.aiRiskAssessmentEnabled !== false}
-                            onChange={(checked) => updateSettings({ aiRiskAssessmentEnabled: checked })}
-                        />
-                    </div>
-                </div>
-
-                <div className="p-4 rounded-lg bg-[var(--bg-tertiary)]">
-                    <div className="flex items-center justify-between mb-3">
-                        <div>
-                            <h4 className="text-sm font-medium text-[var(--text-primary)]">
-                                Enforce 2FA Organization-wide
-                            </h4>
-                            <p className="text-xs text-[var(--text-muted)]">
-                                When disabled, users can choose whether to use 2FA
-                            </p>
-                        </div>
-                        <Toggle
-                            checked={settings?.require2FA === true}
-                            onChange={(checked) => updateSettings({ require2FA: checked })}
-                        />
-                    </div>
-                </div>
-
-                <TwoFactorSettingsPanel />
-
-                <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        Session Timeout (minutes)
-                    </label>
-                    <input
-                        type="number"
-                        value={settings?.sessionTimeout || 30}
-                        onChange={(e) => updateSettings({ sessionTimeout: parseInt(e.target.value) })}
-                        className="input w-32 bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                    />
-                    <p className="text-xs text-[var(--text-muted)] mt-1">
-                        Recommended: 15–30 minutes for banking environments
-                    </p>
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        Password Policy
-                    </label>
-                    <select
-                        className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                        value={settings?.passwordPolicy || "STRONG"}
-                        onChange={(e) => updateSettings({ passwordPolicy: e.target.value })}
-                    >
-                        <option value="STRONG">Strong (12+ chars, mixed case, numbers, symbols)</option>
-                        <option value="MEDIUM">Medium (8+ chars, mixed case, numbers)</option>
-                        <option value="BASIC">Basic (8+ chars)</option>
-                    </select>
-                </div>
-
-                <div className="pt-4 border-t border-[var(--border-color)]">
-                    <button
-                        className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                        onClick={handleSave}
-                        disabled={isSaving}
-                    >
-                        <Save size={16} />
-                        {isSaving ? "Saving..." : "Save Changes"}
-                    </button>
-                </div>
-            </div>
-        </Card>
-    );
-}
-
-function AIAssistSection({ 
-    settings, 
-    updateSettings, 
-    handleSave, 
-    isSaving,
-    featureFlags, 
-    updateFeatureFlags, 
-    handleSaveFeatureFlags 
-}: { 
-    settings: PlatformSettings | null; 
-    updateSettings: (updates: Partial<PlatformSettings>) => void; 
-    handleSave: () => Promise<void>; 
-    isSaving: boolean;
-    featureFlags: FeatureFlags; 
-    updateFeatureFlags: (updates: Partial<FeatureFlags>) => void; 
-    handleSaveFeatureFlags: () => void;
-}) {
-    const aiProvider = settings?.aiProvider || "OLLAMA";
-
-    return (
-        <Card title="AI Intelligence" subtitle="Configure AI analysis engine and guardrails">
-            <div className="space-y-6">
-                <div className="p-4 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-color)]">
-                    <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Core AI Engine Configuration</h4>
-                    <div className="grid gap-4">
-                        <div>
-                            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5 uppercase">AI Provider</label>
-                            <select
-                                className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                                value={aiProvider}
-                                onChange={(e) => updateSettings({ aiProvider: e.target.value as any })}
-                            >
-                                <option value="OLLAMA">Ollama (Local Hosted - Default)</option>
-                                <option value="OPENAI">OpenAI (SaaS)</option>
-                                <option value="ANTHROPIC">Anthropic (Claude)</option>
-                                <option value="OPENROUTER">OpenRouter (Unified API)</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5 uppercase">Model Name</label>
-                            <input
-                                type="text"
-                                className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                                placeholder={aiProvider === "OLLAMA" ? "llama3" : "gpt-4o-mini"}
-                                value={settings?.aiModel || ""}
-                                onChange={(e) => updateSettings({ aiModel: e.target.value })}
-                            />
-                        </div>
-
-                        {aiProvider === "OLLAMA" ? (
-                            <div>
-                                <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5 uppercase">Ollama Base URL</label>
-                                <input
-                                    type="text"
-                                    className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                                    placeholder="http://localhost:11434"
-                                    value={settings?.aiBaseUrl || ""}
-                                    onChange={(e) => updateSettings({ aiBaseUrl: e.target.value })}
-                                />
-                            </div>
-                        ) : (
-                            <div>
-                                <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5 uppercase">API Key</label>
-                                <input
-                                    type="password"
-                                    className="input bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                                    placeholder="sk-..."
-                                    value={settings?.aiApiKey || ""}
-                                    onChange={(e) => updateSettings({ aiApiKey: e.target.value })}
-                                />
-                            </div>
-                        )}
-
-                        <div className="pt-2">
-                             <button
-                                className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                                onClick={handleSave}
-                                disabled={isSaving}
-                            >
-                                <Save size={16} />
-                                {isSaving ? "Saving..." : "Apply AI Engine Settings"}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
-                    <div>
-                        <h4 className="text-sm font-medium text-[var(--text-primary)]">Enable AI Risk Analysis</h4>
-                        <p className="text-xs text-[var(--text-muted)]">
-                            Automatically analyze vulnerabilities using the engine above
-                        </p>
-                    </div>
-                    <Toggle
-                        checked={settings?.aiRiskAssessmentEnabled !== false}
-                        onChange={(checked) => updateSettings({ aiRiskAssessmentEnabled: checked })}
-                    />
-                </div>
-
-                <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
-                    <div>
-                        <h4 className="text-sm font-medium text-[var(--text-primary)]">Enable AI UI Assistant</h4>
-                        <p className="text-xs text-[var(--text-muted)]">
-                            Master switch for in-browser AI features
-                        </p>
-                    </div>
-                    <Toggle
-                        checked={featureFlags.aiAssistEnabled || false}
-                        onChange={(checked) => updateFeatureFlags({ aiAssistEnabled: checked })}
-                    />
-                </div>
-
-                <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]">
-                    <div>
-                        <h4 className="text-sm font-medium text-[var(--text-primary)]">Require human review</h4>
-                        <p className="text-xs text-[var(--text-muted)]">
-                            Prevent automatic acceptance of AI-generated content
-                        </p>
-                    </div>
-                    <Toggle
-                        checked={featureFlags.aiHumanReviewRequired ?? true}
-                        onChange={(checked) => updateFeatureFlags({ aiHumanReviewRequired: checked })}
-                    />
-                </div>
-
-                <div className="pt-4 border-t border-[var(--border-color)]">
-                    <button
-                        className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                        onClick={handleSaveFeatureFlags}
-                    >
-                        <Save size={16} />
-                        Save Guardrail Preferences
-                    </button>
-                </div>
-            </div>
-        </Card>
-    );
-}
-
-// System Health Section
-function SystemHealthSection({ settings, fetchSettings }: SystemHealthSectionProps) {
-    const systemHealth = settings?.systemHealth || {};
-
-    const envVars = [
-        { key: "NVD_API_KEY", label: "NVD API Key", configured: systemHealth.nvdApiKeyConfigured },
-        { key: "GITHUB_TOKEN", label: "GitHub Token", configured: systemHealth.githubTokenConfigured },
-        { key: "OPENROUTER_API_KEY", label: "OpenRouter API Key", configured: systemHealth.openrouterConfigured },
-        { key: "NEXTAUTH_SECRET", label: "NextAuth Secret", configured: systemHealth.nextauthSecretConfigured },
-        { key: "DATABASE_URL", label: "Database URL", configured: systemHealth.databaseUrlConfigured },
-    ];
-
-    return (
-        <Card title="System Health" subtitle="Key configuration status (no secrets exposed)">
-            <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {envVars.map((env) => (
-                        <div
-                            key={env.key}
-                            className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-tertiary)]"
-                        >
-                            <span className="text-sm text-[var(--text-primary)]">{env.label}</span>
-                            {env.configured ? (
-                                <span className="flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400">
-                                    <CheckCircle2 size={14} />
-                                    Configured
-                                </span>
-                            ) : (
-                                <span className="flex items-center gap-1 text-xs font-medium text-intent-danger">
-                                    <XCircle size={14} />
-                                    Missing
-                                </span>
-                            )}
-                        </div>
-                    ))}
-                </div>
-
-                {settings?.serverTimestamp && (
-                    <p className="text-xs text-[var(--text-muted)] mt-4">
-                        Last checked: {new Date(settings.serverTimestamp).toLocaleString()}
-                    </p>
-                )}
-
-                <div className="pt-4 border-t border-[var(--border-color)]">
-                    <button className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95" onClick={fetchSettings}>
-                        <Activity size={16} />
-                        Refresh Status
-                    </button>
-                </div>
-            </div>
-        </Card>
-    );
-}
-
-// Integrations Section
-function IntegrationsSection() {
-    return (
-        <Card title="Integrations" subtitle="Third-party service connections">
-            <div className="space-y-4">
-                <p className="text-sm text-[var(--text-muted)] p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
-                    Configured via ENV variables. Check System Health for status.
-                </p>
-                {[
-                    { name: "Slack", status: "not_connected", icon: "💬" },
-                    { name: "Microsoft Teams", status: "not_connected", icon: "📱" },
-                    { name: "Jira", status: "not_connected", icon: "📋" },
-                    { name: "ServiceNow", status: "not_connected", icon: "🔧" },
-                    { name: "PagerDuty", status: "not_connected", icon: "🚨" },
-                ].map((integration) => (
-                    <div
-                        key={integration.name}
-                        className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-tertiary)]"
-                    >
-                        <div className="flex items-center gap-3">
-                            <span className="text-2xl">{integration.icon}</span>
-                            <div>
-                                <h4 className="text-sm font-medium text-[var(--text-primary)]">
-                                    {integration.name}
-                                </h4>
-                                <p className="text-xs text-[var(--text-muted)]">
-                                    Coming soon
-                                </p>
-                            </div>
-                        </div>
-                        <button className="btn btn-ghost text-sm py-1.5" disabled>
-                            Configure
-                        </button>
-                    </div>
-                ))}
-            </div>
-        </Card>
-    );
-}
-
-
-// Users Management Tab
-function UsersManagementTab() {
-    const { showToast } = useUiFeedback();
-    const { data: session } = useSession();
-    const isMainOfficer = session?.user?.role === MAIN_OFFICER_ROLE;
-    interface UserRecord {
-        id: string;
-        name: string;
-        email: string;
-        role: "ANALYST" | "IT_OFFICER" | "PENTESTER" | "MAIN_OFFICER";
-    }
-
-    const [users, setUsers] = useState<UserRecord[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isUpdating, setIsUpdating] = useState<string | null>(null);
-
-    const fetchUsers = useCallback(async () => {
-        if (!isMainOfficer) {
-            setIsLoading(false);
-            return;
-        }
-
-        try {
-            setIsLoading(true);
-            const response = await fetch("/api/users");
-            const data = await response.json() as UserRecord[];
-            if (Array.isArray(data)) setUsers(data);
-        } catch (error) {
-            console.error("Failed to fetch users:", error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [isMainOfficer]);
-
-    useEffect(() => {
-        void fetchUsers();
-    }, [fetchUsers]);
-
-    const handleRoleChange = async (userId: string, newRole: string) => {
-        try {
-            setIsUpdating(userId);
-            const response = await fetch("/api/users", {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ userId, role: newRole }),
-            });
-
-            if (response.ok) {
-                setUsers((prev) =>
-                    prev.map((user) =>
-                        user.id === userId ? { ...user, role: newRole as UserRecord["role"] } : user,
-                    ),
-                );
-            } else {
-                const err = await response.json() as { error?: string };
-                showToast({
-                    title: "Role update failed",
-                    description: err.error || "Failed to update role",
-                    intent: "error",
-                });
-            }
-        } catch (error) {
-            console.error("Failed to update role:", error);
-            showToast({
-                title: "Role update failed",
-                description: "An unexpected error occurred while updating role.",
-                intent: "error",
-            });
-        } finally {
-            setIsUpdating(null);
-        }
-    };
-
-    if (!isMainOfficer) {
-        return (
-            <Card title="Restricted Access" subtitle="Permissions required">
-                <div className="flex flex-col items-center justify-center py-10 text-center">
-                    <ShieldCheck size={48} className="text-red-600/70 dark:text-red-500/60 mb-4" />
-                    <p className="text-[var(--text-secondary)] max-w-md">
-                        Only users with the <span className="text-[var(--text-primary)] font-bold">MAIN-OFFICER</span> role can manage user permissions and roles.
-                    </p>
-                </div>
-            </Card>
-        );
-    }
-
-    return (
-        <Card title="User Management" subtitle="Manage permissions and platform access levels">
-            <div className="space-y-4">
-                {isLoading ? (
-                    <div className="flex justify-center py-10">
-                        <ShieldLoader size="md" variant="cyber" />
-                    </div>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead>
-                                <tr className="text-xs uppercase text-[var(--text-muted)] border-b border-[var(--border-color)]">
-                                    <th className="px-4 py-3 font-medium">User</th>
-                                    <th className="px-4 py-3 font-medium">Current Role</th>
-                                    <th className="px-4 py-3 font-medium">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[var(--border-color)]">
-                                {users.map((user) => (
-                                    <tr key={user.id} className="text-sm">
-                                        <td className="px-4 py-4">
-                                            <div>
-                                                <p className="font-medium text-[var(--text-primary)]">{user.name}</p>
-                                                <p className="text-xs text-[var(--text-muted)]">{user.email}</p>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <span className={cn(
-                                                "px-2 py-1 rounded-full text-[10px] font-bold uppercase",
-                                                user.role === MAIN_OFFICER_ROLE ? "bg-purple-500/10 text-purple-600 dark:text-purple-400" :
-                                                    user.role === 'ANALYST' ? "bg-blue-500/10 text-intent-accent" :
-                                                        "bg-gray-500/10 text-gray-600 dark:text-gray-400"
-                                            )}>
-                                                {formatRoleLabel(user.role)}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <div className="flex items-center gap-2">
-                                                <select
-                                                    className="input py-1 text-xs w-32"
-                                                    value={user.role}
-                                                    onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                                                    disabled={isUpdating === user.id}
-                                                >
-                                                    <option value="ANALYST">ANALYST</option>
-                                                    <option value="IT_OFFICER">IT_OFFICER</option>
-                                                    <option value="PENTESTER">PENTESTER</option>
-                                                    <option value="MAIN_OFFICER">MAIN-OFFICER</option>
-                                                </select>
-                                                {isUpdating === user.id && (
-                                                    <ShieldLoader size="sm" />
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </div>
-        </Card>
-    );
 }

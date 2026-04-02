@@ -199,6 +199,7 @@ export async function POST(request: NextRequest) {
             to: normalizedEmail,
             role,
             inviteLink,
+            organizationId: authResult.context.organizationId,
         });
 
         if (!mailResult.sent) {

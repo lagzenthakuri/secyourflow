@@ -19,7 +19,8 @@ export async function askAI(organizationId: string, prompt: string, systemPrompt
 
     switch (aiProvider) {
         case "OLLAMA":
-            return callOllama(aiModel, prompt, aiBaseUrl ?? "http://localhost:11434");
+            const effectiveBaseUrl = process.env.OLLAMA_HOST || aiBaseUrl || "http://localhost:11434";
+            return callOllama(aiModel, prompt, effectiveBaseUrl);
         case "OPENAI":
             return callOpenAI(aiModel, prompt, aiApiKey || "", systemPrompt);
         case "ANTHROPIC":

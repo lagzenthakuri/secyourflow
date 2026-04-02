@@ -15,6 +15,12 @@ const DEFAULT_SETTING_VALUES = {
     aiProvider: "OLLAMA",
     aiModel: "llama3",
     aiBaseUrl: "http://localhost:11434",
+    smtpHost: "",
+    smtpPort: 587,
+    smtpUser: "",
+    smtpPass: "",
+    smtpFrom: "",
+    smtpEncryption: "TLS",
 };
 
 export async function GET(request: NextRequest) {
@@ -40,7 +46,7 @@ export async function GET(request: NextRequest) {
                 ...defaultSettings,
                 organizationName: org.name,
                 domain: org.domain,
-                systemHealth: getSystemHealth(),
+                systemHealth: getSystemHealth(defaultSettings),
                 serverTimestamp: new Date().toISOString()
             });
         }
@@ -49,7 +55,7 @@ export async function GET(request: NextRequest) {
             ...org.settings,
             organizationName: org.name,
             domain: org.domain,
-            systemHealth: getSystemHealth(),
+            systemHealth: getSystemHealth(org.settings),
             serverTimestamp: new Date().toISOString()
         });
     } catch (error) {
@@ -61,13 +67,16 @@ export async function GET(request: NextRequest) {
     }
 }
 
-function getSystemHealth() {
+function getSystemHealth(settings?: Setting | null) {
     return {
         nvdApiKeyConfigured: !!process.env.NVD_API_KEY,
         githubTokenConfigured: !!process.env.GITHUB_TOKEN,
         openrouterConfigured: !!process.env.OPENROUTER_API_KEY,
         nextauthSecretConfigured: !!(process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET),
         databaseUrlConfigured: !!process.env.DATABASE_URL,
+        systemSmtpConfigured: !!(process.env.SMTP_HOST && process.env.SMTP_USER),
+        smtpConfigured: !!(settings?.smtpHost && settings?.smtpUser),
+        ollamaConfigured: !!(process.env.OLLAMA_HOST || settings?.aiBaseUrl),
     };
 }
 
@@ -138,6 +147,12 @@ type SettingWriteData = Partial<
         | "aiModel"
         | "aiApiKey"
         | "aiBaseUrl"
+        | "smtpHost"
+        | "smtpPort"
+        | "smtpUser"
+        | "smtpPass"
+        | "smtpFrom"
+        | "smtpEncryption"
     >
 >;
 
@@ -273,6 +288,13 @@ function buildSettingsUpdateData(
     if ("aiApiKey" in input) settingsData.aiApiKey = parseStringField(input.aiApiKey);
     if ("aiBaseUrl" in input) settingsData.aiBaseUrl = parseStringField(input.aiBaseUrl);
 
+    if ("smtpHost" in input) settingsData.smtpHost = parseStringField(input.smtpHost);
+    if ("smtpPort" in input) settingsData.smtpPort = parseIntegerField(input.smtpPort);
+    if ("smtpUser" in input) settingsData.smtpUser = parseStringField(input.smtpUser);
+    if ("smtpPass" in input) settingsData.smtpPass = parseStringField(input.smtpPass);
+    if ("smtpFrom" in input) settingsData.smtpFrom = parseStringField(input.smtpFrom);
+    if ("smtpEncryption" in input) settingsData.smtpEncryption = parseStringField(input.smtpEncryption);
+
     applyRestrictedSessionTimeout();
     applyRestrictedPasswordPolicy();
 
@@ -360,7 +382,11 @@ export async function POST(request: NextRequest) {
             ctx,
         );
 
-        return NextResponse.json(updatedSettings);
+        return NextResponse.json({
+            ...updatedSettings,
+            systemHealth: getSystemHealth(updatedSettings),
+            serverTimestamp: new Date().toISOString()
+        });
     } catch (error) {
         console.error("Settings POST Error:", error);
         return NextResponse.json(

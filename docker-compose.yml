@@ -12,11 +12,13 @@ services:
       - REDIS_URL=redis://redis:6379
       - NEXTAUTH_URL=http://localhost:3000
       - AUTH_TRUST_HOST=true
+      - OLLAMA_HOST=http://ollama:11434
     env_file:
       - .env
     depends_on:
       - postgres
       - redis
+      - ollama
     networks:
       - secyourflow-network
 
@@ -44,9 +46,31 @@ services:
     networks:
       - secyourflow-network
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: secyourflow-ollama
+    restart: always
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - secyourflow-network
+
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: secyourflow-ollama-init
+    depends_on:
+      - ollama
+    networks:
+      - secyourflow-network
+    entrypoint: /bin/sh
+    command: -c "sleep 10 && ollama pull llama3"
+
 networks:
   secyourflow-network:
     driver: bridge
 
 volumes:
   postgres_data:
+  ollama_data:

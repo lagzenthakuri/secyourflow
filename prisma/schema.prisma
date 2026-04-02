@@ -53,7 +53,6 @@ model User {
   @@index([organizationId])
 }
 
-
 model Session {
   id           String   @id @default(cuid())
   sessionToken String   @unique
@@ -95,6 +94,7 @@ model Organization {
   dashboardViews           DashboardView[]
   dashboardViewShares      DashboardViewShare[]
   externalTickets          ExternalTicket[]
+  invitations              Invitation[]
   notificationRules        NotificationRule[]
   policies                 Policy[]
   productKey               ProductKey?
@@ -117,7 +117,6 @@ model Organization {
   users                    User[]
   vulnerabilities          Vulnerability[]
   vulnerabilityTransitions VulnerabilityWorkflowTransition[]
-  invitations             Invitation[]
   wazuhAlerts              WazuhAlert[]
 
   @@index([name])
@@ -773,18 +772,17 @@ model Setting {
   passwordPolicy          String       @default("STRONG")
   updatedAt               DateTime     @updatedAt
   aiRiskAssessmentEnabled Boolean      @default(true)
-  aiProvider              AIProvider   @default(OLLAMA)
-  aiModel                 String       @default("llama3")
   aiApiKey                String?
   aiBaseUrl               String?      @default("http://localhost:11434")
+  aiModel                 String       @default("llama3")
+  aiProvider              AIProvider   @default(OLLAMA)
+  smtpEncryption          String?      @default("TLS")
+  smtpFrom                String?
+  smtpHost                String?
+  smtpPass                String?
+  smtpPort                Int?
+  smtpUser                String?
   organization            Organization @relation(fields: [organizationId], references: [id])
-}
-
-enum AIProvider {
-  OLLAMA
-  OPENAI
-  ANTHROPIC
-  OPENROUTER
 }
 
 model Report {
@@ -1270,7 +1268,6 @@ model Cve {
   @@index([status, lastModifiedAt])
   @@index([status, publishedAt])
   @@index([status, severity, publishedAt(sort: Desc)], map: "Cve_status_severity_published_idx")
-//  @@index([cveId(ops: raw("gin_trgm_ops"))], map: "Cve_cveId_trgm_idx", type: Gin)
   @@index([searchVector], type: Gin)
 }
 
@@ -1453,6 +1450,13 @@ model PasswordToken {
 
   @@index([token])
   @@index([email])
+}
+
+enum AIProvider {
+  OLLAMA
+  OPENAI
+  ANTHROPIC
+  OPENROUTER
 }
 
 enum UserStatus {
