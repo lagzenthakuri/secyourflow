@@ -70,7 +70,7 @@ export async function PUT(request: NextRequest) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        const validRoles = new Set(["ANALYST", "IT_OFFICER", "PENTESTER", "MAIN_OFFICER"]);
+        const validRoles = new Set(["ANALYST", "IT_OFFICER", "PENTESTER", "MAIN_OFFICER", "SUPER_ADMIN"]);
         if (!validRoles.has(role)) {
             return NextResponse.json({ error: "Invalid role value" }, { status: 400 });
         }
@@ -85,6 +85,10 @@ export async function PUT(request: NextRequest) {
 
         if (!targetUser) {
             return NextResponse.json({ error: "User not found in your organization" }, { status: 404 });
+        }
+
+        if (targetUser.role === "SUPER_ADMIN") {
+            return NextResponse.json({ error: "SUPER_ADMIN credentials cannot be modified" }, { status: 403 });
         }
 
         const updatedUser = await prisma.user.update({
@@ -124,7 +128,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        const validRoles = new Set(["ANALYST", "IT_OFFICER", "PENTESTER", "MAIN_OFFICER"]);
+        const validRoles = new Set(["ANALYST", "IT_OFFICER", "PENTESTER", "MAIN_OFFICER", "SUPER_ADMIN"]);
         if (!validRoles.has(role)) {
             return NextResponse.json({ error: "Invalid role value" }, { status: 400 });
         }

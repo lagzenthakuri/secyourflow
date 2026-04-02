@@ -50,7 +50,7 @@ import {
 // Feature flags storage key
 const FEATURE_FLAGS_KEY = "secyourflow.settings.featureFlags.v1";
 const MAIN_OFFICER_ROLE = "MAIN_OFFICER";
-const ADMIN_ROLE = "ADMIN";
+const ADMIN_ROLE = "SUPER_ADMIN";
 
 const settingsSections: SettingsSectionItem[] = [
     { id: "profile", label: "Profile", description: "Personal details and account preferences", icon: User },

@@ -395,7 +395,7 @@ export function UsersManagementTab({ isAuthorized, formatRoleLabel, MAIN_OFFICER
         id: string;
         name: string;
         email: string;
-        role: "ANALYST" | "IT_OFFICER" | "PENTESTER" | "MAIN_OFFICER" | "ADMIN";
+        role: "ANALYST" | "IT_OFFICER" | "PENTESTER" | "MAIN_OFFICER" | "SUPER_ADMIN";
     }
 
     const [users, setUsers] = useState<UserRecord[]>([]);
@@ -513,12 +513,12 @@ export function UsersManagementTab({ isAuthorized, formatRoleLabel, MAIN_OFFICER
                                                 className="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl px-2 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-sky-500/20 transition-all cursor-pointer"
                                                 value={user.role}
                                                 onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                                                disabled={isUpdating === user.id}
+                                                disabled={isUpdating === user.id || user.role === 'SUPER_ADMIN'}
                                             >
                                                 <option value="ANALYST">ANALYST</option>
                                                 <option value="IT_OFFICER">IT_OFFICER</option>
                                                 <option value="PENTESTER">PENTESTER</option>
-                                                <option value="ADMIN">ADMIN</option>
+                                                <option value="SUPER_ADMIN">ADMIN</option>
                                                 <option value="MAIN_OFFICER">MAIN-OFFICER</option>
                                             </select>
                                             {isUpdating === user.id && <Activity size={14} className="text-sky-500 animate-spin" />}

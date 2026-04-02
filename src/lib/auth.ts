@@ -144,7 +144,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                     return null;
                 }
 
-                const bootstrapSuperAdminEmail = process.env.SUPER_ADMIN_EMAIL?.trim().toLowerCase();
+                const bootstrapSuperAdminEmail = process.env.SUPER_ADMIN?.trim().toLowerCase();
                 if (
                     bootstrapSuperAdminEmail &&
                     user.email.toLowerCase() === bootstrapSuperAdminEmail &&
