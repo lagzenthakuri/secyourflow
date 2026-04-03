@@ -16,6 +16,7 @@ import {
     CheckCircle2,
     XCircle,
     RefreshCw,
+    Github,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
@@ -32,11 +33,12 @@ import { GovernanceSection } from "@/components/settings/GovernanceSection";
 import { NotificationsSection } from "@/components/settings/NotificationsSection";
 import { AIAssistSection } from "@/components/settings/AIAssistSection";
 import { 
+    SystemHealthSection, 
     SOCRoutingSection, 
     SecuritySection, 
-    SystemHealthSection, 
     MailSection, 
-    UsersManagementTab 
+    UsersManagementTab,
+    ZenkinsSection
 } from "@/components/settings/SettingsSections";
 
 // Types
@@ -63,6 +65,7 @@ const settingsSections: SettingsSectionItem[] = [
     { id: "mail", label: "Mail Server", description: "SMTP configuration for outbound alerts and reports", icon: Bell },
     { id: "system-health", label: "System Health", description: "Runtime configuration and dependency checks", icon: Activity },
     { id: "users", label: "Users & Roles", description: "Role assignment and access administration", icon: User },
+    { id: "zenkins", label: "Zenkins DevOps", description: "CI/CD orchestration and automated updates", icon: Github },
 ];
 
 const COMMON_SAVE_FIELDS: Array<keyof PlatformSettings> = [
@@ -374,6 +377,7 @@ export default function SettingsPage() {
                                     ADMIN_ROLE={ADMIN_ROLE}
                                 />
                             )}
+                             {activeSection === "zenkins" && <ZenkinsSection />}
                         </div>
                     </main>
                 </div>

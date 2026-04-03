@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Save, Activity, Clock, ShieldAlert, Zap, Search, AlertTriangle } from "lucide-react";
+import { Save, Activity, Clock, ShieldAlert, Zap, Search, AlertTriangle, GitBranch, Github, Terminal, CheckCircle2, AlertCircle, ArrowUpCircle, RefreshCw } from "lucide-react";
 import { SettingsCard, FormField, SectionHeader, Toggle } from "./common";
 import { FeatureFlags, PlatformSettings } from "./types";
 import { cn } from "@/lib/utils";
@@ -530,6 +530,201 @@ export function UsersManagementTab({ isAuthorized, formatRoleLabel, MAIN_OFFICER
                     </table>
                 </div>
             </SettingsCard>
+        </div>
+    );
+}
+
+export function ZenkinsSection() {
+    const [status, setStatus] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchStatus = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const response = await fetch("/api/admin/zenkins/status", { cache: "no-store" });
+            const data = await response.json();
+            if (response.ok) {
+                setStatus(data);
+                setError(null);
+            } else {
+                setError(data.error || "Failed to reach DevOps orchestrator");
+            }
+        } catch (err) {
+            setError("Network connection to CI/CD engine failed");
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        void fetchStatus();
+        
+        // Automated background polling every 60 seconds for CI/CD updates
+        const interval = setInterval(() => {
+            void fetchStatus();
+        }, 60000);
+        
+        return () => clearInterval(interval);
+    }, [fetchStatus]);
+
+    const handleApplyUpdate = async () => {
+        if (!confirm("Are you sure you want to apply system updates? This may trigger a temporary service interruption.")) return;
+        
+        try {
+            setIsUpdating(true);
+            const response = await fetch("/api/admin/zenkins/update", { method: "POST" });
+            const data = await response.json();
+            if (response.ok) {
+                alert("Update applied successfully! System is refreshing.");
+                await fetchStatus();
+            } else {
+                alert("Update failed: " + (data.error || "Unknown error"));
+            }
+        } catch (err) {
+            alert("Update failed due to network error.");
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    return (
+        <div className="space-y-8 pb-10">
+            <SectionHeader 
+                title="Zenkins DevOps" 
+                subtitle="CI/CD Orchestration and automated deployment management"
+                badge={status?.updateRequired ? "UPDATE REQUIRED" : "ALL SYSTEMS GO"}
+            />
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <SettingsCard>
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between pb-4 border-b border-[var(--border-color)]">
+                            <div className="flex items-center gap-3">
+                                <div className={cn(
+                                    "p-2 rounded-lg",
+                                    status?.updateRequired ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" : "bg-green-500/10 text-green-600 dark:text-green-400"
+                                )}>
+                                    <Github size={18} />
+                                </div>
+                                <h4 className="text-sm font-bold">Remote Repository Branch</h4>
+                            </div>
+                            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-color)]">
+                                <GitBranch size={12} className="text-sky-500" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">{status?.branch || "main"}</span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-color)]">
+                                <div>
+                                    <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Local Build Commit</p>
+                                    <p className="text-sm font-mono font-bold text-sky-600 dark:text-sky-400 mt-1">{status?.localHash || "Fetching..."}</p>
+                                </div>
+                                <CheckCircle2 size={16} className="text-green-500" />
+                            </div>
+
+                            <div className="flex items-center justify-between p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-color)]">
+                                <div>
+                                    <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Remote Origin Commit</p>
+                                    <p className="text-sm font-mono font-bold text-amber-600 dark:text-amber-400 mt-1">{status?.remoteHash || "Fetching..."}</p>
+                                </div>
+                                {status?.updateRequired ? (
+                                    <ArrowUpCircle size={16} className="text-amber-500 animate-bounce" />
+                                ) : (
+                                    <CheckCircle2 size={16} className="text-green-500" />
+                                )}
+                            </div>
+                        </div>
+
+                        {status?.updateRequired && (
+                            <div className={cn(
+                                "p-4 rounded-2xl border flex items-start gap-4",
+                                status?.requiresRestart ? "bg-red-500/5 border-red-500/20" : "bg-sky-500/5 border-sky-500/20"
+                            )}>
+                                <div className={cn(
+                                    "p-2 rounded-xl mt-1",
+                                    status?.requiresRestart ? "bg-red-500/20 text-red-600" : "bg-sky-500/20 text-sky-600"
+                                )}>
+                                    <Terminal size={16} />
+                                </div>
+                                <div>
+                                    <h5 className={cn("text-xs font-bold uppercase tracking-wider mb-1", status?.requiresRestart ? "text-red-700 dark:text-red-400" : "text-sky-700 dark:text-sky-400")}>
+                                        {status?.requiresRestart ? "System Restart Required" : "Update Available"}
+                                    </h5>
+                                    <p className="text-[11px] text-muted-foreground leading-relaxed italic">
+                                        {status?.requiresRestart 
+                                            ? "Critical configuration changes detected (Dockerfile/Compose). A container restart is recommended after pulling."
+                                            : "Platform logic updates available. Git pull will be executed silently to update the application."}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </SettingsCard>
+
+                <div className="space-y-6">
+                    <SettingsCard>
+                        <div className="space-y-4">
+                            <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground border-b border-[var(--border-color)] pb-3">DevOps Actions</h4>
+                            
+                            <div className="grid grid-cols-1 gap-3">
+                                <button
+                                    onClick={handleApplyUpdate}
+                                    disabled={!status?.updateRequired || isUpdating || isLoading}
+                                    className={cn(
+                                        "w-full flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 transform active:scale-[0.98]",
+                                        status?.updateRequired 
+                                            ? "bg-sky-600 text-white border-sky-500 shadow-lg shadow-sky-500/10 hover:bg-sky-500" 
+                                            : "bg-[var(--bg-tertiary)] border-[var(--border-color)] opacity-50 grayscale cursor-not-allowed"
+                                    )}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <RefreshCw size={18} className={cn(isUpdating && "animate-spin")} />
+                                        <div className="text-left">
+                                            <p className="text-sm font-bold">Apply System Update</p>
+                                            <p className="text-[10px] opacity-80 font-medium">Automatic Git Pull & Hot Reload</p>
+                                        </div>
+                                    </div>
+                                    <ArrowUpCircle size={16} className={status?.updateRequired ? "animate-pulse" : ""} />
+                                </button>
+
+                                <button
+                                    onClick={() => void fetchStatus()}
+                                    disabled={isLoading || isUpdating}
+                                    className="w-full flex items-center gap-3 p-4 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-elevated)] transition-all duration-300"
+                                >
+                                    <Activity size={18} className={cn(isLoading && "animate-pulse")} />
+                                    <div className="text-left">
+                                        <p className="text-sm font-bold">Sync Orchestrator</p>
+                                        <p className="text-[10px] text-muted-foreground font-medium">Check for remote upstream commits</p>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                    </SettingsCard>
+
+                    {error && (
+                        <div className="p-4 rounded-2xl bg-red-500/5 border border-red-500/20 flex items-center gap-3">
+                            <AlertCircle className="text-red-500" size={16} />
+                            <p className="text-xs font-medium text-red-600 dark:text-red-400">{error}</p>
+                        </div>
+                    )}
+                    
+                    {!status?.updateRequired && !isLoading && !error && (
+                        <div className="p-6 rounded-2xl bg-green-500/5 border border-dashed border-green-500/20 text-center space-y-3">
+                            <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center text-green-500 mx-auto border border-green-500/10">
+                                <CheckCircle2 size={20} />
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-xs font-bold text-green-700 dark:text-green-400 uppercase tracking-widest leading-none">System Stable</p>
+                                <p className="text-[11px] text-green-800/70 dark:text-green-400/70 italic">Synchronized with latest bank branch head</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
     );
 }

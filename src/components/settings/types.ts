@@ -81,6 +81,7 @@ export type SettingsSectionId =
     | "integrations"
     | "api"
     | "users"
+    | "zenkins"
     | "profile";
 
 export interface SettingsSectionItem {
