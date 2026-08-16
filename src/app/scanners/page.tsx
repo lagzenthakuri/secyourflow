@@ -67,6 +67,18 @@ interface AssetOption {
     hostname?: string | null;
 }
 
+/** Server-side capability report for each supported scanner integration. */
+interface ScannerCapability {
+    type: string;
+    label: string;
+    execution: "LOCAL_BINARY" | "REMOTE_API";
+    binary?: string;
+    targetHint: string;
+    installed: boolean | null;
+    version?: string | null;
+    error?: string | null;
+}
+
 export default function ScannersPage() {
     const { showToast, confirm: askForConfirmation } = useUiFeedback();
     const [activeTab, setActiveTab] = useState<"scanners" | "scans" | "import">("scanners");
@@ -76,11 +88,24 @@ export default function ScannersPage() {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [assets, setAssets] = useState<AssetOption[]>([]);
     const [isScanning, setIsScanning] = useState(false);
+    const [capabilities, setCapabilities] = useState<ScannerCapability[]>([]);
+    const [isAddScannerOpen, setIsAddScannerOpen] = useState(false);
+    const [isSavingScanner, setIsSavingScanner] = useState(false);
+    const [newScanner, setNewScanner] = useState({
+        name: "",
+        type: "NMAP",
+        endpoint: "",
+        apiKey: "",
+        username: "",
+        password: "",
+    });
     const [scanConfig, setScanConfig] = useState({
         assetId: "",
         scannerId: "",
-        apiKey: "",
-        model: "google/gemini-2.0-flash-001"
+        // Explicit target overrides the asset's hostname/IP.
+        target: "",
+        // Analyze findings with the configured AI provider after the scan.
+        aiTriage: true,
     });
 
     const fetchData = async () => {
@@ -103,9 +128,22 @@ export default function ScannersPage() {
         }
     };
 
+    /** Which integrations this server can actually execute right now. */
+    const fetchCapabilities = async () => {
+        try {
+            const res = await fetch("/api/scanners/available", { cache: "no-store" });
+            if (!res.ok) return;
+            const payload = await res.json() as { data?: ScannerCapability[] };
+            if (Array.isArray(payload.data)) setCapabilities(payload.data);
+        } catch (error) {
+            console.error("Failed to fetch scanner capabilities:", error);
+        }
+    };
+
     useEffect(() => {
         fetchData();
         fetchAssets();
+        fetchCapabilities();
     }, []);
 
     const fetchAssets = async () => {
@@ -118,22 +156,100 @@ export default function ScannersPage() {
         }
     };
 
+    const selectedAsset = assets.find((asset) => asset.id === scanConfig.assetId) ?? null;
+    const selectedScanner = scanners.find((scanner) => scanner.id === scanConfig.scannerId) ?? null;
+    const selectedCapability =
+        capabilities.find((entry) => entry.type === selectedScanner?.type) ?? null;
+
+    // A local scanner whose binary is missing can never succeed.
+    const canRunScan =
+        Boolean(scanConfig.scannerId) &&
+        Boolean(scanConfig.assetId || scanConfig.target.trim()) &&
+        selectedCapability?.installed !== false;
+
+    /** Capability record for the type currently chosen in the add form. */
+    const newScannerCapability =
+        capabilities.find((entry) => entry.type === newScanner.type) ?? null;
+
+    const handleCreateScanner = async () => {
+        if (newScanner.name.trim().length < 2) return;
+
+        try {
+            setIsSavingScanner(true);
+            const res = await fetch("/api/scanners", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: newScanner.name.trim(),
+                    type: newScanner.type,
+                    endpoint: newScanner.endpoint.trim() || null,
+                    apiKey: newScanner.apiKey.trim() || null,
+                    username: newScanner.username.trim() || null,
+                    password: newScanner.password.trim() || null,
+                    isActive: true,
+                }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                showToast({
+                    title: "Could not add scanner",
+                    description: data.error ?? "Failed to create scanner.",
+                    intent: "error",
+                });
+                return;
+            }
+
+            showToast({
+                title: "Scanner added",
+                description: `${data.name} is ready to use.`,
+                intent: "success",
+            });
+            setIsAddScannerOpen(false);
+            setNewScanner({ name: "", type: "NMAP", endpoint: "", apiKey: "", username: "", password: "" });
+            fetchData();
+        } catch (error) {
+            console.error("Create scanner error:", error);
+            showToast({
+                title: "Could not add scanner",
+                description: "An error occurred while creating the scanner.",
+                intent: "error",
+            });
+        } finally {
+            setIsSavingScanner(false);
+        }
+    };
+
     const handleRunScan = async () => {
-        if (!scanConfig.assetId) return;
+        if (!scanConfig.scannerId) return;
+        if (!scanConfig.assetId && !scanConfig.target.trim()) return;
 
         try {
             setIsScanning(true);
             const res = await fetch("/api/scans/run", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(scanConfig),
+                body: JSON.stringify({
+                    scannerId: scanConfig.scannerId,
+                    ...(scanConfig.assetId && { assetId: scanConfig.assetId }),
+                    ...(scanConfig.target.trim() && { target: scanConfig.target.trim() }),
+                    aiTriage: scanConfig.aiTriage,
+                }),
             });
 
             const data = await res.json();
             if (res.ok) {
+                // The registry path reports `findings`; the Tenable path
+                // reports `vulnerabilitiesFound`.
+                const found = data.findings ?? data.vulnerabilitiesFound ?? 0;
                 showToast({
                     title: "Scan completed",
-                    description: `Found ${data.vulnerabilitiesFound} vulnerabilities.`,
+                    description:
+                        `Found ${found} finding${found === 1 ? "" : "s"}` +
+                        (data.created !== undefined ? ` (${data.created} new, ${data.updated} updated).` : ".") +
+                        (data.aiTriage === "queued"
+                            ? " AI analysis is running in the background."
+                            : ""),
                     intent: "success",
                 });
                 setIsAddModalOpen(false);
@@ -229,14 +345,190 @@ export default function ScannersPage() {
                             <FileJson size={16} />
                             Import Scan
                         </button>
-                        <button className="btn btn-primary" onClick={() => setIsAddModalOpen(true)}>
+                        <button
+                            className="btn btn-secondary"
+                            onClick={() => setIsAddModalOpen(true)}
+                            disabled={scanners.length === 0}
+                            title={scanners.length === 0 ? "Add a scanner first" : undefined}
+                        >
+                            <Play size={16} />
+                            Run Scan
+                        </button>
+                        <button className="btn btn-primary" onClick={() => setIsAddScannerOpen(true)}>
                             <Plus size={16} />
                             Add Scanner
                         </button>
                     </div>
                 </div>
 
-                {/* AI Scan Modal */}
+                {/* Add Scanner Modal */}
+                <Modal
+                    isOpen={isAddScannerOpen}
+                    onClose={() => setIsAddScannerOpen(false)}
+                    title="Add Scanner"
+                    maxWidth="md"
+                    footer={
+                        <div className="flex justify-end gap-3">
+                            <button
+                                className="btn btn-secondary"
+                                onClick={() => setIsAddScannerOpen(false)}
+                                disabled={isSavingScanner}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleCreateScanner}
+                                disabled={isSavingScanner || newScanner.name.trim().length < 2}
+                            >
+                                {isSavingScanner ? (
+                                    <>
+                                        <RefreshCw size={16} className="animate-spin" />
+                                        Saving...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus size={16} />
+                                        Add Scanner
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    }
+                >
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                                Scanner Type
+                            </label>
+                            <select
+                                className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                value={newScanner.type}
+                                onChange={(e) =>
+                                    setNewScanner({ ...newScanner, type: e.target.value })
+                                }
+                            >
+                                {capabilities.map((capability) => (
+                                    <option key={capability.type} value={capability.type}>
+                                        {capability.label}
+                                        {capability.installed === false ? " — not installed" : ""}
+                                    </option>
+                                ))}
+                            </select>
+                            {newScannerCapability && (
+                                <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                                    {newScannerCapability.execution === "LOCAL_BINARY"
+                                        ? `Runs the ${newScannerCapability.binary} binary on this server.`
+                                        : "Connects to a remote appliance using the credentials below."}
+                                </p>
+                            )}
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                                Name
+                            </label>
+                            <input
+                                className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                placeholder={`e.g. Local ${newScannerCapability?.label ?? "Scanner"}`}
+                                value={newScanner.name}
+                                onChange={(e) => setNewScanner({ ...newScanner, name: e.target.value })}
+                            />
+                        </div>
+
+                        {/* Remote scanners need connection details; local ones do not. */}
+                        {newScannerCapability?.execution === "REMOTE_API" && (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                                        Endpoint
+                                    </label>
+                                    <input
+                                        className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                        placeholder="https://scanner.internal:8834"
+                                        value={newScanner.endpoint}
+                                        onChange={(e) =>
+                                            setNewScanner({ ...newScanner, endpoint: e.target.value })
+                                        }
+                                    />
+                                </div>
+
+                                {newScanner.type === "NESSUS" ? (
+                                    <div>
+                                        <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                                            API Key
+                                        </label>
+                                        <input
+                                            type="password"
+                                            className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                            placeholder="accessKey;secretKey"
+                                            value={newScanner.apiKey}
+                                            onChange={(e) =>
+                                                setNewScanner({ ...newScanner, apiKey: e.target.value })
+                                            }
+                                        />
+                                        <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                                            Nessus expects the access and secret key joined by a semicolon.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                                                Username
+                                            </label>
+                                            <input
+                                                className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                                value={newScanner.username}
+                                                onChange={(e) =>
+                                                    setNewScanner({ ...newScanner, username: e.target.value })
+                                                }
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                                                Password
+                                            </label>
+                                            <input
+                                                type="password"
+                                                className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                                value={newScanner.password}
+                                                onChange={(e) =>
+                                                    setNewScanner({ ...newScanner, password: e.target.value })
+                                                }
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        {newScannerCapability?.installed === false && (
+                            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                                <div className="flex gap-3">
+                                    <AlertTriangle className="text-amber-500 shrink-0" size={18} />
+                                    <div className="text-xs text-amber-700 dark:text-amber-200/90 leading-relaxed">
+                                        <code>{newScannerCapability.binary}</code> is not installed on this
+                                        server. You can still save this scanner, but scans will fail until
+                                        the binary is available.
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                            <div className="flex gap-3">
+                                <AlertTriangle className="text-intent-accent shrink-0" size={18} />
+                                <div className="text-xs text-blue-700 dark:text-blue-100/80 leading-relaxed">
+                                    Credentials are encrypted before being stored and are never returned by
+                                    the API.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </Modal>
+
+                {/* Run Scan Modal */}
                 <Modal
                     isOpen={isAddModalOpen}
                     onClose={() => setIsAddModalOpen(false)}
@@ -254,7 +546,7 @@ export default function ScannersPage() {
                             <button
                                 className="btn btn-primary"
                                 onClick={handleRunScan}
-                                disabled={isScanning || !scanConfig.assetId}
+                                disabled={isScanning || !canRunScan}
                             >
                                 {isScanning ? (
                                     <>
@@ -311,25 +603,65 @@ export default function ScannersPage() {
 
                         <div>
                             <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-                                AI Insight Engine (OpenRouter)
+                                Target {selectedAsset ? "(overrides the asset address)" : ""}
                             </label>
                             <input
-                                type="password"
                                 className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                                placeholder="sk-or-v1-..."
-                                value={scanConfig.apiKey}
-                                onChange={(e) => setScanConfig({ ...scanConfig, apiKey: e.target.value })}
+                                placeholder={
+                                    selectedCapability?.targetHint ??
+                                    "Hostname, IP address, or CIDR range"
+                                }
+                                value={scanConfig.target}
+                                onChange={(e) => setScanConfig({ ...scanConfig, target: e.target.value })}
                             />
                             <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                                If empty, the server-side default key will be used.
+                                {scanConfig.target.trim()
+                                    ? "This value will be scanned."
+                                    : selectedAsset
+                                      ? `Defaults to ${selectedAsset.ipAddress || selectedAsset.hostname || selectedAsset.name}.`
+                                      : "Provide a target, or pick an asset with a hostname or IP address."}
                             </p>
                         </div>
+
+                        <label className="flex items-start gap-2.5 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                className="mt-0.5"
+                                checked={scanConfig.aiTriage}
+                                onChange={(e) =>
+                                    setScanConfig({ ...scanConfig, aiTriage: e.target.checked })
+                                }
+                            />
+                            <span className="text-sm text-[var(--text-secondary)]">
+                                Analyze findings with AI after the scan
+                                <span className="block text-[10px] text-[var(--text-muted)] mt-0.5">
+                                    Runs in the background once the scan returns, adding risk scores and
+                                    remediation steps to the Risk Register. Needs an asset matching the
+                                    target.
+                                </span>
+                            </span>
+                        </label>
+
+                        {selectedCapability?.installed === false && (
+                            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                                <div className="flex gap-3">
+                                    <AlertTriangle className="text-red-500 shrink-0" size={18} />
+                                    <div className="text-xs text-red-700 dark:text-red-200/90 leading-relaxed">
+                                        <strong>{selectedCapability.label}</strong> is not installed on this
+                                        server, so this scan cannot run. Install the{" "}
+                                        <code>{selectedCapability.binary}</code> binary and reload.
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
                             <div className="flex gap-3">
                                 <AlertTriangle className="text-intent-accent shrink-0" size={18} />
                                 <div className="text-xs text-blue-700 dark:text-blue-100/80 leading-relaxed">
-                                    The Tenable API will be used to perform the scan and retrieve findings. AI will only be used to provide deep insights, remediation steps, and business context for the results.
+                                    Findings come from the selected scanner. AI is used only to add risk
+                                    context and remediation guidance afterwards — configure which provider in{" "}
+                                    <strong>Settings</strong>.
                                 </div>
                             </div>
                         </div>
@@ -372,6 +704,61 @@ export default function ScannersPage() {
                         Manual Import
                     </button>
                 </div>
+
+                {activeTab === "scanners" && capabilities.length > 0 && (
+                    <div className="mb-6 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+                        <div className="mb-3">
+                            <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                                Supported Integrations
+                            </h2>
+                            <p className="text-sm text-[var(--text-secondary)]">
+                                Local scanners must be installed on the application server. Remote scanners
+                                are reached with the credentials on each configured scanner.
+                            </p>
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                            {capabilities.map((capability) => (
+                                <div
+                                    key={capability.type}
+                                    className="rounded-xl border border-[var(--border-color)] p-3"
+                                >
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="text-sm font-semibold text-[var(--text-primary)]">
+                                            {capability.label}
+                                        </span>
+                                        {capability.installed === true && (
+                                            <span className="inline-flex items-center gap-1 rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                                                <CheckCircle size={10} />
+                                                READY
+                                            </span>
+                                        )}
+                                        {capability.installed === false && (
+                                            <span className="inline-flex items-center gap-1 rounded-lg border border-red-400/30 bg-red-400/10 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400">
+                                                <XCircle size={10} />
+                                                NOT INSTALLED
+                                            </span>
+                                        )}
+                                        {capability.installed === null && (
+                                            <span className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-[10px] font-bold text-[var(--text-muted)]">
+                                                NEEDS CREDENTIALS
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+                                        {capability.execution === "LOCAL_BINARY"
+                                            ? `Local binary: ${capability.binary}`
+                                            : "Remote API"}
+                                    </p>
+                                    <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
+                                        {capability.version || capability.targetHint}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {activeTab === "scanners" && (
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -466,7 +853,10 @@ export default function ScannersPage() {
                                         <p className="text-[var(--text-secondary)] mb-6 max-w-md mx-auto">
                                             Connect vulnerability scanners to automatically import findings and keep your security posture up to date.
                                         </p>
-                                        <button className="btn btn-primary">
+                                        <button
+                                            className="btn btn-primary"
+                                            onClick={() => setIsAddScannerOpen(true)}
+                                        >
                                             <Plus size={16} />
                                             Add Your First Scanner
                                         </button>

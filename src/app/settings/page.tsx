@@ -30,6 +30,7 @@ import { useSession } from "next-auth/react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useRouter } from "next/navigation";
 import { TwoFactorSettingsPanel } from "@/components/settings/TwoFactorSettingsPanel";
+import { AiProviderSettingsPanel } from "@/components/settings/AiProviderSettingsPanel";
 import { useUiFeedback } from "@/hooks/useUiFeedback";
 
 // Feature flags storage key
@@ -1294,6 +1295,8 @@ function SecuritySection({ settings, updateSettings, handleSave, isSaving }: Sec
                 </div>
 
                 <TwoFactorSettingsPanel />
+
+                <AiProviderSettingsPanel />
 
                 <div>
                     <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">

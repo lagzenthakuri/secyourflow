@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -39,6 +38,9 @@ model User {
   dashboardViews                     DashboardView[]
   dashboardViewSharesReceived        DashboardViewShare[]              @relation("DashboardViewSharedWith")
   externalTickets                    ExternalTicket[]
+  nis2ChecklistItemsOwned            Nis2ChecklistItem[]               @relation("Nis2ChecklistOwner")
+  nis2IncidentsReported              Nis2Incident[]                    @relation("Nis2IncidentReporter")
+  nis2TimelineEntriesAuthored        Nis2IncidentTimelineEntry[]       @relation("Nis2TimelineAuthor")
   notifications                      Notification[]
   notificationRules                  NotificationRule[]
   ProductKey                         ProductKey[]
@@ -138,6 +140,13 @@ model Organization {
   externalTickets          ExternalTicket[]
   notificationRules        NotificationRule[]
   invitations              Invitation[]
+  nis2BusinessProcesses    Nis2BusinessProcess[]
+  nis2ChecklistItems       Nis2ChecklistItem[]
+  nis2Incidents            Nis2Incident[]
+  nis2IncidentAssets       Nis2IncidentAsset[]
+  nis2ProcessAssetLinks    Nis2ProcessAssetDependency[]
+  nis2ProcessVendorLinks   Nis2ProcessVendorDependency[]
+  nis2Vendors              Nis2Vendor[]
   policies                 Policy[]
   ProductKey               ProductKey[]
   ProductKeyActivation     ProductKeyActivation[]
@@ -199,6 +208,8 @@ model Asset {
   childRelationships  AssetRelationship[]      @relation("AssetParent")
   vulnerabilities     AssetVulnerability[]
   complianceEvidence  ComplianceEvidence[]
+  nis2IncidentLinks   Nis2IncidentAsset[]
+  nis2ProcessLinks    Nis2ProcessAssetDependency[]
   riskEntries         RiskRegister[]
   indicatorMatches    ThreatIndicatorMatch[]
 
@@ -815,6 +826,9 @@ model Setting {
   passwordPolicy          String       @default("STRONG")
   updatedAt               DateTime     @updatedAt
   aiRiskAssessmentEnabled Boolean      @default(true)
+  aiProvider              String       @default("OLLAMA")
+  aiModel                 String?
+  aiEndpoint              String?
   organization            Organization @relation(fields: [organizationId], references: [id])
 }
 
@@ -1767,4 +1781,288 @@ enum AuditStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+}
+
+// ---------------------------------------------------------------------------
+// NIS2 Directive (EU 2022/2555) — Art. 21 governance, Art. 23 incident
+// reporting, Art. 18 supply chain, and Business Impact Analysis.
+// ---------------------------------------------------------------------------
+
+model Nis2ChecklistItem {
+  id               String                @id @default(cuid())
+  organizationId   String
+  code             String
+  measure          Nis2Article21Measure
+  title            String
+  description      String
+  verificationMode Nis2VerificationMode  @default(MANUAL)
+  status           Nis2ChecklistStatus   @default(NOT_STARTED)
+  ownerId          String?
+  dueDate          DateTime?
+  documentUrl      String?
+  notes            String?
+  escalated        Boolean               @default(false)
+  escalationReason String?
+  escalatedAt      DateTime?
+  lastReviewedAt   DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  organization     Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner            User?                 @relation("Nis2ChecklistOwner", fields: [ownerId], references: [id])
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@index([organizationId, measure])
+  @@index([organizationId, status])
+  @@index([organizationId, escalated])
+  @@index([ownerId])
+}
+
+model Nis2Incident {
+  id                        String                     @id @default(cuid())
+  organizationId            String
+  reference                 String
+  title                     String
+  description               String
+  severity                  Severity                   @default(HIGH)
+  status                    Nis2IncidentStatus         @default(OPEN)
+  phase                     Nis2IncidentPhase          @default(EARLY_WARNING)
+  detectedAt                DateTime
+  earlyWarningDueAt         DateTime
+  notificationDueAt         DateTime
+  finalReportDueAt          DateTime
+  earlyWarningSubmittedAt   DateTime?
+  notificationSubmittedAt   DateTime?
+  finalReportSubmittedAt    DateTime?
+  earlyWarningPayload       Json?
+  notificationPayload       Json?
+  finalReportPayload        Json?
+  significantImpact         Boolean                    @default(true)
+  crossBorder               Boolean                    @default(false)
+  taxonomy                  String?
+  iocs                      Json?
+  affectedUsersEstimate     Int?
+  reportedById              String
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  organization              Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reportedBy                User                       @relation("Nis2IncidentReporter", fields: [reportedById], references: [id])
+  affectedAssets            Nis2IncidentAsset[]
+  timeline                  Nis2IncidentTimelineEntry[]
+  alerts                    Nis2IncidentAlert[]
+
+  @@unique([organizationId, reference])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, phase])
+  @@index([organizationId, detectedAt(sort: Desc)])
+  @@index([earlyWarningDueAt])
+  @@index([notificationDueAt])
+  @@index([finalReportDueAt])
+  @@index([reportedById])
+}
+
+model Nis2IncidentAsset {
+  id             String       @id @default(cuid())
+  incidentId     String
+  assetId        String
+  organizationId String
+  createdAt      DateTime     @default(now())
+  incident       Nis2Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  asset          Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([incidentId, assetId])
+  @@index([assetId])
+  @@index([organizationId])
+}
+
+model Nis2IncidentTimelineEntry {
+  id          String       @id @default(cuid())
+  incidentId  String
+  occurredAt  DateTime
+  description String
+  authorId    String?
+  createdAt   DateTime     @default(now())
+  incident    Nis2Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  author      User?        @relation("Nis2TimelineAuthor", fields: [authorId], references: [id])
+
+  @@index([incidentId, occurredAt])
+  @@index([authorId])
+}
+
+model Nis2IncidentAlert {
+  id         String                @id @default(cuid())
+  incidentId String
+  phase      Nis2IncidentPhase
+  kind       Nis2DeadlineAlertKind
+  dispatchedAt DateTime            @default(now())
+  incident   Nis2Incident          @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@unique([incidentId, phase, kind])
+  @@index([incidentId])
+}
+
+model Nis2Vendor {
+  id               String                        @id @default(cuid())
+  organizationId   String
+  name             String
+  description      String?
+  serviceProvided  String
+  criticality      Nis2VendorCriticality         @default(LEVEL_3)
+  dataAccessLevel  Nis2DataAccessLevel           @default(NONE)
+  country          String?
+  euBased          Boolean                       @default(false)
+  certifications   String[]
+  contractStart    DateTime?
+  contractEnd      DateTime?
+  slaDefined       Boolean                       @default(false)
+  auditRights      Boolean                       @default(false)
+  securityClauses  Boolean                       @default(false)
+  breachNotifiedIn Int?
+  lastAuditAt      DateTime?
+  securityScore    Int?
+  scoreBreakdown   Json?
+  scoredAt         DateTime?
+  acnRelevant      Boolean                       @default(false)
+  contactEmail     String?
+  notes            String?
+  createdAt        DateTime                      @default(now())
+  updatedAt        DateTime                      @updatedAt
+  organization     Organization                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  processLinks     Nis2ProcessVendorDependency[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@index([organizationId, criticality])
+  @@index([organizationId, acnRelevant])
+  @@index([securityScore])
+}
+
+model Nis2BusinessProcess {
+  id                 String                        @id @default(cuid())
+  organizationId     String
+  name               String
+  description        String?
+  owner              String?
+  criticality        Nis2ProcessCriticality        @default(IMPORTANT)
+  rtoHours           Int?
+  rpoHours           Int?
+  mtpdHours          Int?
+  financialImpact    Int                           @default(1)
+  operationalImpact  Int                           @default(1)
+  reputationalImpact Int                           @default(1)
+  regulatoryImpact   Int                           @default(1)
+  safetyImpact       Int                           @default(1)
+  impactScore        Float?
+  bcpDocumented      Boolean                       @default(false)
+  drpDocumented      Boolean                       @default(false)
+  lastTestedAt       DateTime?
+  createdAt          DateTime                      @default(now())
+  updatedAt          DateTime                      @updatedAt
+  organization       Organization                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assetDependencies  Nis2ProcessAssetDependency[]
+  vendorDependencies Nis2ProcessVendorDependency[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@index([organizationId, criticality])
+  @@index([impactScore(sort: Desc)])
+}
+
+model Nis2ProcessAssetDependency {
+  id             String              @id @default(cuid())
+  processId      String
+  assetId        String
+  organizationId String
+  createdAt      DateTime            @default(now())
+  process        Nis2BusinessProcess @relation(fields: [processId], references: [id], onDelete: Cascade)
+  asset          Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([processId, assetId])
+  @@index([assetId])
+  @@index([organizationId])
+}
+
+model Nis2ProcessVendorDependency {
+  id             String              @id @default(cuid())
+  processId      String
+  vendorId       String
+  organizationId String
+  createdAt      DateTime            @default(now())
+  process        Nis2BusinessProcess @relation(fields: [processId], references: [id], onDelete: Cascade)
+  vendor         Nis2Vendor          @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([processId, vendorId])
+  @@index([vendorId])
+  @@index([organizationId])
+}
+
+enum Nis2Article21Measure {
+  RISK_ANALYSIS
+  INCIDENT_HANDLING
+  BUSINESS_CONTINUITY
+  SUPPLY_CHAIN
+  SECURE_ACQUISITION
+  EFFECTIVENESS_ASSESSMENT
+  CYBER_HYGIENE
+  CRYPTOGRAPHY
+  HUMAN_RESOURCES
+  ACCESS_CONTROL
+}
+
+enum Nis2VerificationMode {
+  AUTOMATED
+  PARTIAL
+  MANUAL
+}
+
+enum Nis2ChecklistStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  IMPLEMENTED
+  NOT_APPLICABLE
+}
+
+enum Nis2IncidentPhase {
+  EARLY_WARNING
+  INCIDENT_NOTIFICATION
+  FINAL_REPORT
+  COMPLETE
+}
+
+enum Nis2IncidentStatus {
+  OPEN
+  CONTAINED
+  RESOLVED
+  CLOSED
+}
+
+enum Nis2DeadlineAlertKind {
+  PRE_DEADLINE
+  BREACH
+}
+
+enum Nis2VendorCriticality {
+  LEVEL_1
+  LEVEL_2
+  LEVEL_3
+  LEVEL_4
+}
+
+enum Nis2DataAccessLevel {
+  NONE
+  PUBLIC
+  INTERNAL
+  CONFIDENTIAL
+  RESTRICTED
+}
+
+enum Nis2ProcessCriticality {
+  VITAL
+  CRITICAL
+  IMPORTANT
+  SUPPORTING
 }

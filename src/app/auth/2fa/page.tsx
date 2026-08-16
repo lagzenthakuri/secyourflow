@@ -75,7 +75,10 @@ export default function TwoFactorChallengePage() {
             return;
         }
 
-        if (isTotpEnabled && isTwoFactorVerified) {
+        // Two-factor is opt-in from Settings. This page only serves the
+        // challenge for accounts that already turned it on — an account
+        // without it is never pushed into enrolling here.
+        if (!isTotpEnabled || isTwoFactorVerified) {
             router.replace("/dashboard");
         }
     }, [isTotpEnabled, isTwoFactorVerified, router, status]);
@@ -253,6 +256,27 @@ export default function TwoFactorChallengePage() {
         lastAutoSubmittedChallengeCodeRef.current = normalizedCode;
         void submitChallengeCode(normalizedCode);
     }, [code, isSubmitting, isTotpEnabled, submitChallengeCode]);
+
+    // The session is only known client-side, so hold a neutral placeholder
+    // until it resolves rather than server-rendering a prompt that may be
+    // wrong for this account.
+    if (status === "loading") {
+        return (
+            <div className="min-h-screen bg-[var(--bg-primary)] bg-grid flex items-center justify-center px-4 py-8">
+                <div
+                    className="w-8 h-8 border-2 border-[var(--border-color)] border-t-intent-accent rounded-full animate-spin"
+                    role="status"
+                    aria-label="Loading"
+                />
+            </div>
+        );
+    }
+
+    // Two-factor is opt-in from Settings, so an account without it is on its
+    // way to the dashboard — never show it an enrollment prompt here.
+    if (!isTotpEnabled) {
+        return null;
+    }
 
     return (
         <div className="min-h-screen bg-[var(--bg-primary)] bg-grid flex items-center justify-center px-4 py-8">

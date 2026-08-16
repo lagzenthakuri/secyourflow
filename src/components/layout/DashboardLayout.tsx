@@ -23,6 +23,10 @@ import {
     Database,
     Sun,
     Moon,
+    Scale,
+    Siren,
+    Network,
+    LifeBuoy,
 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -46,6 +50,10 @@ const navigation = [
     { name: "Threats", href: "/threats", icon: AlertTriangle, roles: ALL_ROLES },
     { name: "Risk Register", href: "/risk-register", icon: ClipboardList, roles: ALL_ROLES },
     { name: "Compliance", href: "/compliance", icon: FileCheck, roles: ALL_ROLES },
+    { name: "NIS2 Governance", href: "/nis2/governance", icon: Scale, roles: ALL_ROLES },
+    { name: "NIS2 Incidents", href: "/nis2/incidents", icon: Siren, roles: ALL_ROLES },
+    { name: "Supply Chain", href: "/nis2/vendors", icon: Network, roles: ALL_ROLES },
+    { name: "Business Impact", href: "/nis2/bia", icon: LifeBuoy, roles: ALL_ROLES },
     { name: "Reports", href: "/reports", icon: BarChart3, roles: ALL_ROLES },
     { name: "Scanners", href: "/scanners", icon: Scan, roles: ALL_ROLES },
     { name: "CVE Search", href: "/cves", icon: Database, roles: ALL_ROLES },

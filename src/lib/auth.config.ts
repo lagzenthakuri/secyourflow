@@ -1,5 +1,6 @@
 import type { NextAuthConfig } from "next-auth";
 import GitHub from "next-auth/providers/github";
+import Google from "next-auth/providers/google";
 import { hasRecentTwoFactorVerification, TWO_FACTOR_REVERIFY_INTERVAL_MS } from "@/lib/security/two-factor";
 
 const PROTECTED_PREFIXES = [
@@ -33,8 +34,10 @@ function pickEnv(...keys: string[]): string | undefined {
 
 const githubClientId = pickEnv("AUTH_GITHUB_ID", "GITHUB_CLIENT_ID");
 const githubClientSecret = pickEnv("AUTH_GITHUB_SECRET", "GITHUB_CLIENT_SECRET");
+const googleClientId = pickEnv("AUTH_GOOGLE_ID", "GOOGLE_CLIENT_ID");
+const googleClientSecret = pickEnv("AUTH_GOOGLE_SECRET", "GOOGLE_CLIENT_SECRET");
 
-const oauthProviders = [];
+const oauthProviders: NextAuthConfig["providers"] = [];
 
 if (githubClientId && githubClientSecret) {
     oauthProviders.push(
@@ -44,6 +47,26 @@ if (githubClientId && githubClientSecret) {
         }),
     );
 }
+
+if (googleClientId && googleClientSecret) {
+    oauthProviders.push(
+        Google({
+            clientId: googleClientId,
+            clientSecret: googleClientSecret,
+            // Existing accounts predate the current OAuth client, so their
+            // provider ids no longer match. Google asserts ownership of the
+            // email it returns, so linking on a verified email address is
+            // sound here; do not copy this to a provider that does not.
+            allowDangerousEmailAccountLinking: true,
+        }),
+    );
+}
+
+/** Provider ids the sign-in page should offer, resolved at build time. */
+export const enabledOAuthProviders = oauthProviders
+    .map((provider) => (typeof provider === "function" ? provider() : provider))
+    .map((provider) => ("id" in provider ? (provider.id as string) : ""))
+    .filter(Boolean);
 
 export const authConfig = {
     providers: oauthProviders,

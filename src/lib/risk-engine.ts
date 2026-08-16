@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/logger";
 import { updateComplianceFromRisk } from "@/lib/compliance-engine";
+import { aiChatJson } from "@/lib/ai";
 import type { Prisma, Severity } from "@prisma/client";
 
 /**
@@ -115,20 +116,15 @@ function normalizeRiskAnalysis(raw: unknown, fallback: RiskAnalysis): RiskAnalys
 }
 
 /**
- * Calls the OpenRouter LLM API to analyze risk.
+ * Analyzes risk using the organization's configured AI provider, falling back
+ * to the deterministic model when no provider is available.
  */
 async function analyzeRiskWithAI(
     vulnerability: RiskInputVulnerability,
-    asset: RiskInputAsset
-): Promise<RiskAnalysis> {
+    asset: RiskInputAsset,
+    organizationId: string
+): Promise<{ analysis: RiskAnalysis; usedAi: boolean }> {
     const fallback = mockAnalysis(vulnerability, asset);
-    const apiKey = process.env.OPENROUTER_API_KEY;
-
-    if (!apiKey) {
-        console.warn("[RiskEngine] OPENROUTER_API_KEY is not set. Falling back to mock analysis.");
-        return fallback;
-    }
-
     const cia = parseCVSSVector(vulnerability.cvssVector);
 
     const prompt = `
@@ -182,36 +178,25 @@ Return ONLY structured JSON in this format:
 }
 `;
 
-    try {
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${apiKey}`,
-                "HTTP-Referer": `https://secyourflow.com`, // Optional, for OpenRouter rankings
-                "X-Title": `SecYourFlow`, // Optional
-                "Content-Type": "application/json"
+    const result = await aiChatJson<Record<string, unknown>>(organizationId, {
+        messages: [
+            {
+                role: "system",
+                content:
+                    "You are a specialized Cybersecurity Risk Analyst. Output only valid JSON, with no commentary.",
             },
-            body: JSON.stringify({
-                "model": "google/gemini-2.0-flash-001", // Using a fast and capable model
-                "messages": [
-                    { "role": "system", "content": "You are a specialized Cybersecurity Risk Analyst. Output only valid JSON." },
-                    { "role": "user", "content": prompt }
-                ],
-                "response_format": { "type": "json_object" }
-            })
-        });
+            { role: "user", content: prompt },
+        ],
+    });
 
-        const data = await response.json();
-        const content = data?.choices?.[0]?.message?.content;
-        if (typeof content !== "string") {
-            return fallback;
-        }
-
-        return normalizeRiskAnalysis(JSON.parse(content), fallback);
-    } catch (error) {
-        console.error("[RiskEngine] OpenRouter API call failed:", error);
-        return fallback;
+    if (!result) {
+        // No provider configured, unreachable, or unparsable output — the
+        // deterministic analysis still produces a usable risk entry.
+        console.warn("[RiskEngine] AI analysis unavailable; using deterministic fallback.");
+        return { analysis: fallback, usedAi: false };
     }
+
+    return { analysis: normalizeRiskAnalysis(result.value, fallback), usedAi: true };
 }
 
 /**
@@ -263,6 +248,7 @@ export async function processRiskAssessment(
     userId?: string
 ) {
     let riskEntryId: string | null = null;
+    let assessmentUsedAi = false;
     try {
         // 0. Check if AI Risk Assessment is enabled
         const orgSettings = await prisma.setting.findFirst({
@@ -312,8 +298,8 @@ export async function processRiskAssessment(
         });
         riskEntryId = initialEntry.id;
 
-        // 2. AI Risk Engine (OpenRouter)
-        const analysis = await analyzeRiskWithAI(
+        // 2. AI risk analysis via the organization's configured provider
+        const { analysis, usedAi } = await analyzeRiskWithAI(
             {
                 title: vulnerability.title,
                 description: vulnerability.description ?? undefined,
@@ -328,7 +314,8 @@ export async function processRiskAssessment(
                 criticality: asset.criticality,
                 environment: asset.environment,
                 owner: asset.owner ?? undefined,
-            }
+            },
+            organizationId
         );
 
         // 3. Calculate Impact Score = (C + I + A) / 3
@@ -406,6 +393,7 @@ export async function processRiskAssessment(
         );
 
         console.log(`[RiskEngine] Pipeline Complete. Compliance % should reflect drop.`);
+        assessmentUsedAi = usedAi;
 
         // Log the activity
         const logDetails = `Risk calculated: ${riskScore.toFixed(1)}/25. ${analysis.risk}`;
@@ -428,4 +416,6 @@ export async function processRiskAssessment(
             }).catch(err => console.error("Failed to update risk entry status to FAILED", err));
         }
     }
+
+    return { usedAi: assessmentUsedAi };
 }

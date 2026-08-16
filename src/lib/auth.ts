@@ -32,6 +32,59 @@ class OAuthOnlyCredentialsSigninError extends CredentialsSignin {
     code = "oauth_only";
 }
 
+/**
+ * Raised when an account has no password hash and there is no OAuth provider
+ * left to fall back on — pointing the user at "your configured provider"
+ * would send them nowhere.
+ */
+class NoPasswordSetError extends CredentialsSignin {
+    code = "no_password_set";
+}
+
+/**
+ * Auth.js debug logging is opt-in rather than "any non-production build".
+ * Its debug channel echoes the raw sign-in request body, so leaving it on by
+ * default writes submitted passwords to the server log in cleartext.
+ */
+const authDebugEnabled = process.env.AUTH_DEBUG === "true";
+
+const REDACTED = "[redacted]";
+const SENSITIVE_KEYS = new Set([
+    "password",
+    "newpassword",
+    "currentpassword",
+    "confirmpassword",
+    "secret",
+    "token",
+    "csrftoken",
+    "accesstoken",
+    "refreshtoken",
+    "clientsecret",
+    "totp",
+    "code",
+]);
+
+/**
+ * Strips credential-bearing fields from anything handed to the debug logger,
+ * so enabling AUTH_DEBUG stays safe even on a shared machine.
+ */
+function redactSensitive(value: unknown, depth = 0): unknown {
+    if (depth > 6 || value === null || typeof value !== "object") {
+        return value;
+    }
+
+    if (Array.isArray(value)) {
+        return value.map((entry) => redactSensitive(entry, depth + 1));
+    }
+
+    return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+            key,
+            SENSITIVE_KEYS.has(key.toLowerCase()) ? REDACTED : redactSensitive(entry, depth + 1),
+        ]),
+    );
+}
+
 function extractIpFromForwardedHeader(headerValue: string): string | null {
     const forwardedEntries = headerValue.split(",");
     for (const entry of forwardedEntries) {
@@ -137,7 +190,10 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 }
 
                 if (!user.password) {
-                    throw new OAuthOnlyCredentialsSigninError();
+                    // Only send the user to a provider that actually exists.
+                    throw authConfig.providers.length > 0
+                        ? new OAuthOnlyCredentialsSigninError()
+                        : new NoPasswordSetError();
                 }
 
                 let isValidPassword = false;
@@ -330,7 +386,21 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
         },
     },
     trustHost: true,
-    debug: process.env.NODE_ENV !== "production",
+    debug: authDebugEnabled,
+    logger: {
+        error(error) {
+            console.error("[auth][error]", error);
+        },
+        warn(code) {
+            console.warn("[auth][warn]", code);
+        },
+        debug(message, metadata) {
+            if (!authDebugEnabled) {
+                return;
+            }
+            console.debug("[auth][debug]", message, redactSensitive(metadata));
+        },
+    },
 });
 
 declare module "next-auth" {

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/logger";
 import { extractRequestContext } from "@/lib/request-utils";
 import { requireSessionWithOrg } from "@/lib/api-auth";
+import { AI_PROVIDERS } from "@/lib/ai";
 
 const PASSWORD_POLICIES = new Set(["STRONG", "MEDIUM", "BASIC"]);
 
@@ -131,6 +132,9 @@ type SettingWriteData = Partial<
         | "sessionTimeout"
         | "passwordPolicy"
         | "aiRiskAssessmentEnabled"
+        | "aiProvider"
+        | "aiModel"
+        | "aiEndpoint"
     >
 >;
 
@@ -262,8 +266,54 @@ function buildSettingsUpdateData(
     applyRestrictedBoolean("aiRiskAssessmentEnabled");
     applyRestrictedSessionTimeout();
     applyRestrictedPasswordPolicy();
+    applyAiProviderSelection();
 
     return { settingsData, restrictedChanges, validationErrors };
+
+    /**
+     * Persists the AI provider choice. Only the selection is stored — API keys
+     * stay in the environment and are never written to the database.
+     */
+    function applyAiProviderSelection() {
+        if ("aiProvider" in input) {
+            const value = String(input.aiProvider ?? "").toUpperCase();
+            if (!(AI_PROVIDERS as readonly string[]).includes(value)) {
+                validationErrors.push(
+                    `aiProvider must be one of: ${AI_PROVIDERS.join(", ")}`,
+                );
+            } else if (!isMainOfficer) {
+                restrictedChanges.push("aiProvider");
+            } else {
+                settingsData.aiProvider = value;
+            }
+        }
+
+        if ("aiModel" in input) {
+            const raw = input.aiModel;
+            if (raw !== null && typeof raw !== "string") {
+                validationErrors.push("aiModel must be a string or null");
+            } else if (typeof raw === "string" && raw.length > 200) {
+                validationErrors.push("aiModel is too long");
+            } else if (!isMainOfficer) {
+                restrictedChanges.push("aiModel");
+            } else {
+                settingsData.aiModel = raw ? raw.trim() : null;
+            }
+        }
+
+        if ("aiEndpoint" in input) {
+            const raw = input.aiEndpoint;
+            if (raw !== null && typeof raw !== "string") {
+                validationErrors.push("aiEndpoint must be a string or null");
+            } else if (typeof raw === "string" && raw.trim() && !/^https?:\/\//i.test(raw.trim())) {
+                validationErrors.push("aiEndpoint must be an http(s) URL");
+            } else if (!isMainOfficer) {
+                restrictedChanges.push("aiEndpoint");
+            } else {
+                settingsData.aiEndpoint = raw && raw.trim() ? raw.trim() : null;
+            }
+        }
+    }
 }
 
 export async function POST(request: NextRequest) {
