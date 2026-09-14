@@ -14,6 +14,12 @@ function buildCspHeaderValue(): string {
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
     "style-src 'self' 'unsafe-inline'",
+    // 'unsafe-inline' is required as long as pages are statically
+    // prerendered: Next inlines its RSC bootstrap into the prerendered HTML,
+    // and a per-request nonce cannot exist in a build-time artifact. Verified
+    // empirically — a nonce/'strict-dynamic' policy leaves every one of the 19
+    // script tags unnonced, which blocks all of them. Dropping 'unsafe-inline'
+    // requires forcing dynamic rendering app-wide first.
     `script-src 'self' 'unsafe-inline'${isProd ? "" : " 'unsafe-eval'"}`,
     `connect-src 'self'${isProd ? " https: wss:" : " http: https: ws: wss:"}`,
   ];
@@ -44,15 +50,15 @@ const nextConfig: NextConfig = {
 
   // Optimize package imports
   experimental: {
-    optimizePackageImports: ['lucide-react', 'recharts', '@tanstack/react-query'],
+    optimizePackageImports: ['lucide-react', 'recharts'],
   },
 
   // Enable compression
   compress: true,
 
-  // Standalone output for Docker (disabled for Vercel)
-  // Uncomment for Docker deployments
-  // output: "standalone",
+  // Standalone output: the Dockerfile copies .next/standalone and the worker
+  // container reuses the same image, so this must stay enabled.
+  output: "standalone",
 
   poweredByHeader: false,
 

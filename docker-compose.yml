@@ -1,51 +1,91 @@
+x-app-env: &app-env
+  DATABASE_URL: postgresql://postgres:postgres@postgres:5432/secyourflow
+  REDIS_URL: redis://redis:6379
+  NEXTAUTH_URL: http://localhost:3000
+
 services:
+  # One-shot schema migration. Everything else waits for it to exit 0.
+  migrate:
+    build:
+      context: .
+      target: migrate
+    environment: *app-env
+    env_file: [.env]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks: [secyourflow]
+
   web:
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: secyourflow-web
-    restart: always
+      target: web
+    restart: unless-stopped
     ports:
       - "3000:3000"
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/secyourflow
-      - REDIS_URL=redis://redis:6379
-      - NEXTAUTH_URL=http://localhost:3000
-    env_file:
-      - .env
+    environment: *app-env
+    env_file: [.env]
     depends_on:
-      - postgres
-      - redis
-    networks:
-      - secyourflow-network
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks: [secyourflow]
+
+  # Background job processor. Scale independently of web:
+  #   docker compose up -d --scale worker=3
+  worker:
+    build:
+      context: .
+      target: worker
+    restart: unless-stopped
+    environment: *app-env
+    env_file: [.env]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks: [secyourflow]
 
   postgres:
     image: postgres:15-alpine
-    container_name: secyourflow-postgres
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: secyourflow
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    networks:
-      - secyourflow-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d secyourflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [secyourflow]
 
   redis:
-    image: redis:alpine
-    container_name: secyourflow-redis
-    restart: always
-    ports:
-      - "6379:6379"
-    networks:
-      - secyourflow-network
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks: [secyourflow]
 
 networks:
-  secyourflow-network:
+  secyourflow:
     driver: bridge
 
 volumes:
   postgres_data:
+  redis_data:

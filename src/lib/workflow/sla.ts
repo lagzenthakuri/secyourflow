@@ -14,9 +14,10 @@ export function getDefaultSlaDaysForSeverity(severity: Severity): number {
 
 export function calculateSlaDueAt(severity: Severity, baseDate: Date = new Date()): Date {
   const days = getDefaultSlaDaysForSeverity(severity);
-  const due = new Date(baseDate);
-  due.setDate(due.getDate() + days);
-  return due;
+  // Millisecond arithmetic, not `setDate`. The local-time version shifted the
+  // due instant by an hour across a DST boundary while `isSlaBreached` compares
+  // absolute times, so SLAs silently moved twice a year.
+  return new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
 export function isSlaBreached(slaDueAt: Date | null, now: Date = new Date()): boolean {

@@ -17,6 +17,17 @@ export type OutboundUrlValidationOptions = {
    * Default: true
    */
   resolveDns?: boolean;
+  /**
+   * Permit loopback, private and link-local addresses.
+   *
+   * Only for services the operator deliberately runs inside their own
+   * perimeter — a self-hosted Ollama on 127.0.0.1 is the motivating case, and
+   * its documented default endpoint is exactly that. Never enable this for a
+   * hosted API or for a URL that arrives from an untrusted source: lifting the
+   * check is what turns a URL field into an SSRF primitive.
+   * Default: false
+   */
+  allowPrivateAddresses?: boolean;
 };
 
 export type OutboundUrlValidationResult =
@@ -111,6 +122,7 @@ export async function validateOutboundUrl(
   options: OutboundUrlValidationOptions = {},
 ): Promise<OutboundUrlValidationResult> {
   const allowInsecureHttp = options.allowInsecureHttp ?? false;
+  const allowPrivateAddresses = options.allowPrivateAddresses ?? false;
   const resolveDns = options.resolveDns ?? true;
   const allowedHosts = normalizeAllowedHosts(options.allowedHosts);
 
@@ -145,10 +157,11 @@ export async function validateOutboundUrl(
 
   // Basic hostname blocks (common SSRF targets/misconfigs).
   if (
-    hostname === "localhost" ||
-    hostname.endsWith(".localhost") ||
-    hostname.endsWith(".local") ||
-    hostname.endsWith(".internal")
+    !allowPrivateAddresses &&
+    (hostname === "localhost" ||
+      hostname.endsWith(".localhost") ||
+      hostname.endsWith(".local") ||
+      hostname.endsWith(".internal"))
   ) {
     return { ok: false, error: "Local/internal hostnames are not allowed." };
   }
@@ -159,7 +172,7 @@ export async function validateOutboundUrl(
 
   // If the hostname is an IP literal, validate it directly.
   if (isIP(hostname)) {
-    if (isPrivateIpAddress(hostname)) {
+    if (!allowPrivateAddresses && isPrivateIpAddress(hostname)) {
       return { ok: false, error: "Private or local IP addresses are not allowed." };
     }
     return { ok: true, url };
@@ -170,7 +183,7 @@ export async function validateOutboundUrl(
     if (ips.length === 0) {
       return { ok: false, error: "Hostname could not be resolved." };
     }
-    if (ips.some((ip) => isPrivateIpAddress(ip))) {
+    if (!allowPrivateAddresses && ips.some((ip) => isPrivateIpAddress(ip))) {
       return { ok: false, error: "Hostname resolves to a private or local IP address." };
     }
   }

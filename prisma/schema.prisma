@@ -43,8 +43,6 @@ model User {
   nis2TimelineEntriesAuthored        Nis2IncidentTimelineEntry[]       @relation("Nis2TimelineAuthor")
   notifications                      Notification[]
   notificationRules                  NotificationRule[]
-  ProductKey                         ProductKey[]
-  ProductKeyActivation               ProductKeyActivation[]
   remediationEvidenceUploaded        RemediationEvidence[]             @relation("RemediationEvidenceUploadedBy")
   remediationNotesAuthored           RemediationNote[]                 @relation("RemediationNoteAuthor")
   remediationPlansOwned              RemediationPlan[]                 @relation("RemediationPlanOwner")
@@ -148,8 +146,6 @@ model Organization {
   nis2ProcessVendorLinks   Nis2ProcessVendorDependency[]
   nis2Vendors              Nis2Vendor[]
   policies                 Policy[]
-  ProductKey               ProductKey[]
-  ProductKeyActivation     ProductKeyActivation[]
   remediationEvidence      RemediationEvidence[]
   remediationNotes         RemediationNote[]
   remediationPlans         RemediationPlan[]
@@ -172,6 +168,7 @@ model Organization {
   wazuhAlerts              WazuhAlert[]
 
   @@index([name])
+  jobRuns                  JobRun[]
 }
 
 model Asset {
@@ -420,7 +417,11 @@ model ComplianceEvidenceVersion {
   fileName     String
   mimeType     String
   sizeBytes    Int
+  /// Legacy on-disk location. Retained so pre-migration rows stay downloadable.
   storagePath  String
+  /// File content. Stored in the database, like ReportArtifact.data, so any
+  /// replica can serve a download and a container restart cannot lose evidence.
+  data         Bytes?
   checksum     String?
   notes        String?
   uploadedById String?
@@ -829,6 +830,9 @@ model Setting {
   aiProvider              String       @default("OLLAMA")
   aiModel                 String?
   aiEndpoint              String?
+  // Sealed with lib/crypto/sealed-secrets (AES-256-GCM), never returned to the
+  // client. Falls back to the provider's environment variable when unset.
+  aiApiKey                String?
   organization            Organization @relation(fields: [organizationId], references: [id])
 }
 
@@ -884,7 +888,13 @@ model RiskRegister {
   riskScore        Float
   impactScore      Float
   likelihoodScore  Float
-  status           String        @default("ACTIVE")
+  // Was an unconstrained String, so a client could PATCH it to any value while
+  // the UI branched on three magic strings.
+  status           RiskEntryStatus @default(PROCESSING)
+  // Whether a model actually produced this assessment, or it came from the
+  // deterministic fallback. The UI must never present the two identically.
+  analysisSource   RiskAnalysisSource @default(DETERMINISTIC)
+  failureReason    String?
   aiAnalysis       Json
   treatmentOption  String?
   responsibleParty String?
@@ -909,6 +919,10 @@ model RiskRegister {
   @@index([organizationId, riskScore(sort: Desc)])
   @@index([createdAt(sort: Desc)])
   @@index([assetId, vulnerabilityId])
+  // One live assessment per vulnerability-on-asset. Without this the engine
+  // created a new row on every run, filling the register with stale
+  // PROCESSING/FAILED duplicates and hiding the good result.
+  @@unique([organizationId, assetId, vulnerabilityId])
 }
 
 model VulnerabilityWorkflowTransition {
@@ -1461,41 +1475,7 @@ model WazuhAlert {
   @@index([timestamp])
 }
 
-model ProductKey {
-  id                   String                 @id
-  organizationId       String
-  createdById          String
-  codeHash             String
-  codePrefix           String
-  targetRole           Role
-  expiresAt            DateTime
-  revokedAt            DateTime?
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime
-  User                 User                   @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  Organization         Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  ProductKeyActivation ProductKeyActivation[]
 
-  @@unique([organizationId, codeHash])
-  @@index([organizationId, expiresAt])
-  @@index([organizationId, revokedAt])
-  @@index([organizationId, targetRole])
-}
-
-model ProductKeyActivation {
-  id             String       @id
-  organizationId String
-  productKeyId   String
-  userId         String
-  activatedAt    DateTime     @default(now())
-  Organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  ProductKey     ProductKey   @relation(fields: [productKeyId], references: [id], onDelete: Cascade)
-  User           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([productKeyId, userId])
-  @@index([organizationId, activatedAt])
-  @@index([organizationId, userId])
-}
 
 enum Role {
   IT_OFFICER
@@ -2065,4 +2045,54 @@ enum Nis2ProcessCriticality {
   CRITICAL
   IMPORTANT
   SUPPORTING
+}
+
+/// Durable record of a background job. BullMQ owns the queue; this owns the
+/// history, so the UI can poll progress and operators can audit what ran.
+model JobRun {
+  id             String        @id @default(cuid())
+  queue          String
+  jobName        String
+  /// BullMQ job id, absent while a job runs inline (no Redis configured).
+  jobId          String?
+  status         JobStatus     @default(QUEUED)
+  organizationId String?
+  /// Domain object this job acts on, for "is my analysis done yet" lookups.
+  entityType     String?
+  entityId       String?
+  payload        Json?
+  result         Json?
+  error          String?
+  attempts       Int           @default(0)
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([queue, status])
+  @@index([entityType, entityId])
+  @@index([status, createdAt])
+  @@index([createdAt(sort: Desc)])
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum RiskEntryStatus {
+  PROCESSING
+  ACTIVE
+  FAILED
+  /// Kept for history after a newer assessment replaced it.
+  SUPERSEDED
+}
+
+enum RiskAnalysisSource {
+  AI
+  DETERMINISTIC
 }

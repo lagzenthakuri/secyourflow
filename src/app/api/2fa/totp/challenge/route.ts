@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    const rateLimit = consumeRateLimit(
+    const rateLimit = await consumeRateLimit(
         `totp:challenge:${session.user.id}`,
         CHALLENGE_RATE_LIMIT_ATTEMPTS,
         CHALLENGE_RATE_LIMIT_WINDOW_MS,
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
             allowSameStepReplay: true,
         });
 
-        resetRateLimit(`totp:challenge:${session.user.id}`);
+        await resetRateLimit(`totp:challenge:${session.user.id}`);
         await unstable_update(
             buildTrustedTwoFactorSessionUpdate({
                 twoFactorVerified: true,

@@ -26,7 +26,7 @@ export interface TriageParams {
 
 export interface TriageOutcome {
     analyzed: number;
-    /** Scored, but by the deterministic model because the AI did not answer. */
+    /** Scored, but deterministically because the AI did not answer. */
     fellBack: number;
     failed: number;
     skipped: number;
@@ -134,13 +134,17 @@ export async function triageScanFindings(params: TriageParams): Promise<TriageOu
         params.vulnerabilityIds,
         concurrency,
         async (vulnerabilityId) => {
-            const result = await processRiskAssessment(
+            const outcome = await processRiskAssessment({
                 vulnerabilityId,
                 assetId,
-                params.organizationId,
-                params.userId,
-            );
-            if (!result?.usedAi) {
+                organizationId: params.organizationId,
+                userId: params.userId,
+            });
+
+            if (outcome.status === "FAILED") {
+                throw new Error(outcome.reason);
+            }
+            if (outcome.status === "COMPLETED" && outcome.analysisSource !== "AI") {
                 fellBack += 1;
             }
         },

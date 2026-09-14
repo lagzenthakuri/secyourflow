@@ -1,20 +1,39 @@
-version: '3.8'
-
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:15-alpine
     container_name: secyourflow-db
     restart: unless-stopped
     env_file: ./env/db.env
     volumes:
       - secyourflow_db_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    container_name: secyourflow-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - secyourflow_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  # Applies pending schema migrations, then exits. Everything else waits on it.
+  migrate:
+    image: secyourflow-migrate:latest
+    container_name: secyourflow-migrate
+    env_file: ./env/secyourflow.env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
 
   app:
     image: secyourflow:latest
@@ -24,8 +43,27 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "3000:3000"
 
+  # Background jobs: AI risk analysis, scans, CVE ingestion, scheduled reports.
+  worker:
+    image: secyourflow-worker:latest
+    container_name: secyourflow-worker
+    restart: unless-stopped
+    env_file: ./env/secyourflow.env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
 volumes:
   secyourflow_db_data:
+  secyourflow_redis_data:

@@ -41,17 +41,32 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({
   errorFormat: 'minimal',
 });
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-  globalForPrisma.pool = pool;
-}
+// Cached in every environment, not just development.
+//
+// The guard used to be `NODE_ENV !== "production"`, which is the dev-HMR idiom
+// applied backwards: in production each module-graph instantiation built a
+// fresh PrismaClient and a fresh 20-connection pool, so connection use grew
+// with the number of loaded route bundles rather than with replicas.
+globalForPrisma.prisma = prisma;
+globalForPrisma.pool = pool;
 
-// Graceful shutdown
-if (typeof window === 'undefined') {
-  process.on('beforeExit', async () => {
-    await prisma.$disconnect();
-    await pool.end();
-  });
+// Graceful shutdown.
+//
+// `beforeExit` does not fire on SIGTERM, which is exactly how a container is
+// stopped, and registering it per module instantiation also tripped
+// MaxListenersExceededWarning.
+const globalForShutdown = globalThis as unknown as { __prismaShutdownBound?: boolean };
+
+if (typeof window === "undefined" && !globalForShutdown.__prismaShutdownBound) {
+  globalForShutdown.__prismaShutdownBound = true;
+
+  const disconnect = async () => {
+    await prisma.$disconnect().catch(() => undefined);
+    await pool.end().catch(() => undefined);
+  };
+
+  process.once("SIGTERM", () => void disconnect());
+  process.once("SIGINT", () => void disconnect());
 }
 
 export default prisma;

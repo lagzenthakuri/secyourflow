@@ -126,6 +126,7 @@ export async function pullEvidenceFromLogs(controlId: string, assetId: string) {
         mimeType: filePayload.mimeType,
         sizeBytes: filePayload.sizeBytes,
         storagePath: filePayload.storagePath,
+        data: filePayload.data,
         checksum: filePayload.checksum,
         notes: "Collected by continuous evidence monitor",
       },
@@ -164,62 +165,67 @@ export async function pullEvidenceFromLogs(controlId: string, assetId: string) {
 }
 
 /**
- * Continuous compliance automation runner.
+ * Continuous compliance automation for ONE organization.
  * 1. Runs due scheduled control assessments.
  * 2. Pulls automated log evidence for detective/log-driven controls.
+ *
+ * `organizationId` is required. It used to be optional, and omitting it made
+ * the function sweep every tenant in the database — reachable from an HTTP
+ * route with the admin token and no body.
  */
-export async function runContinuousComplianceAudit(options: { organizationId?: string } = {}) {
-  const organizations = await prisma.organization.findMany({
-    where: options.organizationId ? { id: options.organizationId } : undefined,
-    select: {
-      id: true,
-    },
-  });
+export async function runContinuousComplianceAudit(options: { organizationId: string }) {
+  const { organizationId } = options;
+
+  const scheduleSummary = await runScheduledComplianceAssessments({ organizationId });
+
+  const [assets, controls] = await Promise.all([
+    prisma.asset.findMany({
+      where: { organizationId, status: "ACTIVE" },
+      select: { id: true },
+    }),
+    prisma.complianceControl.findMany({
+      where: { framework: { organizationId } },
+      select: {
+        id: true,
+        controlId: true,
+        title: true,
+        description: true,
+        controlType: true,
+      },
+    }),
+  ]);
+
+  const logControls = controls.filter(isLogDrivenControl);
 
   let evidenceItemsCreated = 0;
+  for (const control of logControls) {
+    for (const asset of assets) {
+      await pullEvidenceFromLogs(control.id, asset.id);
+      evidenceItemsCreated += 1;
+    }
+  }
+
+  return {
+    organizationsScanned: 1,
+    scheduledAssessments: scheduleSummary.assessedControls,
+    evidenceItemsCreated,
+  };
+}
+
+/**
+ * Every-tenant sweep. Deliberately a separate, explicitly named entry point so
+ * that fanning out across organizations is always a conscious choice.
+ */
+export async function runContinuousComplianceAuditForAllOrganizations() {
+  const organizations = await prisma.organization.findMany({ select: { id: true } });
+
   let scheduledAssessments = 0;
+  let evidenceItemsCreated = 0;
 
   for (const organization of organizations) {
-    const scheduleSummary = await runScheduledComplianceAssessments({
-      organizationId: organization.id,
-    });
-
-    scheduledAssessments += scheduleSummary.assessedControls;
-
-    const [assets, controls] = await Promise.all([
-      prisma.asset.findMany({
-        where: {
-          organizationId: organization.id,
-          status: "ACTIVE",
-        },
-        select: {
-          id: true,
-        },
-      }),
-      prisma.complianceControl.findMany({
-        where: {
-          framework: {
-            organizationId: organization.id,
-          },
-        },
-        select: {
-          id: true,
-          controlId: true,
-          title: true,
-          description: true,
-          controlType: true,
-        },
-      }),
-    ]);
-
-    const logControls = controls.filter(isLogDrivenControl);
-
-    for (const control of logControls) {
-      for (const asset of assets) {
-        await pullEvidenceFromLogs(control.id, asset.id);
-        evidenceItemsCreated += 1;
-      }
-    }
+    const summary = await runContinuousComplianceAudit({ organizationId: organization.id });
+    scheduledAssessments += summary.scheduledAssessments;
+    evidenceItemsCreated += summary.evidenceItemsCreated;
   }
 
   return {

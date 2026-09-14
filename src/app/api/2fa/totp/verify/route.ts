@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
         return jsonNoStore({ error: "Invalid origin" }, { status: 403 });
     }
 
-    const rateLimit = consumeRateLimit(
+    const rateLimit = await consumeRateLimit(
         `totp:verify:${session.user.id}`,
         VERIFY_RATE_LIMIT_ATTEMPTS,
         VERIFY_RATE_LIMIT_WINDOW_MS,
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
             code: body.code,
         });
 
-        resetRateLimit(`totp:verify:${session.user.id}`);
+        await resetRateLimit(`totp:verify:${session.user.id}`);
         await unstable_update(
             buildTrustedTwoFactorSessionUpdate({
                 twoFactorVerified: true,

@@ -126,7 +126,24 @@ export interface Vulnerability {
     } | null;
     firstDetected: Date;
     lastSeen: Date;
-    riskEntries?: Array<Record<string, unknown>>;
+    /** Currently linked asset, if any. Risk analysis requires one. */
+    assetId?: string | null;
+    riskEntries?: RiskEntrySummary[];
+}
+
+/** The subset of a RiskRegister row the vulnerability views render. */
+export interface RiskEntrySummary {
+    id: string;
+    status: "PROCESSING" | "ACTIVE" | "FAILED" | "SUPERSEDED";
+    /** Whether a model produced this, or the deterministic fallback did. */
+    analysisSource: "AI" | "DETERMINISTIC";
+    failureReason?: string | null;
+    riskScore: number;
+    impactScore: number;
+    likelihoodScore: number;
+    confidence?: number | null;
+    aiAnalysis?: Record<string, unknown>;
+    updatedAt?: string | Date;
 }
 
 export interface AssetRelationship {

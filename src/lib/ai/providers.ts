@@ -197,10 +197,10 @@ const openai = openAiCompatible({
 /** Anthropic uses its own message shape rather than the OpenAI one. */
 const anthropic: AiProviderAdapter = {
     id: "ANTHROPIC",
-    label: "Anthropic",
+    label: "Anthropic (Claude)",
     selfHosted: false,
     apiKeyEnvVar: "ANTHROPIC_API_KEY",
-    defaultModel: "claude-sonnet-5",
+    defaultModel: "claude-opus-5",
     defaultEndpoint: "https://api.anthropic.com/v1",
 
     async chat(config, request) {
@@ -224,7 +224,11 @@ const anthropic: AiProviderAdapter = {
                 body: JSON.stringify({
                     model: config.model,
                     max_tokens: 4096,
-                    temperature: request.temperature ?? 0.2,
+                    // No `temperature`. Sampling parameters were removed on the
+                    // Claude 5 family (and Opus 4.7/4.8) and are rejected with a
+                    // 400. Sending it made every Anthropic call throw, which
+                    // `aiChatJson` swallowed into a null, which made the risk
+                    // engine silently return its canned fallback instead.
                     ...(system && { system }),
                     messages: user.map((message) => ({ role: "user", content: message.content })),
                 }),
@@ -236,7 +240,22 @@ const anthropic: AiProviderAdapter = {
             throw new Error(`Anthropic responded ${response.status}: ${await response.text()}`);
         }
 
-        const data = (await response.json()) as { content?: { type?: string; text?: string }[] };
+        const data = (await response.json()) as {
+            content?: { type?: string; text?: string }[];
+            stop_reason?: string;
+            stop_details?: { category?: string; explanation?: string };
+        };
+
+        // A policy decline is HTTP 200 with no text block; say so plainly rather
+        // than reporting it as a malformed response.
+        if (data.stop_reason === "refusal") {
+            throw new Error(
+                `Anthropic declined the request${
+                    data.stop_details?.category ? ` (${data.stop_details.category})` : ""
+                }`,
+            );
+        }
+
         const content = data.content?.find((block) => block.type === "text")?.text;
         if (typeof content !== "string") {
             throw new Error("Anthropic returned no text content");
@@ -286,7 +305,12 @@ export function getAdapter(provider: AiProviderId): AiProviderAdapter | null {
     return AI_ADAPTERS[provider] ?? null;
 }
 
-/** API keys stay in the environment; only the provider choice is persisted. */
+/**
+ * Deployment-wide fallback key from the environment.
+ *
+ * An organization's own key (Setting.aiApiKey, sealed at rest) takes
+ * precedence and is applied in `resolveAiConfig`.
+ */
 export function apiKeyForProvider(provider: AiProviderId): string | null {
     const adapter = getAdapter(provider);
     if (!adapter?.apiKeyEnvVar) return null;

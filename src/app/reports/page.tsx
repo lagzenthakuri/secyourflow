@@ -4,11 +4,12 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
+import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { WidgetBuilder } from "@/components/dashboard/WidgetBuilder";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { cn } from "@/lib/utils";
+import { cn, formatLabel } from "@/lib/utils";
 import {
   AlertTriangle,
   BarChart3,
@@ -246,12 +247,6 @@ const dashboardWidgetCatalog = [
   "recent_reports",
 ];
 
-function formatLabel(value: string) {
-  return value
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
 
 function getReportStatusTone(status?: string | null) {
   const normalized = (status || "").toUpperCase();
@@ -497,6 +492,8 @@ export default function ReportsPage() {
 
   return (
     <DashboardLayout>
+      <ErrorBanner message={pageError} onDismiss={() => setPageError(null)} className="mb-4" />
+      <ErrorBanner message={actionError} onDismiss={() => setActionError(null)} className="mb-4" />
       <div className="space-y-5">
         <PageHeader
           title="Reports"

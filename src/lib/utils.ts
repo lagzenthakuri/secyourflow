@@ -19,16 +19,6 @@ export function formatPercentage(value: number, decimals: number = 1): string {
     return `${(value * 100).toFixed(decimals)}%`;
 }
 
-export function getSeverityColor(severity: string): string {
-    const colors: Record<string, string> = {
-        CRITICAL: "#ef4444",
-        HIGH: "#f97316",
-        MEDIUM: "#eab308",
-        LOW: "#22c55e",
-        INFORMATIONAL: "#6b7280",
-    };
-    return colors[severity] || colors.INFORMATIONAL;
-}
 
 export function getSeverityBgClass(severity: string): string {
     const classes: Record<string, string> = {
@@ -41,17 +31,6 @@ export function getSeverityBgClass(severity: string): string {
     return classes[severity] || classes.INFORMATIONAL;
 }
 
-export function getStatusColor(status: string): string {
-    const colors: Record<string, string> = {
-        OPEN: "#ef4444",
-        IN_PROGRESS: "#3b82f6",
-        MITIGATED: "#8b5cf6",
-        FIXED: "#22c55e",
-        ACCEPTED: "#6b7280",
-        FALSE_POSITIVE: "#6b7280",
-    };
-    return colors[status] || "#6b7280";
-}
 
 export function calculateRiskScore(
     cvssScore: number,
@@ -107,4 +86,17 @@ export function getTimeAgo(date: Date | string): string {
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
     if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
     return formatDate(date);
+}
+
+/**
+ * Turns an enum-style token into a display label: `IN_PROGRESS` -> `In Progress`.
+ *
+ * Six files carried their own copy of this, two of which disagreed about
+ * whether to also split on hyphens. This handles both.
+ */
+export function formatLabel(value: string): string {
+    return value
+        .replace(/[_-]/g, " ")
+        .toLowerCase()
+        .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }

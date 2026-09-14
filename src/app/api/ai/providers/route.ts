@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
                     aiProvider: true,
                     aiModel: true,
                     aiEndpoint: true,
+                    aiApiKey: true,
                 },
             }),
             resolveAiConfig(organizationId),
@@ -37,6 +38,8 @@ export async function GET(request: NextRequest) {
                     provider: settings?.aiProvider ?? "OLLAMA",
                     model: settings?.aiModel ?? null,
                     endpoint: settings?.aiEndpoint ?? null,
+                    // Presence only — the key itself is never returned.
+                    hasApiKey: Boolean(settings?.aiApiKey),
                 },
                 // What the engine would actually use right now.
                 effective: active

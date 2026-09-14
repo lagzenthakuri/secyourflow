@@ -4,77 +4,77 @@ pipeline {
     VERSION = "${env.BUILD_NUMBER}"
   }
   stages {
+    stage('Verify') {
+      steps {
+        sh '''
+          npm ci
+          npx prisma generate
+          npm run typecheck
+          npm run lint
+          npm test
+        '''
+      }
+    }
+
     stage('Build Images') {
       steps {
         sh """
-          # Build the main application image
-          docker build -t secyourflow:latest -t secyourflow:${VERSION} .
+          # The Dockerfile is multi-target: the web server, the background job
+          # worker, and a one-shot migration runner all share one build.
+          docker build --target web     -t secyourflow:latest        -t secyourflow:${VERSION} .
+          docker build --target worker  -t secyourflow-worker:latest -t secyourflow-worker:${VERSION} .
+          docker build --target migrate -t secyourflow-migrate:latest -t secyourflow-migrate:${VERSION} .
         """
       }
     }
 
     stage('Prepare ISO Folder') {
       steps {
-        sh """
-          # Clean previous build artifacts
+        sh '''
           rm -rf secyourflow-iso
           mkdir -p secyourflow-iso/images secyourflow-iso/env secyourflow-iso/scripts
 
-          # Copy templates from the repository
-          # Assumes the deploy/iso folder exists in the repo
           cp -r deploy/iso/* secyourflow-iso/
-          
-          # Fix permissions for scripts
           chmod +x secyourflow-iso/scripts/*.sh
 
-          # Save images offline
-          echo "Saving secyourflow:latest..."
-          docker save -o secyourflow-iso/images/secyourflow.tar secyourflow:latest
+          echo "Saving application images..."
+          docker save -o secyourflow-iso/images/secyourflow.tar         secyourflow:latest
+          docker save -o secyourflow-iso/images/secyourflow-worker.tar  secyourflow-worker:latest
+          docker save -o secyourflow-iso/images/secyourflow-migrate.tar secyourflow-migrate:latest
 
-          # Save dependencies (Postgres)
-          echo "Pulling and saving postgres:16-alpine..."
-          docker pull postgres:16-alpine
-          docker save -o secyourflow-iso/images/db.tar postgres:16-alpine
-        """
+          # Pin these to the versions deploy/iso/docker-compose.yml expects.
+          echo "Pulling and saving dependencies..."
+          docker pull postgres:15-alpine
+          docker save -o secyourflow-iso/images/db.tar postgres:15-alpine
+          docker pull redis:7-alpine
+          docker save -o secyourflow-iso/images/redis.tar redis:7-alpine
+        '''
       }
     }
 
     stage('Build ISO') {
       steps {
         sh """
-          # Install genisoimage if not present (requires sudo or pre-installed)
-          # sudo apt-get update && sudo apt-get install -y genisoimage || true
-
           ISO_NAME="SecYourFlow-${VERSION}.iso"
-          
-          # Create ISO with Rock Ridge extensions (-R) and Joliet (-J) for Windows compatibility
-          genisoimage -o "$ISO_NAME" -V "SECYOURFLOW" -R -J secyourflow-iso
-
-          echo "Built: $ISO_NAME"
+          # Rock Ridge (-R) and Joliet (-J) so the media reads on Linux and Windows.
+          genisoimage -o "\$ISO_NAME" -V "SECYOURFLOW" -R -J secyourflow-iso
+          echo "Built: \$ISO_NAME"
         """
       }
     }
-    
+
     stage('Build Update Bundle') {
       steps {
         sh """
-          # Create update bundle structure
+          rm -rf secyourflow-update
           mkdir -p secyourflow-update/images
-          
-          # Copy images
           cp secyourflow-iso/images/*.tar secyourflow-update/images/
-          
-          # Copy docker-compose (optional, in case of updates)
           cp secyourflow-iso/docker-compose.yml secyourflow-update/
-          
-          # Zip it up
+
           BUNDLE_NAME="secyourflow-${VERSION}-bundle.zip"
-          zip -r "$BUNDLE_NAME" secyourflow-update/
-          
-          # Checksum
-          sha256sum "$BUNDLE_NAME" > "${BUNDLE_NAME}.sha256"
-          
-          echo "Built Bundle: $BUNDLE_NAME"
+          zip -r "\$BUNDLE_NAME" secyourflow-update/
+          sha256sum "\$BUNDLE_NAME" > "\$BUNDLE_NAME.sha256"
+          echo "Built Bundle: \$BUNDLE_NAME"
         """
       }
     }
@@ -82,7 +82,7 @@ pipeline {
 
   post {
     always {
-      # archiveArtifacts artifacts: '*.iso, *.zip, *.sha256', fingerprint: true
+      // archiveArtifacts artifacts: '*.iso, *.zip, *.sha256', fingerprint: true
       echo "Build finished. Artifacts present in workspace."
     }
   }

@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { decryptSecret } from "@/lib/crypto/sealed-secrets";
+import { assertSafeOutboundUrl } from "@/lib/security/outbound-url";
 import { AI_ADAPTERS, apiKeyForProvider, getAdapter } from "@/lib/ai/providers";
 import {
     type AiChatRequest,
@@ -29,6 +31,7 @@ export async function resolveAiConfig(organizationId: string): Promise<AiProvide
             aiProvider: true,
             aiModel: true,
             aiEndpoint: true,
+            aiApiKey: true,
         },
     });
 
@@ -49,16 +52,51 @@ export async function resolveAiConfig(organizationId: string): Promise<AiProvide
         return null;
     }
 
-    const apiKey = apiKeyForProvider(provider);
+    // The organization's own sealed key wins; the environment is the
+    // deployment-wide fallback. Without this, every tenant on a shared
+    // deployment was forced to share one key set by the operator.
+    let organizationKey: string | null = null;
+    if (settings?.aiApiKey) {
+        try {
+            organizationKey = decryptSecret(settings.aiApiKey);
+        } catch (error) {
+            console.error(
+                "[AI] Stored API key could not be decrypted; falling back to the environment.",
+                error instanceof Error ? error.message : error,
+            );
+        }
+    }
+
+    const apiKey = organizationKey?.trim() || apiKeyForProvider(provider);
     if (adapter.apiKeyEnvVar && !apiKey) {
         // A hosted provider without its key cannot run; the caller falls back.
         return null;
     }
 
+    const endpoint = settings?.aiEndpoint?.trim() || null;
+
+    // A stored endpoint is user-supplied and reaches the server's network, so
+    // it is an SSRF vector. `/api/ai/test` already checked it; this is the path
+    // that actually runs, and it did not.
+    if (endpoint) {
+        try {
+            await assertSafeOutboundUrl(
+                endpoint,
+                // Ollama legitimately lives on loopback over plain HTTP.
+                adapter.selfHosted ? { allowInsecureHttp: true, allowPrivateAddresses: true, resolveDns: false } : {},
+            );
+        } catch (error) {
+            console.error(
+                `[AI] Configured endpoint rejected: ${error instanceof Error ? error.message : error}`,
+            );
+            return null;
+        }
+    }
+
     return {
         provider,
         model: settings?.aiModel?.trim() || adapter.defaultModel,
-        endpoint: settings?.aiEndpoint?.trim() || adapter.defaultEndpoint || null,
+        endpoint: endpoint || adapter.defaultEndpoint || null,
         apiKey,
     };
 }

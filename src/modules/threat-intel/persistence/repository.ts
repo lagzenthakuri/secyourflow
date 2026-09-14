@@ -28,18 +28,6 @@ export interface IndicatorListFilters {
 export class ThreatIntelRepository {
   constructor(private readonly db: PrismaClientLike = prisma) {}
 
-  async getUserOrganizationId(userId: string): Promise<string | null> {
-    const user = await this.db.user.findUnique({
-      where: { id: userId },
-      select: { organizationId: true },
-    });
-
-    if (!user) {
-      return null;
-    }
-
-    return user.organizationId ?? null;
-  }
 
   async upsertFeed(organizationId: string, input: ThreatFeedUpsertInput) {
     return this.db.threatFeed.upsert({

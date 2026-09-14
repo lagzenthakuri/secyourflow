@@ -7,7 +7,6 @@ import {
     CheckCircle2,
     ChevronDown,
     ChevronUp,
-    FileText,
     RefreshCw,
     ShieldAlert,
     ShieldCheck,

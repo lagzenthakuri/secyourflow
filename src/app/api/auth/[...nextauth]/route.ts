@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
   const ctx = extractRequestContext(request);
   const ip = ctx.ipAddress ?? "unknown";
 
-  const ipBucket = consumeRateLimit(
+  const ipBucket = await consumeRateLimit(
     `auth:credentials:ip:${ip}`,
     LOGIN_RATE_LIMIT_IP_ATTEMPTS,
     LOGIN_RATE_LIMIT_IP_WINDOW_MS,
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
   const email = await extractEmailFromCredentialsCallback(request);
   const emailBucket = email
-    ? consumeRateLimit(
+    ? await consumeRateLimit(
         `auth:credentials:email:${email}`,
         LOGIN_RATE_LIMIT_EMAIL_ATTEMPTS,
         LOGIN_RATE_LIMIT_EMAIL_WINDOW_MS,

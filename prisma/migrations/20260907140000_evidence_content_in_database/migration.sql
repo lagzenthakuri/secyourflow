@@ -1,0 +1,11 @@
+-- Move compliance evidence content into the database.
+--
+-- Evidence was written to `process.cwd()/data/compliance-evidence` on whichever
+-- container handled the upload. Neither compose file mounts a volume there, so
+-- every recreate destroyed it, and with more than one replica a download hit a
+-- machine that did not have the file. ReportArtifact already stores its bytes
+-- this way; evidence now matches.
+--
+-- Nullable: existing rows keep `storagePath` and are read from disk until they
+-- are re-uploaded.
+ALTER TABLE "ComplianceEvidenceVersion" ADD COLUMN IF NOT EXISTS "data" BYTEA;

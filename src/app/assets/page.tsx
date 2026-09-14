@@ -9,7 +9,7 @@ import { AssetActions } from "@/components/assets/AssetActions";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
-import { cn } from "@/lib/utils";
+import { cn, formatLabel } from "@/lib/utils";
 import { Asset } from "@/types";
 import {
   AlertTriangle,
@@ -184,12 +184,6 @@ const criticalityTones: Record<AssetCriticality, string> = {
 
 const numberFormatter = new Intl.NumberFormat("en-US");
 
-function formatLabel(value: string) {
-  return value
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 export default function AssetsPage() {
   const [assets, setAssets] = useState<Asset[]>([]);

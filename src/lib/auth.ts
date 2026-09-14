@@ -315,9 +315,14 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
             }
 
             if (typeof token.id === "string") {
+                // This callback runs on every session read, so it is the one
+                // authoritative read of the user row per request. Carry the
+                // organization and role on the token from the same query —
+                // `requireSessionWithOrg` used to repeat this lookup, doubling
+                // the per-request database cost for no extra freshness.
                 const sessionState = await prisma.user.findUnique({
                     where: { id: token.id },
-                    select: { activeSessionId: true },
+                    select: { activeSessionId: true, organizationId: true, role: true },
                 });
 
                 if (
@@ -327,6 +332,9 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 ) {
                     return null;
                 }
+
+                token.organizationId = sessionState.organizationId ?? null;
+                token.role = sessionState.role || "ANALYST";
             }
 
             if (typeof token.totpEnabled !== "boolean") {
@@ -373,6 +381,8 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
             if (token && session.user) {
                 session.user.id = token.id as string;
                 session.user.role = (token.role as string) || "ANALYST";
+                session.user.organizationId =
+                    typeof token.organizationId === "string" ? token.organizationId : null;
                 session.user.totpEnabled = Boolean(token.totpEnabled);
                 session.twoFactorVerified = token.twoFactorVerified === true;
                 session.twoFactorVerifiedAt =
@@ -418,6 +428,8 @@ declare module "next-auth" {
             image?: string | null;
             role?: string;
             totpEnabled?: boolean;
+            /** Null when the user has not been provisioned into an organization. */
+            organizationId?: string | null;
         };
         twoFactorVerified?: boolean;
         twoFactorVerifiedAt?: number | null;

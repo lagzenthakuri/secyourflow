@@ -3,102 +3,69 @@ import {
   runAutomatedFrameworkAssessment,
   runScheduledComplianceAssessments,
 } from "@/lib/compliance-engine";
-import { auth } from "@/lib/auth";
-import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
 import { prisma } from "@/lib/prisma";
-
-function isAdminTokenAuthorized(request: Request): boolean {
-  const authHeader = request.headers.get("authorization");
-  const adminToken = process.env.ADMIN_API_TOKEN;
-  if (!adminToken) {
-    return false;
-  }
-
-  return authHeader === `Bearer ${adminToken}`;
-}
+import { requireAutomationContext } from "@/lib/api-auth";
 
 export async function POST(request: NextRequest) {
-  const tokenAuthorized = isAdminTokenAuthorized(request);
-  let sessionOrganizationId: string | null = null;
+  const body = (await request.json().catch(() => ({}))) as {
+    frameworkId?: string;
+    reason?: string;
+    organizationId?: string;
+  };
 
-  if (!tokenAuthorized) {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    if (!isTwoFactorSatisfied(session)) {
-      return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
-    }
-
-    if (session.user.role !== "MAIN_OFFICER") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { organizationId: true },
-    });
-
-    if (!user?.organizationId) {
-      return NextResponse.json({ error: "Organization context required" }, { status: 403 });
-    }
-
-    sessionOrganizationId = user.organizationId;
+  const authResult = await requireAutomationContext(request, body.organizationId);
+  if (!authResult.ok) {
+    return authResult.response;
   }
 
+  const { organizationId } = authResult.context;
+
   try {
-    const body = (await request.json().catch(() => ({}))) as {
-      frameworkId?: string;
-      reason?: string;
-      organizationId?: string;
-    };
-
-    if (!tokenAuthorized && body.organizationId && body.organizationId !== sessionOrganizationId) {
-      return NextResponse.json({ error: "Forbidden: cross-organization execution is not allowed" }, { status: 403 });
-    }
-
     if (body.frameworkId) {
-      if (tokenAuthorized) {
-        const framework = await prisma.complianceFramework.findUnique({
-          where: { id: body.frameworkId },
-          select: { id: true, organizationId: true },
-        });
-        if (!framework) {
-          return NextResponse.json({ error: "Framework not found" }, { status: 404 });
-        }
+      // A framework run always needs a concrete tenant. When the admin token is
+      // used without one, derive it from the framework itself.
+      const framework = await prisma.complianceFramework.findFirst({
+        where: {
+          id: body.frameworkId,
+          ...(organizationId ? { organizationId } : {}),
+        },
+        select: { id: true, organizationId: true },
+      });
 
-        if (body.organizationId && body.organizationId !== framework.organizationId) {
-          return NextResponse.json(
-            { error: "frameworkId does not belong to the provided organizationId" },
-            { status: 400 },
-          );
-        }
-      } else {
-        const framework = await prisma.complianceFramework.findFirst({
-          where: {
-            id: body.frameworkId,
-            organizationId: sessionOrganizationId ?? undefined,
-          },
-          select: { id: true },
-        });
-        if (!framework) {
-          return NextResponse.json({ error: "Framework not found" }, { status: 404 });
-        }
+      if (!framework) {
+        return NextResponse.json({ error: "Framework not found" }, { status: 404 });
       }
 
-      const result = await runAutomatedFrameworkAssessment(body.frameworkId, {
+      const result = await runAutomatedFrameworkAssessment(framework.id, {
+        organizationId: framework.organizationId,
         reason: body.reason ?? "api-manual-trigger",
       });
+
       return NextResponse.json({ mode: "framework", ...result });
     }
 
-    const targetOrganizationId = tokenAuthorized ? body.organizationId : (sessionOrganizationId ?? undefined);
-    const result = await runScheduledComplianceAssessments({
-      organizationId: targetOrganizationId,
-    });
+    if (organizationId) {
+      const result = await runScheduledComplianceAssessments({ organizationId });
+      return NextResponse.json({ mode: "scheduled", ...result });
+    }
 
-    return NextResponse.json({ mode: "scheduled", ...result });
+    // Admin token, no organization: an explicit every-tenant sweep.
+    const organizations = await prisma.organization.findMany({ select: { id: true } });
+    const totals = { scannedControls: 0, assessedControls: 0, failedControls: 0, snapshotsCreated: 0 };
+
+    for (const organization of organizations) {
+      const result = await runScheduledComplianceAssessments({ organizationId: organization.id });
+      totals.scannedControls += result.scannedControls;
+      totals.assessedControls += result.assessedControls;
+      totals.failedControls += result.failedControls;
+      totals.snapshotsCreated += result.snapshotsCreated;
+    }
+
+    return NextResponse.json({
+      mode: "scheduled-all-organizations",
+      organizationsScanned: organizations.length,
+      ...totals,
+    });
   } catch (error) {
     console.error("Compliance assessment run failed:", error);
     return NextResponse.json(

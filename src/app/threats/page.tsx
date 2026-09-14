@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
+import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
@@ -457,6 +458,7 @@ export default function ThreatsPage() {
 
   return (
     <DashboardLayout>
+      <ErrorBanner message={error} onDismiss={() => setError(null)} className="mb-4" />
       <div className="space-y-5">
         <PageHeader
           title="Live Threats"

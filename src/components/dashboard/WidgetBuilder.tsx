@@ -1,5 +1,7 @@
 "use client";
 
+import { formatLabel } from "@/lib/utils";
+
 import { useMemo, useState } from "react";
 import { GripVertical, Plus, X } from "lucide-react";
 
@@ -9,12 +11,6 @@ interface WidgetBuilderProps {
   onChange: (next: string[]) => void;
 }
 
-function formatLabel(value: string) {
-  return value
-    .replace(/_/g, " ")
-    .replace(/-/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
 
 export function WidgetBuilder({ availableWidgets, value, onChange }: WidgetBuilderProps) {
   const [draggingId, setDraggingId] = useState<string | null>(null);

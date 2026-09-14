@@ -39,7 +39,6 @@ import {
     type NotificationsResponse,
 } from "@/lib/notification-state";
 import { useTheme } from "@/components/providers/ThemeProvider";
-import { ShieldLoader } from "@/components/ui/ShieldLoader";
 
 const ALL_ROLES = ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"];
 
@@ -607,9 +606,6 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
 }
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
-    const { data: session, status } = useSession();
-    const router = useRouter();
-    const pathname = usePathname();
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     // Audit login events with IP and user agent

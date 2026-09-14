@@ -34,6 +34,11 @@ export function AiProviderSettingsPanel() {
     const [model, setModel] = useState("");
     const [endpoint, setEndpoint] = useState("");
     const [enabled, setEnabled] = useState(true);
+    // Empty means "unchanged". The API never returns the stored key, only
+    // whether one exists.
+    const [apiKey, setApiKey] = useState("");
+    const [hasStoredKey, setHasStoredKey] = useState(false);
+    const [clearApiKey, setClearApiKey] = useState(false);
 
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -57,6 +62,9 @@ export function AiProviderSettingsPanel() {
             setModel(payload.data.current?.model ?? "");
             setEndpoint(payload.data.current?.endpoint ?? "");
             setEnabled(payload.data.current?.enabled ?? true);
+            setHasStoredKey(Boolean(payload.data.current?.hasApiKey));
+            setApiKey("");
+            setClearApiKey(false);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to load AI providers");
         } finally {
@@ -111,6 +119,13 @@ export function AiProviderSettingsPanel() {
                     aiModel: model || null,
                     aiEndpoint: endpoint || null,
                     aiRiskAssessmentEnabled: enabled,
+                    // Three states: omitted (leave as-is), a new value, or an
+                    // explicit null to fall back to the environment key.
+                    ...(clearApiKey
+                        ? { aiApiKey: null }
+                        : apiKey.trim().length > 0
+                          ? { aiApiKey: apiKey.trim() }
+                          : {}),
                 }),
             });
 
@@ -126,7 +141,7 @@ export function AiProviderSettingsPanel() {
         } finally {
             setIsSaving(false);
         }
-    }, [provider, model, endpoint, enabled, load]);
+    }, [provider, model, endpoint, enabled, apiKey, clearApiKey, load]);
 
     if (isLoading) {
         return (
@@ -204,7 +219,7 @@ export function AiProviderSettingsPanel() {
                             {unavailable && (
                                 <p className="mt-1 flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400">
                                     <AlertTriangle size={11} />
-                                    Set {option.apiKeyEnvVar} to use this
+                                    Needs an API key
                                 </p>
                             )}
                             {option.selfHosted && option.id !== "DISABLED" && (
@@ -256,6 +271,50 @@ export function AiProviderSettingsPanel() {
                                 : "Leave blank unless you use a proxy or gateway."}
                         </span>
                     </label>
+
+                    {/* Self-hosted providers need no credential. */}
+                    {selected?.apiKeyEnvVar ? (
+                        <label className="block sm:col-span-2">
+                            <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
+                                API key
+                            </span>
+                            <input
+                                type="password"
+                                autoComplete="off"
+                                value={apiKey}
+                                onChange={(event) => {
+                                    setApiKey(event.target.value);
+                                    setClearApiKey(false);
+                                }}
+                                disabled={clearApiKey}
+                                placeholder={
+                                    clearApiKey
+                                        ? "Key will be removed on save"
+                                        : hasStoredKey
+                                          ? "A key is stored — type to replace it"
+                                          : `Paste your ${selected.label} key`
+                                }
+                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                            />
+                            <span className="mt-1 block text-[11px] text-[var(--text-muted)]">
+                                {hasStoredKey
+                                    ? "Encrypted at rest and never shown again. Leave blank to keep it."
+                                    : `Stored encrypted for this organization. Falls back to the ${selected.apiKeyEnvVar} environment variable when blank.`}
+                            </span>
+                            {hasStoredKey ? (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setClearApiKey((previous) => !previous);
+                                        setApiKey("");
+                                    }}
+                                    className="mt-1 text-[11px] text-red-600 hover:underline dark:text-red-400"
+                                >
+                                    {clearApiKey ? "Keep stored key" : "Remove stored key"}
+                                </button>
+                            ) : null}
+                        </label>
+                    ) : null}
                 </div>
             )}
 
