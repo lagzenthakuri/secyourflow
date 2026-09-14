@@ -40,6 +40,25 @@ async function getQueue(name: QueueName): Promise<Queue> {
   return queue;
 }
 
+/** How long a producer may wait on Redis before running the job in-process. */
+const ENQUEUE_DEADLINE_MS = Number(process.env.QUEUE_ENQUEUE_TIMEOUT_MS ?? 3_000);
+
+function withDeadline<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 export interface EnqueueOptions {
   organizationId?: string | null;
   /** Domain object the job acts on, so the UI can poll by entity. */
@@ -86,15 +105,24 @@ export async function enqueue<N extends JobName>(
 
   try {
     const queue = await getQueue(queueForJob(name));
-    const job = await queue.add(
-      name,
-      { ...payload, __jobRunId: jobRun.id },
-      { jobId: options.dedupeKey, delay: options.delayMs },
+    // BullMQ's connection must use `maxRetriesPerRequest: null`, which makes
+    // ioredis buffer commands indefinitely while Redis is down — `add` would
+    // never settle and the catch below would never run. The deadline turns an
+    // unreachable Redis back into a fallback rather than a hung request.
+    const job = await withDeadline(
+      queue.add(
+        name,
+        { ...payload, __jobRunId: jobRun.id },
+        { jobId: options.dedupeKey, delay: options.delayMs },
+      ),
+      ENQUEUE_DEADLINE_MS,
+      `enqueue ${name}`,
     );
 
     if (job.id) {
       await attachQueueJobId(jobRun.id, job.id);
     }
+
 
     return { jobRunId: jobRun.id, queued: true };
   } catch (error) {

@@ -1,4 +1,4 @@
-import { getRedisConnection, isRedisConfigured } from "@/lib/queue/connection";
+import { getRedisCommandClient, isRedisConfigured } from "@/lib/queue/connection";
 
 /**
  * Rate limiting for authentication and 2FA.
@@ -65,7 +65,7 @@ async function consumeInRedis(
   maxAttempts: number,
   windowMs: number,
 ): Promise<RateLimitResult> {
-  const redis = getRedisConnection();
+  const redis = getRedisCommandClient();
   const redisKey = `${REDIS_PREFIX}${key}`;
 
   const attempts = await redis.incr(redisKey);
@@ -88,6 +88,32 @@ async function consumeInRedis(
   return { allowed: true, remaining: Math.max(maxAttempts - attempts, 0) };
 }
 
+/** Upper bound on how long Redis may hold up a login or a 2FA challenge. */
+const REDIS_DEADLINE_MS = 1_500;
+
+/**
+ * Caps a Redis round trip.
+ *
+ * The client is configured to reject rather than buffer, but a half-open
+ * socket can still stall past its command timeout, and this code sits in front
+ * of the login form: a stalled counter must degrade, never hang the request.
+ */
+function withTimeout<T>(promise: Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("Redis timed out")), REDIS_DEADLINE_MS);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 export async function consumeRateLimit(
   key: string,
   maxAttempts: number,
@@ -98,7 +124,7 @@ export async function consumeRateLimit(
   }
 
   try {
-    return await consumeInRedis(key, maxAttempts, windowMs);
+    return await withTimeout(consumeInRedis(key, maxAttempts, windowMs));
   } catch (error) {
     // Falling open would remove brute-force protection entirely, so degrade to
     // the local counter instead.
@@ -114,7 +140,7 @@ export async function resetRateLimit(key: string): Promise<void> {
   if (!isRedisConfigured()) return;
 
   try {
-    await getRedisConnection().del(`${REDIS_PREFIX}${key}`);
+    await withTimeout(getRedisCommandClient().del(`${REDIS_PREFIX}${key}`));
   } catch (error) {
     console.error("[rate-limit] Failed to reset counter:", error);
   }
