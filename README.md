@@ -245,6 +245,40 @@ REAL_API_TESTS=true npm test
 
 ## Deployment
 
+### Vercel / Serverless Deployment
+
+Vercel functions cannot access a database running on your laptop, inside Docker,
+or on a private network. Configure a Vercel-accessible PostgreSQL provider and
+use its **pooled** connection string for `DATABASE_URL`.
+
+Required production environment variables:
+
+```env
+DATABASE_URL=postgresql://...pooler-host.../secyourflow?sslmode=require
+AUTH_SECRET=<long-random-secret>
+NEXTAUTH_URL=https://secyourflow.vercel.app
+AUTH_GOOGLE_ID=<google-client-id>
+AUTH_GOOGLE_SECRET=<google-client-secret>
+DB_POOL_MAX=1
+DB_CONNECT_TIMEOUT_MS=5000
+```
+
+Also configure these trusted URLs in Google Cloud Console:
+
+```text
+https://secyourflow.vercel.app/api/auth/callback/google
+```
+
+Apply migrations to the hosted database before enabling the Vercel deployment:
+
+```bash
+DATABASE_URL='<hosted-pooled-database-url>' npx prisma migrate deploy
+```
+
+`GET /api/health` returns `503` when PostgreSQL is unavailable. A healthy
+authentication deployment returns `200`; optional CVE feed failures are
+reported as `degraded` without taking login offline.
+
 ### Standard Deployment
 
 Build the application for production:

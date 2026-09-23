@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "node:crypto";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import type { Adapter } from "next-auth/adapters";
 import { prisma } from "./prisma";
 import { authConfig } from "./auth.config";
 import { assertTotpEncryptionKeyConfigured } from "@/lib/crypto/totpSecret";
@@ -116,6 +117,46 @@ async function withLoginDatabase<T>(operation: string, action: () => Promise<T>)
     }
 }
 
+/**
+ * Auth.js wraps unknown exceptions from OAuth adapter methods in AdapterError,
+ * which its client then reports as CallbackRouteError or Configuration. A
+ * timed-out PostgreSQL connection is an availability failure, so preserve the
+ * same safe service-unavailable code used by credential authentication.
+ */
+function withDatabaseFailureHandling(adapter: Adapter): Adapter {
+    return new Proxy(adapter, {
+        get(target, property) {
+            const method = Reflect.get(target, property, target);
+            if (typeof method !== "function") {
+                return method;
+            }
+
+            return async (...args: unknown[]) => {
+                try {
+                    const result = await method.apply(target, args);
+                    clearDatabaseUnavailable();
+                    return result;
+                } catch (error) {
+                    if (!isDatabaseUnavailableError(error)) {
+                        throw error;
+                    }
+
+                    if (markDatabaseUnavailable()) {
+                        console.error(`[auth] Database unavailable during adapter operation ${String(property)}.`, {
+                            errorType: error instanceof Error ? error.name : typeof error,
+                            errorCode: getOperationalErrorCode(error),
+                        });
+                    }
+
+                    throw new LoginServiceUnavailableError();
+                }
+            };
+        },
+    });
+}
+
+const authAdapter = withDatabaseFailureHandling(PrismaAdapter(prisma));
+
 const REDACTED = "[redacted]";
 const SENSITIVE_KEYS = new Set([
     "password",
@@ -212,7 +253,7 @@ function extractLoginIpFromRequest(request?: Request): string | null {
 export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
     ...authConfig,
     secret: authSecret,
-    adapter: PrismaAdapter(prisma),
+    adapter: authAdapter,
     session: {
         strategy: "jwt",
         maxAge: 2 * 24 * 60 * 60, // 2 days

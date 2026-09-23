@@ -4,6 +4,23 @@ import pg from "pg";
 import { normalizeDatabaseUrl } from "./database-url";
 
 const connectionString = normalizeDatabaseUrl(process.env.DATABASE_URL);
+const runningInServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
+function positiveIntegerFromEnv(name: string, fallback: number): number {
+    const parsed = Number.parseInt(process.env[name] ?? "", 10);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+// A Vercel function can create many independent pools across concurrent
+// instances. Twenty direct connections per instance will exhaust a normal
+// PostgreSQL server, so serverless deployments default to one connection and
+// should point DATABASE_URL at the provider's pooled endpoint.
+const poolMax = positiveIntegerFromEnv("DB_POOL_MAX", runningInServerless ? 1 : 20);
+const connectionTimeoutMs = positiveIntegerFromEnv(
+    "DB_CONNECT_TIMEOUT_MS",
+    runningInServerless ? 5_000 : 15_000,
+);
+const idleTimeoutMs = positiveIntegerFromEnv("DB_IDLE_TIMEOUT_MS", runningInServerless ? 10_000 : 30_000);
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -13,12 +30,12 @@ const globalForPrisma = globalThis as unknown as {
 // Reuse connection pool
 const pool = globalForPrisma.pool ?? new pg.Pool({
   connectionString,
-  max: 20, // Maximum pool size
-  idleTimeoutMillis: 30000,
-  // A remote database over the public internet sees latency spikes that a
-  // 2s budget turns into hard failures. Long-running background work (scan
-  // triage) is the main victim, so allow a realistic window.
-  connectionTimeoutMillis: Number(process.env.DB_CONNECT_TIMEOUT_MS ?? 15000),
+  max: poolMax,
+  idleTimeoutMillis: idleTimeoutMs,
+  // Fail inside the Vercel function budget instead of letting Auth.js turn a
+  // timed-out connection into a late CallbackRouteError/Configuration redirect.
+  connectionTimeoutMillis: connectionTimeoutMs,
+  allowExitOnIdle: runningInServerless,
   // Keepalives stop idle pooled sockets from being silently dropped by
   // intermediate NAT/firewalls, which surfaces as EHOSTUNREACH on reuse.
   keepAlive: true,
