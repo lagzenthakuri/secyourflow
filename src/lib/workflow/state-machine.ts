@@ -8,8 +8,17 @@ const transitionMap: Record<WorkflowState, WorkflowState[]> = {
   CLOSED: [],
 };
 
+/**
+ * States reachable from `from`. Exported so the UI renders exactly the
+ * transitions the API will accept, rather than keeping its own copy of the
+ * table that can silently drift out of step.
+ */
+export function allowedWorkflowTransitions(from: WorkflowState): WorkflowState[] {
+  return transitionMap[from] ?? [];
+}
+
 export function canTransitionWorkflowState(from: WorkflowState, to: WorkflowState) {
-  return transitionMap[from].includes(to);
+  return allowedWorkflowTransitions(from).includes(to);
 }
 
 export function assertValidWorkflowTransition(from: WorkflowState, to: WorkflowState) {

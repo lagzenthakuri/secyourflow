@@ -48,8 +48,10 @@ export async function POST(request: NextRequest) {
             try {
                 await assertSafeOutboundUrl(
                     endpoint,
+                    // A self-hosted model runs inside the operator's own
+                    // perimeter; Ollama's documented default is loopback.
                     adapter.selfHosted
-                        ? { allowInsecureHttp: true, resolveDns: false }
+                        ? { allowInsecureHttp: true, allowPrivateAddresses: true, resolveDns: false }
                         : {},
                 );
             } catch (error) {

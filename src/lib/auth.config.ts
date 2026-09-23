@@ -62,7 +62,7 @@ if (googleClientId && googleClientSecret) {
     );
 }
 
-/** Provider ids the sign-in page should offer, resolved at build time. */
+/** Provider ids the authentication pages should offer, resolved at build time. */
 export const enabledOAuthProviders = oauthProviders
     .map((provider) => (typeof provider === "function" ? provider() : provider))
     .map((provider) => ("id" in provider ? (provider.id as string) : ""))
@@ -70,6 +70,12 @@ export const enabledOAuthProviders = oauthProviders
 
 export const authConfig = {
     providers: oauthProviders,
+    // Required for self-hosted deployments. Without it Auth.js rejects any
+    // request whose Host it does not recognise with UntrustedHost, and because
+    // this config backs the middleware gate in src/proxy.ts, that made every
+    // authenticated API call 401 behind a reverse proxy or on a bare host.
+    // `auth.ts` already sets this; the edge config was missed.
+    trustHost: true,
     pages: {
         signIn: "/login",
         error: "/login",

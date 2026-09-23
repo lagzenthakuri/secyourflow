@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { processRiskAssessment } from "@/lib/risk-engine";
 import { requireSessionWithOrg } from "@/lib/api-auth";
+import { enqueue } from "@/lib/queue";
 
-const MAX_BATCH_SIZE = 10;
+const MAX_BATCH_SIZE = Number(process.env.RISK_GENERATE_BATCH_SIZE ?? 50);
 
+/**
+ * Queues risk assessments for vulnerabilities that do not have a completed one.
+ *
+ * Every assessment is a separate job. This used to run up to ten model calls
+ * sequentially inside the request — with a per-call budget of up to 300s, that
+ * could not complete.
+ */
 export async function POST(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request, {
     allowedRoles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER"],
@@ -13,66 +20,63 @@ export async function POST(request: NextRequest) {
     return authResult.response;
   }
 
+  const { organizationId, userId } = authResult.context;
+
   try {
-    const vulnerabilities = await prisma.vulnerability.findMany({
+    const candidates = await prisma.vulnerability.findMany({
       where: {
-        organizationId: authResult.context.organizationId,
-        riskEntries: {
-          none: {
-            organizationId: authResult.context.organizationId,
-          },
-        },
+        organizationId,
+        // Anything without a *completed* assessment. The previous filter
+        // excluded any vulnerability with any risk entry at all, so a single
+        // FAILED or stranded PROCESSING row made it permanently unassessable.
+        riskEntries: { none: { organizationId, status: "ACTIVE" } },
+        // Risk is scored for a vulnerability on an asset; skip unlinked ones.
+        assets: { some: { asset: { organizationId } } },
       },
-      include: {
+      select: {
+        id: true,
         assets: {
-          where: {
-            asset: {
-              organizationId: authResult.context.organizationId,
-            },
-          },
+          where: { asset: { organizationId } },
           take: 1,
-          select: {
-            assetId: true,
-          },
+          select: { assetId: true },
         },
       },
       take: MAX_BATCH_SIZE,
-      orderBy: {
-        updatedAt: "desc",
-      },
+      orderBy: { updatedAt: "desc" },
     });
 
-    if (vulnerabilities.length === 0) {
-      return NextResponse.json({ message: "No new vulnerabilities to assess", count: 0 });
+    if (candidates.length === 0) {
+      return NextResponse.json({ message: "No vulnerabilities need assessment", queued: 0 });
     }
 
-    let processedCount = 0;
-    const failures: Array<{ vulnerabilityId: string; reason: string }> = [];
-
-    for (const vulnerability of vulnerabilities) {
+    const jobRunIds: string[] = [];
+    for (const vulnerability of candidates) {
       const assetId = vulnerability.assets[0]?.assetId;
-      if (!assetId) {
-        continue;
-      }
+      if (!assetId) continue;
 
-      try {
-        await processRiskAssessment(vulnerability.id, assetId, authResult.context.organizationId);
-        processedCount += 1;
-      } catch (error) {
-        failures.push({
-          vulnerabilityId: vulnerability.id,
-          reason: error instanceof Error ? error.message : String(error),
-        });
-      }
+      const { jobRunId } = await enqueue(
+        "risk.assess",
+        { organizationId, vulnerabilityId: vulnerability.id, assetId, userId },
+        {
+          organizationId,
+          entityType: "Vulnerability",
+          entityId: vulnerability.id,
+          dedupeKey: `risk.assess:${organizationId}:${assetId}:${vulnerability.id}`,
+        },
+      );
+      jobRunIds.push(jobRunId);
     }
 
-    return NextResponse.json({
-      message: `Processed ${processedCount} vulnerabilities`,
-      count: processedCount,
-      failed: failures,
-    });
+    return NextResponse.json(
+      {
+        message: `Queued ${jobRunIds.length} risk assessment(s).`,
+        queued: jobRunIds.length,
+        jobRunIds,
+      },
+      { status: 202 },
+    );
   } catch (error) {
-    console.error("Error generating risk register entries:", error);
+    console.error("Error queueing risk register entries:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

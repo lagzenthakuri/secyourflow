@@ -10,7 +10,8 @@ import { AddVulnerabilityModal } from "@/components/vulnerabilities/AddVulnerabi
 import { EditVulnerabilityModal } from "@/components/vulnerabilities/EditVulnerabilityModal";
 import { VulnerabilityActions } from "@/components/vulnerabilities/VulnerabilityActions";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
-import { cn } from "@/lib/utils";
+import { cn, formatLabel } from "@/lib/utils";
+import { allowedWorkflowTransitions } from "@/lib/workflow/state-machine";
 import { Vulnerability } from "@/types";
 import {
   AlertTriangle,
@@ -104,14 +105,6 @@ const statusOptions = [
 
 const workflowOptions = ["NEW", "TRIAGED", "IN_PROGRESS", "RESOLVED", "CLOSED"] as const;
 
-const workflowTransitions: Record<(typeof workflowOptions)[number], (typeof workflowOptions)[number][]> = {
-  NEW: ["TRIAGED", "IN_PROGRESS", "CLOSED"],
-  TRIAGED: ["IN_PROGRESS", "RESOLVED", "CLOSED"],
-  IN_PROGRESS: ["RESOLVED", "TRIAGED", "CLOSED"],
-  RESOLVED: ["CLOSED", "IN_PROGRESS"],
-  CLOSED: [],
-};
-
 const numberFormatter = new Intl.NumberFormat("en-US");
 
 const severityColor: Record<string, string> = {
@@ -131,12 +124,6 @@ const statusColor: Record<string, string> = {
   FALSE_POSITIVE: "text-[var(--text-secondary)] border-[var(--border-hover)] bg-[var(--bg-tertiary)]",
 };
 
-function formatLabel(value: string) {
-  return value
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
 
 function toChartSeverityData(data: SeverityDistributionItem[]) {
   const total = data.reduce((sum, item) => sum + item.count, 0);
@@ -193,6 +180,10 @@ function VulnerabilitiesContent() {
   const [showExploited, setShowExploited] = useState(false);
   const [showKevOnly, setShowKevOnly] = useState(false);
 
+  const goToFirstPage = useCallback(() => {
+    setPagination((prev) => (prev.page === 1 ? prev : { ...prev, page: 1 }));
+  }, []);
+
   const [pagination, setPagination] = useState<PaginationState>({
     page: 1,
     limit: 20,
@@ -218,6 +209,22 @@ function VulnerabilitiesContent() {
       setActiveVulnId(query);
     }
   }, [searchParams]);
+
+  // Any change that alters the result set must return to page one. Previously
+  // only the exploited/KEV toggles reset it, so applying a filter while on
+  // page 3 showed an empty queue.
+  useEffect(() => {
+    goToFirstPage();
+  }, [
+    searchQuery,
+    selectedSeverity,
+    selectedStatus,
+    selectedWorkflow,
+    selectedSource,
+    showExploited,
+    showKevOnly,
+    goToFirstPage,
+  ]);
 
   const fetchVulnerabilities = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
@@ -477,13 +484,13 @@ function VulnerabilitiesContent() {
                 <Download size={14} className="mr-2" />
                 XLSX
               </button>
-              <button
-                type="button"
+              <Link
+                href="/scanners"
                 className="btn btn-secondary !px-4 !py-2.5"
               >
                 <TrendingUp size={14} className="mr-2" />
-                Import Scan
-              </button>
+                Run a scan
+              </Link>
               <Link
                 href="/vulnerabilities/remediation"
                 className="btn btn-secondary !px-4 !py-2.5"
@@ -704,7 +711,7 @@ function VulnerabilitiesContent() {
                   const statusTone = statusColor[vuln.status] || statusColor.OPEN;
                   const isExpanded = activeVulnId === vuln.id || (vuln.cveId && activeVulnId === vuln.cveId);
                   const workflowState = (vuln.workflowState || "NEW") as (typeof workflowOptions)[number];
-                  const nextWorkflowStates = workflowTransitions[workflowState] || [];
+                  const nextWorkflowStates = allowedWorkflowTransitions(workflowState);
                   const slaBadge = getSlaBadge(vuln.slaDueAt);
 
                   return (
@@ -819,6 +826,7 @@ function VulnerabilitiesContent() {
                           <VulnerabilityActions
                             vulnerability={vuln}
                             onEdit={() => setEditingVuln(vuln)}
+                            onRefresh={() => fetchVulnerabilities({ silent: true })}
                             onDelete={() => {
                               void handleDelete(vuln.id);
                             }}
@@ -849,14 +857,7 @@ function VulnerabilitiesContent() {
                             ) : null}
                           </div>
                           <RiskAssessmentView
-                            riskEntry={vuln.riskEntries?.[0] as {
-                              status?: string;
-                              riskScore?: number;
-                              impactScore?: number;
-                              likelihoodScore?: number;
-                              aiAnalysis?: Record<string, unknown>;
-                              [key: string]: unknown;
-                            } | null | undefined}
+                            riskEntry={vuln.riskEntries?.[0]}
                             vulnerabilityId={vuln.id}
                             onRefresh={() => {
                               void fetchVulnerabilities({ silent: true });

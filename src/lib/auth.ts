@@ -7,6 +7,12 @@ import { prisma } from "./prisma";
 import { authConfig } from "./auth.config";
 import { assertTotpEncryptionKeyConfigured } from "@/lib/crypto/totpSecret";
 import { normalizeIpAddress } from "@/lib/request-utils";
+import { activateUserSession } from "@/lib/user-provisioning";
+import {
+    clearDatabaseUnavailable,
+    isDatabaseUnavailableError,
+    markDatabaseUnavailable,
+} from "@/lib/database-availability";
 import {
     assertTwoFactorSessionUpdateKeyConfigured,
     isTrustedTwoFactorSessionUpdate,
@@ -42,11 +48,73 @@ class NoPasswordSetError extends CredentialsSignin {
 }
 
 /**
+ * Auth.js turns any unexpected exception from a credentials callback into a
+ * `CallbackRouteError`, which is presented as `?error=Configuration`. A
+ * database outage is an expected infrastructure failure, not a bad login or a
+ * malformed Auth.js configuration, so preserve a safe, actionable error code.
+ */
+class LoginServiceUnavailableError extends CredentialsSignin {
+    code = "service_unavailable";
+}
+
+/**
  * Auth.js debug logging is opt-in rather than "any non-production build".
  * Its debug channel echoes the raw sign-in request body, so leaving it on by
  * default writes submitted passwords to the server log in cleartext.
  */
 const authDebugEnabled = process.env.AUTH_DEBUG === "true";
+
+function getOperationalErrorCode(error: unknown): string | null {
+    const queue: unknown[] = [error];
+    const seen = new Set<unknown>();
+
+    while (queue.length > 0) {
+        const value = queue.shift();
+
+        if ((typeof value !== "object" && typeof value !== "function") || value === null) {
+            continue;
+        }
+
+        if (seen.has(value)) {
+            continue;
+        }
+        seen.add(value);
+
+        const candidate = value as { code?: unknown; cause?: unknown };
+        if (typeof candidate.code === "string" && candidate.code.trim()) {
+            return candidate.code.trim();
+        }
+
+        if (candidate.cause !== undefined) {
+            queue.push(candidate.cause);
+        }
+    }
+
+    return null;
+}
+
+async function withLoginDatabase<T>(operation: string, action: () => Promise<T>): Promise<T> {
+    try {
+        const result = await action();
+        clearDatabaseUnavailable();
+        return result;
+    } catch (error) {
+        if (!isDatabaseUnavailableError(error)) {
+            throw error;
+        }
+
+        if (markDatabaseUnavailable()) {
+            // Keep the log useful to operators without writing connection
+            // strings, submitted credentials, or user email addresses.
+            console.error(`[auth] Login temporarily unavailable during ${operation}.`, {
+                errorType: error instanceof Error ? error.name : typeof error,
+                errorCode: getOperationalErrorCode(error),
+            });
+        }
+
+        throw new LoginServiceUnavailableError();
+    }
+}
 
 const REDACTED = "[redacted]";
 const SENSITIVE_KEYS = new Set([
@@ -167,23 +235,25 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
 
                 const loginIp = extractLoginIpFromRequest(request);
 
-                const user = await prisma.user.findFirst({
-                    where: {
-                        email: {
-                            equals: email,
-                            mode: "insensitive",
+                const user = await withLoginDatabase("account lookup", () =>
+                    prisma.user.findFirst({
+                        where: {
+                            email: {
+                                equals: email,
+                                mode: "insensitive",
+                            },
                         },
-                    },
-                    select: {
-                        id: true,
-                        email: true,
-                        name: true,
-                        role: true,
-                        password: true,
-                        image: true,
-                        totpEnabled: true,
-                    },
-                });
+                        select: {
+                            id: true,
+                            email: true,
+                            name: true,
+                            role: true,
+                            password: true,
+                            image: true,
+                            totpEnabled: true,
+                        },
+                    }),
+                );
 
                 if (!user) {
                     return null;
@@ -231,7 +301,12 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                     loginIp?: string | null;
                 };
 
-                token.id = user.id;
+                if (!user.id) {
+                    throw new LoginServiceUnavailableError();
+                }
+
+                const userId = user.id;
+                token.id = userId;
                 token.role = signInUser.role || "ANALYST";
                 token.totpEnabled = Boolean(signInUser.totpEnabled);
 
@@ -250,17 +325,20 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 token.twoFactorVerifiedAt = null;
                 token.authenticatedAt = Date.now();
 
-                await prisma.user.update({
-                    where: { id: user.id },
-                    data: {
-                        lastLogin: new Date(),
+                const activatedSession = await withLoginDatabase("session initialization", () =>
+                    activateUserSession({
+                        userId,
+                        name: user.name,
+                        email: user.email,
                         activeSessionId,
                         activeSessionIp,
-                    },
-                });
+                    }),
+                );
+
+                token.organizationId = activatedSession.organizationId;
 
                 void import("./logger").then(({ logActivity }) => {
-                    return logActivity("User login", "auth", user.email || "unknown", null, null, "User logged in", user.id);
+                    return logActivity("User login", "auth", user.email || "unknown", null, null, "User logged in", userId);
                 }).catch(() => undefined);
 
                 return token;
@@ -315,9 +393,14 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
             }
 
             if (typeof token.id === "string") {
+                // This callback runs on every session read, so it is the one
+                // authoritative read of the user row per request. Carry the
+                // organization and role on the token from the same query —
+                // `requireSessionWithOrg` used to repeat this lookup, doubling
+                // the per-request database cost for no extra freshness.
                 const sessionState = await prisma.user.findUnique({
                     where: { id: token.id },
-                    select: { activeSessionId: true },
+                    select: { activeSessionId: true, organizationId: true, role: true },
                 });
 
                 if (
@@ -327,6 +410,9 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 ) {
                     return null;
                 }
+
+                token.organizationId = sessionState.organizationId ?? null;
+                token.role = sessionState.role || "ANALYST";
             }
 
             if (typeof token.totpEnabled !== "boolean") {
@@ -373,6 +459,8 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
             if (token && session.user) {
                 session.user.id = token.id as string;
                 session.user.role = (token.role as string) || "ANALYST";
+                session.user.organizationId =
+                    typeof token.organizationId === "string" ? token.organizationId : null;
                 session.user.totpEnabled = Boolean(token.totpEnabled);
                 session.twoFactorVerified = token.twoFactorVerified === true;
                 session.twoFactorVerifiedAt =
@@ -418,6 +506,8 @@ declare module "next-auth" {
             image?: string | null;
             role?: string;
             totpEnabled?: boolean;
+            /** Null when the user has not been provisioned into an organization. */
+            organizationId?: string | null;
         };
         twoFactorVerified?: boolean;
         twoFactorVerifiedAt?: number | null;

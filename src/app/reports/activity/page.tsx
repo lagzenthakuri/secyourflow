@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { Clock3, RefreshCw, Search, X, XCircle, User, Globe, Monitor, Calendar, FileText, Activity as ActivityIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatLabel } from "@/lib/utils";
 import { formatIpAddress, normalizeIpAddress, parseUserAgent } from "@/lib/request-utils";
 
 interface ActivityLog {
@@ -27,12 +27,6 @@ interface ActivityLog {
   };
 }
 
-function formatLabel(value: string) {
-  return value
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
 
 function getEntityTypeColor(entityType: string) {
   const type = entityType.toLowerCase();

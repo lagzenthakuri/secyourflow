@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { readEvidenceFile } from "@/lib/compliance-evidence-storage";
+import { readEvidenceContent } from "@/lib/compliance-evidence-storage";
 import { requireSessionWithOrg } from "@/lib/api-auth";
 import { logActivity } from "@/lib/logger";
 import { extractRequestContext } from "@/lib/request-utils";
@@ -37,7 +37,7 @@ export async function GET(
       return NextResponse.json({ error: "Evidence version not found" }, { status: 404 });
     }
 
-    const fileBuffer = await readEvidenceFile(version.storagePath);
+    const fileBuffer = await readEvidenceContent(version);
     const requestContext = extractRequestContext(request);
 
     await logActivity(

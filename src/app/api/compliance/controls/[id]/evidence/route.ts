@@ -222,6 +222,8 @@ export async function POST(
           mimeType,
           sizeBytes: filePayload.sizeBytes,
           storagePath: filePayload.storagePath,
+          // Content lives in the database so any replica can serve it.
+          data: filePayload.data,
           checksum: filePayload.checksum,
           notes,
           uploadedById: authResult.context.userId,

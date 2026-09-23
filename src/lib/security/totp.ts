@@ -27,20 +27,6 @@ export function buildTotpOtpAuthUrl(secret: string, accountEmail: string, issuer
     return getAuthenticator().keyuri(accountEmail, issuer, secret);
 }
 
-export function generateTotpToken(secret: string): string {
-    const currentOptions = authenticator.options;
-    authenticator.options = {
-        ...currentOptions,
-        digits: TOTP_DIGITS,
-        step: TOTP_STEP_SECONDS,
-        window: TOTP_WINDOW, // Symmetric window for compatibility
-    };
-
-    const token = authenticator.generate(secret);
-
-    authenticator.options = currentOptions;
-    return token;
-}
 
 export function verifyTotpToken(
     secret: string,

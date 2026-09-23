@@ -1,305 +1,176 @@
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/logger";
-import { updateComplianceFromRisk } from "@/lib/compliance-engine";
 import { aiChatJson } from "@/lib/ai";
-import type { Prisma, Severity } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
+import {
+    type RiskAnalysis,
+    type RiskInputAsset,
+    type RiskInputVulnerability,
+    deterministicAnalysis,
+    normalizeRiskAnalysis,
+    parseCVSSVector,
+    scoreFromAnalysis,
+} from "@/lib/risk/scoring";
+import type { RiskAnalysisSource } from "@prisma/client";
+
+export * from "@/lib/risk/scoring";
 
 /**
- * Parses CVSS v3.1 vector string to extract CIA impacts.
- * Returns scores on 1-5 scale: None=1, Low=3, High=5.
+ * Risk scoring pipeline.
+ *
+ * Risk is a property of a vulnerability *on an asset*: impact comes from the
+ * CVSS vector and the asset's business context, likelihood from a model when
+ * one is configured. The score is `impact x likelihood` on a 1-25 scale.
+ *
+ * Two rules this module exists to enforce:
+ *  1. Exactly one live entry per (organization, asset, vulnerability). It used
+ *     to `create` unconditionally, so every re-run left another duplicate.
+ *  2. A deterministic fallback is never presented as a model assessment. The
+ *     outcome carries `analysisSource`, and it is persisted.
  */
-function parseCVSSVector(vector?: string) {
-    const defaultScores = { c: 3, i: 3, a: 3 }; // Defaults to Medium/Low (3)
-    if (!vector) return defaultScores;
 
-    const scores = { ...defaultScores };
-    const parts = vector.split('/');
-
-    const mapImpact = (val: string) => {
-        if (val === 'H') return 5;
-        if (val === 'L') return 3;
-        if (val === 'N') return 1;
-        return 3;
-    };
-
-    parts.forEach(part => {
-        const [key, value] = part.split(':');
-        if (key === 'C') scores.c = mapImpact(value);
-        if (key === 'I') scores.i = mapImpact(value);
-        if (key === 'A') scores.a = mapImpact(value);
-    });
-
-    return scores;
-}
-
-interface RiskInputVulnerability {
-    title: string;
-    description?: string;
-    cvssVector?: string;
-    cveId?: string;
-    severity?: Severity | null;
-    cvssScore?: number;
-}
-
-interface RiskInputAsset {
-    name: string;
-    type: string;
-    criticality?: string;
-    environment?: string;
-    owner?: string;
-}
-
-interface RiskAnalysis {
-    risk: string;
-    threat: string;
-    confidentiality_impact: number;
-    integrity_impact: number;
-    availability_impact: number;
-    likelihood_score: number;
-    risk_category: string;
-    risk_category_2: string;
-    rationale_for_risk_rating: string;
-    current_controls: string[];
-    selected_controls: string[];
-    controls_violated_iso27001: string[];
-    treatment_option: string;
-    action_plan: string;
-    responsible_party: string;
-    remarks: string;
-    confidence: number;
-}
-
-function toNumber(value: unknown, fallback: number): number {
-    if (typeof value !== "number" || Number.isNaN(value)) {
-        return fallback;
-    }
-    return value;
-}
-
-function toStringValue(value: unknown, fallback: string): string {
-    return typeof value === "string" && value.trim().length > 0 ? value : fallback;
-}
-
-function toStringArray(value: unknown, fallback: string[] = []): string[] {
-    if (!Array.isArray(value)) {
-        return fallback;
-    }
-
-    return value.filter((item): item is string => typeof item === "string" && item.length > 0);
-}
-
-function normalizeRiskAnalysis(raw: unknown, fallback: RiskAnalysis): RiskAnalysis {
-    if (!raw || typeof raw !== "object") {
-        return fallback;
-    }
-
-    const value = raw as Record<string, unknown>;
-    return {
-        risk: toStringValue(value.risk, fallback.risk),
-        threat: toStringValue(value.threat, fallback.threat),
-        confidentiality_impact: toNumber(value.confidentiality_impact, fallback.confidentiality_impact),
-        integrity_impact: toNumber(value.integrity_impact, fallback.integrity_impact),
-        availability_impact: toNumber(value.availability_impact, fallback.availability_impact),
-        likelihood_score: toNumber(value.likelihood_score, fallback.likelihood_score),
-        risk_category: toStringValue(value.risk_category, fallback.risk_category),
-        risk_category_2: toStringValue(value.risk_category_2, fallback.risk_category_2),
-        rationale_for_risk_rating: toStringValue(value.rationale_for_risk_rating, fallback.rationale_for_risk_rating),
-        current_controls: toStringArray(value.current_controls, fallback.current_controls),
-        selected_controls: toStringArray(value.selected_controls, fallback.selected_controls),
-        controls_violated_iso27001: toStringArray(value.controls_violated_iso27001, fallback.controls_violated_iso27001),
-        treatment_option: toStringValue(value.treatment_option, fallback.treatment_option),
-        action_plan: toStringValue(value.action_plan, fallback.action_plan),
-        responsible_party: toStringValue(value.responsible_party, fallback.responsible_party),
-        remarks: toStringValue(value.remarks, fallback.remarks),
-        confidence: Math.min(1, Math.max(0, toNumber(value.confidence, fallback.confidence))),
-    };
-}
-
-/**
- * Analyzes risk using the organization's configured AI provider, falling back
- * to the deterministic model when no provider is available.
- */
-async function analyzeRiskWithAI(
+function buildPrompt(
     vulnerability: RiskInputVulnerability,
     asset: RiskInputAsset,
-    organizationId: string
-): Promise<{ analysis: RiskAnalysis; usedAi: boolean }> {
-    const fallback = mockAnalysis(vulnerability, asset);
-    const cia = parseCVSSVector(vulnerability.cvssVector);
+    cia: { c: number; i: number; a: number },
+): string {
+    return `Assess the risk this vulnerability poses to this asset.
 
-    const prompt = `
-Evaluate the risk of this vulnerability on this asset. 
-Asset Info: 
-- Type: ${asset.type}
+Asset:
 - Name: ${asset.name}
-- Environment: ${asset.environment}
-- Criticality: ${asset.criticality}
-- Owner: ${asset.owner || 'Unknown'}
+- Type: ${asset.type}
+- Environment: ${asset.environment ?? "Unknown"}
+- Business criticality: ${asset.criticality ?? "Unknown"}
+- Owner: ${asset.owner || "Unknown"}
 
-Vulnerability Info:
+Vulnerability:
 - Title: ${vulnerability.title}
-- CVE: ${vulnerability.cveId || 'N/A'}
-- CVSS: ${vulnerability.cvssScore || 'N/A'}
-- Severity: ${vulnerability.severity}
-- CVSS Vector: ${vulnerability.cvssVector || 'N/A'}
-- Description: ${vulnerability.description || 'N/A'}
+- CVE: ${vulnerability.cveId || "N/A"}
+- Severity: ${vulnerability.severity ?? "Unknown"}
+- CVSS base score: ${vulnerability.cvssScore ?? "N/A"}
+- CVSS vector: ${vulnerability.cvssVector || "N/A"}
+- Known exploited: ${vulnerability.isExploited ? "yes" : "no"}
+- CISA KEV: ${vulnerability.cisaKev ? "yes" : "no"}
+- EPSS: ${typeof vulnerability.epssScore === "number" ? vulnerability.epssScore : "N/A"}
+- Description: ${vulnerability.description || "N/A"}
 
-Business Context:
-- Organization criticality: High
-- Regulatory exposure: GDPR, ISO 27001
+The CIA impact values are already derived from the CVSS vector
+(confidentiality ${cia.c}/5, integrity ${cia.i}/5, availability ${cia.a}/5) and
+are not yours to set. Judge likelihood, and map controls.
 
-IMPORTANT: The technical impact metrics (CIA Triad) for this vulnerability have been pre-calculated from the CVSS vector as follows:
-- Confidentiality Impact: ${cia.c}/5
-- Integrity Impact: ${cia.i}/5
-- Availability Impact: ${cia.a}/5
+Base every field on the evidence above. If you cannot support a field, return
+an empty string or empty array for it rather than a plausible guess — in
+particular, do not list ISO 27001 controls unless this specific vulnerability
+genuinely violates them.
 
-You MUST use these specific numeric values (1-5) for confidentiality_impact, integrity_impact, and availability_impact in your response. Do not change them.
-
-Give likelihood (1-5), impact CIA (1-5 each), risk category, rationale, recommended controls, and ISO 27001 mapping.
-Return ONLY structured JSON in this format:
+Respond with JSON only:
 {
-  "risk": "description of the risk",
-  "threat": "description of the threat",
-  "confidentiality_impact": ${cia.c},
-  "integrity_impact": ${cia.i},
-  "availability_impact": ${cia.a},
+  "risk": "what could happen, in business terms",
+  "threat": "the threat being realised",
   "likelihood_score": 1-5,
-  "risk_category": "Critical/High/Medium/Low",
-  "risk_category_2": "Secondary Category (e.g. AppSec, Privacy)",
-  "rationale_for_risk_rating": "detailed rationale",
-  "current_controls": ["control1", "control2"],
-  "selected_controls": ["control3", "control4"],
-  "controls_violated_iso27001": ["A.9.1", "A.13.1"],
-  "treatment_option": "Mitigate/Avoid/Transfer/Accept",
-  "action_plan": "Implementation steps for remediation",
+  "risk_category": "Critical|High|Medium|Low",
+  "risk_category_2": "secondary category, e.g. AppSec or Privacy",
+  "rationale_for_risk_rating": "why this likelihood, citing the evidence",
+  "current_controls": ["controls evident from the context"],
+  "selected_controls": ["controls to add"],
+  "controls_violated_iso27001": ["A.5.1"],
+  "treatment_option": "Mitigate|Avoid|Transfer|Accept",
+  "action_plan": "concrete remediation steps",
   "responsible_party": "role or team",
   "remarks": "",
-  "confidence": 1.0
+  "confidence": 0.0-1.0
+}`;
 }
-`;
+
+async function analyzeRisk(
+    vulnerability: RiskInputVulnerability,
+    asset: RiskInputAsset,
+    organizationId: string,
+): Promise<{ analysis: RiskAnalysis; source: RiskAnalysisSource }> {
+    const fallback = deterministicAnalysis(vulnerability, asset);
+    const cia = parseCVSSVector(vulnerability.cvssVector);
 
     const result = await aiChatJson<Record<string, unknown>>(organizationId, {
         messages: [
             {
                 role: "system",
                 content:
-                    "You are a specialized Cybersecurity Risk Analyst. Output only valid JSON, with no commentary.",
+                    "You are a cybersecurity risk analyst. Output only valid JSON matching the requested shape, with no commentary.",
             },
-            { role: "user", content: prompt },
+            { role: "user", content: buildPrompt(vulnerability, asset, cia) },
         ],
     });
 
     if (!result) {
-        // No provider configured, unreachable, or unparsable output — the
-        // deterministic analysis still produces a usable risk entry.
-        console.warn("[RiskEngine] AI analysis unavailable; using deterministic fallback.");
-        return { analysis: fallback, usedAi: false };
+        console.warn("[RiskEngine] No AI result; using deterministic scoring.");
+        return { analysis: fallback, source: "DETERMINISTIC" };
     }
 
-    return { analysis: normalizeRiskAnalysis(result.value, fallback), usedAi: true };
+    return { analysis: normalizeRiskAnalysis(result.value, fallback), source: "AI" };
+}
+
+export type RiskAssessmentOutcome =
+    | {
+          status: "COMPLETED";
+          riskEntryId: string;
+          riskScore: number;
+          analysisSource: RiskAnalysisSource;
+      }
+    | { status: "SKIPPED"; reason: string }
+    | { status: "FAILED"; reason: string };
+
+export interface ProcessRiskAssessmentParams {
+    vulnerabilityId: string;
+    assetId: string;
+    organizationId: string;
+    userId?: string;
 }
 
 /**
- * Mock analysis for fallback
- */
-function mockAnalysis(
-    vulnerability: Pick<RiskInputVulnerability, "title" | "cvssVector" | "severity">,
-    asset: Pick<RiskInputAsset, "name" | "type">
-): RiskAnalysis {
-    const title = vulnerability.title.toLowerCase();
-    const isDB = title.includes("database") || title.includes("sql") || title.includes("postgre");
-    const cia = parseCVSSVector(vulnerability.cvssVector);
-
-    // Vary likelihood based on severity
-    let likelihood = 3; // Medium
-    if (vulnerability.severity === 'CRITICAL') likelihood = 5;
-    else if (vulnerability.severity === 'HIGH') likelihood = 4;
-    else if (vulnerability.severity === 'LOW') likelihood = 2;
-
-    return {
-        risk: isDB ? "Unauthorized DB access" : "System Compromise",
-        threat: vulnerability.title,
-        confidentiality_impact: cia.c,
-        integrity_impact: cia.i,
-        availability_impact: cia.a,
-        likelihood_score: likelihood,
-        risk_category: vulnerability.severity === "CRITICAL" ? "Critical" : "High",
-        risk_category_2: "Application Security",
-        rationale_for_risk_rating: `Simulated analysis for ${asset.name} (${asset.type}) based on ${vulnerability.severity} severity and technical impact vector.`,
-        current_controls: ["Firewall"],
-        selected_controls: ["MFA", "Encryption"],
-        controls_violated_iso27001: ["A.9.1", "A.13.1"],
-        treatment_option: "Mitigate",
-        action_plan: "Deploy patches and verify config.",
-        responsible_party: "Security Team",
-        remarks: "Generated from mock fallback",
-        confidence: 0.8,
-    };
-}
-
-/**
- * Main Pipeline Function
- * Flow: Asset+Context -> AI Analysis -> Calc Scores -> DB Insert -> Compliance Logic
+ * Scores one vulnerability on one asset and records the result.
+ *
+ * Always returns an outcome — never `undefined` and never throws for an
+ * expected condition — so callers can report honestly what happened. Intended
+ * to run in a background worker: with a self-hosted model a single call can
+ * take minutes.
  */
 export async function processRiskAssessment(
-    vulnerabilityId: string,
-    assetId: string,
-    organizationId: string,
-    userId?: string
-) {
-    let riskEntryId: string | null = null;
-    let assessmentUsedAi = false;
+    params: ProcessRiskAssessmentParams,
+): Promise<RiskAssessmentOutcome> {
+    const { vulnerabilityId, assetId, organizationId, userId } = params;
+
+    const [asset, vulnerability] = await Promise.all([
+        prisma.asset.findFirst({ where: { id: assetId, organizationId } }),
+        prisma.vulnerability.findFirst({ where: { id: vulnerabilityId, organizationId } }),
+    ]);
+
+    if (!asset || !vulnerability) {
+        return { status: "SKIPPED", reason: "Asset or vulnerability not found in this organization" };
+    }
+
+    // One row per (organization, asset, vulnerability), enforced by a unique
+    // constraint. Re-running an assessment updates in place.
+    const entry = await prisma.riskRegister.upsert({
+        where: {
+            organizationId_assetId_vulnerabilityId: { organizationId, assetId, vulnerabilityId },
+        },
+        create: {
+            organizationId,
+            assetId,
+            vulnerabilityId,
+            riskScore: 0,
+            impactScore: 0,
+            likelihoodScore: 0,
+            status: "PROCESSING",
+            analysisSource: "DETERMINISTIC",
+            aiAnalysis: {},
+        },
+        update: { status: "PROCESSING", failureReason: null },
+        select: { id: true },
+    });
+
     try {
-        // 0. Check if AI Risk Assessment is enabled
-        const orgSettings = await prisma.setting.findFirst({
-            where: { organizationId: organizationId }
-        });
-
-        if (orgSettings && orgSettings.aiRiskAssessmentEnabled === false) {
-            console.log(`[RiskEngine] AI Risk Assessment is disabled by organization policy.`);
-            return;
-        }
-
-        console.log(`[RiskEngine] Starting specific assessment flow for Vuln ${vulnerabilityId}`);
-
-        // 1. Fetch Asset + Context
-        const asset = await prisma.asset.findFirst({
-            where: {
-                id: assetId,
-                organizationId,
-            },
-            include: { complianceControls: true }
-        });
-
-        const vulnerability = await prisma.vulnerability.findFirst({
-            where: {
-                id: vulnerabilityId,
-                organizationId,
-            }
-        });
-
-        if (!asset || !vulnerability) {
-            console.error("[RiskEngine] Asset or vulnerability not found for organization context");
-            return;
-        }
-
-        // 1b. Create initial "PROCESSING" record to track state
-        const initialEntry = await prisma.riskRegister.create({
-            data: {
-                assetId,
-                vulnerabilityId,
-                organizationId,
-                riskScore: 0,
-                impactScore: 0,
-                likelihoodScore: 0,
-                status: "PROCESSING",
-                aiAnalysis: {},
-            }
-        });
-        riskEntryId = initialEntry.id;
-
-        // 2. AI risk analysis via the organization's configured provider
-        const { analysis, usedAi } = await analyzeRiskWithAI(
+        const { analysis, source } = await analyzeRisk(
             {
                 title: vulnerability.title,
                 description: vulnerability.description ?? undefined,
@@ -307,6 +178,9 @@ export async function processRiskAssessment(
                 cveId: vulnerability.cveId ?? undefined,
                 severity: vulnerability.severity,
                 cvssScore: vulnerability.cvssScore ?? undefined,
+                isExploited: vulnerability.isExploited,
+                cisaKev: vulnerability.cisaKev,
+                epssScore: vulnerability.epssScore,
             },
             {
                 name: asset.name,
@@ -315,107 +189,64 @@ export async function processRiskAssessment(
                 environment: asset.environment,
                 owner: asset.owner ?? undefined,
             },
-            organizationId
+            organizationId,
         );
 
-        // 3. Calculate Impact Score = (C + I + A) / 3
-        const impactScore = (analysis.confidentiality_impact + analysis.integrity_impact + analysis.availability_impact) / 3;
+        const { impactScore, riskScore } = scoreFromAnalysis(analysis);
 
-        // 4. Calculate Final Risk Score = Impact * Likelihood
-        const riskScore = impactScore * analysis.likelihood_score; // Range 1-25
-
-        console.log(`[RiskEngine] Scores - C:${analysis.confidentiality_impact} I:${analysis.integrity_impact} A:${analysis.availability_impact} => Impact:${impactScore.toFixed(2)} * Likelihood:${analysis.likelihood_score} = Risk:${riskScore.toFixed(2)}`);
-
-        // 5. UPDATE risk_register entry
-        const riskEntry = await prisma.riskRegister.update({
-            where: { id: riskEntryId },
+        await prisma.riskRegister.update({
+            where: { id: entry.id },
             data: {
-                riskScore: parseFloat(riskScore.toFixed(2)),
-                impactScore: parseFloat(impactScore.toFixed(2)),
-                likelihoodScore: parseFloat(analysis.likelihood_score.toString()),
+                riskScore,
+                impactScore,
+                likelihoodScore: analysis.likelihood_score,
                 aiAnalysis: analysis as unknown as Prisma.InputJsonValue,
                 status: "ACTIVE",
-                treatmentOption: analysis.treatment_option,
-                responsibleParty: analysis.responsible_party,
-                currentControls: analysis.current_controls.join(", "),
-                riskCategory2: analysis.risk_category_2,
-                actionPlan: analysis.action_plan,
-                selectedControls: analysis.selected_controls.join(", "),
-                remarks: analysis.remarks,
+                analysisSource: source,
+                failureReason: null,
+                treatmentOption: analysis.treatment_option || null,
+                responsibleParty: analysis.responsible_party || null,
+                currentControls: analysis.current_controls.join(", ") || null,
+                riskCategory2: analysis.risk_category_2 || null,
+                actionPlan: analysis.action_plan || null,
+                selectedControls: analysis.selected_controls.join(", ") || null,
+                remarks: analysis.remarks || null,
                 confidence: analysis.confidence,
-                updatedAt: new Date()
-            }
+            },
         });
 
-        // 5b. Notify relevant users
-        try {
-            const securityTeam = await prisma.user.findMany({
-                where: {
-                    role: { in: ['IT_OFFICER', 'MAIN_OFFICER', 'ANALYST'] },
-                    organizationId: organizationId
-                },
-                select: { id: true }
-            });
+        // Mirror the score onto the vulnerability so the queue can sort by it.
+        await prisma.vulnerability
+            .update({ where: { id: vulnerabilityId }, data: { riskScore } })
+            .catch(() => undefined);
 
-            if (securityTeam.length > 0) {
-                await prisma.notification.createMany({
-                    data: securityTeam.map(user => ({
-                        userId: user.id,
-                        title: "AI Risk Assessment Complete",
-                        message: `AI has analyzed risk for '${vulnerability.title}' on '${asset.name}'. Score: ${riskScore.toFixed(1)}/25.`,
-                        type: "INFO",
-                        link: `/vulnerabilities`
-                    }))
-                });
-            }
-        } catch (notifyErr) {
-            console.error("[RiskEngine] Failed to notify after assessment:", notifyErr);
-        }
-
-        // 6. Compliance Engine Updates (The "Glue")
-        // Logic: specific controls_violated_iso27001[] -> Mark ISO Controls as FAILED
-        await updateComplianceFromRisk(
-            {
-                id: riskEntry.id,
-                organizationId,
-                riskScore: parseFloat(riskScore.toFixed(2)),
-                aiAnalysis: analysis,
-            },
-            {
-                title: vulnerability.title,
-                cveId: vulnerability.cveId ?? undefined,
-                severity: vulnerability.severity,
-            },
-            {
-                id: asset.id,
-                name: asset.name,
-            }
-        );
-
-        console.log(`[RiskEngine] Pipeline Complete. Compliance % should reflect drop.`);
-        assessmentUsedAi = usedAi;
-
-        // Log the activity
-        const logDetails = `Risk calculated: ${riskScore.toFixed(1)}/25. ${analysis.risk}`;
         await logActivity(
             "RISK_ASSESSMENT_COMPLETED",
             "RiskRegister",
-            riskEntry.id,
+            entry.id,
             null,
-            { riskScore, impactScore },
-            logDetails,
-            userId
+            { riskScore, impactScore, analysisSource: source },
+            `Risk assessed at ${riskScore.toFixed(1)}/25 (${source === "AI" ? "AI" : "deterministic"}).`,
+            userId,
         );
 
+        return {
+            status: "COMPLETED",
+            riskEntryId: entry.id,
+            riskScore,
+            analysisSource: source,
+        };
     } catch (error) {
-        console.error("[RiskEngine] Pipeline Failed:", error);
-        if (riskEntryId) {
-            await prisma.riskRegister.update({
-                where: { id: riskEntryId },
-                data: { status: "FAILED" }
-            }).catch(err => console.error("Failed to update risk entry status to FAILED", err));
-        }
-    }
+        const reason = error instanceof Error ? error.message : String(error);
+        console.error("[RiskEngine] Assessment failed:", reason);
 
-    return { usedAi: assessmentUsedAi };
+        await prisma.riskRegister
+            .update({
+                where: { id: entry.id },
+                data: { status: "FAILED", failureReason: reason.slice(0, 1000) },
+            })
+            .catch(() => undefined);
+
+        return { status: "FAILED", reason };
+    }
 }

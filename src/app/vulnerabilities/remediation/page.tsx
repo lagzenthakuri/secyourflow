@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Modal } from "@/components/ui/Modal";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
-import { cn } from "@/lib/utils";
+import { cn, formatLabel } from "@/lib/utils";
 import { Calendar, CheckCircle2, Paperclip, Plus, RefreshCw } from "lucide-react";
 
 type RemediationStatus = "DRAFT" | "ACTIVE" | "BLOCKED" | "COMPLETED" | "ARCHIVED";
@@ -49,12 +49,6 @@ const statusTone: Record<RemediationStatus, string> = {
   ARCHIVED: "border-purple-400/35 bg-purple-500/10 text-purple-700 dark:text-purple-200",
 };
 
-function formatLabel(value: string) {
-  return value
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
 
 function calculateProgress(plan: RemediationPlanRecord) {
   const total = plan.vulnerabilities.length;

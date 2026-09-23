@@ -1,28 +1,16 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireSessionWithOrg } from "@/lib/api-auth";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+    const authResult = await requireSessionWithOrg(request);
+    if (!authResult.ok) {
+        return authResult.response;
+    }
+
+    const { organizationId } = authResult.context;
+
     try {
-        const session = await auth();
-        if (!session?.user?.id) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
-        const userId = session.user.id;
-
-        // Get user's organization to ensure data isolation
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { organizationId: true },
-        });
-
-        if (!user?.organizationId) {
-            return NextResponse.json({ error: "Organization context required" }, { status: 403 });
-        }
-
-        const organizationId = user.organizationId;
-
         // 1. Active Monitoring
         // Fetch controls that are recently assessed or are of type DETECTIVE
         // We'll treat these as "Continuous Monitoring Checks"
@@ -59,25 +47,13 @@ export async function GET(request: Request) {
             controlId: control.controlId
         }));
 
-        // If no real data, fallback to some smart defaults so the UI isn't empty for new users
-        if (activeChecks.length === 0) {
-            // We can leave it empty or provide "System Checks"
-            // Let's leave it empty to be honest, or maybe the UI handles empty state?
-            // The original mock had data. Let's return the mock data structure if DB is empty to "show off" features
-            // But for "functionable", we should prefer real data.
-            // However, if the user just created an account, they won't have data.
-            // Let's stick to real data, but if < 3, maybe pad with "System Health" checks?
-            // No, let's just return what we have.
-        }
-
         // 2. Pending Evidence Tasks
         // Controls that are NOT COMPLIANT and missing evidence
         const pendingControls = await prisma.complianceControl.findMany({
             where: {
                 framework: { organizationId },
                 status: { in: ["NON_COMPLIANT", "PARTIALLY_COMPLIANT", "NOT_ASSESSED"] },
-                evidence: null, // Simple check for now
-                // In a real app, we might check for evidenceFiles relation count = 0
+                evidence: null,
             },
             take: 5,
             orderBy: {
@@ -98,9 +74,9 @@ export async function GET(request: Request) {
                 : "Review Required"
         }));
 
-        // 3. AI Insights
-        // This would typically involve an LLM call. 
-        // For now, we will construct insights based on the actual status and notes.
+        // 3. Insights derived from stored assessment notes and control status.
+        // Deliberately not an LLM call: this endpoint is polled every 30s by the
+        // dashboard widget.
         const insightControls = await prisma.complianceControl.findMany({
             where: {
                 framework: { organizationId },
@@ -117,7 +93,7 @@ export async function GET(request: Request) {
                 control.status === "NON_COMPLIANT" ? "negative" : "neutral"
         }));
 
-        // If no notes-based insights, generate some "General" insights based on overall posture
+        // With no per-control notes, fall back to a summary of overall posture.
         if (aiInsights.length === 0 && monitoredControls.length > 0) {
             const failingCount = monitoredControls.filter(c => c.status === "NON_COMPLIANT").length;
             aiInsights.push({

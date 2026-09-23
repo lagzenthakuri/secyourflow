@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AddAssetModal } from "@/components/assets/AddAssetModal";
@@ -9,7 +10,7 @@ import { AssetActions } from "@/components/assets/AssetActions";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
-import { cn } from "@/lib/utils";
+import { cn, formatLabel } from "@/lib/utils";
 import { Asset } from "@/types";
 import {
   AlertTriangle,
@@ -20,6 +21,7 @@ import {
   Cloud,
   Database,
   Download,
+  Eye,
   Filter,
   Globe,
   LayoutGrid,
@@ -184,12 +186,6 @@ const criticalityTones: Record<AssetCriticality, string> = {
 
 const numberFormatter = new Intl.NumberFormat("en-US");
 
-function formatLabel(value: string) {
-  return value
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 export default function AssetsPage() {
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -995,6 +991,13 @@ export default function AssetsPage() {
                                 <Network size={11} />
                                 Impact
                               </button>
+                              <Link
+                                href={`/assets/${asset.id}`}
+                                className="inline-flex items-center gap-1 rounded-md border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)] hover:text-blue-500"
+                              >
+                                <Eye size={11} />
+                                Overview
+                              </Link>
                             </div>
 
                             {asset.tags?.length ? (

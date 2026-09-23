@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSessionWithOrg } from "@/lib/api-auth";
 import { generateInvitationToken, getInvitationExpiry } from "@/lib/invitation-utils";
+import { buildInvitationEmail, isMailConfigured, sendMail } from "@/lib/mail";
 import { logActivity } from "@/lib/logger";
 
 const createInvitationSchema = z.object({
@@ -112,12 +113,38 @@ export async function POST(req: Request) {
       context.organizationId
     );
 
+    const inviteUrl = `${process.env.APP_BASE_URL || process.env.NEXTAUTH_URL || "http://localhost:3000"}/auth/accept-invite?token=${invitation.token}`;
+
+    // Deliver it. Invitations were previously only ever returned to the caller,
+    // so the recipient had no way to learn the link existed.
+    const organization = await prisma.organization.findUnique({
+      where: { id: context.organizationId },
+      select: { name: true },
+    });
+
+    const mailResult = await sendMail({
+      to: invitation.email,
+      ...buildInvitationEmail({
+        organizationName: organization?.name ?? "your organization",
+        token: invitation.token,
+        role: invitation.role,
+      }),
+    });
+
+    if (!mailResult.sent) {
+      console.warn(`[invitations] not emailed to ${invitation.email}: ${mailResult.reason}`);
+    }
+
     return NextResponse.json(
       {
-        message: "Invitation created successfully",
+        message: mailResult.sent
+          ? "Invitation created and emailed."
+          : "Invitation created. Share the link manually — email is not configured or delivery failed.",
+        emailed: mailResult.sent,
+        emailConfigured: isMailConfigured(),
         invitation: {
           ...invitation,
-          inviteUrl: `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/auth/accept-invite?token=${invitation.token}`,
+          inviteUrl,
         },
       },
       { status: 201 }

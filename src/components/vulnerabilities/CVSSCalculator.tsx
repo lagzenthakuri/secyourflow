@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface CVSSCalculatorProps {
     onScoreChange: (score: string) => void;
     onVectorChange?: (vector: string) => void;
+    /** Existing vector to load when editing, e.g. "CVSS:3.1/AV:N/...". */
+    initialVector?: string | null;
 }
 
 type AV = "N" | "A" | "L" | "P";
@@ -49,18 +51,59 @@ function MetricButton({ label, value, currentValue, onClick }: MetricButtonProps
     );
 }
 
-export function CVSSCalculator({ onScoreChange, onVectorChange }: CVSSCalculatorProps) {
+const DEFAULT_METRICS: CVSSMetrics = {
+    av: "N",
+    ac: "L",
+    pr: "N",
+    ui: "N",
+    s: "U",
+    c: "N",
+    i: "N",
+    a: "N",
+};
+
+const ALLOWED: Record<keyof CVSSMetrics, readonly string[]> = {
+    av: ["N", "A", "L", "P"],
+    ac: ["L", "H"],
+    pr: ["N", "L", "H"],
+    ui: ["N", "R"],
+    s: ["U", "C"],
+    c: ["N", "L", "H"],
+    i: ["N", "L", "H"],
+    a: ["N", "L", "H"],
+};
+
+/** Reads a CVSS v3.x vector string back into metric selections. */
+export function parseVector(vector: string | null | undefined): CVSSMetrics | null {
+    if (!vector) return null;
+
+    const parsed: CVSSMetrics = { ...DEFAULT_METRICS };
+    let matched = 0;
+
+    for (const part of vector.split("/")) {
+        const [rawKey, rawValue] = part.split(":");
+        if (!rawKey || !rawValue) continue;
+
+        const key = rawKey.toLowerCase() as keyof CVSSMetrics;
+        const value = rawValue.toUpperCase();
+        if (ALLOWED[key]?.includes(value)) {
+            // Each metric is a narrow union; the allow-list above is the check.
+            (parsed[key] as string) = value;
+            matched += 1;
+        }
+    }
+
+    return matched >= 4 ? parsed : null;
+}
+
+export function CVSSCalculator({ onScoreChange, onVectorChange, initialVector }: CVSSCalculatorProps) {
     const [isOpen, setIsOpen] = useState(false);
-    const [metrics, setMetrics] = useState<CVSSMetrics>({
-        av: "N",
-        ac: "L",
-        pr: "N",
-        ui: "N",
-        s: "U",
-        c: "N",
-        i: "N",
-        a: "N",
-    });
+    const [metrics, setMetrics] = useState<CVSSMetrics>(() => parseVector(initialVector) ?? DEFAULT_METRICS);
+    // The calculator must not publish a score the user never chose. Mounting it
+    // used to emit "0.0" immediately, which set severity to INFORMATIONAL and
+    // then disabled the severity dropdown because `!!"0.0"` is true — so every
+    // manually added vulnerability was saved as INFORMATIONAL / CVSS 0.
+    const hasUserEdited = useRef(false);
 
     const calculateScore = (m: CVSSMetrics) => {
         const WEIGHTS = {
@@ -102,14 +145,18 @@ export function CVSSCalculator({ onScoreChange, onVectorChange }: CVSSCalculator
     };
 
     useEffect(() => {
-        const score = calculateScore(metrics);
-        const vector = generateVector(metrics);
-
-        onScoreChange(score);
-        if (onVectorChange) {
-            onVectorChange(vector);
+        if (!hasUserEdited.current) {
+            return;
         }
+
+        onScoreChange(calculateScore(metrics));
+        onVectorChange?.(generateVector(metrics));
     }, [metrics, onScoreChange, onVectorChange]);
+
+    const updateMetric = (patch: Partial<CVSSMetrics>) => {
+        hasUserEdited.current = true;
+        setMetrics((previous) => ({ ...previous, ...patch }));
+    };
 
     return (
         <div className="border border-[var(--border-color)] rounded-lg overflow-hidden bg-[var(--bg-tertiary)]">
@@ -129,10 +176,10 @@ export function CVSSCalculator({ onScoreChange, onVectorChange }: CVSSCalculator
                         <div className="space-y-2">
                             <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Attack Vector</label>
                             <div className="flex flex-wrap gap-2">
-                                <MetricButton label="Network" value="N" currentValue={metrics.av} onClick={() => setMetrics({ ...metrics, av: "N" })} />
-                                <MetricButton label="Adjacent" value="A" currentValue={metrics.av} onClick={() => setMetrics({ ...metrics, av: "A" })} />
-                                <MetricButton label="Local" value="L" currentValue={metrics.av} onClick={() => setMetrics({ ...metrics, av: "L" })} />
-                                <MetricButton label="Physical" value="P" currentValue={metrics.av} onClick={() => setMetrics({ ...metrics, av: "P" })} />
+                                <MetricButton label="Network" value="N" currentValue={metrics.av} onClick={() => updateMetric({ av: "N" })} />
+                                <MetricButton label="Adjacent" value="A" currentValue={metrics.av} onClick={() => updateMetric({ av: "A" })} />
+                                <MetricButton label="Local" value="L" currentValue={metrics.av} onClick={() => updateMetric({ av: "L" })} />
+                                <MetricButton label="Physical" value="P" currentValue={metrics.av} onClick={() => updateMetric({ av: "P" })} />
                             </div>
                         </div>
 
@@ -140,8 +187,8 @@ export function CVSSCalculator({ onScoreChange, onVectorChange }: CVSSCalculator
                         <div className="space-y-2">
                             <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Attack Complexity</label>
                             <div className="flex flex-wrap gap-2">
-                                <MetricButton label="Low" value="L" currentValue={metrics.ac} onClick={() => setMetrics({ ...metrics, ac: "L" })} />
-                                <MetricButton label="High" value="H" currentValue={metrics.ac} onClick={() => setMetrics({ ...metrics, ac: "H" })} />
+                                <MetricButton label="Low" value="L" currentValue={metrics.ac} onClick={() => updateMetric({ ac: "L" })} />
+                                <MetricButton label="High" value="H" currentValue={metrics.ac} onClick={() => updateMetric({ ac: "H" })} />
                             </div>
                         </div>
 
@@ -149,9 +196,9 @@ export function CVSSCalculator({ onScoreChange, onVectorChange }: CVSSCalculator
                         <div className="space-y-2">
                             <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Privileges Required</label>
                             <div className="flex flex-wrap gap-2">
-                                <MetricButton label="None" value="N" currentValue={metrics.pr} onClick={() => setMetrics({ ...metrics, pr: "N" })} />
-                                <MetricButton label="Low" value="L" currentValue={metrics.pr} onClick={() => setMetrics({ ...metrics, pr: "L" })} />
-                                <MetricButton label="High" value="H" currentValue={metrics.pr} onClick={() => setMetrics({ ...metrics, pr: "H" })} />
+                                <MetricButton label="None" value="N" currentValue={metrics.pr} onClick={() => updateMetric({ pr: "N" })} />
+                                <MetricButton label="Low" value="L" currentValue={metrics.pr} onClick={() => updateMetric({ pr: "L" })} />
+                                <MetricButton label="High" value="H" currentValue={metrics.pr} onClick={() => updateMetric({ pr: "H" })} />
                             </div>
                         </div>
 
@@ -159,8 +206,8 @@ export function CVSSCalculator({ onScoreChange, onVectorChange }: CVSSCalculator
                         <div className="space-y-2">
                             <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">User Interaction</label>
                             <div className="flex flex-wrap gap-2">
-                                <MetricButton label="None" value="N" currentValue={metrics.ui} onClick={() => setMetrics({ ...metrics, ui: "N" })} />
-                                <MetricButton label="Required" value="R" currentValue={metrics.ui} onClick={() => setMetrics({ ...metrics, ui: "R" })} />
+                                <MetricButton label="None" value="N" currentValue={metrics.ui} onClick={() => updateMetric({ ui: "N" })} />
+                                <MetricButton label="Required" value="R" currentValue={metrics.ui} onClick={() => updateMetric({ ui: "R" })} />
                             </div>
                         </div>
 
@@ -168,8 +215,8 @@ export function CVSSCalculator({ onScoreChange, onVectorChange }: CVSSCalculator
                         <div className="space-y-2">
                             <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Scope</label>
                             <div className="flex flex-wrap gap-2">
-                                <MetricButton label="Unchanged" value="U" currentValue={metrics.s} onClick={() => setMetrics({ ...metrics, s: "U" })} />
-                                <MetricButton label="Changed" value="C" currentValue={metrics.s} onClick={() => setMetrics({ ...metrics, s: "C" })} />
+                                <MetricButton label="Unchanged" value="U" currentValue={metrics.s} onClick={() => updateMetric({ s: "U" })} />
+                                <MetricButton label="Changed" value="C" currentValue={metrics.s} onClick={() => updateMetric({ s: "C" })} />
                             </div>
                         </div>
 
@@ -177,9 +224,9 @@ export function CVSSCalculator({ onScoreChange, onVectorChange }: CVSSCalculator
                         <div className="space-y-2">
                             <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Confidentiality</label>
                             <div className="flex flex-wrap gap-2">
-                                <MetricButton label="None" value="N" currentValue={metrics.c} onClick={() => setMetrics({ ...metrics, c: "N" })} />
-                                <MetricButton label="Low" value="L" currentValue={metrics.c} onClick={() => setMetrics({ ...metrics, c: "L" })} />
-                                <MetricButton label="High" value="H" currentValue={metrics.c} onClick={() => setMetrics({ ...metrics, c: "H" })} />
+                                <MetricButton label="None" value="N" currentValue={metrics.c} onClick={() => updateMetric({ c: "N" })} />
+                                <MetricButton label="Low" value="L" currentValue={metrics.c} onClick={() => updateMetric({ c: "L" })} />
+                                <MetricButton label="High" value="H" currentValue={metrics.c} onClick={() => updateMetric({ c: "H" })} />
                             </div>
                         </div>
 
@@ -187,9 +234,9 @@ export function CVSSCalculator({ onScoreChange, onVectorChange }: CVSSCalculator
                         <div className="space-y-2">
                             <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Integrity</label>
                             <div className="flex flex-wrap gap-2">
-                                <MetricButton label="None" value="N" currentValue={metrics.i} onClick={() => setMetrics({ ...metrics, i: "N" })} />
-                                <MetricButton label="Low" value="L" currentValue={metrics.i} onClick={() => setMetrics({ ...metrics, i: "L" })} />
-                                <MetricButton label="High" value="H" currentValue={metrics.i} onClick={() => setMetrics({ ...metrics, i: "H" })} />
+                                <MetricButton label="None" value="N" currentValue={metrics.i} onClick={() => updateMetric({ i: "N" })} />
+                                <MetricButton label="Low" value="L" currentValue={metrics.i} onClick={() => updateMetric({ i: "L" })} />
+                                <MetricButton label="High" value="H" currentValue={metrics.i} onClick={() => updateMetric({ i: "H" })} />
                             </div>
                         </div>
 
@@ -197,9 +244,9 @@ export function CVSSCalculator({ onScoreChange, onVectorChange }: CVSSCalculator
                         <div className="space-y-2">
                             <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Availability</label>
                             <div className="flex flex-wrap gap-2">
-                                <MetricButton label="None" value="N" currentValue={metrics.a} onClick={() => setMetrics({ ...metrics, a: "N" })} />
-                                <MetricButton label="Low" value="L" currentValue={metrics.a} onClick={() => setMetrics({ ...metrics, a: "L" })} />
-                                <MetricButton label="High" value="H" currentValue={metrics.a} onClick={() => setMetrics({ ...metrics, a: "H" })} />
+                                <MetricButton label="None" value="N" currentValue={metrics.a} onClick={() => updateMetric({ a: "N" })} />
+                                <MetricButton label="Low" value="L" currentValue={metrics.a} onClick={() => updateMetric({ a: "L" })} />
+                                <MetricButton label="High" value="H" currentValue={metrics.a} onClick={() => updateMetric({ a: "H" })} />
                             </div>
                         </div>
                     </div>

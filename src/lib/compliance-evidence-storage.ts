@@ -45,6 +45,14 @@ function buildTimestampSlug() {
   return new Date().toISOString().replace(/[:.]/g, "-");
 }
 
+/**
+ * Prepares evidence content for storage.
+ *
+ * Returns the bytes alongside the metadata: the caller writes them to
+ * `ComplianceEvidenceVersion.data` so the content lives in the database and any
+ * replica can serve it. `storagePath` is kept as a stable logical identifier
+ * for the version, not as a filesystem location.
+ */
 export async function writeEvidenceFile(options: {
   controlId: string;
   evidenceId: string;
@@ -62,10 +70,6 @@ export async function writeEvidenceFile(options: {
     )
     .replace(/\\/g, "/");
 
-  const absolutePath = path.join(getEvidenceBaseDir(), relativePath);
-  await fs.mkdir(path.dirname(absolutePath), { recursive: true });
-  await fs.writeFile(absolutePath, options.data);
-
   const checksum = crypto.createHash("sha256").update(options.data).digest("hex");
 
   return {
@@ -73,19 +77,48 @@ export async function writeEvidenceFile(options: {
     sizeBytes: options.data.byteLength,
     checksum,
     mimeType: options.mimeType,
+    // Prisma's Bytes field is Uint8Array<ArrayBuffer>; Buffer's backing store is
+    // ArrayBufferLike, which does not satisfy it. Copy into an exact view.
+    data: new Uint8Array(
+      options.data.buffer.slice(
+        options.data.byteOffset,
+        options.data.byteOffset + options.data.byteLength,
+      ) as ArrayBuffer,
+    ),
   };
 }
 
-export async function readEvidenceFile(storagePath: string): Promise<Buffer> {
-  const normalized = storagePath.replace(/^\/+/, "");
-  const absolutePath = path.resolve(getEvidenceBaseDir(), normalized);
-  const baseDir = path.resolve(getEvidenceBaseDir());
+/**
+ * Reads a version's content.
+ *
+ * Prefers the database column. Rows created before evidence moved into the
+ * database still only have a file on one machine's disk, so those fall back to
+ * reading it — with the traversal guard the old implementation had.
+ */
+export async function readEvidenceContent(version: {
+  data?: Buffer | Uint8Array | null;
+  storagePath: string;
+}): Promise<Buffer> {
+  if (version.data && version.data.byteLength > 0) {
+    return Buffer.from(version.data);
+  }
 
-  if (!absolutePath.startsWith(baseDir)) {
+  const normalized = version.storagePath.replace(/^\/+/, "");
+  const baseDir = path.resolve(getEvidenceBaseDir());
+  const absolutePath = path.resolve(baseDir, normalized);
+
+  // `startsWith` on the base alone would accept a sibling like `/data/evidence-x`.
+  if (absolutePath !== baseDir && !absolutePath.startsWith(baseDir + path.sep)) {
     throw new Error("Invalid evidence file path");
   }
 
-  return fs.readFile(absolutePath);
+  try {
+    return await fs.readFile(absolutePath);
+  } catch {
+    throw new Error(
+      "Evidence content is unavailable. It predates database storage and is not present on this instance.",
+    );
+  }
 }
 
 export async function writeTextEvidenceFile(options: {
@@ -108,6 +141,10 @@ export async function writeTextEvidenceFile(options: {
   });
 }
 
+/**
+ * No longer creates anything: content lives in the database. Retained as a
+ * no-op so existing call sites keep working.
+ */
 export async function ensureEvidenceStorageExists() {
-  await fs.mkdir(getEvidenceBaseDir(), { recursive: true });
+  // Intentionally empty.
 }

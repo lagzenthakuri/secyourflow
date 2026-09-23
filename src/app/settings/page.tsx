@@ -12,7 +12,6 @@ import {
     ChevronRight,
     Save,
     Search,
-    AlertTriangle,
     CheckCircle2,
     XCircle,
     Plus,
@@ -657,10 +656,6 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
     );
 }
 
-// Restricted field wrapper
-function RestrictedField({ isMainOfficer, children }: { isMainOfficer: boolean; children: React.ReactNode }) {
-    return <>{children}</>;
-}
 
 interface GeneralSectionProps {
     settings: PlatformSettings | null;

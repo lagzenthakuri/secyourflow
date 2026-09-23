@@ -43,8 +43,6 @@ model User {
   nis2TimelineEntriesAuthored        Nis2IncidentTimelineEntry[]       @relation("Nis2TimelineAuthor")
   notifications                      Notification[]
   notificationRules                  NotificationRule[]
-  ProductKey                         ProductKey[]
-  ProductKeyActivation               ProductKeyActivation[]
   remediationEvidenceUploaded        RemediationEvidence[]             @relation("RemediationEvidenceUploadedBy")
   remediationNotesAuthored           RemediationNote[]                 @relation("RemediationNoteAuthor")
   remediationPlansOwned              RemediationPlan[]                 @relation("RemediationPlanOwner")
@@ -137,6 +135,7 @@ model Organization {
   complianceTrendSnapshots ComplianceTrendSnapshot[]
   dashboardViews           DashboardView[]
   dashboardViewShares      DashboardViewShare[]
+  dataAssets               DataAsset[]
   externalTickets          ExternalTicket[]
   notificationRules        NotificationRule[]
   invitations              Invitation[]
@@ -148,8 +147,6 @@ model Organization {
   nis2ProcessVendorLinks   Nis2ProcessVendorDependency[]
   nis2Vendors              Nis2Vendor[]
   policies                 Policy[]
-  ProductKey               ProductKey[]
-  ProductKeyActivation     ProductKeyActivation[]
   remediationEvidence      RemediationEvidence[]
   remediationNotes         RemediationNote[]
   remediationPlans         RemediationPlan[]
@@ -157,6 +154,7 @@ model Organization {
   reportArtifacts          ReportArtifact[]
   reportRuns               ReportRun[]
   reportSchedules          ReportSchedule[]
+  riskAppetites            RiskAppetite[]
   riskEntries              RiskRegister[]
   riskSnapshots            RiskSnapshot[]
   scanResults              ScanResult[]
@@ -172,6 +170,7 @@ model Organization {
   wazuhAlerts              WazuhAlert[]
 
   @@index([name])
+  jobRuns                  JobRun[]
 }
 
 model Asset {
@@ -212,6 +211,9 @@ model Asset {
   nis2ProcessLinks    Nis2ProcessAssetDependency[]
   riskEntries         RiskRegister[]
   indicatorMatches    ThreatIndicatorMatch[]
+  vendorLinks         VendorAssetLink[]
+  dataLinks           AssetDataLink[]
+  policyLinks         PolicyAssetLink[]
 
   @@index([name])
   @@index([type])
@@ -365,6 +367,7 @@ model ComplianceControl {
   framework            ComplianceFramework              @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
   evidenceFiles        ComplianceEvidence[]
   vulnerabilities      VulnerabilityComplianceControl[]
+  policyLinks          PolicyControlLink[]
 
   @@unique([frameworkId, controlId])
   @@index([frameworkId])
@@ -420,7 +423,11 @@ model ComplianceEvidenceVersion {
   fileName     String
   mimeType     String
   sizeBytes    Int
+  /// Legacy on-disk location. Retained so pre-migration rows stay downloadable.
   storagePath  String
+  /// File content. Stored in the database, like ReportArtifact.data, so any
+  /// replica can serve a download and a container restart cannot lose evidence.
+  data         Bytes?
   checksum     String?
   notes        String?
   uploadedById String?
@@ -829,6 +836,9 @@ model Setting {
   aiProvider              String       @default("OLLAMA")
   aiModel                 String?
   aiEndpoint              String?
+  // Sealed with lib/crypto/sealed-secrets (AES-256-GCM), never returned to the
+  // client. Falls back to the provider's environment variable when unset.
+  aiApiKey                String?
   organization            Organization @relation(fields: [organizationId], references: [id])
 }
 
@@ -884,7 +894,13 @@ model RiskRegister {
   riskScore        Float
   impactScore      Float
   likelihoodScore  Float
-  status           String        @default("ACTIVE")
+  // Was an unconstrained String, so a client could PATCH it to any value while
+  // the UI branched on three magic strings.
+  status           RiskEntryStatus @default(PROCESSING)
+  // Whether a model actually produced this assessment, or it came from the
+  // deterministic fallback. The UI must never present the two identically.
+  analysisSource   RiskAnalysisSource @default(DETERMINISTIC)
+  failureReason    String?
   aiAnalysis       Json
   treatmentOption  String?
   responsibleParty String?
@@ -897,9 +913,15 @@ model RiskRegister {
   remarks          String?
   riskCategory2    String?
   selectedControls String?
+  /// Optional direct attribution to a vendor. Risks on a vendor's assets are
+  /// reached through the asset; this is for risks the vendor itself carries
+  /// (contract, service continuity, supplier breach).
+  vendorId         String?
   asset            Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
   organization     Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   vulnerability    Vulnerability @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+  vendor           Nis2Vendor?   @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  policyLinks      PolicyRiskLink[]
 
   @@index([assetId])
   @@index([vulnerabilityId])
@@ -909,6 +931,11 @@ model RiskRegister {
   @@index([organizationId, riskScore(sort: Desc)])
   @@index([createdAt(sort: Desc)])
   @@index([assetId, vulnerabilityId])
+  @@index([vendorId])
+  // One live assessment per vulnerability-on-asset. Without this the engine
+  // created a new row on every run, filling the register with stale
+  // PROCESSING/FAILED duplicates and hiding the good result.
+  @@unique([organizationId, assetId, vulnerabilityId])
 }
 
 model VulnerabilityWorkflowTransition {
@@ -1405,6 +1432,7 @@ model Policy {
   description    String?
   version        String       @default("1.0")
   status         PolicyStatus @default(DRAFT)
+  /// Document level in the policy hierarchy: POLICY | STANDARD | PROCEDURE | GUIDELINE.
   type           String?
   url            String?
   owner          String?
@@ -1415,8 +1443,186 @@ model Policy {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
+  /// What the policy applies to: Policy -> Risks -> Assets -> Vendors -> Data -> Controls.
+  riskLinks      PolicyRiskLink[]
+  assetLinks     PolicyAssetLink[]
+  vendorLinks    PolicyVendorLink[]
+  dataLinks      PolicyDataLink[]
+  controlLinks   PolicyControlLink[]
+
   @@index([organizationId])
   @@index([status])
+  @@index([organizationId, status])
+  @@index([nextReview])
+}
+
+// ---------------------------------------------------------------------------
+// GRC interconnection core — Vendor <-> Asset <-> Data <-> Risk <-> Policy <-> Control.
+//
+// Relationships are explicit join models rather than ID arrays so that both
+// sides can be traversed with a single query and deleted rows stay consistent
+// through referential cascades.
+// ---------------------------------------------------------------------------
+
+/// Catalog of the data the organization handles. One row per data type
+/// (e.g. "Customer PII"), shared by every vendor and asset that touches it —
+/// never duplicated per relationship.
+model DataAsset {
+  id             String             @id @default(cuid())
+  organizationId String
+  name           String
+  category       DataCategory       @default(BUSINESS_SENSITIVE)
+  classification DataClassification @default(INTERNAL)
+  description    String?
+  retentionNotes String?
+  tags           String[]           @default([])
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  vendorLinks VendorDataLink[]
+  assetLinks  AssetDataLink[]
+  policyLinks PolicyDataLink[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@index([organizationId, category])
+  @@index([organizationId, classification])
+}
+
+/// How a vendor relates to an asset: which vendor provides, manages, hosts or
+/// otherwise interacts with it.
+model VendorAssetLink {
+  id               String                    @id @default(cuid())
+  vendorId         String
+  assetId          String
+  relationshipType VendorAssetRelationshipType @default(MANAGES)
+  notes            String?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  vendor           Nis2Vendor                @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  asset            Asset                     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([vendorId, assetId])
+  @@index([assetId])
+}
+
+/// What a vendor does with a data type: collects, accesses, stores, processes or shares it.
+model VendorDataLink {
+  id           String              @id @default(cuid())
+  vendorId     String
+  dataAssetId  String
+  accessType   VendorDataAccessType @default(ACCESSES)
+  notes        String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  vendor       Nis2Vendor          @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  dataAsset    DataAsset           @relation(fields: [dataAssetId], references: [id], onDelete: Cascade)
+
+  @@unique([vendorId, dataAssetId])
+  @@index([dataAssetId])
+}
+
+/// What an asset does with a data type: stores, processes or transits it.
+model AssetDataLink {
+  id          String     @id @default(cuid())
+  assetId     String
+  dataAssetId String
+  dataRole    AssetDataRole @default(STORES)
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  asset       Asset      @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  dataAsset   DataAsset  @relation(fields: [dataAssetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, dataAssetId])
+  @@index([dataAssetId])
+}
+
+/// Board-level statement of how much residual risk (1-25 scale) the
+/// organization accepts in a risk category. Risks are evaluated against the
+/// tolerance of their category to decide whether they sit within appetite,
+/// are approaching the threshold, or exceed it.
+model RiskAppetite {
+  id             String            @id @default(cuid())
+  organizationId String
+  /// Risk category this statement governs, matched case-insensitively against
+  /// the risk's primary category. The literal "ALL" acts as the catch-all.
+  category       String
+  appetiteLevel  RiskAppetiteLevel @default(MODERATE)
+  /// Maximum acceptable residual risk score on the 1-25 (impact x likelihood) scale.
+  toleranceMax   Int
+  statement      String
+  boardApproved  Boolean           @default(false)
+  boardApprovedAt DateTime?
+  reviewDate     DateTime?
+  owner          String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, category])
+  @@index([organizationId])
+}
+
+model PolicyRiskLink {
+  id        String      @id @default(cuid())
+  policyId  String
+  riskId    String
+  createdAt DateTime    @default(now())
+  policy    Policy      @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  risk      RiskRegister @relation(fields: [riskId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, riskId])
+  @@index([riskId])
+}
+
+model PolicyAssetLink {
+  id        String   @id @default(cuid())
+  policyId  String
+  assetId   String
+  createdAt DateTime @default(now())
+  policy    Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, assetId])
+  @@index([assetId])
+}
+
+model PolicyVendorLink {
+  id        String       @id @default(cuid())
+  policyId  String
+  vendorId  String
+  createdAt DateTime     @default(now())
+  policy    Policy       @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  vendor    Nis2Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, vendorId])
+  @@index([vendorId])
+}
+
+model PolicyDataLink {
+  id          String    @id @default(cuid())
+  policyId    String
+  dataAssetId String
+  createdAt   DateTime  @default(now())
+  policy      Policy    @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  dataAsset   DataAsset @relation(fields: [dataAssetId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, dataAssetId])
+  @@index([dataAssetId])
+}
+
+model PolicyControlLink {
+  id        String           @id @default(cuid())
+  policyId  String
+  controlId String
+  createdAt DateTime         @default(now())
+  policy    Policy           @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  control   ComplianceControl @relation(fields: [controlId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, controlId])
+  @@index([controlId])
 }
 
 model Audit {
@@ -1461,41 +1667,7 @@ model WazuhAlert {
   @@index([timestamp])
 }
 
-model ProductKey {
-  id                   String                 @id
-  organizationId       String
-  createdById          String
-  codeHash             String
-  codePrefix           String
-  targetRole           Role
-  expiresAt            DateTime
-  revokedAt            DateTime?
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime
-  User                 User                   @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  Organization         Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  ProductKeyActivation ProductKeyActivation[]
 
-  @@unique([organizationId, codeHash])
-  @@index([organizationId, expiresAt])
-  @@index([organizationId, revokedAt])
-  @@index([organizationId, targetRole])
-}
-
-model ProductKeyActivation {
-  id             String       @id
-  organizationId String
-  productKeyId   String
-  userId         String
-  activatedAt    DateTime     @default(now())
-  Organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  ProductKey     ProductKey   @relation(fields: [productKeyId], references: [id], onDelete: Cascade)
-  User           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([productKeyId, userId])
-  @@index([organizationId, activatedAt])
-  @@index([organizationId, userId])
-}
 
 enum Role {
   IT_OFFICER
@@ -1769,6 +1941,65 @@ enum PolicyStatus {
   UNDER_REVIEW
 }
 
+enum DataCategory {
+  CUSTOMER_PII
+  EMPLOYEE_DATA
+  FINANCIAL_DATA
+  AUTHENTICATION_CREDENTIALS
+  BUSINESS_SENSITIVE
+  HEALTH_DATA
+  TELEMETRY
+  OTHER
+}
+
+enum DataClassification {
+  PUBLIC
+  INTERNAL
+  CONFIDENTIAL
+  RESTRICTED
+}
+
+enum VendorAssetRelationshipType {
+  PROVIDES
+  MANAGES
+  HOSTS
+  OPERATES
+  SUPPORTS
+}
+
+enum VendorDataAccessType {
+  COLLECTS
+  ACCESSES
+  STORES
+  PROCESSES
+  SHARES
+}
+
+enum AssetDataRole {
+  STORES
+  PROCESSES
+  TRANSITS
+}
+
+/// Strategic willingness to take risk, from averse (lowest tolerance) to hungry.
+enum RiskAppetiteLevel {
+  AVERSE
+  CAUTIOUS
+  MODERATE
+  OPEN
+  HUNGRY
+}
+
+/// Where a risk's score sits relative to its category's tolerance:
+/// WITHIN — comfortably below, APPROACHING — near the threshold,
+/// EXCEEDED — above the acceptable appetite, NOT_EVALUATED — no statement matches.
+enum RiskAppetiteStatus {
+  WITHIN
+  APPROACHING
+  EXCEEDED
+  NOT_EVALUATED
+}
+
 enum AuditType {
   INTERNAL
   EXTERNAL
@@ -1931,6 +2162,10 @@ model Nis2Vendor {
   updatedAt        DateTime                      @updatedAt
   organization     Organization                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   processLinks     Nis2ProcessVendorDependency[]
+  assetLinks       VendorAssetLink[]
+  dataLinks        VendorDataLink[]
+  policyLinks      PolicyVendorLink[]
+  riskEntries      RiskRegister[]
 
   @@unique([organizationId, name])
   @@index([organizationId])
@@ -2065,4 +2300,54 @@ enum Nis2ProcessCriticality {
   CRITICAL
   IMPORTANT
   SUPPORTING
+}
+
+/// Durable record of a background job. BullMQ owns the queue; this owns the
+/// history, so the UI can poll progress and operators can audit what ran.
+model JobRun {
+  id             String        @id @default(cuid())
+  queue          String
+  jobName        String
+  /// BullMQ job id, absent while a job runs inline (no Redis configured).
+  jobId          String?
+  status         JobStatus     @default(QUEUED)
+  organizationId String?
+  /// Domain object this job acts on, for "is my analysis done yet" lookups.
+  entityType     String?
+  entityId       String?
+  payload        Json?
+  result         Json?
+  error          String?
+  attempts       Int           @default(0)
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([queue, status])
+  @@index([entityType, entityId])
+  @@index([status, createdAt])
+  @@index([createdAt(sort: Desc)])
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum RiskEntryStatus {
+  PROCESSING
+  ACTIVE
+  FAILED
+  /// Kept for history after a newer assessment replaced it.
+  SUPERSEDED
+}
+
+enum RiskAnalysisSource {
+  AI
+  DETERMINISTIC
 }

@@ -5,6 +5,7 @@ import { trivyAdapter } from "@/lib/scanners/adapters/trivy";
 import { openvasAdapter } from "@/lib/scanners/adapters/openvas";
 import { nessusAdapter } from "@/lib/scanners/adapters/nessus";
 import { qualysAdapter } from "@/lib/scanners/adapters/qualys";
+import { tenableAdapter } from "@/lib/scanners/adapters/tenable";
 
 /**
  * Every scanner the run endpoint can dispatch to, keyed by the scanner type
@@ -16,6 +17,7 @@ export const SCANNER_ADAPTERS: Partial<Record<VulnSource, ScannerAdapter>> = {
     OPENVAS: openvasAdapter,
     NESSUS: nessusAdapter,
     QUALYS: qualysAdapter,
+    TENABLE: tenableAdapter,
 };
 
 export function getScannerAdapter(type: VulnSource): ScannerAdapter | null {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { RiskRegisterTable } from "@/components/risk/RiskRegisterTable";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -135,6 +136,7 @@ export default function RiskRegisterPage() {
 
   return (
     <DashboardLayout>
+      <ErrorBanner message={overviewError} onDismiss={() => setOverviewError(null)} className="mb-4" />
       <div className="space-y-5">
         <PageHeader
           title="Risk Register"

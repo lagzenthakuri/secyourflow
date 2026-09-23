@@ -635,43 +635,57 @@ export async function runAutomatedControlAssessment(
     options.reason ? ` (${options.reason})` : ""
   }`;
 
-  await prisma.$transaction(async (tx) => {
-    await tx.complianceControl.update({
-      where: { id: control.id },
-      data: {
-        status: evaluated.status,
-        implementationStatus: statusToImplementation(evaluated.status),
-        evidence: evaluated.evidenceSummary,
-        notes: control.notes ? `${control.notes}\n${autoNote}` : autoNote,
-        lastAssessed: now,
-        nextAssessment,
-      },
+  // The control row and the per-asset rows are written separately.
+  //
+  // Looping an upsert per asset *inside* an interactive transaction blew
+  // Prisma's 5s transaction timeout past roughly a hundred assets and threw
+  // "Transaction already closed" on the ordinary scheduled-assessment path.
+  await prisma.complianceControl.update({
+    where: { id: control.id },
+    data: {
+      status: evaluated.status,
+      implementationStatus: statusToImplementation(evaluated.status),
+      evidence: evaluated.evidenceSummary,
+      notes: control.notes ? `${control.notes}\n${autoNote}` : autoNote,
+      lastAssessed: now,
+      nextAssessment,
+    },
+  });
+
+  const evidenceNote = `[AUTO-ASSET-ASSESSMENT] ${now.toISOString()} (${control.controlId})`;
+
+  // Group assets by resulting status so the whole set is written in a handful
+  // of statements instead of one round trip each.
+  const assetsByStatus = new Map<ComplianceStatus, string[]>();
+  for (const asset of assets) {
+    const status = evaluated.assetStatuses.get(asset.id) ?? "NOT_ASSESSED";
+    const bucket = assetsByStatus.get(status);
+    if (bucket) {
+      bucket.push(asset.id);
+    } else {
+      assetsByStatus.set(status, [asset.id]);
+    }
+  }
+
+  for (const [status, assetIds] of assetsByStatus) {
+    // updateMany covers the rows that already exist...
+    await prisma.assetComplianceControl.updateMany({
+      where: { controlId: control.id, assetId: { in: assetIds } },
+      data: { status, evidence: evidenceNote, assessedAt: now },
     });
 
-    for (const asset of assets) {
-      const status = evaluated.assetStatuses.get(asset.id) ?? "NOT_ASSESSED";
-      await tx.assetComplianceControl.upsert({
-        where: {
-          assetId_controlId: {
-            assetId: asset.id,
-            controlId: control.id,
-          },
-        },
-        update: {
-          status,
-          evidence: `[AUTO-ASSET-ASSESSMENT] ${now.toISOString()} (${control.controlId})`,
-          assessedAt: now,
-        },
-        create: {
-          assetId: asset.id,
-          controlId: control.id,
-          status,
-          evidence: `[AUTO-ASSET-ASSESSMENT] ${now.toISOString()} (${control.controlId})`,
-          assessedAt: now,
-        },
-      });
-    }
-  });
+    // ...and createMany, skipping duplicates, covers the ones that do not.
+    await prisma.assetComplianceControl.createMany({
+      data: assetIds.map((assetId) => ({
+        assetId,
+        controlId: control.id,
+        status,
+        evidence: evidenceNote,
+        assessedAt: now,
+      })),
+      skipDuplicates: true,
+    });
+  }
 
   if (options.persistSnapshot ?? true) {
     await recordComplianceTrendSnapshot(control.framework.id);
@@ -695,9 +709,20 @@ export async function runAutomatedControlAssessment(
 export async function runAutomatedFrameworkAssessment(
   frameworkId: string,
   options: {
+    /** Required: the framework must be verified to belong to this tenant. */
+    organizationId: string;
     reason?: string;
-  } = {},
+  },
 ) {
+  const framework = await prisma.complianceFramework.findFirst({
+    where: { id: frameworkId, organizationId: options.organizationId },
+    select: { id: true },
+  });
+
+  if (!framework) {
+    throw new Error("Framework not found for this organization");
+  }
+
   const controls = await prisma.complianceControl.findMany({
     where: {
       frameworkId,
@@ -727,12 +752,19 @@ export async function runAutomatedFrameworkAssessment(
   };
 }
 
+/**
+ * Assesses the controls that are due for ONE organization.
+ *
+ * `organizationId` is required. When it was optional the `where` collapsed to
+ * `{ framework: {} }` — every control in every tenant — which was reachable
+ * from `POST /api/compliance/assessments/run` with the admin token and no body.
+ */
 export async function runScheduledComplianceAssessments(
   options: {
-    organizationId?: string;
+    organizationId: string;
     asOf?: Date;
     limit?: number;
-  } = {},
+  },
 ): Promise<ScheduledAssessmentResult> {
   const asOf = options.asOf ?? new Date();
   const limit = options.limit ?? 250;
@@ -740,7 +772,7 @@ export async function runScheduledComplianceAssessments(
   const dueControls = await prisma.complianceControl.findMany({
     where: {
       framework: {
-        ...(options.organizationId ? { organizationId: options.organizationId } : {}),
+        organizationId: options.organizationId,
       },
       OR: [
         { nextAssessment: null },

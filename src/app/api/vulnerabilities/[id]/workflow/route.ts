@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireSessionWithOrg } from "@/lib/api-auth";
+import { requireSessionWithOrg, ROLE_VULNERABILITY_WRITE } from "@/lib/api-auth";
 import { applyWorkflowStateTimestamps, assertValidWorkflowTransition } from "@/lib/workflow/state-machine";
 import { calculateSlaDueAt } from "@/lib/workflow/sla";
 
@@ -18,7 +18,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const authResult = await requireSessionWithOrg(request);
+  const authResult = await requireSessionWithOrg(request, {
+    allowedRoles: ROLE_VULNERABILITY_WRITE,
+  });
   if (!authResult.ok) return authResult.response;
 
   const parsed = workflowSchema.safeParse(await request.json());
