@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
+import { AppetitePill, RiskLevelPill, type AppetiteStatus } from "@/components/grc/GrcPrimitives";
 
 interface RiskEntry {
     id: string;
@@ -37,6 +38,11 @@ interface RiskEntry {
     isResolved: boolean;
     vulnerabilityTitle?: string;
     assetName?: string;
+    vendorName?: string | null;
+    riskLevel?: string;
+    appetiteStatus?: string;
+    appetiteTolerance?: number | null;
+    appetiteCategory?: string | null;
 }
 
 export function RiskRegisterTable() {
@@ -267,6 +273,7 @@ export function RiskRegisterTable() {
                             <th className="p-4 text-left">ID & Threat</th>
                             <th className="p-4 text-center">Impact Details</th>
                             <th className="p-4 text-center">Score</th>
+                            <th className="p-4 text-center">Appetite</th>
                             <th className="p-4 text-left">Treatment</th>
                             <th className="p-4 text-center">Resolved</th>
                             <th className="p-4 text-right">Actions</th>
@@ -333,6 +340,17 @@ export function RiskRegisterTable() {
                                                 <span className="text-[10px] text-[var(--text-muted)]">
                                                     I:{risk.impactScore.toFixed(1)} x L:{risk.likelihoodScore}
                                                 </span>
+                                            </div>
+                                        </td>
+
+                                        {/* Appetite: banded level and where the score sits vs its category's tolerance */}
+                                        <td className="p-4 text-center">
+                                            <div className="inline-flex flex-col items-center gap-1">
+                                                <RiskLevelPill level={risk.riskLevel} />
+                                                <AppetitePill
+                                                    status={risk.appetiteStatus as AppetiteStatus | undefined}
+                                                    tolerance={risk.appetiteTolerance}
+                                                />
                                             </div>
                                         </td>
 

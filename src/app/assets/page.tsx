@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AddAssetModal } from "@/components/assets/AddAssetModal";
@@ -20,6 +21,7 @@ import {
   Cloud,
   Database,
   Download,
+  Eye,
   Filter,
   Globe,
   LayoutGrid,
@@ -989,6 +991,13 @@ export default function AssetsPage() {
                                 <Network size={11} />
                                 Impact
                               </button>
+                              <Link
+                                href={`/assets/${asset.id}`}
+                                className="inline-flex items-center gap-1 rounded-md border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)] hover:text-blue-500"
+                              >
+                                <Eye size={11} />
+                                Overview
+                              </Link>
                             </div>
 
                             {asset.tags?.length ? (

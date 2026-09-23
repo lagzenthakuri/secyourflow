@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSessionWithOrg } from "@/lib/api-auth";
+import { evaluateRiskAppetite, riskCategoriesFrom, riskLevelForScore } from "@/lib/grc/appetite";
+import { fetchAppetiteStatements } from "@/lib/grc/overviews";
 
 const updateRiskRegisterSchema = z.object({
     id: z.string().min(1),
@@ -53,31 +55,47 @@ export async function GET(request: NextRequest) {
 
         const total = await prisma.riskRegister.count({ where });
 
-        const risks = await prisma.riskRegister.findMany({
-            where,
-            skip: (page - 1) * limit,
-            take: limit,
-            include: {
-                vulnerability: {
-                    select: {
-                        title: true,
-                        cveId: true,
-                        severity: true,
-                        description: true,
+        const [risks, appetiteStatements] = await Promise.all([
+            prisma.riskRegister.findMany({
+                where,
+                skip: (page - 1) * limit,
+                take: limit,
+                include: {
+                    vulnerability: {
+                        select: {
+                            title: true,
+                            cveId: true,
+                            severity: true,
+                            description: true,
+                        },
+                    },
+                    asset: {
+                        select: {
+                            name: true,
+                            type: true,
+                        },
+                    },
+                    vendor: {
+                        select: {
+                            id: true,
+                            name: true,
+                        },
                     },
                 },
-                asset: {
-                    select: {
-                        name: true,
-                        type: true,
-                    },
-                },
-            },
-            orderBy: [{ riskScore: "desc" }, { id: "asc" }],
-        });
+                orderBy: [{ riskScore: "desc" }, { id: "asc" }],
+            }),
+            fetchAppetiteStatements(authResult.context.organizationId),
+        ]);
 
         const formattedRisks = risks.map((risk, index) => {
             const analysis = (risk.aiAnalysis as Record<string, unknown>) || {};
+            // Appetite is derived at read time so editing a tolerance
+            // immediately changes what the register shows.
+            const appetite = evaluateRiskAppetite(
+                risk.riskScore,
+                riskCategoriesFrom(risk),
+                appetiteStatements,
+            );
 
             return {
                 id: risk.id,
@@ -115,6 +133,12 @@ export async function GET(request: NextRequest) {
                 failureReason: risk.failureReason,
                 vulnerabilityTitle: risk.vulnerability.title,
                 assetName: risk.asset.name,
+                riskLevel: riskLevelForScore(risk.riskScore),
+                appetiteStatus: appetite.status,
+                appetiteCategory: appetite.statement?.category ?? null,
+                appetiteTolerance: appetite.toleranceMax,
+                vendorId: risk.vendor?.id ?? null,
+                vendorName: risk.vendor?.name ?? null,
             };
         });
 

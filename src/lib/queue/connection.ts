@@ -53,6 +53,19 @@ export function getRedisConnection(): Redis {
 let commandClient: Redis | null = null;
 let lastCommandClientErrorLoggedAt = 0;
 
+function getRedisErrorMessage(error: unknown): string {
+  if (error instanceof AggregateError) {
+    const nestedMessages = error.errors.map(getRedisErrorMessage).filter(Boolean);
+    return nestedMessages.join("; ") || "Connection failed";
+  }
+
+  if (error instanceof Error) {
+    return error.message || error.name;
+  }
+
+  return "Connection failed";
+}
+
 export function getRedisCommandClient(): Redis {
   const url = process.env.REDIS_URL?.trim();
   if (!url) {
@@ -76,12 +89,43 @@ export function getRedisCommandClient(): Redis {
       const now = Date.now();
       if (now - lastCommandClientErrorLoggedAt > 60_000) {
         lastCommandClientErrorLoggedAt = now;
-        console.error("[redis] command client unavailable:", error.message || error);
+        console.error(`[redis] Command client unavailable: ${getRedisErrorMessage(error)}`);
       }
     });
   }
 
   return commandClient;
+}
+
+/**
+ * Resolves once the short-command client can safely accept a write. Commands
+ * issued while ioredis is still connecting are rejected because the offline
+ * queue is disabled; waiting briefly avoids a spurious first-request fallback
+ * immediately after process startup.
+ */
+export async function getReadyRedisCommandClient(timeoutMs: number): Promise<Redis | null> {
+  const client = getRedisCommandClient();
+  if (client.status === "ready") {
+    return client;
+  }
+
+  return new Promise<Redis | null>((resolve) => {
+    let settled = false;
+    const finish = (value: Redis | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      client.off("ready", onReady);
+      client.off("end", onUnavailable);
+      resolve(value);
+    };
+    const onReady = () => finish(client);
+    const onUnavailable = () => finish(null);
+    const timer = setTimeout(() => finish(null), timeoutMs);
+
+    client.once("ready", onReady);
+    client.once("end", onUnavailable);
+  });
 }
 
 /** Workers need their own blocking connection, separate from the producer's. */

@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handlers } from "@/lib/auth";
 import { extractRequestContext } from "@/lib/request-utils";
-import { consumeRateLimit } from "@/lib/security/rate-limit";
-
-const LOGIN_RATE_LIMIT_IP_ATTEMPTS = 10;
-const LOGIN_RATE_LIMIT_IP_WINDOW_MS = 10 * 60 * 1000;
-
-const LOGIN_RATE_LIMIT_EMAIL_ATTEMPTS = 5;
-const LOGIN_RATE_LIMIT_EMAIL_WINDOW_MS = 10 * 60 * 1000;
+import { consumeAuthRateLimit } from "@/lib/security/auth-rate-limit";
 
 export const GET = handlers.GET;
 
@@ -51,38 +45,21 @@ export async function POST(request: NextRequest) {
   }
 
   const ctx = extractRequestContext(request);
-  const ip = ctx.ipAddress ?? "unknown";
-
-  const ipBucket = await consumeRateLimit(
-    `auth:credentials:ip:${ip}`,
-    LOGIN_RATE_LIMIT_IP_ATTEMPTS,
-    LOGIN_RATE_LIMIT_IP_WINDOW_MS,
-  );
-
   const email = await extractEmailFromCredentialsCallback(request);
-  const emailBucket = email
-    ? await consumeRateLimit(
-        `auth:credentials:email:${email}`,
-        LOGIN_RATE_LIMIT_EMAIL_ATTEMPTS,
-        LOGIN_RATE_LIMIT_EMAIL_WINDOW_MS,
-      )
-    : null;
+  const rateLimit = await consumeAuthRateLimit("credentials", {
+    ipAddress: ctx.ipAddress,
+    email,
+  });
 
-  if (!ipBucket.allowed || (emailBucket && !emailBucket.allowed)) {
-    const retryAfterSeconds = !ipBucket.allowed
-      ? ipBucket.retryAfterSeconds
-      : emailBucket && !emailBucket.allowed
-        ? emailBucket.retryAfterSeconds
-        : 60;
-
+  if (!rateLimit.allowed) {
     const response = NextResponse.json(
       {
         error: "Too many authentication attempts. Please try again later.",
-        retryAfterSeconds,
+        retryAfterSeconds: rateLimit.retryAfterSeconds,
       },
       { status: 429 },
     );
-    response.headers.set("Retry-After", String(retryAfterSeconds));
+    response.headers.set("Retry-After", String(rateLimit.retryAfterSeconds));
     response.headers.set("Cache-Control", "no-store");
     return response;
   }

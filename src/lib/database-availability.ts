@@ -5,6 +5,22 @@ const globalState = globalThis as typeof globalThis & {
 };
 
 const dbUnavailablePatterns = [
+  // Prisma initialization/codes.
+  "p1000",
+  "p1001",
+  "p1002",
+  "prisma client initialization error",
+  // PostgreSQL and Node network failures. These are especially important with
+  // the pg adapter: its EHOSTUNREACH/ETIMEDOUT error is otherwise allowed to
+  // escape the credentials callback, where Auth.js mislabels it as a
+  // `Configuration` error and redirects the user away from the login form.
+  "econnrefused",
+  "econnreset",
+  "ehostunreach",
+  "enetunreach",
+  "etimedout",
+  "socket hang up",
+  // Messages emitted by Prisma, pg proxies, and managed PostgreSQL providers.
   "planlimitreached",
   "failed to identify your database",
   "connection terminated",
@@ -49,9 +65,13 @@ function extractErrorText(error: unknown): string {
         fragments.push(value.message.toLowerCase());
       }
 
-      const cause = (value as Error & { cause?: unknown }).cause;
-      if (cause !== undefined) {
-        queue.push(cause);
+      const errorWithCode = value as Error & { code?: unknown; cause?: unknown };
+      if (typeof errorWithCode.code === "string") {
+        fragments.push(errorWithCode.code.toLowerCase());
+      }
+
+      if (errorWithCode.cause !== undefined) {
+        queue.push(errorWithCode.cause);
       }
 
       continue;

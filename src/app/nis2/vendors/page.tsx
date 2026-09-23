@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { Modal } from "@/components/ui/Modal";
 import { EmptyState, Pill, ProgressBar, SectionCard } from "@/components/nis2/Nis2Primitives";
-import { AlertTriangle, Building2, Network, Plus, ShieldCheck, Sigma } from "lucide-react";
+import { AlertTriangle, Building2, Eye, Network, Plus, ShieldCheck, Sigma } from "lucide-react";
 
 interface ScoreComponent {
     key: string;
@@ -276,6 +277,16 @@ export default function Nis2VendorsPage() {
                                                 </div>
                                             </div>
                                         </button>
+
+                                        <div className="mt-3 flex justify-end">
+                                            <Link
+                                                href={`/vendors/${vendor.id}`}
+                                                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border-color)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-secondary)] transition-colors hover:border-blue-500/40 hover:text-blue-500"
+                                            >
+                                                <Eye size={12} />
+                                                Open full overview — assets, data, risks, policies
+                                            </Link>
+                                        </div>
 
                                         {vendor.assessment.flags.length > 0 && (
                                             <ul className="mt-3 space-y-1">

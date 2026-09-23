@@ -62,7 +62,7 @@ if (googleClientId && googleClientSecret) {
     );
 }
 
-/** Provider ids the sign-in page should offer, resolved at build time. */
+/** Provider ids the authentication pages should offer, resolved at build time. */
 export const enabledOAuthProviders = oauthProviders
     .map((provider) => (typeof provider === "function" ? provider() : provider))
     .map((provider) => ("id" in provider ? (provider.id as string) : ""))

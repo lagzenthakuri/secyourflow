@@ -56,6 +56,10 @@ services:
   postgres:
     image: postgres:15-alpine
     restart: unless-stopped
+    # Bound to loopback so `npm run dev` on the host can use the same compose
+    # services without exposing the database on public network interfaces.
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -72,6 +76,8 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis_data:/data

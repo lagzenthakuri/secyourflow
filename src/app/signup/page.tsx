@@ -6,6 +6,8 @@ import Image from "next/image";
 import { Mail, Lock, User, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import { useAuthProviders } from "@/hooks/use-auth-providers";
 
 export default function SignUpPage() {
     const router = useRouter();
@@ -15,6 +17,7 @@ export default function SignUpPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { googleEnabled } = useAuthProviders();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -28,24 +31,26 @@ export default function SignUpPage() {
                 body: JSON.stringify({ name, email, password }),
             });
 
-            if (res.ok) {
-                // Login immediately after signup
-                const result = await signIn("credentials", {
-                    email,
-                    password,
-                    redirect: false,
-                    callbackUrl: "/dashboard",
-                });
+            const data = (await res.json().catch(() => null)) as { error?: string } | null;
 
-                if (result?.error) {
-                    setError("Account created, but automatic login failed. Please sign in.");
-                    setTimeout(() => router.push("/login"), 2000);
-                } else {
-                    router.push("/dashboard");
-                }
+            if (!res.ok) {
+                setError(data?.error || "Registration failed. Please try again.");
+                return;
+            }
+
+            // Login immediately after signup.
+            const result = await signIn("credentials", {
+                email,
+                password,
+                redirect: false,
+                callbackUrl: "/dashboard",
+            });
+
+            if (result?.error) {
+                setError("Account created, but automatic login failed. Please sign in.");
+                setTimeout(() => router.push("/login"), 2000);
             } else {
-                const data = await res.json();
-                setError(data.error || "Registration failed");
+                router.push("/dashboard");
             }
         } catch (err) {
             console.error("Signup error:", err);
@@ -80,7 +85,11 @@ export default function SignUpPage() {
                 <div className="card p-8">
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {error && (
-                            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-300 text-sm">
+                            <div
+                                role="alert"
+                                aria-live="polite"
+                                className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-300 text-sm"
+                            >
                                 {error}
                             </div>
                         )}
@@ -97,6 +106,8 @@ export default function SignUpPage() {
                                 />
                                 <input
                                     type="text"
+                                    name="name"
+                                    autoComplete="name"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     placeholder="John Doe"
@@ -118,6 +129,8 @@ export default function SignUpPage() {
                                 />
                                 <input
                                     type="email"
+                                    name="email"
+                                    autoComplete="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder="you@company.com"
@@ -139,6 +152,8 @@ export default function SignUpPage() {
                                 />
                                 <input
                                     type={showPassword ? "text" : "password"}
+                                    name="password"
+                                    autoComplete="new-password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="••••••••"
@@ -173,6 +188,26 @@ export default function SignUpPage() {
                         </button>
                     </form>
 
+                    {googleEnabled && (
+                        <>
+                            <div className="flex items-center gap-3 my-6">
+                                <span className="h-px flex-1 bg-[var(--border-color)]" />
+                                <span className="text-xs uppercase tracking-widest text-[var(--text-muted)]">
+                                    or
+                                </span>
+                                <span className="h-px flex-1 bg-[var(--border-color)]" />
+                            </div>
+
+                            <GoogleAuthButton
+                                disabled={isLoading}
+                                onClick={() => {
+                                    setError(null);
+                                    setIsLoading(true);
+                                    void signIn("google", { callbackUrl: "/dashboard" });
+                                }}
+                            />
+                        </>
+                    )}
                 </div>
 
                 {/* Footer */}

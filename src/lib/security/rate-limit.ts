@@ -1,4 +1,5 @@
-import { getRedisCommandClient, isRedisConfigured } from "@/lib/queue/connection";
+import type { Redis } from "ioredis";
+import { getReadyRedisCommandClient, isRedisConfigured } from "@/lib/queue/connection";
 
 /**
  * Rate limiting for authentication and 2FA.
@@ -61,11 +62,11 @@ const REDIS_PREFIX = "ratelimit:";
  * the window by the round-trip, never disables the limit.
  */
 async function consumeInRedis(
+  redis: Redis,
   key: string,
   maxAttempts: number,
   windowMs: number,
 ): Promise<RateLimitResult> {
-  const redis = getRedisCommandClient();
   const redisKey = `${REDIS_PREFIX}${key}`;
 
   const attempts = await redis.incr(redisKey);
@@ -89,7 +90,18 @@ async function consumeInRedis(
 }
 
 /** Upper bound on how long Redis may hold up a login or a 2FA challenge. */
+const REDIS_READY_DEADLINE_MS = 500;
 const REDIS_DEADLINE_MS = 1_500;
+const REDIS_FALLBACK_LOG_INTERVAL_MS = 60_000;
+let lastRedisFallbackLoggedAt = 0;
+
+function getRedisFailureMessage(error: unknown): string {
+  if (error instanceof AggregateError) {
+    return error.errors.map(getRedisFailureMessage).filter(Boolean).join("; ") || "Connection failed";
+  }
+
+  return error instanceof Error && error.message ? error.message : "Connection failed";
+}
 
 /**
  * Caps a Redis round trip.
@@ -124,11 +136,21 @@ export async function consumeRateLimit(
   }
 
   try {
-    return await withTimeout(consumeInRedis(key, maxAttempts, windowMs));
+    const redis = await getReadyRedisCommandClient(REDIS_READY_DEADLINE_MS);
+    if (!redis) {
+      throw new Error("Redis connection is not ready");
+    }
+
+    return await withTimeout(consumeInRedis(redis, key, maxAttempts, windowMs));
   } catch (error) {
     // Falling open would remove brute-force protection entirely, so degrade to
-    // the local counter instead.
-    console.error("[rate-limit] Redis unavailable, falling back to in-memory:", error);
+    // the local counter instead. Rate-limit the diagnostic because every login
+    // can otherwise produce another noisy stack trace while Redis is down.
+    const now = Date.now();
+    if (now - lastRedisFallbackLoggedAt > REDIS_FALLBACK_LOG_INTERVAL_MS) {
+      lastRedisFallbackLoggedAt = now;
+      console.error(`[rate-limit] Redis unavailable; using in-memory limiter: ${getRedisFailureMessage(error)}`);
+    }
     return consumeInMemory(key, maxAttempts, windowMs);
   }
 }
@@ -140,8 +162,12 @@ export async function resetRateLimit(key: string): Promise<void> {
   if (!isRedisConfigured()) return;
 
   try {
-    await withTimeout(getRedisCommandClient().del(`${REDIS_PREFIX}${key}`));
-  } catch (error) {
-    console.error("[rate-limit] Failed to reset counter:", error);
+    const redis = await getReadyRedisCommandClient(REDIS_READY_DEADLINE_MS);
+    if (redis) {
+      await withTimeout(redis.del(`${REDIS_PREFIX}${key}`));
+    }
+  } catch {
+    // A successful authentication has already removed the local counter. A
+    // Redis cleanup failure must never turn that success into an auth error.
   }
 }
