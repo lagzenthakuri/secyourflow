@@ -254,7 +254,7 @@ use its **pooled** connection string for `DATABASE_URL`.
 Required production environment variables:
 
 ```env
-DATABASE_URL=postgresql://...pooler-host.../secyourflow?sslmode=require
+DATABASE_URL=postgresql://...pooler-host.../secyourflow?sslmode=verify-full
 AUTH_SECRET=<long-random-secret>
 NEXTAUTH_URL=https://secyourflow.vercel.app
 AUTH_GOOGLE_ID=<google-client-id>
@@ -262,6 +262,11 @@ AUTH_GOOGLE_SECRET=<google-client-secret>
 DB_POOL_MAX=1
 DB_CONNECT_TIMEOUT_MS=5000
 ```
+
+`sslmode=verify-full` verifies both the database certificate and its hostname.
+If a provider uses a certificate that is not trusted by Node, configure its CA
+with `sslrootcert` instead. Use `uselibpqcompat=true&sslmode=require` only when
+that provider explicitly requires libpq's weaker certificate semantics.
 
 Also configure these trusted URLs in Google Cloud Console:
 

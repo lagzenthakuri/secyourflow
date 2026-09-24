@@ -1,3 +1,5 @@
+const legacyAliasSslModes = new Set(["prefer", "require", "verify-ca"]);
+
 /**
  * Normalises DATABASE_URL for the pg pool.
  *
@@ -33,6 +35,17 @@ export function normalizeDatabaseUrl(rawUrl: string | undefined): string {
 
   if (process.env.DB_PGBOUNCER === "true") {
     applyIfAbsent("pgbouncer", "true");
+  }
+
+  // pg-connection-string currently treats these values as aliases for
+  // verify-full, but warns because that compatibility will be removed in the
+  // next major version. Make the current, certificate-verifying behaviour
+  // explicit. A URL that opts into libpq compatibility is left untouched so
+  // providers that intentionally use require/prefer semantics still work.
+  const sslMode = parsed.searchParams.get("sslmode")?.toLowerCase();
+  const useLibpqCompat = parsed.searchParams.get("uselibpqcompat")?.toLowerCase() === "true";
+  if (sslMode && legacyAliasSslModes.has(sslMode) && !useLibpqCompat) {
+    parsed.searchParams.set("sslmode", "verify-full");
   }
 
   return parsed.toString();
