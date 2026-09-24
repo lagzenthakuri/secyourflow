@@ -1,11 +1,58 @@
 import { NextResponse } from "next/server";
 import { IngestionOrchestrator } from "@/modules/cve-ingestion/orchestrator";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+/**
+ * The ingestion health check intentionally treats external feeds as optional,
+ * but the application schema is not optional. Check the tables and columns
+ * used by authentication and the core GRC pages before reporting a deployment
+ * as ready; otherwise a partial migration can leave the health endpoint green
+ * while the dashboard fails one request at a time.
+ */
+async function assertApplicationSchema(): Promise<void> {
+  await prisma.user.findFirst({
+    select: { id: true },
+    take: 1,
+  });
+  await prisma.account.findFirst({
+    select: { id: true },
+    take: 1,
+  });
+  await prisma.nis2Vendor.findFirst({
+    select: { id: true },
+    take: 1,
+  });
+  await prisma.riskAppetite.findFirst({
+    select: { id: true },
+    take: 1,
+  });
+  await prisma.riskRegister.findFirst({
+    select: {
+      id: true,
+      vendorId: true,
+      analysisSource: true,
+      failureReason: true,
+    },
+    take: 1,
+  });
+  await prisma.setting.findFirst({
+    select: {
+      id: true,
+      aiProvider: true,
+      aiModel: true,
+      aiEndpoint: true,
+    },
+    take: 1,
+  });
+}
+
 export async function GET() {
   try {
+    await assertApplicationSchema();
+
     const orchestrator = new IngestionOrchestrator();
     const health = await orchestrator.getHealth();
 
