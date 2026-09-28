@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Setting } from "@prisma/client";
+import type { Setting } from "@repo/database";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/logger";
 import { extractRequestContext } from "@/lib/request-utils";
 import { requireSessionWithOrg } from "@/lib/api-auth";
+import { AI_PROVIDERS } from "@/lib/ai";
+import { encryptSecret } from "@/lib/crypto/sealed-secrets";
+
+/** Placeholder the API returns instead of a stored key. */
+const REDACTED_SECRET = "********";
 
 const PASSWORD_POLICIES = new Set(["STRONG", "MEDIUM", "BASIC"]);
 
@@ -13,6 +18,19 @@ const DEFAULT_SETTING_VALUES = {
     passwordPolicy: "STRONG",
     aiRiskAssessmentEnabled: true,
 };
+
+
+/**
+ * Strips the stored AI credential from a settings row.
+ *
+ * The GET handler spreads the whole record, so without this the sealed key
+ * envelope would be returned to every authenticated user. The client only
+ * needs to know whether a key is set.
+ */
+function redactSettings<T extends { aiApiKey?: string | null }>(settings: T) {
+    const { aiApiKey, ...rest } = settings;
+    return { ...rest, aiApiKey: aiApiKey ? REDACTED_SECRET : null, hasAiApiKey: Boolean(aiApiKey) };
+}
 
 export async function GET(request: NextRequest) {
     try {
@@ -34,7 +52,7 @@ export async function GET(request: NextRequest) {
                 }
             });
             return NextResponse.json({
-                ...defaultSettings,
+                ...redactSettings(defaultSettings),
                 organizationName: org.name,
                 domain: org.domain,
                 systemHealth: getSystemHealth(),
@@ -43,7 +61,7 @@ export async function GET(request: NextRequest) {
         }
 
         return NextResponse.json({
-            ...org.settings,
+            ...redactSettings(org.settings),
             organizationName: org.name,
             domain: org.domain,
             systemHealth: getSystemHealth(),
@@ -131,6 +149,10 @@ type SettingWriteData = Partial<
         | "sessionTimeout"
         | "passwordPolicy"
         | "aiRiskAssessmentEnabled"
+        | "aiProvider"
+        | "aiModel"
+        | "aiEndpoint"
+        | "aiApiKey"
     >
 >;
 
@@ -262,8 +284,73 @@ function buildSettingsUpdateData(
     applyRestrictedBoolean("aiRiskAssessmentEnabled");
     applyRestrictedSessionTimeout();
     applyRestrictedPasswordPolicy();
+    applyAiProviderSelection();
 
     return { settingsData, restrictedChanges, validationErrors };
+
+    /**
+     * Persists the AI provider choice. Only the selection is stored — API keys
+     * stay in the environment and are never written to the database.
+     */
+    function applyAiProviderSelection() {
+        if ("aiProvider" in input) {
+            const value = String(input.aiProvider ?? "").toUpperCase();
+            if (!(AI_PROVIDERS as readonly string[]).includes(value)) {
+                validationErrors.push(
+                    `aiProvider must be one of: ${AI_PROVIDERS.join(", ")}`,
+                );
+            } else if (!isMainOfficer) {
+                restrictedChanges.push("aiProvider");
+            } else {
+                settingsData.aiProvider = value;
+            }
+        }
+
+        if ("aiModel" in input) {
+            const raw = input.aiModel;
+            if (raw !== null && typeof raw !== "string") {
+                validationErrors.push("aiModel must be a string or null");
+            } else if (typeof raw === "string" && raw.length > 200) {
+                validationErrors.push("aiModel is too long");
+            } else if (!isMainOfficer) {
+                restrictedChanges.push("aiModel");
+            } else {
+                settingsData.aiModel = raw ? raw.trim() : null;
+            }
+        }
+
+        if ("aiEndpoint" in input) {
+            const raw = input.aiEndpoint;
+            if (raw !== null && typeof raw !== "string") {
+                validationErrors.push("aiEndpoint must be a string or null");
+            } else if (typeof raw === "string" && raw.trim() && !/^https?:\/\//i.test(raw.trim())) {
+                validationErrors.push("aiEndpoint must be an http(s) URL");
+            } else if (!isMainOfficer) {
+                restrictedChanges.push("aiEndpoint");
+            } else {
+                settingsData.aiEndpoint = raw && raw.trim() ? raw.trim() : null;
+            }
+        }
+
+        if ("aiApiKey" in input) {
+            const raw = input.aiApiKey;
+            if (raw !== null && typeof raw !== "string") {
+                validationErrors.push("aiApiKey must be a string or null");
+            } else if (!isMainOfficer) {
+                restrictedChanges.push("aiApiKey");
+            } else if (raw === null || raw.trim().length === 0) {
+                // Explicitly cleared: fall back to the environment key.
+                settingsData.aiApiKey = null;
+            } else if (raw.trim() === REDACTED_SECRET) {
+                // The GET returns a placeholder rather than the key; echoing it
+                // back means "unchanged", not "set the key to that literal".
+            } else {
+                // Sealed with AES-256-GCM, same envelope as scanner and threat
+                // feed credentials. Never stored or logged in plaintext.
+                settingsData.aiApiKey = encryptSecret(raw.trim());
+            }
+        }
+    }
 }
 
 export async function POST(request: NextRequest) {
@@ -347,7 +434,7 @@ export async function POST(request: NextRequest) {
             ctx,
         );
 
-        return NextResponse.json(updatedSettings);
+        return NextResponse.json(redactSettings(updatedSettings));
     } catch (error) {
         console.error("Settings POST Error:", error);
         return NextResponse.json(
