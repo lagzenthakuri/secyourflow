@@ -1,64 +1,49 @@
+# syntax=docker/dockerfile:1
 
-FROM node:18-alpine AS base
-
-# Install dependencies only when needed
-FROM base AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-RUN apk add --no-cache libc6-compat
-WORKDIR /app
-
-# Install dependencies based on the preferred package manager
-COPY package.json package-lock.json* ./
-RUN \
-    if [ -f package-lock.json ]; then npm ci; \
-    else echo "Lockfile not found." && exit 1; \
-    fi
-
-# Rebuild the source code only when needed
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+FROM oven/bun:1.3.9 AS build
+WORKDIR /workspace
 COPY . .
+RUN bun install --frozen-lockfile
 
-# Next.js collects completely anonymous telemetry data about general usage.
-# Learn more here: https://nextjs.org/telemetry
-# Uncomment the following line in case you want to disable telemetry during the build.
-# ENV NEXT_TELEMETRY_DISABLED 1
+# Prisma generation is offline; this placeholder only satisfies Prisma's
+# config loader. The real connection string is provided at runtime.
+ARG DATABASE_URL=postgresql://postgres:postgres@localhost:5432/secyourflow
+RUN DATABASE_URL=$DATABASE_URL bun run db:generate \
+ && DATABASE_URL=$DATABASE_URL bun run build
 
-# Generate Prisma Client
-RUN npx prisma generate
-
-RUN npm run build
-
-# Production image, copy all the files and run next
-FROM base AS runner
+FROM node:22-alpine AS web
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 WORKDIR /app
-
-ENV NODE_ENV production
-# Uncomment the following line in case you want to disable telemetry during runtime.
-# ENV NEXT_TELEMETRY_DISABLED 1
-
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-COPY --from=builder /app/public ./public
-
-# Set the correct permission for prerender cache
-# Set the correct permission for prerender cache
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
-
-# Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser --system --uid 1001 nextjs
+COPY --from=build --chown=nextjs:nodejs /workspace/public ./public
+COPY --from=build --chown=nextjs:nodejs /workspace/.next/standalone ./
+COPY --from=build --chown=nextjs:nodejs /workspace/.next/static ./.next/static
 USER nextjs
-
 EXPOSE 3000
-
-ENV PORT 3000
-# set hostname to localhost
-ENV HOSTNAME "0.0.0.0"
-
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 CMD ["node", "server.js"]
+
+FROM node:22-alpine AS worker
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+WORKDIR /app
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser --system --uid 1001 nextjs
+COPY --from=build --chown=nextjs:nodejs /workspace/node_modules ./node_modules
+COPY --from=build --chown=nextjs:nodejs /workspace/packages ./packages
+COPY --from=build --chown=nextjs:nodejs /workspace/src ./src
+COPY --from=build --chown=nextjs:nodejs /workspace/package.json /workspace/tsconfig.json ./
+USER nextjs
+CMD ["node", "--import", "tsx", "src/worker/index.ts"]
+
+FROM oven/bun:1.3.9 AS migrate
+ENV NODE_ENV=production
+WORKDIR /workspace
+COPY . .
+RUN bun install --frozen-lockfile
+CMD ["bun", "run", "db:migrate"]

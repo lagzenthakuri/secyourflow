@@ -1,0 +1,5 @@
+{
+  "buildCommand": "bun run db:generate && bun run build",
+  "installCommand": "bun install --frozen-lockfile",
+  "framework": "nextjs"
+}
