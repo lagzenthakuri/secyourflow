@@ -23,6 +23,10 @@ type ApiFailure = {
     code?: string;
 };
 
+function isSixDigitTotpCode(value: string): boolean {
+    return /^\d{6}$/.test(value.replace(/\s+/g, "").trim());
+}
+
 async function parseApiFailure(response: Response, fallback: string): Promise<ApiFailure> {
     try {
         const payload = (await response.json()) as ApiError;
@@ -47,6 +51,7 @@ export default function TwoFactorChallengePage() {
     const [enrollment, setEnrollment] = useState<EnrollmentResponse | null>(null);
     const lastSubmissionRef = useRef<{ flow: "enrollment" | "challenge"; code: string; at: number } | null>(null);
     const lastAutoSubmittedEnrollmentCodeRef = useRef<string | null>(null);
+    const lastAutoSubmittedChallengeCodeRef = useRef<string | null>(null);
 
     const isTotpEnabled = Boolean(session?.user?.totpEnabled);
     const isTwoFactorVerified = session?.twoFactorVerified === true;
@@ -70,7 +75,10 @@ export default function TwoFactorChallengePage() {
             return;
         }
 
-        if (isTotpEnabled && isTwoFactorVerified) {
+        // Two-factor is opt-in from Settings. This page only serves the
+        // challenge for accounts that already turned it on — an account
+        // without it is never pushed into enrolling here.
+        if (!isTotpEnabled || isTwoFactorVerified) {
             router.replace("/dashboard");
         }
     }, [isTotpEnabled, isTwoFactorVerified, router, status]);
@@ -162,12 +170,7 @@ export default function TwoFactorChallengePage() {
     };
 
     const submitChallengeCode = useCallback(async (submittedCode: string) => {
-        const trimmedCode = submittedCode.trim();
-        const normalizedTotpCandidate = trimmedCode.replace(/\D/g, "").slice(0, 6);
-        const normalizedCode =
-            normalizedTotpCandidate.length === 6
-                ? normalizedTotpCandidate
-                : trimmedCode.replace(/\s+/g, "");
+        const normalizedCode = submittedCode.replace(/\s+/g, "").trim();
         if (!normalizedCode) {
             setError("Enter your authenticator or recovery code.");
             return;
@@ -235,6 +238,46 @@ export default function TwoFactorChallengePage() {
         void submitEnrollmentCode(normalizedCode);
     }, [enrollment, isSubmitting, submitEnrollmentCode, verifyCode]);
 
+    useEffect(() => {
+        if (!isTotpEnabled || isSubmitting) {
+            return;
+        }
+
+        const normalizedCode = code.replace(/\s+/g, "").trim();
+        if (!isSixDigitTotpCode(normalizedCode)) {
+            lastAutoSubmittedChallengeCodeRef.current = null;
+            return;
+        }
+
+        if (lastAutoSubmittedChallengeCodeRef.current === normalizedCode) {
+            return;
+        }
+
+        lastAutoSubmittedChallengeCodeRef.current = normalizedCode;
+        void submitChallengeCode(normalizedCode);
+    }, [code, isSubmitting, isTotpEnabled, submitChallengeCode]);
+
+    // The session is only known client-side, so hold a neutral placeholder
+    // until it resolves rather than server-rendering a prompt that may be
+    // wrong for this account.
+    if (status === "loading") {
+        return (
+            <div className="min-h-screen bg-[var(--bg-primary)] bg-grid flex items-center justify-center px-4 py-8">
+                <div
+                    className="w-8 h-8 border-2 border-[var(--border-color)] border-t-intent-accent rounded-full animate-spin"
+                    role="status"
+                    aria-label="Loading"
+                />
+            </div>
+        );
+    }
+
+    // Two-factor is opt-in from Settings, so an account without it is on its
+    // way to the dashboard — never show it an enrollment prompt here.
+    if (!isTotpEnabled) {
+        return null;
+    }
+
     return (
         <div className="min-h-screen bg-[var(--bg-primary)] bg-grid flex items-center justify-center px-4 py-8">
             <div className="w-full max-w-md">
@@ -246,10 +289,9 @@ export default function TwoFactorChallengePage() {
                             alt="SecYourFlow"
                             width={80}
                             height={80}
-                            style={{ width: "auto", height: "auto" }}
                         />
                         <span className="text-2xl font-semibold tracking-[0.25em] text-[var(--text-primary)]">
-                            SECYOUR<span className="text-sky-300">FLOW</span>
+                            SECYOUR<span className="text-intent-accent">FLOW</span>
                         </span>
                     </Link>
                 </div>
@@ -257,7 +299,7 @@ export default function TwoFactorChallengePage() {
                 <div className="card p-8">
                     <div className="flex items-center gap-3 mb-6">
                         <div className="w-11 h-11 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center">
-                            <ShieldCheck className="w-6 h-6 text-blue-400" />
+                            <ShieldCheck className="w-6 h-6 text-intent-accent" />
                         </div>
                         <div>
                             <h1 className="text-xl font-semibold text-[var(--text-primary)]">Two-Factor Challenge</h1>
@@ -280,7 +322,7 @@ export default function TwoFactorChallengePage() {
                             </button>
                         ) : (
                             <form onSubmit={submitEnrollmentVerification} className="space-y-4">
-                                <p className="text-sm text-blue-100 border border-blue-500/30 bg-blue-500/10 rounded-lg px-3 py-2">
+                                <p className="text-sm text-blue-700 dark:text-blue-100 border border-blue-500/30 bg-blue-500/10 rounded-lg px-3 py-2">
                                     Scan this QR code in Google Authenticator, then verify with a 6-digit code.
                                 </p>
                                 <Image
@@ -345,13 +387,13 @@ export default function TwoFactorChallengePage() {
                 )}
 
                 {notice && (
-                    <p className="text-sm text-green-300 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 mt-4">
+                    <p className="text-sm text-green-600 dark:text-green-300 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 mt-4">
                         {notice}
                     </p>
                 )}
 
                 {error && (
-                    <p className="text-sm text-red-400 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 mt-4">
+                    <p className="text-sm text-intent-danger rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 mt-4">
                         {error}
                     </p>
                 )}

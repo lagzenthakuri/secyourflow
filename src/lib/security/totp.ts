@@ -2,26 +2,21 @@ import { authenticator } from "otplib";
 
 export const TOTP_DIGITS = 6;
 export const TOTP_STEP_SECONDS = 30;
-export const TOTP_WINDOW_PROD = 2;
-export const TOTP_WINDOW_DEV = 10;
-
-function getTotpWindow(): number {
-    return process.env.NODE_ENV === "production" ? TOTP_WINDOW_PROD : TOTP_WINDOW_DEV;
-}
+export const TOTP_WINDOW = 1;
 
 function getAuthenticator() {
     authenticator.options = {
         digits: TOTP_DIGITS,
         step: TOTP_STEP_SECONDS,
-        window: getTotpWindow(),
+        window: TOTP_WINDOW,
     };
 
     return authenticator;
 }
 
 export function normalizeTotpCode(code: string): string | null {
-    const digitsOnly = code.replace(/\D/g, "");
-    return digitsOnly.length === TOTP_DIGITS ? digitsOnly : null;
+    const normalized = code.replace(/\s+/g, "").trim();
+    return /^\d{6}$/.test(normalized) ? normalized : null;
 }
 
 export function generateTotpSecret(): string {
@@ -32,20 +27,6 @@ export function buildTotpOtpAuthUrl(secret: string, accountEmail: string, issuer
     return getAuthenticator().keyuri(accountEmail, issuer, secret);
 }
 
-export function generateTotpToken(secret: string): string {
-    const currentOptions = authenticator.options;
-    authenticator.options = {
-        ...currentOptions,
-        digits: TOTP_DIGITS,
-        step: TOTP_STEP_SECONDS,
-        window: getTotpWindow(), // Symmetric window for compatibility
-    };
-
-    const token = authenticator.generate(secret);
-
-    authenticator.options = currentOptions;
-    return token;
-}
 
 export function verifyTotpToken(
     secret: string,
@@ -66,7 +47,7 @@ export function verifyTotpToken(
         ...currentOptions,
         digits: TOTP_DIGITS,
         step: TOTP_STEP_SECONDS,
-        window: getTotpWindow(), // Symmetric window
+        window: TOTP_WINDOW, // Symmetric window
     };
 
     const delta = authenticator.checkDelta(normalized, secret);

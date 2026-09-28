@@ -3,56 +3,31 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "node:crypto";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import type { Adapter } from "next-auth/adapters";
 import { prisma } from "./prisma";
 import { authConfig } from "./auth.config";
 import { assertTotpEncryptionKeyConfigured } from "@/lib/crypto/totpSecret";
 import { normalizeIpAddress } from "@/lib/request-utils";
+import { activateUserSession } from "@/lib/user-provisioning";
+import {
+    clearDatabaseUnavailable,
+    isDatabaseUnavailableError,
+    markDatabaseUnavailable,
+} from "@/lib/database-availability";
 import {
     assertTwoFactorSessionUpdateKeyConfigured,
     isTrustedTwoFactorSessionUpdate,
 } from "@/lib/security/two-factor-session";
 import { hasRecentTwoFactorVerification, TWO_FACTOR_REVERIFY_INTERVAL_MS } from "@/lib/security/two-factor";
-import { type Account } from "next-auth";
 
-async function refreshAccessToken(token: any) {
-    try {
-        const url = "https://oauth2.googleapis.com/token";
-        if (token.provider === "google") {
-            const response = await fetch(url, {
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: new URLSearchParams({
-                    client_id: process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID || "",
-                    client_secret: process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET || "",
-                    grant_type: "refresh_token",
-                    refresh_token: token.refreshToken as string,
-                }),
-                method: "POST",
-            });
+type RefreshableToken = Record<string, unknown> & {
+    provider?: string;
+    refreshToken?: string;
+};
 
-            const refreshedTokens = await response.json();
-
-            if (!response.ok) {
-                throw refreshedTokens;
-            }
-
-            return {
-                ...token,
-                accessToken: refreshedTokens.access_token,
-                expiresAt: Date.now() + refreshedTokens.expires_in * 1000,
-                // Fall back to old refresh token, but use the new one if provided
-                refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
-            };
-        }
-
-        // Add other providers if needed (GitHub usually doesn't need refresh or doesn't provide refresh_token)
-        return token;
-    } catch (error) {
-        console.error("Error refreshing access token", error);
-        return {
-            ...token,
-            error: "RefreshAccessTokenError",
-        };
-    }
+async function refreshAccessToken(token: RefreshableToken): Promise<RefreshableToken> {
+    // No refresh flow is configured for current OAuth providers.
+    return token;
 }
 
 const authSecret =
@@ -62,6 +37,161 @@ const authSecret =
 
 class OAuthOnlyCredentialsSigninError extends CredentialsSignin {
     code = "oauth_only";
+}
+
+/**
+ * Raised when an account has no password hash and there is no OAuth provider
+ * left to fall back on — pointing the user at "your configured provider"
+ * would send them nowhere.
+ */
+class NoPasswordSetError extends CredentialsSignin {
+    code = "no_password_set";
+}
+
+/**
+ * Auth.js turns any unexpected exception from a credentials callback into a
+ * `CallbackRouteError`, which is presented as `?error=Configuration`. A
+ * database outage is an expected infrastructure failure, not a bad login or a
+ * malformed Auth.js configuration, so preserve a safe, actionable error code.
+ */
+class LoginServiceUnavailableError extends CredentialsSignin {
+    code = "service_unavailable";
+}
+
+/**
+ * Auth.js debug logging is opt-in rather than "any non-production build".
+ * Its debug channel echoes the raw sign-in request body, so leaving it on by
+ * default writes submitted passwords to the server log in cleartext.
+ */
+const authDebugEnabled = process.env.AUTH_DEBUG === "true";
+
+function getOperationalErrorCode(error: unknown): string | null {
+    const queue: unknown[] = [error];
+    const seen = new Set<unknown>();
+
+    while (queue.length > 0) {
+        const value = queue.shift();
+
+        if ((typeof value !== "object" && typeof value !== "function") || value === null) {
+            continue;
+        }
+
+        if (seen.has(value)) {
+            continue;
+        }
+        seen.add(value);
+
+        const candidate = value as { code?: unknown; cause?: unknown };
+        if (typeof candidate.code === "string" && candidate.code.trim()) {
+            return candidate.code.trim();
+        }
+
+        if (candidate.cause !== undefined) {
+            queue.push(candidate.cause);
+        }
+    }
+
+    return null;
+}
+
+async function withLoginDatabase<T>(operation: string, action: () => Promise<T>): Promise<T> {
+    try {
+        const result = await action();
+        clearDatabaseUnavailable();
+        return result;
+    } catch (error) {
+        if (!isDatabaseUnavailableError(error)) {
+            throw error;
+        }
+
+        if (markDatabaseUnavailable()) {
+            // Keep the log useful to operators without writing connection
+            // strings, submitted credentials, or user email addresses.
+            console.error(`[auth] Login temporarily unavailable during ${operation}.`, {
+                errorType: error instanceof Error ? error.name : typeof error,
+                errorCode: getOperationalErrorCode(error),
+            });
+        }
+
+        throw new LoginServiceUnavailableError();
+    }
+}
+
+/**
+ * Auth.js wraps unknown exceptions from OAuth adapter methods in AdapterError,
+ * which its client then reports as CallbackRouteError or Configuration. A
+ * timed-out PostgreSQL connection is an availability failure, so preserve the
+ * same safe service-unavailable code used by credential authentication.
+ */
+function withDatabaseFailureHandling(adapter: Adapter): Adapter {
+    return new Proxy(adapter, {
+        get(target, property) {
+            const method = Reflect.get(target, property, target);
+            if (typeof method !== "function") {
+                return method;
+            }
+
+            return async (...args: unknown[]) => {
+                try {
+                    const result = await method.apply(target, args);
+                    clearDatabaseUnavailable();
+                    return result;
+                } catch (error) {
+                    if (!isDatabaseUnavailableError(error)) {
+                        throw error;
+                    }
+
+                    if (markDatabaseUnavailable()) {
+                        console.error(`[auth] Database unavailable during adapter operation ${String(property)}.`, {
+                            errorType: error instanceof Error ? error.name : typeof error,
+                            errorCode: getOperationalErrorCode(error),
+                        });
+                    }
+
+                    throw new LoginServiceUnavailableError();
+                }
+            };
+        },
+    });
+}
+
+const authAdapter = withDatabaseFailureHandling(PrismaAdapter(prisma));
+
+const REDACTED = "[redacted]";
+const SENSITIVE_KEYS = new Set([
+    "password",
+    "newpassword",
+    "currentpassword",
+    "confirmpassword",
+    "secret",
+    "token",
+    "csrftoken",
+    "accesstoken",
+    "refreshtoken",
+    "clientsecret",
+    "totp",
+    "code",
+]);
+
+/**
+ * Strips credential-bearing fields from anything handed to the debug logger,
+ * so enabling AUTH_DEBUG stays safe even on a shared machine.
+ */
+function redactSensitive(value: unknown, depth = 0): unknown {
+    if (depth > 6 || value === null || typeof value !== "object") {
+        return value;
+    }
+
+    if (Array.isArray(value)) {
+        return value.map((entry) => redactSensitive(entry, depth + 1));
+    }
+
+    return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+            key,
+            SENSITIVE_KEYS.has(key.toLowerCase()) ? REDACTED : redactSensitive(entry, depth + 1),
+        ]),
+    );
 }
 
 function extractIpFromForwardedHeader(headerValue: string): string | null {
@@ -123,7 +253,7 @@ function extractLoginIpFromRequest(request?: Request): string | null {
 export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
     ...authConfig,
     secret: authSecret,
-    adapter: PrismaAdapter(prisma),
+    adapter: authAdapter,
     session: {
         strategy: "jwt",
         maxAge: 2 * 24 * 60 * 60, // 2 days
@@ -146,30 +276,35 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
 
                 const loginIp = extractLoginIpFromRequest(request);
 
-                const user = await prisma.user.findFirst({
-                    where: {
-                        email: {
-                            equals: email,
-                            mode: "insensitive",
+                const user = await withLoginDatabase("account lookup", () =>
+                    prisma.user.findFirst({
+                        where: {
+                            email: {
+                                equals: email,
+                                mode: "insensitive",
+                            },
                         },
-                    },
-                    select: {
-                        id: true,
-                        email: true,
-                        name: true,
-                        role: true,
-                        password: true,
-                        image: true,
-                        totpEnabled: true,
-                    },
-                });
+                        select: {
+                            id: true,
+                            email: true,
+                            name: true,
+                            role: true,
+                            password: true,
+                            image: true,
+                            totpEnabled: true,
+                        },
+                    }),
+                );
 
                 if (!user) {
                     return null;
                 }
 
                 if (!user.password) {
-                    throw new OAuthOnlyCredentialsSigninError();
+                    // Only send the user to a provider that actually exists.
+                    throw authConfig.providers.length > 0
+                        ? new OAuthOnlyCredentialsSigninError()
+                        : new NoPasswordSetError();
                 }
 
                 let isValidPassword = false;
@@ -207,7 +342,12 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                     loginIp?: string | null;
                 };
 
-                token.id = user.id;
+                if (!user.id) {
+                    throw new LoginServiceUnavailableError();
+                }
+
+                const userId = user.id;
+                token.id = userId;
                 token.role = signInUser.role || "ANALYST";
                 token.totpEnabled = Boolean(signInUser.totpEnabled);
 
@@ -226,36 +366,20 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 token.twoFactorVerifiedAt = null;
                 token.authenticatedAt = Date.now();
 
-                const dbUser = await prisma.user.findUnique({
-                    where: { id: user.id },
-                    select: { organizationId: true }
-                });
-
-                let organizationId = dbUser?.organizationId;
-                if (!organizationId) {
-                    const firstOrg = await prisma.organization.findFirst();
-                    if (firstOrg) {
-                        organizationId = firstOrg.id;
-                    } else {
-                        const newOrg = await prisma.organization.create({
-                            data: { name: "My Organization" }
-                        });
-                        organizationId = newOrg.id;
-                    }
-                }
-
-                await prisma.user.update({
-                    where: { id: user.id },
-                    data: {
-                        lastLogin: new Date(),
+                const activatedSession = await withLoginDatabase("session initialization", () =>
+                    activateUserSession({
+                        userId,
+                        name: user.name,
+                        email: user.email,
                         activeSessionId,
                         activeSessionIp,
-                        organizationId,
-                    },
-                });
+                    }),
+                );
+
+                token.organizationId = activatedSession.organizationId;
 
                 void import("./logger").then(({ logActivity }) => {
-                    return logActivity("User login", "auth", user.email || "unknown", null, null, "User logged in", user.id);
+                    return logActivity("User login", "auth", user.email || "unknown", null, null, "User logged in", userId);
                 }).catch(() => undefined);
 
                 return token;
@@ -310,9 +434,14 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
             }
 
             if (typeof token.id === "string") {
+                // This callback runs on every session read, so it is the one
+                // authoritative read of the user row per request. Carry the
+                // organization and role on the token from the same query —
+                // `requireSessionWithOrg` used to repeat this lookup, doubling
+                // the per-request database cost for no extra freshness.
                 const sessionState = await prisma.user.findUnique({
                     where: { id: token.id },
-                    select: { activeSessionId: true },
+                    select: { activeSessionId: true, organizationId: true, role: true },
                 });
 
                 if (
@@ -322,6 +451,9 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 ) {
                     return null;
                 }
+
+                token.organizationId = sessionState.organizationId ?? null;
+                token.role = sessionState.role || "ANALYST";
             }
 
             if (typeof token.totpEnabled !== "boolean") {
@@ -350,12 +482,6 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
 
             if (typeof token.authenticatedAt !== "number") {
                 token.authenticatedAt = Date.now();
-            } else {
-                // Keep the session alive while the user is active
-                token.authenticatedAt = Date.now();
-                if (token.twoFactorVerified === true && typeof token.twoFactorVerifiedAt === "number") {
-                    token.twoFactorVerifiedAt = Date.now();
-                }
             }
 
             // Return previous token if the access token has not expired yet
@@ -374,6 +500,8 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
             if (token && session.user) {
                 session.user.id = token.id as string;
                 session.user.role = (token.role as string) || "ANALYST";
+                session.user.organizationId =
+                    typeof token.organizationId === "string" ? token.organizationId : null;
                 session.user.totpEnabled = Boolean(token.totpEnabled);
                 session.twoFactorVerified = token.twoFactorVerified === true;
                 session.twoFactorVerifiedAt =
@@ -387,7 +515,21 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
         },
     },
     trustHost: true,
-    debug: process.env.NODE_ENV !== "production",
+    debug: authDebugEnabled,
+    logger: {
+        error(error) {
+            console.error("[auth][error]", error);
+        },
+        warn(code) {
+            console.warn("[auth][warn]", code);
+        },
+        debug(message, metadata) {
+            if (!authDebugEnabled) {
+                return;
+            }
+            console.debug("[auth][debug]", message, redactSensitive(metadata));
+        },
+    },
 });
 
 declare module "next-auth" {
@@ -405,6 +547,8 @@ declare module "next-auth" {
             image?: string | null;
             role?: string;
             totpEnabled?: boolean;
+            /** Null when the user has not been provisioned into an organization. */
+            organizationId?: string | null;
         };
         twoFactorVerified?: boolean;
         twoFactorVerifiedAt?: number | null;

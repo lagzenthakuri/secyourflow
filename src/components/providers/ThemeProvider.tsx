@@ -1,10 +1,17 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Moon, Sun } from "lucide-react";
 import { usePathname } from "next/navigation";
-
-const THEME_KEY = "secyourflow-theme";
 
 type ThemeMode = "dark" | "light";
 type ThemeContextValue = {
@@ -13,6 +20,7 @@ type ThemeContextValue = {
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
+export const THEME_STORAGE_KEY = "secyourflow.theme.mode.v1";
 
 const APP_SHELL_PREFIXES = [
   "/dashboard",
@@ -32,17 +40,29 @@ function isAppShellPath(pathname: string): boolean {
   return APP_SHELL_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
-function resolveInitialTheme(): ThemeMode {
+function resolveSystemTheme(): ThemeMode {
   if (typeof window === "undefined") {
     return "dark";
   }
 
-  const stored = window.localStorage.getItem(THEME_KEY);
-  if (stored === "dark" || stored === "light") {
+  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+
+function resolveStoredTheme(): ThemeMode | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (stored === "light" || stored === "dark") {
     return stored;
   }
 
-  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  return null;
+}
+
+function resolveInitialTheme(): ThemeMode {
+  return resolveStoredTheme() ?? resolveSystemTheme();
 }
 
 function applyTheme(theme: ThemeMode) {
@@ -54,6 +74,14 @@ function applyTheme(theme: ThemeMode) {
     root.classList.add("theme-dark", "dark");
   }
   root.style.colorScheme = theme;
+}
+
+function startThemeTransition(durationMs = 220) {
+  const root = document.documentElement;
+  root.classList.add("theme-transitioning");
+  return window.setTimeout(() => {
+    root.classList.remove("theme-transitioning");
+  }, durationMs);
 }
 
 export function useTheme(): ThemeContextValue {
@@ -70,24 +98,57 @@ export function useTheme(): ThemeContextValue {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [theme, setTheme] = useState<ThemeMode>("dark");
-  const [isReady, setIsReady] = useState(false);
+  const [theme, setTheme] = useState<ThemeMode>(() => resolveInitialTheme());
+  const transitionTimeoutRef = useRef<number | null>(null);
+  const hasManualOverrideRef = useRef<boolean>(false);
 
   useEffect(() => {
-    const initialTheme = resolveInitialTheme();
-    setTheme(initialTheme);
-    applyTheme(initialTheme);
-    setIsReady(true);
+    hasManualOverrideRef.current = resolveStoredTheme() !== null;
   }, []);
 
   useEffect(() => {
-    if (!isReady) return;
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: light)");
+
+    const handleSystemThemeChange = (event: MediaQueryListEvent) => {
+      if (hasManualOverrideRef.current) {
+        return;
+      }
+      setTheme(event.matches ? "light" : "dark");
+    };
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", handleSystemThemeChange);
+      return () => mediaQuery.removeEventListener("change", handleSystemThemeChange);
+    }
+
+    mediaQuery.addListener(handleSystemThemeChange);
+    return () => mediaQuery.removeListener(handleSystemThemeChange);
+  }, []);
+
+  useLayoutEffect(() => {
     applyTheme(theme);
-    window.localStorage.setItem(THEME_KEY, theme);
-  }, [isReady, theme]);
+  }, [theme]);
+
+  useEffect(() => {
+    return () => {
+      if (transitionTimeoutRef.current !== null) {
+        window.clearTimeout(transitionTimeoutRef.current);
+      }
+      document.documentElement.classList.remove("theme-transitioning");
+    };
+  }, []);
 
   const toggleTheme = () => {
-    setTheme((current) => (current === "dark" ? "light" : "dark"));
+    if (transitionTimeoutRef.current !== null) {
+      window.clearTimeout(transitionTimeoutRef.current);
+    }
+    transitionTimeoutRef.current = startThemeTransition();
+    setTheme((current) => {
+      const next = current === "dark" ? "light" : "dark";
+      window.localStorage.setItem(THEME_STORAGE_KEY, next);
+      hasManualOverrideRef.current = true;
+      return next;
+    });
   };
 
   const contextValue = useMemo<ThemeContextValue>(

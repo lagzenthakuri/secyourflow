@@ -1,27 +1,14 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { NavigationProgress } from "@/components/providers/NavigationProgress";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
-
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-sans",
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-display",
-});
-
-const jetBrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-mono",
-});
+import { UiFeedbackProvider } from "@/components/providers/UiFeedbackProvider";
+import { TooltipProvider } from "@repo/design-system/components/ui/tooltip";
+import { AnalyticsProvider } from "@repo/analytics/provider";
+import { Toolbar } from "@repo/feature-flags/components/toolbar";
+import { fonts } from "@repo/design-system/lib/fonts";
 
 export const metadata: Metadata = {
   title: "SecYourFlow | Cyber Risk Operations Platform",
@@ -49,22 +36,47 @@ export const metadata: Metadata = {
   },
 };
 
+const themeBootstrapScript = `
+  (function () {
+    try {
+      var root = document.documentElement;
+      var stored = window.localStorage.getItem("secyourflow.theme.mode.v1");
+      var preferred = stored === "light" || stored === "dark"
+        ? stored
+        : (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+      root.classList.remove("theme-dark", "theme-light", "dark");
+      if (preferred === "light") {
+        root.classList.add("theme-light");
+      } else {
+        root.classList.add("theme-dark", "dark");
+      }
+      root.style.colorScheme = preferred;
+    } catch (_) {}
+  })();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${inter.variable} ${spaceGrotesk.variable} ${jetBrainsMono.variable} theme-dark`}
-      data-scroll-behavior="smooth"
-    >
-      <body className={`${inter.className} antialiased`}>
-        <ThemeProvider>
-          <NavigationProgress />
-          <AuthProvider>{children}</AuthProvider>
-        </ThemeProvider>
+    <html lang="en" className={fonts} data-scroll-behavior="smooth" suppressHydrationWarning>
+      <body className="antialiased">
+        <AnalyticsProvider>
+          <Script id="theme-bootstrap" strategy="beforeInteractive">
+            {themeBootstrapScript}
+          </Script>
+          <ThemeProvider>
+            <UiFeedbackProvider>
+              <TooltipProvider>
+                <NavigationProgress />
+                <AuthProvider>{children}</AuthProvider>
+              </TooltipProvider>
+            </UiFeedbackProvider>
+          </ThemeProvider>
+          <Toolbar />
+        </AnalyticsProvider>
       </body>
     </html>
   );

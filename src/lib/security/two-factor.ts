@@ -25,8 +25,9 @@ export function isTwoFactorSatisfied(
         return false;
     }
 
+    // If 2FA is not enabled for this user, it is considered satisfied.
     if (!session.user.totpEnabled) {
-        return false;
+        return true;
     }
 
     return hasRecentTwoFactorVerification(
