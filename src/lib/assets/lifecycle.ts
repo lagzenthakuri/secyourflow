@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
-import type { Environment, LifecycleEventType } from "@prisma/client";
+import { Prisma } from "@repo/database";
+import type { Environment, LifecycleEventType } from "@repo/database";
 
 function toNullableJsonValue(
   value: unknown,

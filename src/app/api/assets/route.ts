@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { AssetStatus, AssetType, Criticality, Prisma } from "@prisma/client";
+import { AssetStatus, AssetType, Criticality, Prisma } from "@repo/database";
 import { requireSessionWithOrg } from "@/lib/api-auth";
 
 const createAssetSchema = z.object({
@@ -164,7 +164,14 @@ export async function POST(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request);
   if (!authResult.ok) return authResult.response;
 
-  const parsed = createAssetSchema.safeParse(await request.json());
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parsed = createAssetSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid payload", details: parsed.error.flatten() },
