@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Modal } from "@/components/ui/Modal";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
-import { cn } from "@/lib/utils";
+import { DatePickerField } from "@/components/ui/DatePickerField";
+import { cn, formatLabel } from "@/lib/utils";
 import { Calendar, CheckCircle2, Paperclip, Plus, RefreshCw } from "lucide-react";
 
 type RemediationStatus = "DRAFT" | "ACTIVE" | "BLOCKED" | "COMPLETED" | "ARCHIVED";
@@ -42,19 +43,13 @@ const statusOptions: RemediationStatus[] = [
 ];
 
 const statusTone: Record<RemediationStatus, string> = {
-  DRAFT: "border-[var(--badge-info-border)] bg-[var(--badge-info-bg)] text-[var(--badge-info-text)]",
-  ACTIVE: "border-[var(--line-3)] bg-[var(--accent-1-soft)] text-[var(--accent-1)]",
-  BLOCKED: "border-[var(--badge-critical-border)] bg-[var(--badge-critical-bg)] text-[var(--badge-critical-text)]",
-  COMPLETED: "border-[var(--badge-low-border)] bg-[var(--badge-low-bg)] text-[var(--badge-low-text)]",
-  ARCHIVED: "border-[var(--badge-high-border)] bg-[var(--badge-high-bg)] text-[var(--badge-high-text)]",
+  DRAFT: "border-[var(--border-hover)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]",
+  ACTIVE: "border-sky-400/35 bg-sky-500/10 text-sky-700 dark:text-sky-200",
+  BLOCKED: "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200",
+  COMPLETED: "border-emerald-400/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
+  ARCHIVED: "border-purple-400/35 bg-purple-500/10 text-purple-700 dark:text-purple-200",
 };
 
-function formatLabel(value: string) {
-  return value
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
 
 function calculateProgress(plan: RemediationPlanRecord) {
   const total = plan.vulnerabilities.length;
@@ -259,21 +254,21 @@ export default function RemediationPlansPage() {
   return (
     <DashboardLayout>
       <div className="space-y-5">
-        <section className="rounded-3xl border border-[var(--border-color)] bg-[linear-gradient(132deg,var(--accent-1-soft),color-mix(in_srgb,var(--bg-secondary)_92%,transparent)_44%,color-mix(in_srgb,var(--bg-secondary)_98%,transparent))] p-6 sm:p-8">
+        <section className="rounded-3xl border border-[var(--border-color)] bg-[linear-gradient(132deg,rgba(56,189,248,0.2),rgba(18,18,26,0.9)_44%,rgba(18,18,26,0.96))] p-6 sm:p-8">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
             <div>
-              <h1 className="type-display text-[var(--text-primary)]">Remediation Plans</h1>
+              <h1 className="text-2xl font-semibold text-[var(--text-primary)] sm:text-3xl">Remediation Plans</h1>
               <p className="mt-2 text-sm text-[var(--text-secondary)]">
                 Track plan ownership, linked vulnerabilities, evidence, and completion progress.
               </p>
-              <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
-                <span className="type-mono rounded-full border border-[var(--border-color)] bg-[var(--bg-tertiary)]/70 px-3 py-1">
+              <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--text-primary)]">
+                <span className="rounded-full border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-3 py-1">
                   {plans.length} plans
                 </span>
-                <span className="type-mono rounded-full border border-[var(--border-color)] bg-[var(--bg-tertiary)]/70 px-3 py-1">
+                <span className="rounded-full border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-3 py-1">
                   {summary.active} active
                 </span>
-                <span className="type-mono rounded-full border border-[var(--border-color)] bg-[var(--bg-tertiary)]/70 px-3 py-1">
+                <span className="rounded-full border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-3 py-1">
                   {summary.blocked} blocked
                 </span>
               </div>
@@ -282,7 +277,7 @@ export default function RemediationPlansPage() {
               <button
                 type="button"
                 onClick={() => void fetchPlans({ silent: true })}
-                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
               >
                 <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
                 Refresh
@@ -290,7 +285,7 @@ export default function RemediationPlansPage() {
               <button
                 type="button"
                 onClick={() => setIsCreateOpen(true)}
-                className="btn btn-primary"
+                className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-200"
               >
                 <Plus size={14} />
                 New Plan
@@ -300,16 +295,16 @@ export default function RemediationPlansPage() {
         </section>
 
         {error ? (
-          <section className="rounded-2xl border border-[var(--badge-critical-border)] bg-[var(--badge-critical-bg)] px-4 py-3 text-sm text-[var(--badge-critical-text)]">
+          <section className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
             {error}
           </section>
         ) : null}
 
         <section className="grid gap-4 sm:grid-cols-3">
           {[
-            { label: "Completed", value: summary.completed, tone: "text-[var(--badge-low-text)]" },
-            { label: "Active", value: summary.active, tone: "text-[var(--accent-1)]" },
-            { label: "Blocked", value: summary.blocked, tone: "text-[var(--badge-critical-text)]" },
+            { label: "Completed", value: summary.completed, tone: "text-emerald-700 dark:text-emerald-200" },
+            { label: "Active", value: summary.active, tone: "text-sky-700 dark:text-sky-200" },
+            { label: "Blocked", value: summary.blocked, tone: "text-red-700 dark:text-red-200" },
           ].map((item) => (
             <article
               key={item.label}
@@ -323,7 +318,7 @@ export default function RemediationPlansPage() {
 
         <section className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
           <header className="border-b border-[var(--border-color)] px-5 py-4">
-            <h2 className="type-section text-[var(--text-primary)]">Plan Tracker</h2>
+            <h2 className="text-base font-semibold text-[var(--text-primary)]">Plan Tracker</h2>
           </header>
 
           {plans.length === 0 ? (
@@ -349,7 +344,7 @@ export default function RemediationPlansPage() {
                           >
                             {formatLabel(plan.status)}
                           </span>
-                          <span className="rounded-full border border-[var(--border-color)] bg-[var(--bg-tertiary)]/50 px-2 py-0.5 text-[11px] text-[var(--text-secondary)]">
+                          <span className="rounded-full border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]">
                             {progress}% complete
                           </span>
                         </div>
@@ -391,7 +386,7 @@ export default function RemediationPlansPage() {
                             setSelectedPlan(plan);
                             setIsEvidenceOpen(true);
                           }}
-                          className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)]"
+                          className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)]"
                         >
                           <Paperclip size={12} />
                           Add Evidence
@@ -466,12 +461,7 @@ export default function RemediationPlansPage() {
             </div>
             <div>
               <label className="mb-1 block text-sm text-[var(--text-primary)]">Due Date</label>
-              <input
-                type="datetime-local"
-                className="input"
-                value={createForm.dueDate}
-                onChange={(event) => setCreateForm((prev) => ({ ...prev, dueDate: event.target.value }))}
-              />
+              <DatePickerField label="Choose due date and time" value={createForm.dueDate} includeTime onChange={(dueDate) => setCreateForm((prev) => ({ ...prev, dueDate }))} />
             </div>
           </div>
           <div>

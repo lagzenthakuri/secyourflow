@@ -1,24 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireSessionWithOrg } from "@/lib/api-auth";
 
 export async function GET(request: NextRequest) {
+    const authResult = await requireSessionWithOrg(request);
+    if (!authResult.ok) {
+        return authResult.response;
+    }
+
     try {
         const { searchParams } = new URL(request.url);
-        const limit = parseInt(searchParams.get("limit") || "10");
+        const limit = Math.min(parseInt(searchParams.get("limit") || "10", 10), 100);
 
         const scans = await prisma.scanResult.findMany({
+            where: { organizationId: authResult.context.organizationId },
             include: {
                 scanner: {
                     select: {
-                        name: true
-                    }
-                }
+                        name: true,
+                    },
+                },
             },
-            orderBy: { startTime: 'desc' },
-            take: limit
+            orderBy: { startTime: "desc" },
+            take: limit,
         });
 
-        const formattedScans = scans.map(scan => ({
+        const formattedScans = scans.map((scan) => ({
             id: scan.id,
             name: `${scan.scanner.name} Scan`,
             scanner: scan.scanner.name,
@@ -34,10 +41,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(formattedScans);
     } catch (error) {
         console.error("Scan Results GET Error:", error);
-        return NextResponse.json(
-            { error: "Failed to fetch scan results" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Failed to fetch scan results" }, { status: 500 });
     }
 }
 

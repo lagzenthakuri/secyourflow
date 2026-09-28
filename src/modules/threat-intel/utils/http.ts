@@ -1,3 +1,5 @@
+import { assertSafeOutboundUrl } from "@/lib/security/outbound-url";
+
 export interface FetchWithRetryOptions {
   url: string;
   method?: string;
@@ -6,6 +8,7 @@ export interface FetchWithRetryOptions {
   timeoutMs?: number;
   maxRetries?: number;
   baseBackoffMs?: number;
+  maxRedirects?: number;
 }
 
 function delay(ms: number): Promise<void> {
@@ -21,6 +24,10 @@ function computeBackoff(attempt: number, baseBackoffMs: number): number {
   return Math.min(exp, 30_000);
 }
 
+function isRedirect(status: number): boolean {
+  return status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
+}
+
 export async function fetchWithRetry(options: FetchWithRetryOptions): Promise<Response> {
   const {
     url,
@@ -30,21 +37,61 @@ export async function fetchWithRetry(options: FetchWithRetryOptions): Promise<Re
     timeoutMs = 15_000,
     maxRetries = 2,
     baseBackoffMs = 500,
+    maxRedirects = 3,
   } = options;
 
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    let currentUrl = url;
+    let redirectsRemaining = maxRedirects;
+
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const response = await fetch(url, {
+      // Validate before outbound request to prevent SSRF primitives from custom feeds.
+      await assertSafeOutboundUrl(currentUrl, {
+        allowInsecureHttp: process.env.NODE_ENV !== "production",
+        allowedHosts: process.env.THREAT_INTEL_CUSTOM_FEED_ALLOWED_HOSTS
+          ? process.env.THREAT_INTEL_CUSTOM_FEED_ALLOWED_HOSTS.split(",")
+          : undefined,
+        resolveDns: true,
+      });
+
+      let response = await fetch(currentUrl, {
         method,
         headers,
         body,
+        redirect: "manual",
         signal: controller.signal,
       });
+
+      while (isRedirect(response.status) && redirectsRemaining > 0) {
+        const location = response.headers.get("location");
+        if (!location) {
+          break;
+        }
+
+        const nextUrl = new URL(location, currentUrl).toString();
+        await assertSafeOutboundUrl(nextUrl, {
+          allowInsecureHttp: process.env.NODE_ENV !== "production",
+          allowedHosts: process.env.THREAT_INTEL_CUSTOM_FEED_ALLOWED_HOSTS
+            ? process.env.THREAT_INTEL_CUSTOM_FEED_ALLOWED_HOSTS.split(",")
+            : undefined,
+          resolveDns: true,
+        });
+
+        currentUrl = nextUrl;
+        redirectsRemaining -= 1;
+        response = await fetch(currentUrl, {
+          method,
+          headers,
+          body,
+          redirect: "manual",
+          signal: controller.signal,
+        });
+      }
 
       clearTimeout(timer);
 

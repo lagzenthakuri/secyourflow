@@ -5,12 +5,14 @@ import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { FilterSelect } from "@/components/ui/FilterSelect";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { AddVulnerabilityModal } from "@/components/vulnerabilities/AddVulnerabilityModal";
 import { EditVulnerabilityModal } from "@/components/vulnerabilities/EditVulnerabilityModal";
 import { VulnerabilityActions } from "@/components/vulnerabilities/VulnerabilityActions";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
-import { cn } from "@/lib/utils";
+import { cn, formatLabel } from "@/lib/utils";
+import { allowedWorkflowTransitions } from "@/lib/workflow/state-machine";
 import { Vulnerability } from "@/types";
 import {
   AlertTriangle,
@@ -47,7 +49,7 @@ const RiskAssessmentView = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)]/40 p-4 text-sm text-[var(--text-muted)]">
+      <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
         Loading risk assessment...
       </div>
     ),
@@ -104,39 +106,25 @@ const statusOptions = [
 
 const workflowOptions = ["NEW", "TRIAGED", "IN_PROGRESS", "RESOLVED", "CLOSED"] as const;
 
-const workflowTransitions: Record<(typeof workflowOptions)[number], (typeof workflowOptions)[number][]> = {
-  NEW: ["TRIAGED", "IN_PROGRESS", "CLOSED"],
-  TRIAGED: ["IN_PROGRESS", "RESOLVED", "CLOSED"],
-  IN_PROGRESS: ["RESOLVED", "TRIAGED", "CLOSED"],
-  RESOLVED: ["CLOSED", "IN_PROGRESS"],
-  CLOSED: [],
-};
-
 const numberFormatter = new Intl.NumberFormat("en-US");
 
 const severityColor: Record<string, string> = {
-  CRITICAL: "text-[var(--badge-critical-text)] border-[var(--badge-critical-border)] bg-[var(--badge-critical-bg)]",
-  HIGH: "text-[var(--badge-high-text)] border-[var(--badge-high-border)] bg-[var(--badge-high-bg)]",
-  MEDIUM: "text-[var(--badge-medium-text)] border-[var(--badge-medium-border)] bg-[var(--badge-medium-bg)]",
-  LOW: "text-[var(--badge-low-text)] border-[var(--badge-low-border)] bg-[var(--badge-low-bg)]",
-  INFORMATIONAL: "text-[var(--badge-info-text)] border-[var(--badge-info-border)] bg-[var(--badge-info-bg)]",
+  CRITICAL: "text-red-700 dark:text-red-200 border-red-400/35 bg-red-500/10",
+  HIGH: "text-orange-700 dark:text-orange-200 border-orange-400/35 bg-orange-500/10",
+  MEDIUM: "text-yellow-800 dark:text-yellow-200 border-yellow-400 bg-yellow-100 dark:bg-yellow-500/10 dark:border-yellow-400/35",
+  LOW: "text-emerald-700 dark:text-emerald-200 border-emerald-400/35 bg-emerald-500/10",
+  INFORMATIONAL: "text-[var(--text-secondary)] border-[var(--border-hover)] bg-[var(--bg-tertiary)]",
 };
 
 const statusColor: Record<string, string> = {
-  OPEN: "text-[var(--badge-critical-text)] border-[var(--badge-critical-border)] bg-[var(--badge-critical-bg)]",
-  IN_PROGRESS: "text-[var(--accent-1-strong)] border-[var(--line-3)] bg-[var(--accent-1-soft)]",
-  MITIGATED: "text-[var(--accent-1)] border-[var(--line-3)] bg-[var(--accent-1-soft)]",
-  FIXED: "text-[var(--badge-low-text)] border-[var(--badge-low-border)] bg-[var(--badge-low-bg)]",
-  ACCEPTED: "text-[var(--badge-info-text)] border-[var(--badge-info-border)] bg-[var(--badge-info-bg)]",
-  FALSE_POSITIVE: "text-[var(--badge-info-text)] border-[var(--badge-info-border)] bg-[var(--badge-info-bg)]",
+  OPEN: "text-red-700 dark:text-red-200 border-red-400/35 bg-red-500/10",
+  IN_PROGRESS: "text-sky-700 dark:text-sky-200 border-sky-400/35 bg-sky-500/10",
+  MITIGATED: "text-violet-700 dark:text-violet-200 border-violet-400/35 bg-violet-500/10",
+  FIXED: "text-emerald-800 dark:text-emerald-200 border-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-400/35",
+  ACCEPTED: "text-[var(--text-secondary)] border-[var(--border-hover)] bg-[var(--bg-tertiary)]",
+  FALSE_POSITIVE: "text-[var(--text-secondary)] border-[var(--border-hover)] bg-[var(--bg-tertiary)]",
 };
 
-function formatLabel(value: string) {
-  return value
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
 
 function toChartSeverityData(data: SeverityDistributionItem[]) {
   const total = data.reduce((sum, item) => sum + item.count, 0);
@@ -150,7 +138,7 @@ function getSlaBadge(slaDueAt?: string | Date | null) {
   if (!slaDueAt) {
     return {
       label: "No SLA",
-      tone: "border-[var(--badge-info-border)] bg-[var(--badge-info-bg)] text-[var(--badge-info-text)]",
+      tone: "border-[var(--border-hover)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]",
     };
   }
 
@@ -161,20 +149,20 @@ function getSlaBadge(slaDueAt?: string | Date | null) {
   if (remainingMs < 0) {
     return {
       label: `SLA Breached ${Math.abs(remainingDays)}d`,
-      tone: "border-[var(--badge-critical-border)] bg-[var(--badge-critical-bg)] text-[var(--badge-critical-text)]",
+      tone: "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200",
     };
   }
 
   if (remainingDays <= 3) {
     return {
       label: `SLA ${remainingDays}d left`,
-      tone: "border-[var(--badge-medium-border)] bg-[var(--badge-medium-bg)] text-[var(--badge-medium-text)]",
+      tone: "border-amber-300/60 bg-amber-100/85 text-amber-800 dark:border-amber-400/35 dark:bg-amber-500/12 dark:text-amber-200",
     };
   }
 
   return {
     label: `SLA ${remainingDays}d left`,
-    tone: "border-[var(--badge-low-border)] bg-[var(--badge-low-bg)] text-[var(--badge-low-text)]",
+    tone: "border-emerald-400/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
   };
 }
 
@@ -192,6 +180,10 @@ function VulnerabilitiesContent() {
   const [selectedSource, setSelectedSource] = useState<string>("ALL");
   const [showExploited, setShowExploited] = useState(false);
   const [showKevOnly, setShowKevOnly] = useState(false);
+
+  const goToFirstPage = useCallback(() => {
+    setPagination((prev) => (prev.page === 1 ? prev : { ...prev, page: 1 }));
+  }, []);
 
   const [pagination, setPagination] = useState<PaginationState>({
     page: 1,
@@ -218,6 +210,22 @@ function VulnerabilitiesContent() {
       setActiveVulnId(query);
     }
   }, [searchParams]);
+
+  // Any change that alters the result set must return to page one. Previously
+  // only the exploited/KEV toggles reset it, so applying a filter while on
+  // page 3 showed an empty queue.
+  useEffect(() => {
+    goToFirstPage();
+  }, [
+    searchQuery,
+    selectedSeverity,
+    selectedStatus,
+    selectedWorkflow,
+    selectedSource,
+    showExploited,
+    showKevOnly,
+    goToFirstPage,
+  ]);
 
   const fetchVulnerabilities = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
@@ -477,13 +485,13 @@ function VulnerabilitiesContent() {
                 <Download size={14} className="mr-2" />
                 XLSX
               </button>
-              <button
-                type="button"
+              <Link
+                href="/scanners"
                 className="btn btn-secondary !px-4 !py-2.5"
               >
                 <TrendingUp size={14} className="mr-2" />
-                Import Scan
-              </button>
+                Run a scan
+              </Link>
               <Link
                 href="/vulnerabilities/remediation"
                 className="btn btn-secondary !px-4 !py-2.5"
@@ -530,7 +538,7 @@ function VulnerabilitiesContent() {
         />
 
         {actionError ? (
-          <section className="rounded-2xl border border-[var(--badge-critical-border)] bg-[var(--badge-critical-bg)] p-3 text-sm text-[var(--badge-critical-text)]">
+          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-3 text-sm text-red-700 dark:text-red-200">
             {actionError}
           </section>
         ) : null}
@@ -556,69 +564,45 @@ function VulnerabilitiesContent() {
               />
             </label>
 
-            <select
+            <FilterSelect
+              label="Filter by severity"
               value={selectedSeverity}
-              onChange={(event) => {
-                setSelectedSeverity(event.target.value);
+              onValueChange={(value) => {
+                setSelectedSeverity(value);
                 setPagination((prev) => ({ ...prev, page: 1 }));
               }}
-              className="input h-10 w-full appearance-none text-sm text-[var(--text-primary)] border-[var(--border-color)] bg-[var(--bg-secondary)]"
-            >
-              <option value="ALL">All Severities</option>
-              {severityOptions.map((severity) => (
-                <option key={severity} value={severity}>
-                  {formatLabel(severity)}
-                </option>
-              ))}
-            </select>
+              options={[{ value: "ALL", label: "All Severities" }, ...severityOptions.map((severity) => ({ value: severity, label: formatLabel(severity) }))]}
+            />
 
-            <select
+            <FilterSelect
+              label="Filter by status"
               value={selectedStatus}
-              onChange={(event) => {
-                setSelectedStatus(event.target.value);
+              onValueChange={(value) => {
+                setSelectedStatus(value);
                 setPagination((prev) => ({ ...prev, page: 1 }));
               }}
-              className="input h-10 w-full appearance-none text-sm text-[var(--text-primary)] border-[var(--border-color)] bg-[var(--bg-secondary)]"
-            >
-              <option value="ALL">All Statuses</option>
-              {statusOptions.map((status) => (
-                <option key={status} value={status}>
-                  {formatLabel(status)}
-                </option>
-              ))}
-            </select>
+              options={[{ value: "ALL", label: "All Statuses" }, ...statusOptions.map((status) => ({ value: status, label: formatLabel(status) }))]}
+            />
 
-            <select
+            <FilterSelect
+              label="Filter by source"
               value={selectedSource}
-              onChange={(event) => {
-                setSelectedSource(event.target.value);
+              onValueChange={(value) => {
+                setSelectedSource(value);
                 setPagination((prev) => ({ ...prev, page: 1 }));
               }}
-              className="input h-10 w-full appearance-none text-sm text-[var(--text-primary)] border-[var(--border-color)] bg-[var(--bg-secondary)]"
-            >
-              <option value="ALL">All Sources</option>
-              {sourceOptions.map((source) => (
-                <option key={source} value={source}>
-                  {source}
-                </option>
-              ))}
-            </select>
+              options={[{ value: "ALL", label: "All Sources" }, ...sourceOptions.map((source) => ({ value: source, label: source }))]}
+            />
 
-            <select
+            <FilterSelect
+              label="Filter by workflow"
               value={selectedWorkflow}
-              onChange={(event) => {
-                setSelectedWorkflow(event.target.value);
+              onValueChange={(value) => {
+                setSelectedWorkflow(value);
                 setPagination((prev) => ({ ...prev, page: 1 }));
               }}
-              className="input h-10 w-full appearance-none text-sm text-[var(--text-primary)] border-[var(--border-color)] bg-[var(--bg-secondary)]"
-            >
-              <option value="ALL">All Workflow</option>
-              {workflowOptions.map((workflow) => (
-                <option key={workflow} value={workflow}>
-                  {formatLabel(workflow)}
-                </option>
-              ))}
-            </select>
+              options={[{ value: "ALL", label: "All Workflow" }, ...workflowOptions.map((workflow) => ({ value: workflow, label: formatLabel(workflow) }))]}
+            />
 
             <div className="flex gap-2">
               <button
@@ -646,9 +630,9 @@ function VulnerabilitiesContent() {
                 setPagination((prev) => ({ ...prev, page: 1 }));
               }}
               className={cn(
-                "inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition",
+                "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition",
                 showExploited
-                  ? "border-[var(--badge-critical-border)] bg-[var(--badge-critical-bg)] text-[var(--badge-critical-text)]"
+                  ? "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200"
                   : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]",
               )}
             >
@@ -662,9 +646,9 @@ function VulnerabilitiesContent() {
                 setPagination((prev) => ({ ...prev, page: 1 }));
               }}
               className={cn(
-                "inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition",
+                "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition",
                 showKevOnly
-                  ? "border-[var(--badge-high-border)] bg-[var(--badge-high-bg)] text-[var(--badge-high-text)]"
+                  ? "border-orange-400/35 bg-orange-500/10 text-orange-700 dark:text-orange-200"
                   : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]",
               )}
             >
@@ -674,7 +658,7 @@ function VulnerabilitiesContent() {
         </section>
 
         {error ? (
-          <section className="rounded-2xl border border-[var(--badge-critical-border)] bg-[var(--badge-critical-bg)] p-4 text-sm text-[var(--badge-critical-text)]">
+          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-sm text-red-700 dark:text-red-200">
             {error}
           </section>
         ) : null}
@@ -683,12 +667,12 @@ function VulnerabilitiesContent() {
           <article className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
             <header className="flex flex-col gap-3 border-b border-[var(--border-color)] p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="type-section text-[var(--text-primary)]">Vulnerability Queue</h2>
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Vulnerability Queue</h2>
                 <p className="text-sm text-[var(--text-secondary)]">
                   Showing {vulns.length} of {numberFormatter.format(pagination.total)} vulnerabilities
                 </p>
               </div>
-              <div className="type-caption text-[var(--text-muted)]">Page {pagination.page}</div>
+              <div className="text-xs text-[var(--text-muted)]">Page {pagination.page}</div>
             </header>
 
             {vulns.length === 0 ? (
@@ -704,7 +688,7 @@ function VulnerabilitiesContent() {
                   const statusTone = statusColor[vuln.status] || statusColor.OPEN;
                   const isExpanded = activeVulnId === vuln.id || (vuln.cveId && activeVulnId === vuln.cveId);
                   const workflowState = (vuln.workflowState || "NEW") as (typeof workflowOptions)[number];
-                  const nextWorkflowStates = workflowTransitions[workflowState] || [];
+                  const nextWorkflowStates = allowedWorkflowTransitions(workflowState);
                   const slaBadge = getSlaBadge(vuln.slaDueAt);
 
                   return (
@@ -720,7 +704,7 @@ function VulnerabilitiesContent() {
                         onClick={() => setActiveVulnId(isExpanded ? null : vuln.id)}
                       >
                         <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2.5">
-                          <Shield size={18} className="text-[var(--accent-1)]" />
+                          <Shield size={18} className="text-sky-700 dark:text-sky-300" />
                         </div>
 
                         <div className="min-w-0 flex-1">
@@ -730,14 +714,14 @@ function VulnerabilitiesContent() {
                                 href={`https://nvd.nist.gov/vuln/detail/${vuln.cveId}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="type-mono inline-flex items-center gap-1 text-xs text-[var(--accent-1)] hover:text-[var(--accent-1-strong)]"
+                                className="inline-flex items-center gap-1 font-mono text-xs text-sky-800 dark:text-sky-300 hover:text-sky-900 dark:hover:text-sky-200"
                                 onClick={(event) => event.stopPropagation()}
                               >
                                 {vuln.cveId}
                                 <ExternalLink size={11} />
                               </a>
                             ) : (
-                              <span className="type-mono text-xs text-[var(--text-muted)]">No CVE ID</span>
+                              <span className="font-mono text-xs text-[var(--text-muted)]">No CVE ID</span>
                             )}
 
                             <span className={cn("rounded-full border px-2 py-0.5 text-[11px]", severityTone)}>
@@ -749,19 +733,19 @@ function VulnerabilitiesContent() {
                             </span>
 
                             {vuln.workflowState ? (
-                              <span className="rounded-full border border-[var(--line-3)] bg-[var(--accent-1-soft)] px-2 py-0.5 text-[11px] text-[var(--accent-1)]">
+                              <span className="rounded-full border border-sky-300 bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-800 dark:border-sky-400/35 dark:bg-sky-500/10 dark:text-sky-200">
                                 {formatLabel(vuln.workflowState)}
                               </span>
                             ) : null}
 
                             {vuln.isExploited ? (
-                              <span className="rounded-full border border-[var(--badge-critical-border)] bg-[var(--badge-critical-bg)] px-2 py-0.5 text-[11px] text-[var(--badge-critical-text)]">
+                              <span className="rounded-full border border-red-400/35 bg-red-500/10 px-2 py-0.5 text-[11px] text-red-700 dark:text-red-200">
                                 EXPLOITED
                               </span>
                             ) : null}
 
                             {vuln.cisaKev ? (
-                              <span className="rounded-full border border-[var(--badge-high-border)] bg-[var(--badge-high-bg)] px-2 py-0.5 text-[11px] text-[var(--badge-high-text)]">
+                              <span className="rounded-full border border-orange-400/35 bg-orange-500/10 px-2 py-0.5 text-[11px] text-orange-700 dark:text-orange-200">
                                 CISA KEV
                               </span>
                             ) : null}
@@ -773,12 +757,12 @@ function VulnerabilitiesContent() {
                           </p>
 
                           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
-                              <span className="type-mono">
-                                CVSS {typeof vuln.cvssScore === "number" ? vuln.cvssScore.toFixed(1) : "N/A"}
-                              </span>
-                              <span className="type-mono">
-                                EPSS {typeof vuln.epssScore === "number" ? `${(vuln.epssScore * 100).toFixed(1)}%` : "N/A"}
-                              </span>
+                            <span>
+                              CVSS {typeof vuln.cvssScore === "number" ? vuln.cvssScore.toFixed(1) : "N/A"}
+                            </span>
+                            <span>
+                              EPSS {typeof vuln.epssScore === "number" ? `${(vuln.epssScore * 100).toFixed(1)}%` : "N/A"}
+                            </span>
                             <span>Source {vuln.source}</span>
                             {vuln.assignedUser?.name || vuln.assignedUser?.email ? (
                               <span>
@@ -799,7 +783,7 @@ function VulnerabilitiesContent() {
                         </div>
 
                         <div className="hidden text-right md:block">
-                          <p className="text-sm font-semibold text-[var(--badge-high-text)]">
+                          <p className="text-sm font-semibold text-orange-700 dark:text-orange-300">
                             {vuln.affectedAssets || 0}
                           </p>
                           <p className="text-xs text-[var(--text-muted)]">Affected Assets</p>
@@ -819,6 +803,7 @@ function VulnerabilitiesContent() {
                           <VulnerabilityActions
                             vulnerability={vuln}
                             onEdit={() => setEditingVuln(vuln)}
+                            onRefresh={() => fetchVulnerabilities({ silent: true })}
                             onDelete={() => {
                               void handleDelete(vuln.id);
                             }}
@@ -839,7 +824,7 @@ function VulnerabilitiesContent() {
                                 type="button"
                                 disabled={workflowUpdatingId === vuln.id}
                                 onClick={() => void transitionWorkflow(vuln, state)}
-                                className="inline-flex items-center gap-1 rounded-md border border-[var(--line-3)] bg-[var(--accent-1-soft)] px-2.5 py-1 text-[11px] text-[var(--accent-1)] transition hover:bg-[var(--accent-1-dim)] disabled:cursor-not-allowed disabled:opacity-50"
+                                className="inline-flex items-center gap-1 rounded-md border border-sky-400/50 bg-sky-100/80 px-2.5 py-1 text-[11px] text-sky-900 dark:border-sky-400/35 dark:bg-sky-500/10 dark:text-sky-200 transition hover:bg-sky-200/80 dark:hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 {workflowUpdatingId === vuln.id ? "Updating..." : `Move to ${formatLabel(state)}`}
                               </button>
@@ -849,14 +834,7 @@ function VulnerabilitiesContent() {
                             ) : null}
                           </div>
                           <RiskAssessmentView
-                            riskEntry={vuln.riskEntries?.[0] as {
-                              status?: string;
-                              riskScore?: number;
-                              impactScore?: number;
-                              likelihoodScore?: number;
-                              aiAnalysis?: Record<string, unknown>;
-                              [key: string]: unknown;
-                            } | null | undefined}
+                            riskEntry={vuln.riskEntries?.[0]}
                             vulnerabilityId={vuln.id}
                             onRefresh={() => {
                               void fetchVulnerabilities({ silent: true });
@@ -940,7 +918,7 @@ function VulnerabilitiesContent() {
                       </div>
                       <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
                         <div
-                          className="h-full rounded-full bg-[var(--accent-1)]"
+                          className="h-full rounded-full bg-cyan-300"
                           style={{
                             width: `${Math.min((item.count / highestSourceCount) * 100, 100)}%`,
                           }}
@@ -963,22 +941,22 @@ function VulnerabilitiesContent() {
                   {
                     label: "High (>70%)",
                     value: epssDistribution.high,
-                     tone: "text-[var(--badge-critical-text)] border-[var(--badge-critical-border)] bg-[var(--badge-critical-bg)]",
+                    tone: "text-red-800 dark:text-red-200 border-red-300/60 bg-red-100/85 dark:border-red-400/35 dark:bg-red-500/12",
                   },
                   {
                     label: "Medium (30-70%)",
                     value: epssDistribution.medium,
-                     tone: "text-[var(--badge-high-text)] border-[var(--badge-high-border)] bg-[var(--badge-high-bg)]",
+                    tone: "text-orange-800 dark:text-orange-200 border-orange-300/60 bg-orange-100/85 dark:border-orange-400/35 dark:bg-orange-500/12",
                   },
                   {
                     label: "Low (10-30%)",
                     value: epssDistribution.low,
-                     tone: "text-[var(--badge-medium-text)] border-[var(--badge-medium-border)] bg-[var(--badge-medium-bg)]",
+                    tone: "text-amber-800 dark:text-amber-200 border-amber-300/60 bg-amber-100/85 dark:border-amber-400/35 dark:bg-amber-500/12",
                   },
                   {
                     label: "Minimal (<10%)",
                     value: epssDistribution.minimal,
-                     tone: "text-[var(--badge-low-text)] border-[var(--badge-low-border)] bg-[var(--badge-low-bg)]",
+                    tone: "text-emerald-800 dark:text-emerald-200 border-emerald-300/60 bg-emerald-100/85 dark:border-emerald-400/35 dark:bg-emerald-500/12",
                   },
                 ].map((item) => (
                   <div

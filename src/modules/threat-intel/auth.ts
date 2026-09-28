@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
-import { ThreatIntelRepository } from "./persistence/repository";
+import { prisma } from "@/lib/prisma";
+import { isAdminTokenAuthorized, requireSessionWithOrg } from "@/lib/api-auth";
 
 export interface ThreatIntelRequestContext {
   userId: string;
@@ -10,25 +9,43 @@ export interface ThreatIntelRequestContext {
   tokenAuthorized: boolean;
 }
 
-export function isAdminTokenAuthorized(request: Request): boolean {
-  const authHeader = request.headers.get("authorization");
-  const adminToken = process.env.ADMIN_API_TOKEN;
-  if (!adminToken) {
-    return false;
-  }
+export { isAdminTokenAuthorized };
 
-  return authHeader === `Bearer ${adminToken}`;
-}
-
+/**
+ * Threat-intel routes accept either a normal session or, for the unattended
+ * sync endpoints, the admin bearer token plus an explicit organization header.
+ *
+ * The session branch delegates to `requireSessionWithOrg`; it used to carry its
+ * own copy of that logic, including the bug that attached an org-less user to
+ * whichever organization happened to be first in the table.
+ */
 export async function requireThreatIntelContext(
   request: Request,
   options: { allowAdminToken?: boolean; requireMainOfficer?: boolean } = {},
 ): Promise<{ ok: true; context: ThreatIntelRequestContext } | { ok: false; response: NextResponse }> {
-  const tokenAuthorized = options.allowAdminToken === true && isAdminTokenAuthorized(request);
+  if (options.allowAdminToken === true && isAdminTokenAuthorized(request)) {
+    const orgId = request.headers.get("x-secyourflow-org-id") || request.headers.get("x-org-id");
+    if (!orgId) {
+      return {
+        ok: false,
+        response: NextResponse.json(
+          { error: "x-secyourflow-org-id header is required for token-based threat intel access" },
+          { status: 400 },
+        ),
+      };
+    }
 
-  if (tokenAuthorized) {
-    const repository = new ThreatIntelRepository();
-    const org = await repository.seedAndReturnDefaultOrganization();
+    const org = await prisma.organization.findUnique({
+      where: { id: orgId },
+      select: { id: true },
+    });
+
+    if (!org) {
+      return {
+        ok: false,
+        response: NextResponse.json({ error: "Invalid organization context" }, { status: 403 }),
+      };
+    }
 
     return {
       ok: true,
@@ -41,46 +58,13 @@ export async function requireThreatIntelContext(
     };
   }
 
-  const session = await auth();
-  if (!session?.user?.id) {
-    return {
-      ok: false,
-      response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
-    };
+  const result = await requireSessionWithOrg(request, {
+    allowedRoles: options.requireMainOfficer ? ["MAIN_OFFICER"] : undefined,
+  });
+
+  if (!result.ok) {
+    return result;
   }
 
-  if (!isTwoFactorSatisfied(session)) {
-    return {
-      ok: false,
-      response: NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 }),
-    };
-  }
-
-  const role = session.user.role ?? "ANALYST";
-  if (options.requireMainOfficer && role !== "MAIN_OFFICER") {
-    return {
-      ok: false,
-      response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
-    };
-  }
-
-  const repository = new ThreatIntelRepository();
-  const organizationId = await repository.getUserOrganizationId(session.user.id);
-
-  if (!organizationId) {
-    return {
-      ok: false,
-      response: NextResponse.json({ error: "Organization not found" }, { status: 403 }),
-    };
-  }
-
-  return {
-    ok: true,
-    context: {
-      userId: session.user.id,
-      organizationId,
-      role,
-      tokenAuthorized: false,
-    },
-  };
+  return { ok: true, context: { ...result.context, tokenAuthorized: false } };
 }

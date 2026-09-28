@@ -40,6 +40,16 @@ const COUNTRY_COORDS: Record<string, [number, number]> = {
 export function AssetMap({ assets }: AssetMapProps) {
     const [tooltipContent, setTooltipContent] = useState("");
 
+    const mapStyle = {
+        activeFill: "rgba(59, 130, 246, 0.4)",
+        activeHoverFill: "rgba(59, 130, 246, 0.8)",
+        neutralFill: "var(--bg-tertiary)",
+        neutralHoverFill: "var(--bg-elevated)",
+        neutralStroke: "var(--border-color)",
+        neutralHoverStroke: "var(--border-hover)",
+        markerLabel: "var(--text-primary)",
+    } as const;
+
     // Aggregate assets by country
     const countryStats = assets.reduce((acc, asset) => {
         if (!asset.location) return acc;
@@ -58,13 +68,13 @@ export function AssetMap({ assets }: AssetMapProps) {
     return (
         <div className="relative w-full h-[500px] bg-[var(--bg-tertiary)] rounded-xl overflow-hidden border border-[var(--border-color)]">
             <div className="absolute top-4 left-4 z-10">
-                <h3 className="text-lg font-bold text-white">Global Asset Distribution</h3>
+                <h3 className="text-lg font-bold text-[var(--text-primary)]">Global Asset Distribution</h3>
                 <p className="text-sm text-[var(--text-muted)]">Real-time geographic locations of items</p>
             </div>
 
             {tooltipContent && (
                 <div className="absolute bottom-4 right-4 z-20 bg-[var(--bg-elevated)] border border-[var(--border-color)] p-3 rounded-lg shadow-xl max-w-xs animate-in fade-in slide-in-from-bottom-2">
-                    <p className="text-sm font-bold text-white mb-1">{tooltipContent.split(':')[0]}</p>
+                    <p className="text-sm font-bold text-[var(--text-primary)] mb-1">{tooltipContent.split(':')[0]}</p>
                     <p className="text-xs text-[var(--text-secondary)]">{tooltipContent.split(':')[1]}</p>
                 </div>
             )}
@@ -104,14 +114,14 @@ export function AssetMap({ assets }: AssetMapProps) {
                                         onMouseLeave={() => setTooltipContent("")}
                                         style={{
                                             default: {
-                                                fill: hasAssets ? "rgba(59, 130, 246, 0.4)" : "rgba(255, 255, 255, 0.05)",
-                                                stroke: "rgba(255, 255, 255, 0.1)",
+                                                fill: hasAssets ? mapStyle.activeFill : mapStyle.neutralFill,
+                                                stroke: mapStyle.neutralStroke,
                                                 strokeWidth: 0.5,
                                                 outline: "none",
                                             },
                                             hover: {
-                                                fill: hasAssets ? "rgba(59, 130, 246, 0.8)" : "rgba(255, 255, 255, 0.15)",
-                                                stroke: "rgba(255, 255, 255, 0.3)",
+                                                fill: hasAssets ? mapStyle.activeHoverFill : mapStyle.neutralHoverFill,
+                                                stroke: mapStyle.neutralHoverStroke,
                                                 strokeWidth: 0.5,
                                                 outline: "none",
                                                 cursor: "pointer"
@@ -136,12 +146,12 @@ export function AssetMap({ assets }: AssetMapProps) {
                                 />
                                 <circle
                                     r={2}
-                                    fill="#fff"
+                                    fill={mapStyle.markerLabel}
                                 />
                                 <text
                                     textAnchor="middle"
                                     y={-15}
-                                    style={{ fontFamily: "Inter, sans-serif", fill: "#fff", fontSize: "10px", fontWeight: "bold", pointerEvents: "none" }}
+                                    style={{ fontFamily: "Inter, sans-serif", fill: mapStyle.markerLabel, fontSize: "10px", fontWeight: "bold", pointerEvents: "none" }}
                                 >
                                     {country} ({stats.count})
                                 </text>
@@ -154,11 +164,11 @@ export function AssetMap({ assets }: AssetMapProps) {
             <div className="absolute bottom-4 left-4 flex flex-col gap-2 bg-[var(--bg-elevated)]/80 backdrop-blur-md p-3 rounded-lg border border-[var(--border-color)]">
                 <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-blue-500" />
-                    <span className="text-[10px] text-white font-medium">Active Assets</span>
+                    <span className="text-[10px] text-[var(--text-primary)] font-medium">Active Assets</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-red-500" />
-                    <span className="text-[10px] text-white font-medium">Critical Issues</span>
+                    <span className="text-[10px] text-[var(--text-primary)] font-medium">Critical Issues</span>
                 </div>
             </div>
         </div>

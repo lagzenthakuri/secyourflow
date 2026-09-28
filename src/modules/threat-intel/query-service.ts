@@ -1,4 +1,4 @@
-import type { Severity } from "@prisma/client";
+import type { Severity } from "@repo/database";
 import { ThreatIntelRepository } from "./persistence/repository";
 
 const severityRank: Record<Exclude<Severity, never>, number> = {

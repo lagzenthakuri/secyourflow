@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireSessionWithOrg } from "@/lib/api-auth";
+import { requireSessionWithOrg, ROLE_VULNERABILITY_WRITE } from "@/lib/api-auth";
 import { applyWorkflowStateTimestamps, assertValidWorkflowTransition } from "@/lib/workflow/state-machine";
 import { calculateSlaDueAt } from "@/lib/workflow/sla";
 
@@ -18,7 +18,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const authResult = await requireSessionWithOrg(request);
+  const authResult = await requireSessionWithOrg(request, {
+    allowedRoles: ROLE_VULNERABILITY_WRITE,
+  });
   if (!authResult.ok) return authResult.response;
 
   const parsed = workflowSchema.safeParse(await request.json());
@@ -43,6 +45,12 @@ export async function PATCH(
 
   const now = new Date();
   const toState = payload.toState || vulnerability.workflowState;
+  const assignedUserId =
+    payload.assignedUserId === null
+      ? null
+      : typeof payload.assignedUserId === "string" && payload.assignedUserId.trim().length > 0
+        ? payload.assignedUserId.trim()
+        : undefined;
 
   if (toState !== vulnerability.workflowState) {
     try {
@@ -59,8 +67,22 @@ export async function PATCH(
     workflowState: toState,
   };
 
-  if (typeof payload.assignedUserId !== "undefined") {
-    updates.assignedUserId = payload.assignedUserId;
+  if (typeof assignedUserId === "string") {
+    const assignee = await prisma.user.findFirst({
+      where: {
+        id: assignedUserId,
+        organizationId,
+      },
+      select: { id: true },
+    });
+
+    if (!assignee) {
+      return NextResponse.json({ error: "assignedUserId is invalid for your organization" }, { status: 400 });
+    }
+  }
+
+  if (typeof assignedUserId !== "undefined") {
+    updates.assignedUserId = assignedUserId;
   }
 
   if (typeof payload.assignedTeam !== "undefined") {
