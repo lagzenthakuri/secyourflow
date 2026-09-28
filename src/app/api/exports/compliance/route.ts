@@ -63,6 +63,6 @@ export async function GET(request: NextRequest) {
     rows,
   };
 
-  const rendered = renderTabularExport(data, format, `compliance_${data.generatedAt.slice(0, 10)}`);
+  const rendered = await renderTabularExport(data, format, `compliance_${data.generatedAt.slice(0, 10)}`);
   return exportResponse(rendered);
 }

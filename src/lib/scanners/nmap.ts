@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@repo/database";
 import type { DiscoveredAssetRecord } from "@/lib/discovery/adapters/types";
 
 interface ParsedHost {

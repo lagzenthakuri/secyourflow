@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import type { Severity } from "@prisma/client";
+import type { Severity } from "@repo/database";
 
 interface VulnerabilityNotificationInput {
   organizationId: string;
@@ -49,21 +49,17 @@ export async function dispatchVulnerabilityNotifications(input: VulnerabilityNot
     const message = `Vulnerability ${vuln.id} matched notification rule '${rule.name}'.`;
 
     try {
-      if (rule.channel !== "IN_APP") {
-        continue;
-      }
-
-      if (rule.channel === "IN_APP") {
-        await prisma.notification.create({
-          data: {
-            userId: rule.userId,
-            title,
-            message,
-            type: "WARNING",
-            link: `/vulnerabilities/${vuln.id}`,
-          },
-        });
-      }
+      // The query already filters to channel IN_APP; the two branches that
+      // re-checked it here could never both be reached.
+      await prisma.notification.create({
+        data: {
+          userId: rule.userId,
+          title,
+          message,
+          type: "WARNING",
+          link: `/vulnerabilities/${vuln.id}`,
+        },
+      });
 
       sent += 1;
     } catch (error) {
