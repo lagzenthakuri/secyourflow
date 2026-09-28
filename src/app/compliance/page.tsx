@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { FilterSelect } from "@/components/ui/FilterSelect";
 import { ComplianceBarChart } from "@/components/charts/DashboardCharts";
 import { cn } from "@/lib/utils";
 import { Modal } from "@/components/ui/Modal";
@@ -33,6 +34,7 @@ import { ControlActions } from "@/components/compliance/ControlActions";
 import { FrameworkActions } from "@/components/compliance/FrameworkActions";
 import { EvidenceUploadModal } from "@/components/compliance/EvidenceUploadModal";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
+import { ComplianceEngine } from "@/components/compliance/ComplianceEngine";
 
 interface FrameworkControl {
   id: string;
@@ -92,32 +94,32 @@ const statusConfig = {
   COMPLIANT: {
     label: "Compliant",
     icon: CheckCircle2,
-    tone: "border-emerald-400/35 bg-emerald-500/10 text-emerald-200",
-    softTone: "bg-emerald-500/15 text-emerald-300",
+    tone: "border-emerald-400/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
+    softTone: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
   },
   NON_COMPLIANT: {
     label: "Non-Compliant",
     icon: XCircle,
-    tone: "border-red-400/35 bg-red-500/10 text-red-200",
-    softTone: "bg-red-500/15 text-red-300",
+    tone: "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200",
+    softTone: "bg-red-500/15 text-red-600 dark:text-red-300",
   },
   PARTIALLY_COMPLIANT: {
     label: "Partial",
     icon: AlertTriangle,
-    tone: "border-yellow-400/35 bg-yellow-500/10 text-yellow-200",
-    softTone: "bg-yellow-500/15 text-yellow-300",
+    tone: "border-yellow-400/35 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200",
+    softTone: "bg-yellow-500/15 text-yellow-600 dark:text-yellow-300",
   },
   NOT_ASSESSED: {
     label: "Not Assessed",
     icon: HelpCircle,
-    tone: "border-slate-400/35 bg-slate-500/10 text-[var(--text-secondary)]",
-    softTone: "bg-slate-500/15 text-[var(--text-secondary)]",
+    tone: "border-[var(--border-hover)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]",
+    softTone: "bg-[var(--bg-tertiary)] text-[var(--text-secondary)]",
   },
   NOT_APPLICABLE: {
     label: "N/A",
     icon: HelpCircle,
-    tone: "border-slate-400/35 bg-slate-500/10 text-[var(--text-secondary)]",
-    softTone: "bg-slate-500/15 text-[var(--text-secondary)]",
+    tone: "border-[var(--border-hover)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]",
+    softTone: "bg-[var(--bg-tertiary)] text-[var(--text-secondary)]",
   },
 } as const;
 
@@ -131,12 +133,36 @@ const nistCsfConfig = {
 } as const;
 
 const maturityLabels = [
-  { level: 0, label: "Non-existent", color: "#94a3b8" },
-  { level: 1, label: "Ad Hoc", color: "#f87171" },
-  { level: 2, label: "Repeatable", color: "#fb923c" },
-  { level: 3, label: "Defined", color: "#facc15" },
-  { level: 4, label: "Managed", color: "#34d399" },
-  { level: 5, label: "Optimized", color: "#38bdf8" },
+  {
+    level: 0,
+    label: "Non-existent",
+    tone: "border-slate-300/70 bg-slate-100 text-slate-700 dark:border-slate-400/30 dark:bg-slate-500/15 dark:text-slate-200",
+  },
+  {
+    level: 1,
+    label: "Ad Hoc",
+    tone: "border-red-300/70 bg-red-100 text-red-800 dark:border-red-400/30 dark:bg-red-500/15 dark:text-red-200",
+  },
+  {
+    level: 2,
+    label: "Repeatable",
+    tone: "border-orange-300/70 bg-orange-100 text-orange-800 dark:border-orange-400/30 dark:bg-orange-500/15 dark:text-orange-200",
+  },
+  {
+    level: 3,
+    label: "Defined",
+    tone: "border-amber-300/70 bg-amber-100 text-amber-800 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-200",
+  },
+  {
+    level: 4,
+    label: "Managed",
+    tone: "border-emerald-300/70 bg-emerald-100 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-200",
+  },
+  {
+    level: 5,
+    label: "Optimized",
+    tone: "border-sky-300/70 bg-sky-100 text-sky-800 dark:border-sky-400/30 dark:bg-sky-500/15 dark:text-sky-200",
+  },
 ] as const;
 
 const controlTypeConfig = {
@@ -148,9 +174,9 @@ const controlTypeConfig = {
 const numberFormatter = new Intl.NumberFormat("en-US");
 
 function getComplianceTone(value: number) {
-  if (value >= 80) return "text-emerald-300";
-  if (value >= 60) return "text-yellow-300";
-  return "text-red-300";
+  if (value >= 80) return "text-emerald-700 dark:text-emerald-200";
+  if (value >= 60) return "text-yellow-700 dark:text-yellow-200";
+  return "text-red-700 dark:text-red-200";
 }
 
 function getComplianceBarTone(value: number) {
@@ -161,10 +187,11 @@ function getComplianceBarTone(value: number) {
 
 function escapeCsv(value: unknown): string {
   const str = String(value ?? "");
-  if (!str.includes(",") && !str.includes("\"") && !str.includes("\n")) {
-    return str;
+  const normalized = /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
+  if (!normalized.includes(",") && !normalized.includes("\"") && !normalized.includes("\n")) {
+    return normalized;
   }
-  return `"${str.replace(/"/g, '""')}"`;
+  return `"${normalized.replace(/"/g, '""')}"`;
 }
 
 function getMaturityTone(level?: number | null) {
@@ -713,13 +740,13 @@ export default function CompliancePage() {
         />
 
         {pageError ? (
-          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-sm text-red-200">
+          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-sm text-red-700 dark:text-red-200">
             {pageError}
           </section>
         ) : null}
 
         {actionError ? (
-          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-sm text-red-200">
+          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-sm text-red-700 dark:text-red-200">
             {actionError}
           </section>
         ) : null}
@@ -761,7 +788,7 @@ export default function CompliancePage() {
             return (
               <article
                 key={metric.label}
-                className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-300/35 hover:shadow-lg hover:shadow-sky-300/10 animate-in fade-in slide-in-from-bottom-4"
+                className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-400/50 hover:shadow-lg hover:shadow-sky-300/10 dark:hover:border-sky-300/35 animate-in fade-in slide-in-from-bottom-4"
                 style={{ animationDelay: `${index * 90}ms`, animationFillMode: "backwards" }}
               >
                 <div className="flex items-start justify-between">
@@ -776,6 +803,8 @@ export default function CompliancePage() {
             );
           })}
         </section>
+
+        <ComplianceEngine />
 
         <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4 sm:p-5 animate-in fade-in slide-in-from-bottom-3 duration-500">
           <div className="mb-4 flex items-center justify-between gap-3">
@@ -821,7 +850,7 @@ export default function CompliancePage() {
                       "group relative cursor-pointer rounded-xl border p-4 transition-all duration-300 animate-in fade-in zoom-in-95",
                       isSelected
                         ? "border-sky-300/35 bg-sky-400/10 shadow-lg shadow-sky-400/10"
-                        : "border-white/10 bg-white/[0.02] hover:border-sky-300/30 hover:bg-white/[0.04] hover:scale-[1.02]",
+                        : "border-[var(--border-color)] bg-[var(--bg-tertiary)] hover:border-sky-400/40 hover:bg-sky-50/50 dark:hover:border-sky-300/30 dark:hover:bg-[var(--bg-tertiary)] hover:scale-[1.02]",
                     )}
                     style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}
                   >
@@ -849,18 +878,12 @@ export default function CompliancePage() {
                       <span className={cn("font-semibold", getComplianceTone(framework.compliancePercentage))}>
                         {framework.compliancePercentage.toFixed(0)}% compliant
                       </span>
-                      <span
-                        className="rounded-md px-2 py-1 font-medium"
-                        style={{
-                          backgroundColor: `${maturityTone.color}22`,
-                          color: maturityTone.color,
-                        }}
-                      >
+                      <span className={cn("rounded-md border px-2 py-1 font-medium", maturityTone.tone)}>
                         L{framework.avgMaturityLevel.toFixed(1)}
                       </span>
                     </div>
 
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
                       <div
                         className={cn(
                           "h-full rounded-full transition-all duration-700 ease-out",
@@ -872,14 +895,14 @@ export default function CompliancePage() {
                       />
                     </div>
 
-                    <div className="mt-3 flex items-center justify-between text-[11px] text-[var(--text-muted)]">
-                      <span>{framework.compliant} passing</span>
-                      <span>{framework.nonCompliant} failing</span>
+                    <div className="mt-3 flex items-center justify-between text-[11px] text-[var(--text-secondary)]">
+                      <span className="text-emerald-700 dark:text-emerald-200">{framework.compliant} passing</span>
+                      <span className="text-red-700 dark:text-red-200">{framework.nonCompliant} failing</span>
                       <ChevronRight
                         size={13}
                         className={cn(
                           "transition-transform duration-300",
-                          isSelected ? "translate-x-0 text-sky-200" : "text-slate-500 group-hover:translate-x-0.5",
+                          isSelected ? "translate-x-0 text-sky-800 dark:text-sky-200" : "text-[var(--text-muted)] group-hover:translate-x-0.5",
                         )}
                       />
                     </div>
@@ -918,58 +941,47 @@ export default function CompliancePage() {
                     <label className="relative block">
                       <Search
                         size={16}
-                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
                       />
                       <input
                         type="text"
                         placeholder="Search control ID, title, owner, category..."
                         value={searchQuery}
                         onChange={(event) => setSearchQuery(event.target.value)}
-                        className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.03] pl-10 pr-3 text-sm text-[var(--text-primary)] outline-none transition-colors duration-200 placeholder:text-slate-500 focus:border-sky-300/45"
+                        className="h-11 w-full rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] pl-10 pr-3 text-sm text-[var(--text-primary)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus:border-sky-300/45"
                       />
                     </label>
 
                     <label className="relative block">
                       <Filter
                         size={14}
-                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
                       />
-                      <select
+                      <FilterSelect
+                        label="Filter controls by status"
                         value={selectedStatus}
-                        onChange={(event) =>
-                          setSelectedStatus(event.target.value as "ALL" | FrameworkControl["status"])
-                        }
-                        className="h-11 w-full appearance-none rounded-xl border border-white/10 bg-white/[0.03] pl-9 pr-8 text-sm text-slate-100 outline-none transition-colors duration-200 focus:border-sky-300/45"
-                      >
-                        <option value="ALL">All Statuses</option>
-                        <option value="COMPLIANT">Compliant</option>
-                        <option value="NON_COMPLIANT">Non-Compliant</option>
-                        <option value="PARTIALLY_COMPLIANT">Partial</option>
-                        <option value="NOT_ASSESSED">Not Assessed</option>
-                      </select>
+                        onValueChange={(value) => setSelectedStatus(value as "ALL" | FrameworkControl["status"])}
+                        options={[
+                          { value: "ALL", label: "All Statuses" },
+                          { value: "COMPLIANT", label: "Compliant" },
+                          { value: "NON_COMPLIANT", label: "Non-Compliant" },
+                          { value: "PARTIALLY_COMPLIANT", label: "Partial" },
+                          { value: "NOT_ASSESSED", label: "Not Assessed" },
+                        ]}
+                      />
                     </label>
 
                     <label className="relative block">
                       <Layers
                         size={14}
-                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
                       />
-                      <select
+                      <FilterSelect
+                        label="Filter controls by NIST function"
                         value={selectedNistFunction}
-                        onChange={(event) =>
-                          setSelectedNistFunction(
-                            event.target.value as "ALL" | keyof typeof nistCsfConfig,
-                          )
-                        }
-                        className="h-11 w-full appearance-none rounded-xl border border-white/10 bg-white/[0.03] pl-9 pr-8 text-sm text-slate-100 outline-none transition-colors duration-200 focus:border-sky-300/45"
-                      >
-                        <option value="ALL">All NIST Functions</option>
-                        {Object.entries(nistCsfConfig).map(([key, item]) => (
-                          <option key={key} value={key}>
-                            {item.label}
-                          </option>
-                        ))}
-                      </select>
+                        onValueChange={(value) => setSelectedNistFunction(value as "ALL" | keyof typeof nistCsfConfig)}
+                        options={[{ value: "ALL", label: "All NIST Functions" }, ...Object.entries(nistCsfConfig).map(([key, item]) => ({ value: key, label: item.label }))]}
+                      />
                     </label>
 
                     <button
@@ -979,7 +991,7 @@ export default function CompliancePage() {
                         setSelectedStatus("ALL");
                         setSelectedNistFunction("ALL");
                       }}
-                      className="h-11 rounded-xl border border-white/20 bg-white/[0.04] px-4 text-sm font-medium text-[var(--text-secondary)] transition-all duration-200 hover:bg-white/[0.08]"
+                      className="h-11 rounded-xl border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-4 text-sm font-medium text-[var(--text-secondary)] transition-all duration-200 hover:bg-[var(--bg-elevated)]"
                     >
                       Clear
                     </button>
@@ -990,27 +1002,27 @@ export default function CompliancePage() {
                       {
                         key: "ALL",
                         label: `All (${selectedFrameworkStats.total})`,
-                        tone: "border-white/20 bg-white/[0.05] text-[var(--text-secondary)]",
+                        tone: "border-[var(--border-hover)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]",
                       },
                       {
                         key: "COMPLIANT",
                         label: `Compliant (${selectedFrameworkStats.compliant})`,
-                        tone: "border-emerald-400/30 bg-emerald-500/10 text-emerald-200",
+                        tone: "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
                       },
                       {
                         key: "NON_COMPLIANT",
                         label: `Non-Compliant (${selectedFrameworkStats.nonCompliant})`,
-                        tone: "border-red-400/30 bg-red-500/10 text-red-200",
+                        tone: "border-red-400/30 bg-red-500/10 text-red-700 dark:text-red-200",
                       },
                       {
                         key: "PARTIALLY_COMPLIANT",
                         label: `Partial (${selectedFrameworkStats.partial})`,
-                        tone: "border-yellow-400/30 bg-yellow-500/10 text-yellow-200",
+                        tone: "border-yellow-400/30 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200",
                       },
                       {
                         key: "NOT_ASSESSED",
                         label: `Not Assessed (${selectedFrameworkStats.notAssessed})`,
-                        tone: "border-slate-400/30 bg-slate-500/10 text-[var(--text-secondary)]",
+                        tone: "border-[var(--border-hover)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]",
                       },
                     ].map((chip) => (
                       <button
@@ -1023,7 +1035,7 @@ export default function CompliancePage() {
                           "rounded-full border px-3 py-1 font-medium transition-all duration-200",
                           selectedStatus === chip.key
                             ? chip.tone
-                            : "border-white/10 bg-white/[0.02] text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                            : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
                         )}
                       >
                         {chip.label}
@@ -1032,8 +1044,8 @@ export default function CompliancePage() {
                   </div>
                 </>
               ) : (
-                <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-10 text-center">
-                  <FileCheck className="mx-auto h-10 w-10 text-slate-500" />
+                <div className="rounded-xl border border-dashed border-[var(--border-hover)] bg-[var(--bg-tertiary)] p-10 text-center">
+                  <FileCheck className="mx-auto h-10 w-10 text-[var(--text-muted)]" />
                   <p className="mt-4 text-base font-medium text-[var(--text-primary)]">No Framework Selected</p>
                   <p className="mt-2 text-sm text-[var(--text-muted)]">
                     Select a framework to review and assess controls.
@@ -1046,14 +1058,14 @@ export default function CompliancePage() {
               <div className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
                 {filteredControls.length === 0 ? (
                   <div className="p-14 text-center">
-                    <FileCheck className="mx-auto h-12 w-12 text-slate-500" />
+                    <FileCheck className="mx-auto h-12 w-12 text-[var(--text-muted)]" />
                     <p className="mt-4 text-base font-medium text-[var(--text-primary)]">No Controls Found</p>
                     <p className="mt-2 text-sm text-[var(--text-muted)]">
                       Adjust filters or add controls to this framework.
                     </p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-white/10">
+                  <div className="divide-y divide-[var(--border-color)]">
                     {filteredControls.map((control) => {
                       const status = statusConfig[control.status] || statusConfig.NOT_ASSESSED;
                       const StatusIcon = status.icon;
@@ -1072,7 +1084,7 @@ export default function CompliancePage() {
                             setSelectedControl(control);
                             setIsAssessModalOpen(true);
                           }}
-                          className="group cursor-pointer p-4 transition-colors duration-200 hover:bg-white/[0.04] sm:p-5"
+                          className="group cursor-pointer p-4 transition-colors duration-200 hover:bg-[var(--bg-tertiary)] sm:p-5"
                         >
                           <div className="flex items-start gap-4">
                             <div
@@ -1086,7 +1098,7 @@ export default function CompliancePage() {
 
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="rounded-md border border-sky-300/35 bg-sky-300/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-sky-700 dark:text-sky-200">
+                                <span className="rounded-md border border-sky-400/50 bg-sky-100/90 px-2 py-0.5 font-mono text-[11px] font-semibold text-sky-900 dark:border-sky-300/35 dark:bg-sky-300/10 dark:text-sky-200">
                                   {control.controlId}
                                 </span>
                                 <span
@@ -1098,11 +1110,10 @@ export default function CompliancePage() {
                                   {status.label}
                                 </span>
                                 <span
-                                  className="rounded-md px-2 py-0.5 text-[11px] font-semibold"
-                                  style={{
-                                    backgroundColor: `${maturityTone.color}22`,
-                                    color: maturityTone.color,
-                                  }}
+                                  className={cn(
+                                    "rounded-md border px-2 py-0.5 text-[11px] font-semibold",
+                                    maturityTone.tone,
+                                  )}
                                 >
                                   L{control.maturityLevel ?? 0}
                                 </span>
@@ -1120,13 +1131,13 @@ export default function CompliancePage() {
                                 ) : null}
                               </div>
 
-                              <h3 className="mt-2 text-sm font-semibold text-[var(--text-primary)] transition-colors duration-200 group-hover:text-sky-100 sm:text-base">
+                              <h3 className="mt-2 text-sm font-semibold text-[var(--text-primary)] transition-colors duration-200 group-hover:text-sky-900 dark:group-hover:text-sky-100 sm:text-base">
                                 {control.title}
                               </h3>
 
                               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
                                 {control.category ? (
-                                  <span className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5">
+                                  <span className="rounded-md border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-0.5">
                                     {control.category}
                                   </span>
                                 ) : null}
@@ -1187,7 +1198,7 @@ export default function CompliancePage() {
                 {frameworks.length > 0 ? (
                   <ComplianceBarChart data={frameworks} />
                 ) : (
-                  <p className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-4 text-sm text-[var(--text-muted)]">
+                  <p className="rounded-xl border border-dashed border-[var(--border-hover)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
                     Add frameworks to see comparison trends.
                   </p>
                 )}
@@ -1209,24 +1220,24 @@ export default function CompliancePage() {
                     {
                       label: "Maturity",
                       value: `L${selectedFramework.avgMaturityLevel.toFixed(1)}`,
-                      color: "text-sky-200",
+                      color: "text-sky-800 dark:text-sky-200",
                     },
                     {
                       label: "Compliant",
                       value: String(selectedFrameworkStats.compliant),
-                      color: "text-emerald-200",
+                      color: "text-emerald-700 dark:text-emerald-200",
                     },
                     {
                       label: "Non-Compliant",
                       value: String(selectedFrameworkStats.nonCompliant),
-                      color: "text-red-200",
+                      color: "text-red-700 dark:text-red-200",
                     },
                   ].map((item) => (
                     <div
                       key={item.label}
-                      className="rounded-xl border border-white/10 bg-white/[0.03] p-3"
+                      className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3"
                     >
-                      <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                      <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
                         {item.label}
                       </p>
                       <p className={cn("mt-2 text-xl font-semibold", item.color)}>{item.value}</p>
@@ -1255,7 +1266,7 @@ export default function CompliancePage() {
                           </span>
                           <span className="text-[var(--text-muted)]">{value}</span>
                         </div>
-                        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
+                        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
                           <div
                             className="h-full rounded-full transition-all duration-500"
                             style={{
@@ -1278,11 +1289,10 @@ export default function CompliancePage() {
                 {maturityLabels.map((item) => (
                   <div key={item.level} className="flex items-center gap-2">
                     <span
-                      className="inline-flex h-6 w-6 items-center justify-center rounded-md text-xs font-semibold"
-                      style={{
-                        backgroundColor: `${item.color}22`,
-                        color: item.color,
-                      }}
+                      className={cn(
+                        "inline-flex h-6 w-6 items-center justify-center rounded-md border text-xs font-semibold",
+                        item.tone,
+                      )}
                     >
                       {item.level}
                     </span>
@@ -1446,7 +1456,7 @@ export default function CompliancePage() {
           </div>
 
           {selectedTemplateId ? (
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-[var(--text-secondary)]">
+            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 text-sm text-[var(--text-secondary)]">
               {templates.find((template) => template.id === selectedTemplateId)?.description}
             </div>
           ) : null}

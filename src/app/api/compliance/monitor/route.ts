@@ -1,40 +1,29 @@
 import { NextResponse } from "next/server";
-import { runContinuousComplianceAudit } from "@/lib/evidence-engine";
-import { auth } from "@/lib/auth";
-import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
-
-function isAdminTokenAuthorized(request: Request): boolean {
-  const authHeader = request.headers.get("authorization");
-  const adminToken = process.env.ADMIN_API_TOKEN;
-  if (!adminToken) {
-    return false;
-  }
-
-  return authHeader === `Bearer ${adminToken}`;
-}
+import {
+  runContinuousComplianceAudit,
+  runContinuousComplianceAuditForAllOrganizations,
+} from "@/lib/evidence-engine";
+import { requireAutomationContext } from "@/lib/api-auth";
 
 export async function POST(request: Request) {
-  if (!isAdminTokenAuthorized(request)) {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const body = (await request.json().catch(() => ({}))) as { organizationId?: string };
 
-    if (!isTwoFactorSatisfied(session)) {
-      return NextResponse.json({ error: "Two-factor authentication required" }, { status: 403 });
-    }
-
-    if (session.user.role !== "MAIN_OFFICER") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+  const authResult = await requireAutomationContext(request, body.organizationId);
+  if (!authResult.ok) {
+    return authResult.response;
   }
 
+  const { organizationId } = authResult.context;
+
   try {
-    const summary = await runContinuousComplianceAudit();
-    return NextResponse.json({
-      message: "Compliance monitoring completed.",
-      summary,
-    });
+    // A null organization is only reachable via the admin token and means an
+    // explicit every-tenant sweep. The single-tenant entry point now requires
+    // an organizationId so it can never fan out across tenants by accident.
+    const summary = organizationId
+      ? await runContinuousComplianceAudit({ organizationId })
+      : await runContinuousComplianceAuditForAllOrganizations();
+
+    return NextResponse.json({ message: "Compliance monitoring completed.", summary });
   } catch (error) {
     console.error("Compliance Monitor Error:", error);
     return NextResponse.json(

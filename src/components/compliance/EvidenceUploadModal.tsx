@@ -181,7 +181,7 @@ export function EvidenceUploadModal({
     >
       <div className="space-y-5">
         {error ? (
-          <div className="rounded-lg border border-red-500/25 bg-red-500/10 p-3 text-sm text-red-300">
+          <div className="rounded-lg border border-red-500/25 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-300">
             <div className="flex items-center gap-2">
               <AlertCircle size={16} />
               <span>{error}</span>
@@ -189,14 +189,14 @@ export function EvidenceUploadModal({
           </div>
         ) : null}
 
-        <form onSubmit={submitEvidence} className="space-y-4 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)]/35 p-4">
+        <form onSubmit={submitEvidence} className="space-y-4 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4">
           <div className="flex flex-wrap gap-2 text-xs">
             <button
               type="button"
               onClick={() => setMode("new")}
               className={`rounded-md border px-3 py-1.5 ${
                 mode === "new"
-                  ? "border-[var(--line-3)] bg-[var(--accent-1-soft)] text-[var(--accent-1)]"
+                  ? "border-sky-300/35 bg-sky-300/10 text-sky-700 dark:text-sky-100"
                   : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]"
               }`}
             >
@@ -212,7 +212,7 @@ export function EvidenceUploadModal({
               }}
               className={`rounded-md border px-3 py-1.5 ${
                 mode === "version"
-                  ? "border-[var(--badge-low-border)] bg-[var(--badge-low-bg)] text-[var(--badge-low-text)]"
+                  ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-700 dark:text-emerald-100"
                   : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]"
               }`}
             >
@@ -318,7 +318,7 @@ export function EvidenceUploadModal({
             <button
               type="button"
               onClick={() => void fetchEvidence()}
-              className="inline-flex items-center gap-1 rounded-md border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-1 text-xs text-[var(--text-secondary)]"
+              className="inline-flex items-center gap-1 rounded-md border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-2 py-1 text-xs text-[var(--text-secondary)]"
               disabled={isLoading}
             >
               <RefreshCw size={12} className={isLoading ? "animate-spin" : ""} />
@@ -327,17 +327,17 @@ export function EvidenceUploadModal({
           </div>
 
           {isLoading ? (
-            <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)]/40 p-4 text-sm text-[var(--text-muted)]">
+            <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
               Loading evidence...
             </div>
           ) : evidence.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-[var(--border-color)] bg-[var(--bg-tertiary)]/40 p-4 text-sm text-[var(--text-muted)]">
+            <div className="rounded-lg border border-dashed border-[var(--border-hover)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
               No evidence uploaded yet.
             </div>
           ) : (
             <div className="max-h-[280px] space-y-3 overflow-y-auto pr-1">
               {evidence.map((item) => (
-                <article key={item.id} className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)]/40 p-3">
+                <article key={item.id} className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <p className="text-sm font-semibold text-[var(--text-primary)]">{item.title}</p>
@@ -345,7 +345,7 @@ export function EvidenceUploadModal({
                         Current version: v{item.currentVersion} • Updated {new Date(item.updatedAt).toLocaleString()}
                       </p>
                     </div>
-                    <span className="inline-flex items-center gap-1 rounded-md border border-[var(--badge-low-border)] bg-[var(--badge-low-bg)] px-2 py-0.5 text-[11px] text-[var(--badge-low-text)]">
+                    <span className="inline-flex items-center gap-1 rounded-md border border-emerald-300/30 bg-emerald-400/10 px-2 py-0.5 text-[11px] text-emerald-700 dark:text-emerald-200">
                       <FileClock size={11} />
                       {item.versions.length} version(s)
                     </span>
@@ -353,7 +353,7 @@ export function EvidenceUploadModal({
 
                   <div className="mt-2 space-y-1 text-xs">
                     {item.versions.map((version) => (
-                      <div key={version.id} className="flex items-center justify-between gap-2 rounded bg-[var(--bg-secondary)]/65 px-2 py-1">
+                      <div key={version.id} className="flex items-center justify-between gap-2 rounded bg-[var(--code-block-bg)] px-2 py-1">
                         <div className="min-w-0">
                           <p className="truncate text-[var(--text-secondary)]">
                             v{version.version} • {version.fileName}
@@ -366,7 +366,7 @@ export function EvidenceUploadModal({
                           href={version.storagePath}
                           target="_blank"
                           rel="noreferrer"
-                          className="rounded border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-1 text-[11px] text-[var(--text-secondary)]"
+                          className="rounded border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-2 py-1 text-[11px] text-[var(--text-secondary)]"
                         >
                           View
                         </a>

@@ -65,6 +65,9 @@ export async function buildTabularReportData(context: ReportContext): Promise<Ta
 
   if (context.templateKey === "RISK_TREND") {
     const snapshots = await prisma.riskSnapshot.findMany({
+      where: {
+        organizationId: context.organizationId,
+      },
       orderBy: { date: "desc" },
       take: 30,
     });
@@ -280,7 +283,7 @@ export async function buildTabularReportData(context: ReportContext): Promise<Ta
   });
 }
 
-export function renderReport(context: ReportContext, data: TabularReportData): RenderedReport {
+export async function renderReport(context: ReportContext, data: TabularReportData): Promise<RenderedReport> {
   const base = buildFileBase(context.templateKey, data.generatedAt);
 
   if (context.outputFormat === "CSV") {
@@ -296,7 +299,7 @@ export function renderReport(context: ReportContext, data: TabularReportData): R
 
 export async function generateRenderedReport(context: ReportContext) {
   const data = await buildTabularReportData(context);
-  const artifact = renderReport(context, data);
+  const artifact = await renderReport(context, data);
 
   return { data, artifact };
 }

@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { Clock3, RefreshCw, Search, X, XCircle, User, Globe, Monitor, Calendar, FileText, Activity as ActivityIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatLabel } from "@/lib/utils";
 import { formatIpAddress, normalizeIpAddress, parseUserAgent } from "@/lib/request-utils";
 
 interface ActivityLog {
@@ -27,22 +27,16 @@ interface ActivityLog {
   };
 }
 
-function formatLabel(value: string) {
-  return value
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
 
 function getEntityTypeColor(entityType: string) {
   const type = entityType.toLowerCase();
-  if (type.includes("auth") || type.includes("user")) return "border-[var(--line-3)] bg-[var(--accent-1-soft)] text-[var(--accent-1)]";
-  if (type.includes("vulnerability")) return "border-[var(--badge-critical-border)] bg-[var(--badge-critical-bg)] text-[var(--badge-critical-text)]";
-  if (type.includes("asset")) return "border-[var(--badge-low-border)] bg-[var(--badge-low-bg)] text-[var(--badge-low-text)]";
-  if (type.includes("compliance")) return "border-[var(--line-3)] bg-[var(--accent-1-soft)] text-[var(--accent-1-strong)]";
-  if (type.includes("risk")) return "border-[var(--badge-high-border)] bg-[var(--badge-high-bg)] text-[var(--badge-high-text)]";
-  if (type.includes("report")) return "border-[var(--badge-medium-border)] bg-[var(--badge-medium-bg)] text-[var(--badge-medium-text)]";
-  return "border-[var(--badge-info-border)] bg-[var(--badge-info-bg)] text-[var(--badge-info-text)]";
+  if (type.includes("auth") || type.includes("user")) return "border-blue-400/35 bg-blue-500/10 text-blue-700 dark:text-blue-200";
+  if (type.includes("vulnerability")) return "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200";
+  if (type.includes("asset")) return "border-green-400/35 bg-green-500/10 text-green-700 dark:text-green-200";
+  if (type.includes("compliance")) return "border-purple-400/35 bg-purple-500/10 text-purple-700 dark:text-purple-200";
+  if (type.includes("risk")) return "border-orange-400/35 bg-orange-500/10 text-orange-700 dark:text-orange-200";
+  if (type.includes("report")) return "border-yellow-400/35 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200";
+  return "border-sky-400/35 bg-sky-500/10 text-sky-700 dark:text-sky-200";
 }
 
 export default function ReportsActivityPage() {
@@ -129,15 +123,15 @@ export default function ReportsActivityPage() {
     return (
       <DashboardLayout>
         <div className="flex min-h-[60vh] flex-col items-center justify-center p-6 text-center">
-          <div className="max-w-md rounded-2xl border border-[var(--badge-critical-border)] bg-[var(--badge-critical-bg)] p-8">
-            <XCircle size={48} className="mx-auto mb-4 text-[var(--badge-critical-text)]" />
+          <div className="rounded-2xl border border-red-400/20 bg-red-500/5 p-8 max-w-md">
+            <XCircle size={48} className="mx-auto text-intent-danger mb-4" />
             <h1 className="text-xl font-semibold text-[var(--text-primary)] mb-2">Access Denied</h1>
             <p className="text-sm text-[var(--text-muted)] mb-6">
               The Activity Log is only accessible by Main Officers. Please contact your administrator if you believe this is an error.
             </p>
             <Link
               href="/dashboard"
-              className="btn btn-primary"
+              className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-6 py-2.5 text-sm font-semibold text-slate-950 transition-all hover:bg-sky-200"
             >
               Back to Dashboard
             </Link>
@@ -150,10 +144,10 @@ export default function ReportsActivityPage() {
   return (
     <DashboardLayout>
       <div className="space-y-5">
-        <section className="rounded-3xl border border-[var(--border-color)] bg-[linear-gradient(132deg,var(--accent-1-soft),color-mix(in_srgb,var(--bg-secondary)_92%,transparent)_44%,color-mix(in_srgb,var(--bg-secondary)_98%,transparent))] p-6 sm:p-8">
+        <section className="rounded-3xl border border-[var(--border-color)] bg-[linear-gradient(132deg,rgba(56,189,248,0.2),rgba(18,18,26,0.9)_44%,rgba(18,18,26,0.96))] p-6 sm:p-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="type-display text-[var(--text-primary)]">Activity Log</h1>
+              <h1 className="text-2xl font-semibold text-[var(--text-primary)] sm:text-3xl">Activity Log</h1>
               <p className="mt-2 text-sm text-[var(--text-secondary)]">
                 System activity history showing user actions, security events, and system changes.
               </p>
@@ -179,7 +173,7 @@ export default function ReportsActivityPage() {
         </section>
 
         {error ? (
-          <section className="rounded-2xl border border-[var(--badge-critical-border)] bg-[var(--badge-critical-bg)] px-4 py-3 text-sm text-[var(--badge-critical-text)]">
+          <section className="rounded-2xl border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
             {error}
           </section>
         ) : null}
@@ -189,22 +183,22 @@ export default function ReportsActivityPage() {
             {
               label: "Total Activities",
               value: totalActivities,
-               tone: "border-[var(--line-3)] bg-[var(--accent-1-soft)] text-[var(--accent-1)]",
+              tone: "border-sky-400/35 bg-sky-500/10 text-sky-700 dark:text-sky-200",
             },
             {
               label: "Today",
               value: todayActivities,
-               tone: "border-[var(--badge-low-border)] bg-[var(--badge-low-bg)] text-[var(--badge-low-text)]",
+              tone: "border-emerald-400/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
             },
             {
               label: "This Week",
               value: thisWeekActivities,
-               tone: "border-[var(--badge-medium-border)] bg-[var(--badge-medium-bg)] text-[var(--badge-medium-text)]",
+              tone: "border-yellow-400/35 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200",
             },
           ].map((item) => (
             <article key={item.label} className={cn("rounded-xl border px-4 py-3", item.tone)}>
-              <p className="type-label">{item.label}</p>
-              <p className="type-title mt-1">{item.value}</p>
+              <p className="text-xs uppercase tracking-wide">{item.label}</p>
+              <p className="mt-1 text-2xl font-semibold">{item.value}</p>
             </article>
           ))}
         </section>
@@ -226,7 +220,7 @@ export default function ReportsActivityPage() {
 
         <section className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
           <header className="border-b border-[var(--border-color)] px-5 py-4">
-            <h2 className="type-section text-[var(--text-primary)]">Activity Log</h2>
+            <h2 className="text-base font-semibold text-[var(--text-primary)]">Activity Log</h2>
           </header>
           {filteredActivities.length === 0 ? (
             <div className="p-8 text-sm text-[var(--text-muted)]">No activity logs found.</div>
@@ -240,7 +234,7 @@ export default function ReportsActivityPage() {
                 return (
                   <div
                     key={activity.id}
-                    className="cursor-pointer px-5 py-4 transition-colors hover:bg-[var(--bg-elevated)]/40"
+                    className="px-5 py-4 cursor-pointer transition-colors hover:bg-[var(--bg-elevated)]"
                     onClick={() => setSelectedActivity(activity)}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -286,7 +280,7 @@ export default function ReportsActivityPage() {
                         </div>
                       </div>
                       <button
-                        className="type-caption text-[var(--accent-1)] transition-colors hover:text-[var(--accent-1-strong)]"
+                        className="text-xs text-intent-accent hover:text-intent-accent-strong transition-colors"
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedActivity(activity);
@@ -306,28 +300,28 @@ export default function ReportsActivityPage() {
       {/* Detail Modal */}
       {selectedActivity && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-scrim)] backdrop-blur-sm p-4"
           onClick={() => setSelectedActivity(null)}
         >
           <div
             className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-[var(--border-color)] bg-[var(--bg-elevated)] shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--border-color)] bg-[var(--bg-elevated)]/95 px-6 py-4">
-              <h2 className="type-section text-[var(--text-primary)]">Activity Details</h2>
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--border-color)] bg-[var(--bg-elevated)] px-6 py-4">
+              <h2 className="text-xl font-semibold text-[var(--text-primary)]">Activity Details</h2>
               <button
                 onClick={() => setSelectedActivity(null)}
-                className="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
+                className="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
               >
                 <X size={20} />
               </button>
             </div>
 
             <div className="space-y-6 p-6">
-              <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)]/40 p-4">
+              <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <ActivityIcon size={16} className="text-[var(--accent-1)]" />
-                  <h3 className="type-caption font-semibold text-[var(--text-primary)]">Action Information</h3>
+                  <ActivityIcon size={16} className="text-intent-accent" />
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">Action Information</h3>
                 </div>
                 <div className="space-y-3">
                   <div>
@@ -350,10 +344,10 @@ export default function ReportsActivityPage() {
               </div>
 
               {selectedActivity.user ? (
-                <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)]/40 p-4">
+                <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <User size={16} className="text-[var(--accent-1)]" />
-                    <h3 className="type-caption font-semibold text-[var(--text-primary)]">User Information</h3>
+                    <User size={16} className="text-blue-600 dark:text-blue-300" />
+                    <h3 className="text-sm font-semibold text-[var(--text-primary)]">User Information</h3>
                   </div>
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-4">
@@ -368,7 +362,7 @@ export default function ReportsActivityPage() {
                     </div>
                     <div>
                       <p className="text-xs text-[var(--text-muted)] mb-1">Role</p>
-                      <span className="inline-block rounded-full border border-[var(--line-3)] bg-[var(--accent-1-soft)] px-2 py-0.5 text-[11px] text-[var(--accent-1)]">
+                      <span className="inline-block rounded-full border border-purple-400/35 bg-purple-500/10 px-2 py-0.5 text-[11px] text-purple-700 dark:text-purple-200">
                         {formatLabel(selectedActivity.user.role)}
                       </span>
                     </div>
@@ -377,10 +371,10 @@ export default function ReportsActivityPage() {
               ) : null}
 
               {/* Network & Device Information */}
-              <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)]/40 p-4">
+              <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <Globe size={16} className="text-[var(--badge-low-text)]" />
-                  <h3 className="type-caption font-semibold text-[var(--text-primary)]">Network & Device</h3>
+                  <Globe size={16} className="text-green-600 dark:text-green-300" />
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">Network & Device</h3>
                 </div>
                 <div className="space-y-3">
                   <div>
@@ -418,10 +412,10 @@ export default function ReportsActivityPage() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)]/40 p-4">
+              <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <Calendar size={16} className="text-[var(--badge-medium-text)]" />
-                  <h3 className="type-caption font-semibold text-[var(--text-primary)]">Timestamp</h3>
+                  <Calendar size={16} className="text-yellow-600 dark:text-yellow-300" />
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">Timestamp</h3>
                 </div>
                 <div>
                   <p className="text-xs text-[var(--text-muted)] mb-1">Date & Time</p>
@@ -436,16 +430,16 @@ export default function ReportsActivityPage() {
               </div>
 
               {(selectedActivity.oldValue || selectedActivity.newValue) ? (
-                <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)]/40 p-4">
+                <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <FileText size={16} className="text-[var(--badge-high-text)]" />
-                    <h3 className="type-caption font-semibold text-[var(--text-primary)]">Changes</h3>
+                    <FileText size={16} className="text-orange-600 dark:text-orange-300" />
+                    <h3 className="text-sm font-semibold text-[var(--text-primary)]">Changes</h3>
                   </div>
                   <div className="space-y-3">
                     {selectedActivity.oldValue ? (
                       <div>
                         <p className="text-xs text-[var(--text-muted)] mb-1">Previous Value</p>
-                        <pre className="rounded-lg bg-[var(--bg-secondary)]/60 p-3 text-xs text-[var(--text-secondary)] overflow-x-auto">
+                        <pre className="text-xs text-[var(--text-secondary)] bg-[var(--code-block-bg)] rounded-lg p-3 overflow-x-auto">
                           {JSON.stringify(selectedActivity.oldValue, null, 2)}
                         </pre>
                       </div>
@@ -453,7 +447,7 @@ export default function ReportsActivityPage() {
                     {selectedActivity.newValue ? (
                       <div>
                         <p className="text-xs text-[var(--text-muted)] mb-1">New Value</p>
-                        <pre className="rounded-lg bg-[var(--bg-secondary)]/60 p-3 text-xs text-[var(--text-secondary)] overflow-x-auto">
+                        <pre className="text-xs text-[var(--text-secondary)] bg-[var(--code-block-bg)] rounded-lg p-3 overflow-x-auto">
                           {JSON.stringify(selectedActivity.newValue, null, 2)}
                         </pre>
                       </div>

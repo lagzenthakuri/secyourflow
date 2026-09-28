@@ -1,7 +1,18 @@
 import type { TabularReportData, RenderedReport } from "@/lib/reporting/types";
 
+const CSV_FORMULA_PREFIX = /^[=+\-@\t\r]/;
+
+function neutralizeCsvFormula(value: string): string {
+  if (!CSV_FORMULA_PREFIX.test(value)) {
+    return value;
+  }
+
+  // Prevent spreadsheet formula execution (CSV injection).
+  return `'${value}`;
+}
+
 function escapeCsv(value: string | number) {
-  const text = String(value ?? "");
+  const text = neutralizeCsvFormula(String(value ?? ""));
   if (!text.includes(",") && !text.includes("\"") && !text.includes("\n")) {
     return text;
   }

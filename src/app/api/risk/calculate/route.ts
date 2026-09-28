@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { calculateRiskScore } from "@/lib/utils";
+import { requireSessionWithOrg } from "@/lib/api-auth";
 
 interface RiskCalculationRequest {
     cvssScore: number;
@@ -9,6 +10,11 @@ interface RiskCalculationRequest {
 }
 
 export async function POST(request: NextRequest) {
+    const authResult = await requireSessionWithOrg(request);
+    if (!authResult.ok) {
+        return authResult.response;
+    }
+
     try {
         const body: RiskCalculationRequest = await request.json();
 
@@ -92,7 +98,12 @@ function getRecommendations(riskScore: number, isExploited: boolean): string[] {
     return recommendations;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+    const authResult = await requireSessionWithOrg(request);
+    if (!authResult.ok) {
+        return authResult.response;
+    }
+
     // Return risk scoring methodology
     return NextResponse.json({
         methodology: "SecYourFlow Risk Scoring Engine",

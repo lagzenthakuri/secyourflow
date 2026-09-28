@@ -1,31 +1,61 @@
-import * as XLSX from "xlsx";
 import type { RenderedReport, TabularReportData } from "@/lib/reporting/types";
 
-export function renderXlsxReport(data: TabularReportData, fileNameBase: string): RenderedReport {
-  const workbook = XLSX.utils.book_new();
+type WorkbookLike = {
+  creator?: string;
+  addWorksheet: (name: string) => {
+    addRow: (row: Array<string | number>) => void;
+  };
+  xlsx: {
+    writeBuffer: () => Promise<ArrayBuffer | Buffer>;
+  };
+};
 
-  const summarySheetData = [
-    ["Title", data.title],
-    ["Generated At", data.generatedAt],
-    ...data.summary.map((item) => [item.label, String(item.value)]),
-  ];
+type ExcelJsModule = {
+  Workbook: new () => WorkbookLike;
+};
 
-  const summarySheet = XLSX.utils.aoa_to_sheet(summarySheetData);
-  XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
+async function loadExcelJs(): Promise<ExcelJsModule> {
+  try {
+    const runtimeImport = new Function(
+      "specifier",
+      "return import(specifier);",
+    ) as (specifier: string) => Promise<ExcelJsModule & { default?: ExcelJsModule }>;
+    const excelModule = await runtimeImport("exceljs");
+    return excelModule.default ?? excelModule;
+  } catch {
+    throw new Error(
+      'XLSX export dependency is missing. Install it with "npm install exceljs" and restart the server.',
+    );
+  }
+}
 
-  const dataSheet = XLSX.utils.aoa_to_sheet([data.headers, ...data.rows]);
-  XLSX.utils.book_append_sheet(workbook, dataSheet, "Data");
+export async function renderXlsxReport(
+  data: TabularReportData,
+  fileNameBase: string,
+): Promise<RenderedReport> {
+  const ExcelJS = await loadExcelJs();
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "SecYourFlow";
 
-  const bytes = XLSX.write(workbook, {
-    type: "buffer",
-    bookType: "xlsx",
-    compression: true,
-  }) as Buffer;
+  const summarySheet = workbook.addWorksheet("Summary");
+  summarySheet.addRow(["Title", data.title]);
+  summarySheet.addRow(["Generated At", data.generatedAt]);
+  for (const item of data.summary) {
+    summarySheet.addRow([item.label, String(item.value)]);
+  }
+
+  const dataSheet = workbook.addWorksheet("Data");
+  dataSheet.addRow(data.headers);
+  for (const row of data.rows) {
+    dataSheet.addRow(row);
+  }
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const bytes = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
 
   return {
     fileName: `${fileNameBase}.xlsx`,
-    mimeType:
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     bytes,
   };
 }
