@@ -5,6 +5,7 @@ import { AuthProvider } from "@/components/providers/AuthProvider";
 import { NavigationProgress } from "@/components/providers/NavigationProgress";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { UiFeedbackProvider } from "@/components/providers/UiFeedbackProvider";
+import { NativeFormValidation } from "@/components/providers/NativeFormValidation";
 import { TooltipProvider } from "@repo/design-system/components/ui/tooltip";
 import { AnalyticsProvider } from "@repo/analytics/provider";
 import { Toolbar } from "@repo/feature-flags/components/toolbar";
@@ -70,6 +71,7 @@ export default function RootLayout({
           <ThemeProvider>
             <UiFeedbackProvider>
               <TooltipProvider>
+                <NativeFormValidation />
                 <NavigationProgress />
                 <AuthProvider>{children}</AuthProvider>
               </TooltipProvider>
