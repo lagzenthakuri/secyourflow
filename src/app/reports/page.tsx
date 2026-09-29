@@ -1,5 +1,7 @@
 "use client";
 
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -875,16 +877,18 @@ export default function ReportsPage() {
                 <div className="grid grid-cols-2 gap-2">
                   <label className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2 text-xs text-[var(--text-secondary)]">
                     Share Role
-                    <select
-                      className="input mt-1 h-9 text-xs"
-                      value={viewShareRole}
-                      onChange={(event) => setViewShareRole(event.target.value)}
-                    >
-                      <option value="ANALYST">ANALYST</option>
-                      <option value="PENTESTER">PENTESTER</option>
-                      <option value="IT_OFFICER">IT_OFFICER</option>
-                      <option value="MAIN_OFFICER">MAIN_OFFICER</option>
-                    </select>
+                    <Select value={viewShareRole} onValueChange={(event) => setViewShareRole(event)}>
+                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                      <SelectItem value="ANALYST">ANALYST</SelectItem>
+                      <SelectItem value="PENTESTER">PENTESTER</SelectItem>
+                      <SelectItem value="IT_OFFICER">IT_OFFICER</SelectItem>
+                      <SelectItem value="MAIN_OFFICER">MAIN_OFFICER</SelectItem>
+
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
                   </label>
                   <label className="flex items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2 text-xs text-[var(--text-secondary)]">
                     <input

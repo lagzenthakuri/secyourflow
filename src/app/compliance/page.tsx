@@ -1,5 +1,7 @@
 "use client";
 
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -956,19 +958,20 @@ export default function CompliancePage() {
                         size={14}
                         className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
                       />
-                      <select
-                        value={selectedStatus}
-                        onChange={(event) =>
-                          setSelectedStatus(event.target.value as "ALL" | FrameworkControl["status"])
-                        }
-                        className="h-11 w-full appearance-none rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] pl-9 pr-8 text-sm text-[var(--text-primary)] outline-none transition-colors duration-200 focus:border-sky-300/45"
-                      >
-                        <option value="ALL">All Statuses</option>
-                        <option value="COMPLIANT">Compliant</option>
-                        <option value="NON_COMPLIANT">Non-Compliant</option>
-                        <option value="PARTIALLY_COMPLIANT">Partial</option>
-                        <option value="NOT_ASSESSED">Not Assessed</option>
-                      </select>
+                      <Select value={selectedStatus} onValueChange={(event) =>
+                          setSelectedStatus(event as "ALL" | FrameworkControl["status"])}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                        <SelectItem value="ALL">All Statuses</SelectItem>
+                        <SelectItem value="COMPLIANT">Compliant</SelectItem>
+                        <SelectItem value="NON_COMPLIANT">Non-Compliant</SelectItem>
+                        <SelectItem value="PARTIALLY_COMPLIANT">Partial</SelectItem>
+                        <SelectItem value="NOT_ASSESSED">Not Assessed</SelectItem>
+
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
                     </label>
 
                     <label className="relative block">
@@ -976,22 +979,23 @@ export default function CompliancePage() {
                         size={14}
                         className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
                       />
-                      <select
-                        value={selectedNistFunction}
-                        onChange={(event) =>
+                      <Select value={selectedNistFunction} onValueChange={(event) =>
                           setSelectedNistFunction(
-                            event.target.value as "ALL" | keyof typeof nistCsfConfig,
-                          )
-                        }
-                        className="h-11 w-full appearance-none rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] pl-9 pr-8 text-sm text-[var(--text-primary)] outline-none transition-colors duration-200 focus:border-sky-300/45"
-                      >
-                        <option value="ALL">All NIST Functions</option>
+                            event as "ALL" | keyof typeof nistCsfConfig,
+                          )}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                        <SelectItem value="ALL">All NIST Functions</SelectItem>
                         {Object.entries(nistCsfConfig).map(([key, item]) => (
-                          <option key={key} value={key}>
+                          <SelectItem key={key} value={key}>
                             {item.label}
-                          </option>
+                          </SelectItem>
                         ))}
-                      </select>
+
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
                     </label>
 
                     <button
@@ -1447,22 +1451,23 @@ export default function CompliancePage() {
             <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
               Template
             </label>
-            <select
-              className="input w-full"
-              value={selectedTemplateId}
-              onChange={(event) => setSelectedTemplateId(event.target.value)}
-              disabled={isTemplateLoading}
-            >
+            <Select value={selectedTemplateId || "__select_none__"} onValueChange={(event) => setSelectedTemplateId((event === "__select_none__" ? "" : event))} disabled={isTemplateLoading}>
+              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
               {templates.length === 0 ? (
-                <option value="">No templates loaded</option>
+                <SelectItem value="__select_none__">No templates loaded</SelectItem>
               ) : (
                 templates.map((template) => (
-                  <option key={template.id} value={template.id}>
+                  <SelectItem key={template.id} value={template.id}>
                     {template.name} {template.version} ({template.controlCount} controls)
-                  </option>
+                  </SelectItem>
                 ))
               )}
-            </select>
+
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
 
           {selectedTemplateId ? (

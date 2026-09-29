@@ -1,5 +1,7 @@
 "use client";
 
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Modal } from "@/components/ui/Modal";
@@ -366,19 +368,20 @@ export default function RemediationPlansPage() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <select
-                          value={plan.status}
-                          onChange={(event) =>
-                            void updatePlanStatus(plan.id, event.target.value as RemediationStatus)
-                          }
-                          className="input h-9 w-[130px] text-xs"
-                        >
+                        <Select value={plan.status} onValueChange={(event) =>
+                            void updatePlanStatus(plan.id, event as RemediationStatus)}>
+                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
                           {statusOptions.map((status) => (
-                            <option key={status} value={status}>
+                            <SelectItem key={status} value={status}>
                               {formatLabel(status)}
-                            </option>
+                            </SelectItem>
                           ))}
-                        </select>
+
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                         <button
                           type="button"
                           onClick={() => {
@@ -441,22 +444,23 @@ export default function RemediationPlansPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm text-[var(--text-primary)]">Status</label>
-              <select
-                className="input"
-                value={createForm.status}
-                onChange={(event) =>
+              <Select value={createForm.status} onValueChange={(event) =>
                   setCreateForm((prev) => ({
                     ...prev,
-                    status: event.target.value as RemediationStatus,
-                  }))
-                }
-              >
+                    status: event as RemediationStatus,
+                  }))}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
                 {statusOptions.map((status) => (
-                  <option key={status} value={status}>
+                  <SelectItem key={status} value={status}>
                     {formatLabel(status)}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
+
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="mb-1 block text-sm text-[var(--text-primary)]">Due Date</label>

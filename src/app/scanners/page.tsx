@@ -1,5 +1,7 @@
 "use client";
 
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/Cards";
@@ -401,20 +403,21 @@ export default function ScannersPage() {
                             <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                                 Scanner Type
                             </label>
-                            <select
-                                className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                                value={newScanner.type}
-                                onChange={(e) =>
-                                    setNewScanner({ ...newScanner, type: e.target.value })
-                                }
-                            >
+                            <Select value={newScanner.type} onValueChange={(e) =>
+                                    setNewScanner({ ...newScanner, type: e })}>
+                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
                                 {capabilities.map((capability) => (
-                                    <option key={capability.type} value={capability.type}>
+                                    <SelectItem key={capability.type} value={capability.type}>
                                         {capability.label}
                                         {capability.installed === false ? " — not installed" : ""}
-                                    </option>
+                                    </SelectItem>
                                 ))}
-                            </select>
+
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
                             {newScannerCapability && (
                                 <p className="text-[10px] text-[var(--text-muted)] mt-1">
                                     {newScannerCapability.execution === "LOCAL_BINARY"
@@ -568,36 +571,40 @@ export default function ScannersPage() {
                             <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                                 Select Asset to Scan
                             </label>
-                            <select
-                                className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                                value={scanConfig.assetId}
-                                onChange={(e) => setScanConfig({ ...scanConfig, assetId: e.target.value })}
-                            >
-                                <option value="">Select an asset...</option>
+                            <Select value={scanConfig.assetId || "__select_none__"} onValueChange={(e) => setScanConfig({ ...scanConfig, assetId: (e === "__select_none__" ? "" : e) })}>
+                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
+                                <SelectItem value="__select_none__">Select an asset...</SelectItem>
                                 {assets.map((asset) => (
-                                    <option key={asset.id} value={asset.id}>
+                                    <SelectItem key={asset.id} value={asset.id}>
                                         {asset.name} ({asset.ipAddress || asset.hostname || "No IP"})
-                                    </option>
+                                    </SelectItem>
                                 ))}
-                            </select>
+
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                                 Scanner / Agent
                             </label>
-                            <select
-                                className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                                value={scanConfig.scannerId}
-                                onChange={(e) => setScanConfig({ ...scanConfig, scannerId: e.target.value })}
-                            >
-                                <option value="">Select a scanner...</option>
+                            <Select value={scanConfig.scannerId || "__select_none__"} onValueChange={(e) => setScanConfig({ ...scanConfig, scannerId: (e === "__select_none__" ? "" : e) })}>
+                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
+                                <SelectItem value="__select_none__">Select a scanner...</SelectItem>
                                 {scanners.map((scanner) => (
-                                    <option key={scanner.id} value={scanner.id}>
+                                    <SelectItem key={scanner.id} value={scanner.id}>
                                         {scanner.name} ({scanner.type})
-                                    </option>
+                                    </SelectItem>
                                 ))}
-                            </select>
+
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
                         </div>
 
 

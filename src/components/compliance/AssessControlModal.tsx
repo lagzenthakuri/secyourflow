@@ -1,5 +1,7 @@
 "use client";
 
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import { useState, useEffect } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Loader2, AlertCircle, Info } from "lucide-react";
@@ -216,46 +218,52 @@ export function AssessControlModal({ isOpen, onClose, onSuccess, control }: Asse
                                 <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                                     Control Type
                                 </label>
-                                <select
-                                    className="input w-full"
-                                    value={formData.controlType}
-                                    onChange={(e) => setFormData({ ...formData, controlType: e.target.value })}
-                                >
+                                <Select value={formData.controlType} onValueChange={(e) => setFormData({ ...formData, controlType: e })}>
+                                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectGroup>
                                     {CONTROL_TYPES.map(type => (
-                                        <option key={type} value={type}>{type}</option>
+                                        <SelectItem key={type} value={type}>{type}</SelectItem>
                                     ))}
-                                </select>
+
+                                    </SelectGroup>
+                                  </SelectContent>
+                                </Select>
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                                     Assessment Frequency
                                 </label>
-                                <select
-                                    className="input w-full"
-                                    value={formData.frequency}
-                                    onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
-                                >
+                                <Select value={formData.frequency} onValueChange={(e) => setFormData({ ...formData, frequency: e })}>
+                                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectGroup>
                                     {CONTROL_FREQUENCIES.map(freq => (
-                                        <option key={freq} value={freq}>{freq.replace(/_/g, " ")}</option>
+                                        <SelectItem key={freq} value={freq}>{freq.replace(/_/g, " ")}</SelectItem>
                                     ))}
-                                </select>
+
+                                    </SelectGroup>
+                                  </SelectContent>
+                                </Select>
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                                     NIST CSF Function
                                 </label>
-                                <select
-                                    className="input w-full"
-                                    value={formData.nistCsfFunction || ""}
-                                    onChange={(e) => setFormData({ ...formData, nistCsfFunction: e.target.value || null })}
-                                >
-                                    <option value="">None</option>
+                                <Select value={formData.nistCsfFunction || "" || "__select_none__"} onValueChange={(e) => setFormData({ ...formData, nistCsfFunction: (e === "__select_none__" ? "" : e) || null })}>
+                                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectGroup>
+                                    <SelectItem value="__select_none__">None</SelectItem>
                                     {NIST_CSF_FUNCTIONS.map(func => (
-                                        <option key={func} value={func}>{func}</option>
+                                        <SelectItem key={func} value={func}>{func}</SelectItem>
                                     ))}
-                                </select>
+
+                                    </SelectGroup>
+                                  </SelectContent>
+                                </Select>
                             </div>
 
                             <div>

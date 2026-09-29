@@ -1,5 +1,7 @@
 "use client";
 
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ClipboardList, Plus, Scale, ShieldCheck, Trash2, TriangleAlert } from "lucide-react";
@@ -501,19 +503,20 @@ export default function RiskAppetitePage() {
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Appetite level
                             </span>
-                            <select
-                                value={form.appetiteLevel}
-                                onChange={(event) =>
-                                    setForm({ ...form, appetiteLevel: event.target.value })
-                                }
-                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                            >
+                            <Select value={form.appetiteLevel} onValueChange={(event) =>
+                                    setForm({ ...form, appetiteLevel: event })}>
+                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
                                 {APPETITE_LEVELS.map((level) => (
-                                    <option key={level} value={level}>
+                                    <SelectItem key={level} value={level}>
                                         {level}
-                                    </option>
+                                    </SelectItem>
                                 ))}
-                            </select>
+
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
                             <span className="mt-1 block text-[11px] text-[var(--text-muted)]">
                                 {LEVEL_HELP[form.appetiteLevel]}
                             </span>

@@ -1,5 +1,7 @@
 "use client";
 
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import {
@@ -131,68 +133,76 @@ export function AddAssetModal({ isOpen, onClose, onSuccess }: AddAssetModalProps
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Type *
                         </label>
-                        <select
-                            className="input w-full"
-                            value={formData.type}
-                            onChange={(e) => setFormData({ ...formData, type: e.target.value as AssetType })}
-                        >
+                        <Select value={formData.type} onValueChange={(e) => setFormData({ ...formData, type: e as AssetType })}>
+                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
                             {ASSET_TYPES.map((t) => (
-                                <option key={t} value={t}>
+                                <SelectItem key={t} value={t}>
                                     {t.replace(/_/g, " ")}
-                                </option>
+                                </SelectItem>
                             ))}
-                        </select>
+
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Environment *
                         </label>
-                        <select
-                            className="input w-full"
-                            value={formData.environment}
-                            onChange={(e) => setFormData({ ...formData, environment: e.target.value as Environment })}
-                        >
+                        <Select value={formData.environment} onValueChange={(e) => setFormData({ ...formData, environment: e as Environment })}>
+                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
                             {ENVIRONMENTS.map((e) => (
-                                <option key={e} value={e}>
+                                <SelectItem key={e} value={e}>
                                     {e}
-                                </option>
+                                </SelectItem>
                             ))}
-                        </select>
+
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Criticality *
                         </label>
-                        <select
-                            className="input w-full"
-                            value={formData.criticality}
-                            onChange={(e) => setFormData({ ...formData, criticality: e.target.value as Criticality })}
-                        >
+                        <Select value={formData.criticality} onValueChange={(e) => setFormData({ ...formData, criticality: e as Criticality })}>
+                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
                             {CRITICALITIES.map((c) => (
-                                <option key={c} value={c}>
+                                <SelectItem key={c} value={c}>
                                     {c}
-                                </option>
+                                </SelectItem>
                             ))}
-                        </select>
+
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Status *
                         </label>
-                        <select
-                            className="input w-full"
-                            value={formData.status}
-                            onChange={(e) => setFormData({ ...formData, status: e.target.value as AssetStatus })}
-                        >
+                        <Select value={formData.status} onValueChange={(e) => setFormData({ ...formData, status: e as AssetStatus })}>
+                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
                             {STATUSES.map((s) => (
-                                <option key={s} value={s}>
+                                <SelectItem key={s} value={s}>
                                     {s}
-                                </option>
+                                </SelectItem>
                             ))}
-                        </select>
+
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                     </div>
 
                     <div>
@@ -238,18 +248,20 @@ export function AddAssetModal({ isOpen, onClose, onSuccess }: AddAssetModalProps
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Cloud Provider
                         </label>
-                        <select
-                            className="input w-full"
-                            value={formData.cloudProvider}
-                            onChange={(e) => setFormData({ ...formData, cloudProvider: e.target.value as CloudProvider })}
-                        >
-                            <option value="">None / On-Premise</option>
+                        <Select value={formData.cloudProvider || "__select_none__"} onValueChange={(e) => setFormData({ ...formData, cloudProvider: (e === "__select_none__" ? "" : e) as CloudProvider })}>
+                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                            <SelectItem value="__select_none__">None / On-Premise</SelectItem>
                             {CLOUD_PROVIDERS.map((p) => (
-                                <option key={p} value={p}>
+                                <SelectItem key={p} value={p}>
                                     {p}
-                                </option>
+                                </SelectItem>
                             ))}
-                        </select>
+
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                     </div>
 
                     <div>

@@ -3,6 +3,7 @@
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -28,9 +29,11 @@ export function FilterSelect({ label, value, options, onValueChange, className }
         <SelectValue placeholder={label} />
       </SelectTrigger>
       <SelectContent align="start">
-        {options.map((option) => (
-          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-        ))}
+        <SelectGroup>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+          ))}
+        </SelectGroup>
       </SelectContent>
     </Select>
   );

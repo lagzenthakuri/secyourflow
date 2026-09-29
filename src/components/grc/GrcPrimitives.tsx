@@ -1,5 +1,7 @@
 "use client";
 
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Pill } from "@/components/nis2/Nis2Primitives";
@@ -295,19 +297,20 @@ export function RelationshipPicker({
                                         <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
                                             {metaLabel ?? "As"}
                                         </span>
-                                        <select
-                                            value={meta[option.id] ?? metaOptions[0]?.value ?? ""}
-                                            onChange={(event) =>
-                                                onMetaChange(option.id, event.target.value)
-                                            }
-                                            className="rounded-md border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-1.5 py-0.5 text-[11px] text-[var(--text-primary)]"
-                                        >
+                                        <Select value={meta[option.id] ?? metaOptions[0]?.value ?? ""} onValueChange={(event) =>
+                                                onMetaChange(option.id, event)}>
+                                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                                          <SelectContent>
+                                            <SelectGroup>
                                             {metaOptions.map((optionMeta) => (
-                                                <option key={optionMeta.value} value={optionMeta.value}>
+                                                <SelectItem key={optionMeta.value} value={optionMeta.value}>
                                                     {optionMeta.label}
-                                                </option>
+                                                </SelectItem>
                                             ))}
-                                        </select>
+
+                                            </SelectGroup>
+                                          </SelectContent>
+                                        </Select>
                                     </div>
                                 )}
                             </li>

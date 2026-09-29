@@ -1,5 +1,7 @@
 "use client";
 
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -656,17 +658,18 @@ export default function AssetsPage() {
                 {selectedAssetIds.length} asset{selectedAssetIds.length > 1 ? "s" : ""} selected
               </p>
               <div className="grid gap-2 sm:grid-cols-[150px_1fr_auto]">
-                <select
-                  value={bulkOperation}
-                  onChange={(event) =>
-                    setBulkOperation(event.target.value as "set_status" | "set_owner" | "set_tags")
-                  }
-                  className="input h-10 text-sm"
-                >
-                  <option value="set_status">Set Status</option>
-                  <option value="set_owner">Set Owner</option>
-                  <option value="set_tags">Set Tags</option>
-                </select>
+                <Select value={bulkOperation} onValueChange={(event) =>
+                    setBulkOperation(event as "set_status" | "set_owner" | "set_tags")}>
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                  <SelectItem value="set_status">Set Status</SelectItem>
+                  <SelectItem value="set_owner">Set Owner</SelectItem>
+                  <SelectItem value="set_tags">Set Tags</SelectItem>
+
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
                 <input
                   className="input h-10 text-sm"
                   value={bulkValue}
@@ -716,21 +719,23 @@ export default function AssetsPage() {
                 size={14}
                 className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] transition-colors duration-200"
               />
-              <select
-                value={selectedType}
-                onChange={(event) => {
-                  setSelectedType(event.target.value);
+              <Select value={selectedType} onValueChange={(event) => {
+                  setSelectedType(event);
                   setPagination((prev) => ({ ...prev, page: 1 }));
-                }}
-                className="input h-10 w-full appearance-none !pl-9 text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30 text-[var(--text-primary)] border-[var(--border-color)] bg-[var(--bg-secondary)]"
-              >
-                <option value="ALL">All Types</option>
+                }}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                <SelectItem value="ALL">All Types</SelectItem>
                 {assetTypes.map((type) => (
-                  <option key={type} value={type}>
+                  <SelectItem key={type} value={type}>
                     {formatLabel(type)}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
+
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </label>
 
             <label className="relative block">
@@ -738,38 +743,42 @@ export default function AssetsPage() {
                 size={14}
                 className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] transition-colors duration-200"
               />
-              <select
-                value={selectedStatus}
-                onChange={(event) => {
-                  setSelectedStatus(event.target.value);
+              <Select value={selectedStatus} onValueChange={(event) => {
+                  setSelectedStatus(event);
                   setPagination((prev) => ({ ...prev, page: 1 }));
-                }}
-                className="input h-10 w-full appearance-none !pl-9 text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30"
-              >
-                <option value="ALL">All Status</option>
+                }}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                <SelectItem value="ALL">All Status</SelectItem>
                 {statusOptions.map((status) => (
-                  <option key={status} value={status}>
+                  <SelectItem key={status} value={status}>
                     {formatLabel(status)}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
+
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </label>
 
-            <select
-              value={selectedCriticality}
-              onChange={(event) => {
-                setSelectedCriticality(event.target.value);
+            <Select value={selectedCriticality} onValueChange={(event) => {
+                setSelectedCriticality(event);
                 setPagination((prev) => ({ ...prev, page: 1 }));
-              }}
-              className="input h-10 w-full appearance-none text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30"
-            >
-              <option value="ALL">All Criticality</option>
+              }}>
+              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+              <SelectItem value="ALL">All Criticality</SelectItem>
               {criticalityOptions.map((criticality) => (
-                <option key={criticality} value={criticality}>
+                <SelectItem key={criticality} value={criticality}>
                   {formatLabel(criticality)}
-                </option>
+                </SelectItem>
               ))}
-            </select>
+
+                </SelectGroup>
+              </SelectContent>
+            </Select>
 
             <input
               type="text"
@@ -782,21 +791,23 @@ export default function AssetsPage() {
               className="input h-10 w-full text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30"
             />
 
-            <select
-              value={selectedGroupId}
-              onChange={(event) => {
-                setSelectedGroupId(event.target.value);
+            <Select value={selectedGroupId} onValueChange={(event) => {
+                setSelectedGroupId(event);
                 setPagination((prev) => ({ ...prev, page: 1 }));
-              }}
-              className="input h-10 w-full appearance-none text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30"
-            >
-              <option value="ALL">All Groups</option>
+              }}>
+              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+              <SelectItem value="ALL">All Groups</SelectItem>
               {groups.map((group) => (
-                <option key={group.id} value={group.id}>
+                <SelectItem key={group.id} value={group.id}>
                   {group.name}
-                </option>
+                </SelectItem>
               ))}
-            </select>
+
+                </SelectGroup>
+              </SelectContent>
+            </Select>
 
             <div className="flex gap-2">
               <button
@@ -1239,14 +1250,16 @@ export default function AssetsPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm text-[var(--text-primary)]">Mode</label>
-              <select
-                className="input"
-                value={discoveryMode}
-                onChange={(event) => setDiscoveryMode(event.target.value as "nmap" | "json")}
-              >
-                <option value="nmap">Nmap XML</option>
-                <option value="json">Normalized JSON</option>
-              </select>
+              <Select value={discoveryMode} onValueChange={(event) => setDiscoveryMode(event as "nmap" | "json")}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                <SelectItem value="nmap">Nmap XML</SelectItem>
+                <SelectItem value="json">Normalized JSON</SelectItem>
+
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
             {discoveryMode === "json" ? (
               <div>
@@ -1298,39 +1311,42 @@ export default function AssetsPage() {
           </p>
           <div>
             <label className="mb-1 block text-sm text-[var(--text-primary)]">Action</label>
-            <select
-              className="input"
-              value={lifecycleAction}
-              onChange={(event) =>
+            <Select value={lifecycleAction} onValueChange={(event) =>
                 setLifecycleAction(
-                  event.target.value as
+                  event as
                   | "transfer"
                   | "decommission"
                   | "ownership_change"
                   | "reactivate",
-                )
-              }
-            >
-              <option value="transfer">Transfer Environment</option>
-              <option value="ownership_change">Change Ownership</option>
-              <option value="decommission">Decommission</option>
-              <option value="reactivate">Reactivate</option>
-            </select>
+                )}>
+              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+              <SelectItem value="transfer">Transfer Environment</SelectItem>
+              <SelectItem value="ownership_change">Change Ownership</SelectItem>
+              <SelectItem value="decommission">Decommission</SelectItem>
+              <SelectItem value="reactivate">Reactivate</SelectItem>
+
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
           {lifecycleAction === "transfer" ? (
             <div>
               <label className="mb-1 block text-sm text-[var(--text-primary)]">Target Environment</label>
-              <select
-                className="input"
-                value={lifecycleToEnvironment}
-                onChange={(event) => setLifecycleToEnvironment(event.target.value)}
-              >
-                <option value="PRODUCTION">PRODUCTION</option>
-                <option value="STAGING">STAGING</option>
-                <option value="DEVELOPMENT">DEVELOPMENT</option>
-                <option value="TESTING">TESTING</option>
-                <option value="DR">DR</option>
-              </select>
+              <Select value={lifecycleToEnvironment} onValueChange={(event) => setLifecycleToEnvironment(event)}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                <SelectItem value="PRODUCTION">PRODUCTION</SelectItem>
+                <SelectItem value="STAGING">STAGING</SelectItem>
+                <SelectItem value="DEVELOPMENT">DEVELOPMENT</SelectItem>
+                <SelectItem value="TESTING">TESTING</SelectItem>
+                <SelectItem value="DR">DR</SelectItem>
+
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
           ) : null}
           {lifecycleAction === "ownership_change" ? (

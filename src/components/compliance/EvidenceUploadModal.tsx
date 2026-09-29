@@ -1,5 +1,7 @@
 "use client";
 
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { AlertCircle, FileClock, FileUp, Loader2, RefreshCw } from "lucide-react";
@@ -223,18 +225,20 @@ export function EvidenceUploadModal({
           {mode === "version" ? (
             <div>
               <label className="mb-1 block text-sm text-[var(--text-secondary)]">Evidence Record</label>
-              <select
-                className="input w-full"
-                value={selectedEvidenceId}
-                onChange={(event) => setSelectedEvidenceId(event.target.value)}
-              >
-                <option value="">Select evidence...</option>
+              <Select value={selectedEvidenceId || "__select_none__"} onValueChange={(event) => setSelectedEvidenceId((event === "__select_none__" ? "" : event))}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                <SelectItem value="__select_none__">Select evidence...</SelectItem>
                 {evidence.map((item) => (
-                  <option key={item.id} value={item.id}>
+                  <SelectItem key={item.id} value={item.id}>
                     {item.title} (v{item.currentVersion})
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
+
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
           ) : null}
 

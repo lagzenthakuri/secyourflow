@@ -1,5 +1,7 @@
 "use client";
 
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Database, FileCheck, Plus, Server, Building2 } from "lucide-react";
@@ -438,33 +440,37 @@ export default function DataCatalogPage() {
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Category
                             </span>
-                            <select
-                                value={form.category}
-                                onChange={(event) => setForm({ ...form, category: event.target.value })}
-                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                            >
+                            <Select value={form.category} onValueChange={(event) => setForm({ ...form, category: event })}>
+                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
                                 {DATA_CATEGORIES.map((category) => (
-                                    <option key={category} value={category}>
+                                    <SelectItem key={category} value={category}>
                                         {titleCase(category)}
-                                    </option>
+                                    </SelectItem>
                                 ))}
-                            </select>
+
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
                         </label>
                         <label className="block">
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Classification
                             </span>
-                            <select
-                                value={form.classification}
-                                onChange={(event) => setForm({ ...form, classification: event.target.value })}
-                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                            >
+                            <Select value={form.classification} onValueChange={(event) => setForm({ ...form, classification: event })}>
+                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
                                 {DATA_CLASSIFICATIONS.map((classification) => (
-                                    <option key={classification} value={classification}>
+                                    <SelectItem key={classification} value={classification}>
                                         {classification}
-                                    </option>
+                                    </SelectItem>
                                 ))}
-                            </select>
+
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
                         </label>
                     </div>
 

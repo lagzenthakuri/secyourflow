@@ -1,5 +1,7 @@
 "use client";
 
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -405,33 +407,37 @@ export default function Nis2VendorsPage() {
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Criticality
                             </span>
-                            <select
-                                value={form.criticality}
-                                onChange={(event) => setForm({ ...form, criticality: event.target.value })}
-                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                            >
+                            <Select value={form.criticality} onValueChange={(event) => setForm({ ...form, criticality: event })}>
+                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
                                 {Object.entries(CRITICALITY_LABELS).map(([value, label]) => (
-                                    <option key={value} value={value}>
+                                    <SelectItem key={value} value={value}>
                                         {label}
-                                    </option>
+                                    </SelectItem>
                                 ))}
-                            </select>
+
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
                         </label>
                         <label className="block">
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Data access level
                             </span>
-                            <select
-                                value={form.dataAccessLevel}
-                                onChange={(event) => setForm({ ...form, dataAccessLevel: event.target.value })}
-                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                            >
+                            <Select value={form.dataAccessLevel} onValueChange={(event) => setForm({ ...form, dataAccessLevel: event })}>
+                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
                                 {["NONE", "PUBLIC", "INTERNAL", "CONFIDENTIAL", "RESTRICTED"].map((level) => (
-                                    <option key={level} value={level}>
+                                    <SelectItem key={level} value={level}>
                                         {level}
-                                    </option>
+                                    </SelectItem>
                                 ))}
-                            </select>
+
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
                         </label>
                     </div>
 

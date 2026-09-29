@@ -1,5 +1,7 @@
 "use client";
 
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
@@ -768,14 +770,16 @@ export default function ThreatsPage() {
             <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4">
               <h3 className="text-sm font-semibold text-[var(--text-primary)]">Import IOC Feed Data</h3>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <select
-                  value={importFormat}
-                  onChange={(event) => setImportFormat(event.target.value as "JSON" | "CSV")}
-                  className="input h-8 w-28 text-sm bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                >
-                  <option value="JSON">JSON</option>
-                  <option value="CSV">CSV</option>
-                </select>
+                <Select value={importFormat} onValueChange={(event) => setImportFormat(event as "JSON" | "CSV")}>
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                  <SelectItem value="JSON">JSON</SelectItem>
+                  <SelectItem value="CSV">CSV</SelectItem>
+
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
                 <button
                   type="button"
                   onClick={submitImport}

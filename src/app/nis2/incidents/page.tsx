@@ -1,5 +1,7 @@
 "use client";
 
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -431,17 +433,19 @@ export default function Nis2IncidentsPage() {
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Severity
                             </span>
-                            <select
-                                value={form.severity}
-                                onChange={(event) => setForm({ ...form, severity: event.target.value })}
-                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                            >
+                            <Select value={form.severity} onValueChange={(event) => setForm({ ...form, severity: event })}>
+                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
                                 {["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"].map((severity) => (
-                                    <option key={severity} value={severity}>
+                                    <SelectItem key={severity} value={severity}>
                                         {severity}
-                                    </option>
+                                    </SelectItem>
                                 ))}
-                            </select>
+
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
                         </label>
                     </div>
 

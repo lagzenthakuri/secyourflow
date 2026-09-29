@@ -1,3 +1,4 @@
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import React, { useEffect, useState } from "react";
 import {
     Download,
@@ -356,17 +357,18 @@ export function RiskRegisterTable() {
 
                                         <td className="p-4 text-sm">
                                             {isEditing ? (
-                                                <select
-                                                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500"
-                                                    value={editForm.treatmentOption || "Mitigate"}
-                                                    onChange={e => setEditForm({ ...editForm, treatmentOption: e.target.value })}
-                                                    onClick={e => e.stopPropagation()}
-                                                >
-                                                    <option value="Mitigate">Mitigate</option>
-                                                    <option value="Avoid">Avoid</option>
-                                                    <option value="Transfer">Transfer</option>
-                                                    <option value="Accept">Accept</option>
-                                                </select>
+                                                <Select value={editForm.treatmentOption || "Mitigate"} onValueChange={e => setEditForm({ ...editForm, treatmentOption: e })}>
+                                                  <SelectTrigger className="w-full" onClick={e => e.stopPropagation()}><SelectValue /></SelectTrigger>
+                                                  <SelectContent>
+                                                    <SelectGroup>
+                                                    <SelectItem value="Mitigate">Mitigate</SelectItem>
+                                                    <SelectItem value="Avoid">Avoid</SelectItem>
+                                                    <SelectItem value="Transfer">Transfer</SelectItem>
+                                                    <SelectItem value="Accept">Accept</SelectItem>
+
+                                                    </SelectGroup>
+                                                  </SelectContent>
+                                                </Select>
                                             ) : (
                                                 <div className="flex items-center gap-2">
                                                     <span className={cn(

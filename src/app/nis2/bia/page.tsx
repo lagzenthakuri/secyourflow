@@ -1,5 +1,7 @@
 "use client";
 
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import { useCallback, useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -386,19 +388,20 @@ export default function Nis2BiaPage() {
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Criticality
                             </span>
-                            <select
-                                value={form.criticality}
-                                onChange={(event) =>
-                                    setForm({ ...form, criticality: event.target.value as Criticality })
-                                }
-                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                            >
+                            <Select value={form.criticality} onValueChange={(event) =>
+                                    setForm({ ...form, criticality: event as Criticality })}>
+                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
                                 {["VITAL", "CRITICAL", "IMPORTANT", "SUPPORTING"].map((value) => (
-                                    <option key={value} value={value}>
+                                    <SelectItem key={value} value={value}>
                                         {value}
-                                    </option>
+                                    </SelectItem>
                                 ))}
-                            </select>
+
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
                         </label>
                         {(
                             [

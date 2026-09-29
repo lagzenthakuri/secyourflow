@@ -1,5 +1,7 @@
 "use client";
 
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ClipboardList, Eye, Plus, ScrollText, ShieldCheck } from "lucide-react";
@@ -384,17 +386,19 @@ export default function PoliciesPage() {
                     <div className="grid gap-4 sm:grid-cols-3">
                         <label className="block">
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">Type</span>
-                            <select
-                                value={form.type}
-                                onChange={(event) => setForm({ ...form, type: event.target.value })}
-                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                            >
+                            <Select value={form.type} onValueChange={(event) => setForm({ ...form, type: event })}>
+                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
                                 {POLICY_TYPES.map((type) => (
-                                    <option key={type} value={type}>
+                                    <SelectItem key={type} value={type}>
                                         {type}
-                                    </option>
+                                    </SelectItem>
                                 ))}
-                            </select>
+
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
                         </label>
                         <label className="block">
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">Version</span>
