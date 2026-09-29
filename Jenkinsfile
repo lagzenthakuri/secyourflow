@@ -7,11 +7,11 @@ pipeline {
     stage('Verify') {
       steps {
         sh '''
-          bun install --frozen-lockfile
-          bun run db:generate
-          bun run typecheck
-          bun run check
-          bun run test
+          npm ci
+          npx prisma generate
+          npm run typecheck
+          npm run lint
+          npm test
         '''
       }
     }

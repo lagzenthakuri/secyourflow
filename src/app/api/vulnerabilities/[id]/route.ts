@@ -8,7 +8,7 @@ import {
 } from "@/lib/api-auth";
 import { calculateSlaDueAt } from "@/lib/workflow/sla";
 import { applyWorkflowStateTimestamps } from "@/lib/workflow/state-machine";
-import type { Prisma, VulnStatus, WorkflowState } from "@repo/database";
+import type { Prisma, VulnStatus, WorkflowState } from "@prisma/client";
 import { createNotification, notifyMainOfficers } from "@/lib/notifications/service";
 
 const updateSchema = z.object({

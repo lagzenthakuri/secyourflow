@@ -1,4 +1,4 @@
-import type { Nis2Article21Measure, Nis2VerificationMode } from "@repo/database";
+import type { Nis2Article21Measure, Nis2VerificationMode } from "@prisma/client";
 
 /**
  * NIS2 Directive (EU 2022/2555) Art. 21(2) risk-management measures.

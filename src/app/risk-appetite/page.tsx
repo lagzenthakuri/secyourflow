@@ -5,7 +5,6 @@ import Link from "next/link";
 import { ClipboardList, Plus, Scale, ShieldCheck, Trash2, TriangleAlert } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { DatePickerField } from "@/components/ui/DatePickerField";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { Modal } from "@/components/ui/Modal";
 import { EmptyState, Pill, ProgressBar, SectionCard } from "@/components/nis2/Nis2Primitives";
@@ -564,7 +563,12 @@ export default function RiskAppetitePage() {
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Review date
                             </span>
-                            <DatePickerField label="Choose review date" value={form.reviewDate} onChange={(reviewDate) => setForm({ ...form, reviewDate })} />
+                            <input
+                                type="date"
+                                value={form.reviewDate}
+                                onChange={(event) => setForm({ ...form, reviewDate: event.target.value })}
+                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                            />
                         </label>
                         <label className="block">
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">

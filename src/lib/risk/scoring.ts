@@ -1,4 +1,4 @@
-import type { RiskAnalysisSource, Severity } from "@repo/database";
+import type { RiskAnalysisSource, Severity } from "@prisma/client";
 
 /**
  * Pure risk scoring.

@@ -1,4 +1,4 @@
-import type { VulnSource } from "@repo/database";
+import type { VulnSource } from "@prisma/client";
 import type { ScannerAdapter } from "@/lib/scanners/types";
 import { nmapAdapter } from "@/lib/scanners/adapters/nmap";
 import { trivyAdapter } from "@/lib/scanners/adapters/trivy";

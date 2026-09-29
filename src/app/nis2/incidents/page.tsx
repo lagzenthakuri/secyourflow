@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { DatePickerField } from "@/components/ui/DatePickerField";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { Modal } from "@/components/ui/Modal";
 import { EmptyState, Pill, SectionCard, formatDuration } from "@/components/nis2/Nis2Primitives";
@@ -420,7 +419,12 @@ export default function Nis2IncidentsPage() {
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Became aware at
                             </span>
-                            <DatePickerField label="Choose detection date and time" value={form.detectedAt} includeTime onChange={(detectedAt) => setForm({ ...form, detectedAt })} />
+                            <input
+                                type="datetime-local"
+                                value={form.detectedAt}
+                                onChange={(event) => setForm({ ...form, detectedAt: event.target.value })}
+                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                            />
                         </label>
 
                         <label className="block">

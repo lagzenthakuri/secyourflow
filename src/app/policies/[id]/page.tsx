@@ -6,7 +6,6 @@ import { useParams } from "next/navigation";
 import { ArrowLeft, Link2, Save, ScrollText, ShieldCheck } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { DatePickerField } from "@/components/ui/DatePickerField";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { Pill, SectionCard } from "@/components/nis2/Nis2Primitives";
 import {
@@ -501,7 +500,12 @@ export default function PolicyDetailPage() {
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Next review
                             </span>
-                            <DatePickerField label="Choose next review date" value={form.nextReview} onChange={(nextReview) => setForm({ ...form, nextReview })} />
+                            <input
+                                type="date"
+                                value={form.nextReview}
+                                onChange={(event) => setForm({ ...form, nextReview: event.target.value })}
+                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                            />
                         </label>
                     </div>
 

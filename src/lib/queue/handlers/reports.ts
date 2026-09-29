@@ -1,4 +1,4 @@
-import type { ReportFrequency, ReportOutputFormat, ReportTemplateKey } from "@repo/database";
+import type { ReportFrequency, ReportOutputFormat, ReportTemplateKey } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { generateRenderedReport } from "@/lib/reporting/engine";
 import { persistReportRun } from "@/lib/reporting/archive";

@@ -6,7 +6,8 @@ datasource db {
   provider = "postgresql"
 }
 
-// Kept for the Next Forge example app in apps/demo.
+// Next Forge demo app sample data. It is kept separate from SecYourFlow's
+// product models while sharing the generated Prisma client.
 model Page {
   id   Int    @id @default(autoincrement())
   name String
@@ -2357,4 +2358,3 @@ enum RiskAnalysisSource {
   AI
   DETERMINISTIC
 }
-

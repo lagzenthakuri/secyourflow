@@ -10,7 +10,6 @@ import { AssetActions } from "@/components/assets/AssetActions";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
-import { FilterSelect } from "@/components/ui/FilterSelect";
 import { cn, formatLabel } from "@/lib/utils";
 import { Asset } from "@/types";
 import {
@@ -712,35 +711,65 @@ export default function AssetsPage() {
               />
             </label>
 
-            <FilterSelect
-                label="Filter by asset type"
+            <label className="relative block">
+              <Box
+                size={14}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] transition-colors duration-200"
+              />
+              <select
                 value={selectedType}
-                onValueChange={(value) => {
-                  setSelectedType(value);
+                onChange={(event) => {
+                  setSelectedType(event.target.value);
                   setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
-                options={[{ value: "ALL", label: "All Types" }, ...assetTypes.map((type) => ({ value: type, label: formatLabel(type) }))]}
-            />
+                className="input h-10 w-full appearance-none !pl-9 text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30 text-[var(--text-primary)] border-[var(--border-color)] bg-[var(--bg-secondary)]"
+              >
+                <option value="ALL">All Types</option>
+                {assetTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {formatLabel(type)}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-            <FilterSelect
-                label="Filter by asset status"
+            <label className="relative block">
+              <Filter
+                size={14}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] transition-colors duration-200"
+              />
+              <select
                 value={selectedStatus}
-                onValueChange={(value) => {
-                  setSelectedStatus(value);
+                onChange={(event) => {
+                  setSelectedStatus(event.target.value);
                   setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
-                options={[{ value: "ALL", label: "All Status" }, ...statusOptions.map((status) => ({ value: status, label: formatLabel(status) }))]}
-            />
+                className="input h-10 w-full appearance-none !pl-9 text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30"
+              >
+                <option value="ALL">All Status</option>
+                {statusOptions.map((status) => (
+                  <option key={status} value={status}>
+                    {formatLabel(status)}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-            <FilterSelect
-              label="Filter by criticality"
+            <select
               value={selectedCriticality}
-              onValueChange={(value) => {
-                setSelectedCriticality(value);
+              onChange={(event) => {
+                setSelectedCriticality(event.target.value);
                 setPagination((prev) => ({ ...prev, page: 1 }));
               }}
-              options={[{ value: "ALL", label: "All Criticality" }, ...criticalityOptions.map((criticality) => ({ value: criticality, label: formatLabel(criticality) }))]}
-            />
+              className="input h-10 w-full appearance-none text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30"
+            >
+              <option value="ALL">All Criticality</option>
+              {criticalityOptions.map((criticality) => (
+                <option key={criticality} value={criticality}>
+                  {formatLabel(criticality)}
+                </option>
+              ))}
+            </select>
 
             <input
               type="text"
@@ -753,15 +782,21 @@ export default function AssetsPage() {
               className="input h-10 w-full text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30"
             />
 
-            <FilterSelect
-              label="Filter by asset group"
+            <select
               value={selectedGroupId}
-              onValueChange={(value) => {
-                setSelectedGroupId(value);
+              onChange={(event) => {
+                setSelectedGroupId(event.target.value);
                 setPagination((prev) => ({ ...prev, page: 1 }));
               }}
-              options={[{ value: "ALL", label: "All Groups" }, ...groups.map((group) => ({ value: group.id, label: group.name }))]}
-            />
+              className="input h-10 w-full appearance-none text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30"
+            >
+              <option value="ALL">All Groups</option>
+              {groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
 
             <div className="flex gap-2">
               <button

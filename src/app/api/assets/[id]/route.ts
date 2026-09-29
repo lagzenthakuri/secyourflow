@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSessionWithOrg } from "@/lib/api-auth";
 import { logAssetChange } from "@/lib/assets/lifecycle";
 import { z } from "zod";
-import type { Prisma } from "@repo/database";
+import type { Prisma } from "@prisma/client";
 
 const updateAssetSchema = z
   .object({

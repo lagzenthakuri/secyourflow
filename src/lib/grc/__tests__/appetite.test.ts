@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { RiskAppetite } from "@repo/database";
+import type { RiskAppetite } from "@prisma/client";
 import {
     appetiteLevelLabel,
     evaluateAppetite,

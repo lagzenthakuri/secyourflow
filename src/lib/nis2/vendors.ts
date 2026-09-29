@@ -1,4 +1,4 @@
-import type { Nis2DataAccessLevel, Nis2VendorCriticality } from "@repo/database";
+import type { Nis2DataAccessLevel, Nis2VendorCriticality } from "@prisma/client";
 
 /**
  * Art. 18 / Art. 21(2)(d) supplier risk scoring.

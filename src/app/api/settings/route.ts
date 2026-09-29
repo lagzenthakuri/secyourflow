@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Setting } from "@repo/database";
+import type { Setting } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/logger";
 import { extractRequestContext } from "@/lib/request-utils";
@@ -8,7 +8,7 @@ import { AI_PROVIDERS } from "@/lib/ai";
 import { encryptSecret } from "@/lib/crypto/sealed-secrets";
 
 /** Placeholder the API returns instead of a stored key. */
-const REDACTED_SECRET = "********";
+export const REDACTED_SECRET = "********";
 
 const PASSWORD_POLICIES = new Set(["STRONG", "MEDIUM", "BASIC"]);
 

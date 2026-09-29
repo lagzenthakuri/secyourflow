@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ControlType } from "@repo/database";
+import { ControlType } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSessionWithOrg } from "@/lib/api-auth";

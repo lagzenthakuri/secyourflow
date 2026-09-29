@@ -11,9 +11,9 @@ interface FrameworkActionsProps {
     isDeleting?: boolean;
 }
 
-export function FrameworkActions({ 
-    framework, 
-    onEdit, 
+export function FrameworkActions({
+    framework,
+    onEdit,
     onDelete,
     isDeleting = false
 }: FrameworkActionsProps) {
@@ -64,7 +64,7 @@ export function FrameworkActions({
             </button>
 
             {isOpen && (
-                <div 
+                <div
                     className="absolute right-0 mt-2 w-48 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-color)] shadow-2xl z-[50] overflow-hidden"
                 >
                     {!isConfirming ? (

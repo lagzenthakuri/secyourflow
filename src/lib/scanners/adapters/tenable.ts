@@ -1,4 +1,4 @@
-import type { Severity } from "@repo/database";
+import type { Severity } from "@prisma/client";
 import {
     type NormalizedFinding,
     type ScannerAdapter,

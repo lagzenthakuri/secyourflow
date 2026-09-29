@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { Prisma, Severity, VulnSource, VulnStatus, WorkflowState } from "@repo/database";
+import { Prisma, Severity, VulnSource, VulnStatus, WorkflowState } from "@prisma/client";
 import { logActivity } from "@/lib/logger";
 import { requireSessionWithOrg, ROLE_VULNERABILITY_WRITE } from "@/lib/api-auth";
 import { enqueue } from "@/lib/queue";

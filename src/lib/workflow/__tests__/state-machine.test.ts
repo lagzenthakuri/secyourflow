@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { WorkflowState } from "@repo/database";
+import type { WorkflowState } from "@prisma/client";
 import {
   applyWorkflowStateTimestamps,
   assertValidWorkflowTransition,

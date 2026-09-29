@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { JobName } from "@/lib/queue/types";
 import { queueForJob } from "@/lib/queue/types";
-import type { Prisma } from "@repo/database";
+import type { Prisma } from "@prisma/client";
 
 /**
  * Durable job history.

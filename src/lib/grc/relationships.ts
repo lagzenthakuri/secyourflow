@@ -2,7 +2,7 @@ import type {
     AssetDataRole,
     VendorAssetRelationshipType,
     VendorDataAccessType,
-} from "@repo/database";
+} from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 /**

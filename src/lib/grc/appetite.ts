@@ -1,4 +1,4 @@
-import type { RiskAppetite, RiskAppetiteLevel, RiskAppetiteStatus } from "@repo/database";
+import type { RiskAppetite, RiskAppetiteLevel, RiskAppetiteStatus } from "@prisma/client";
 
 /**
  * Risk appetite evaluation.

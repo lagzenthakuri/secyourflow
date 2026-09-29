@@ -1,4 +1,4 @@
-import type { Nis2BusinessProcess, Nis2ProcessCriticality } from "@repo/database";
+import type { Nis2BusinessProcess, Nis2ProcessCriticality } from "@prisma/client";
 
 /**
  * Business Impact Analysis supporting Art. 21(2)(c) — business continuity,

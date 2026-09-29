@@ -3,17 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { DatePickerField } from "@/components/ui/DatePickerField";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
+import { Modal } from "@/components/ui/Modal";
 import { EmptyState, Pill, ProgressBar, SectionCard } from "@/components/nis2/Nis2Primitives";
 import { Activity, AlertTriangle, LifeBuoy, Plus, TimerReset, Workflow } from "lucide-react";
-import { Button } from "@repo/design-system/components/ui/button";
-import { Input } from "@repo/design-system/components/ui/input";
-import { Label } from "@repo/design-system/components/ui/label";
-import { Checkbox } from "@repo/design-system/components/ui/checkbox";
-import { Slider } from "@repo/design-system/components/ui/slider";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@repo/design-system/components/ui/dialog";
 
 type Criticality = "VITAL" | "CRITICAL" | "IMPORTANT" | "SUPPORTING";
 
@@ -340,45 +333,159 @@ export default function Nis2BiaPage() {
                 </SectionCard>
             </div>
 
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="max-h-[min(90dvh,52rem)] gap-0 overflow-y-auto p-0 sm:max-w-2xl">
-                    <DialogHeader className="border-b px-6 py-5 pr-12">
-                        <DialogTitle className="text-xl">Add a business process</DialogTitle>
-                        <DialogDescription>Capture service ownership, recovery targets, and continuity evidence for your impact assessment.</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-6 px-6 py-5">
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <div className="space-y-2"><Label htmlFor="bia-name">Process name <span className="text-destructive">*</span></Label><Input id="bia-name" autoFocus value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Customer payment processing" /></div>
-                            <div className="space-y-2"><Label htmlFor="bia-owner">Owner</Label><Input id="bia-owner" value={form.owner} onChange={(event) => setForm({ ...form, owner: event.target.value })} placeholder="Team or accountable person" /></div>
-                        </div>
-
-                        <section className="space-y-3">
-                            <div><h3 className="text-sm font-semibold">Criticality and recovery objectives</h3><p className="mt-1 text-xs text-muted-foreground">Recovery targets are measured in hours.</p></div>
-                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                                <div className="space-y-2"><Label htmlFor="bia-criticality">Criticality</Label><Select value={form.criticality} onValueChange={(value) => setForm({ ...form, criticality: value as Criticality })}><SelectTrigger id="bia-criticality" className="w-full"><SelectValue /></SelectTrigger><SelectContent>{([["VITAL", "Vital"], ["CRITICAL", "Critical"], ["IMPORTANT", "Important"], ["SUPPORTING", "Supporting"]] as const).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></div>
-                                {([["rtoHours", "RTO"], ["rpoHours", "RPO"], ["mtpdHours", "MTPD"]] as const).map(([key, label]) => <div key={key} className="space-y-2"><Label htmlFor={`bia-${key}`}>{label} <span className="text-muted-foreground">(hours)</span></Label><Input id={`bia-${key}`} type="number" min={0} value={form[key]} onChange={(event) => setForm({ ...form, [key]: event.target.value })} placeholder="—" /></div>)}
-                            </div>
-                        </section>
-
-                        <fieldset className="space-y-3 rounded-lg border border-border p-4">
-                            <legend className="px-1 text-sm font-semibold">Business impact assessment</legend>
-                            <p className="text-xs text-muted-foreground">Rate each dimension from 1 (negligible) to 5 (catastrophic).</p>
-                            <div className="space-y-4">
-                                {IMPACT_FIELDS.map(([key, label]) => <div key={key} className="grid grid-cols-[6.5rem_minmax(0,1fr)_1.75rem] items-center gap-3"><Label htmlFor={`bia-${key}`} className="text-sm font-normal">{label}</Label><Slider id={`bia-${key}`} min={1} max={5} step={1} value={[form[key]]} onValueChange={([value]) => setForm({ ...form, [key]: value ?? 1 })} aria-label={`${label} impact`} /><span className="text-right text-sm font-semibold tabular-nums">{form[key]}<span className="sr-only"> out of 5</span></span></div>)}
-                            </div>
-                        </fieldset>
-
-                        <section className="grid gap-5 sm:grid-cols-2">
-                            <div className="space-y-3"><h3 className="text-sm font-semibold">Continuity plans</h3><label className="flex items-center gap-2.5 text-sm"><Checkbox checked={form.bcpDocumented} onCheckedChange={(checked) => setForm({ ...form, bcpDocumented: checked === true })} />Business continuity plan documented</label><label className="flex items-center gap-2.5 text-sm"><Checkbox checked={form.drpDocumented} onCheckedChange={(checked) => setForm({ ...form, drpDocumented: checked === true })} />Disaster recovery plan documented</label></div>
-                            <div className="space-y-2"><Label>Last continuity test</Label><DatePickerField label="Choose test date" value={form.lastTestedAt} onChange={(lastTestedAt) => setForm({ ...form, lastTestedAt })} /></div>
-                        </section>
+            <Modal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                title="Add a business process"
+                maxWidth="lg"
+                footer={
+                    <div className="flex justify-end gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setIsModalOpen(false)}
+                            className="rounded-xl border border-[var(--border-color)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            disabled={isSaving || form.name.trim().length < 2}
+                            onClick={() => void createProcess()}
+                            className="btn btn-primary rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-60"
+                        >
+                            {isSaving ? "Saving…" : "Add process"}
+                        </button>
                     </div>
-                    <DialogFooter className="sticky bottom-0 border-t bg-background px-6 py-4">
-                        <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                        <Button type="button" disabled={isSaving || form.name.trim().length < 2} onClick={() => void createProcess()}>{isSaving ? "Saving…" : "Add process"}</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                }
+            >
+                <div className="space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <label className="block">
+                            <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">Name</span>
+                            <input
+                                value={form.name}
+                                onChange={(event) => setForm({ ...form, name: event.target.value })}
+                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                                placeholder="Customer payment processing"
+                            />
+                        </label>
+                        <label className="block">
+                            <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
+                                Owner
+                            </span>
+                            <input
+                                value={form.owner}
+                                onChange={(event) => setForm({ ...form, owner: event.target.value })}
+                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                            />
+                        </label>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-4">
+                        <label className="block">
+                            <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
+                                Criticality
+                            </span>
+                            <select
+                                value={form.criticality}
+                                onChange={(event) =>
+                                    setForm({ ...form, criticality: event.target.value as Criticality })
+                                }
+                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                            >
+                                {["VITAL", "CRITICAL", "IMPORTANT", "SUPPORTING"].map((value) => (
+                                    <option key={value} value={value}>
+                                        {value}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        {(
+                            [
+                                ["rtoHours", "RTO (h)"],
+                                ["rpoHours", "RPO (h)"],
+                                ["mtpdHours", "MTPD (h)"],
+                            ] as const
+                        ).map(([key, label]) => (
+                            <label key={key} className="block">
+                                <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
+                                    {label}
+                                </span>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    value={form[key]}
+                                    onChange={(event) => setForm({ ...form, [key]: event.target.value })}
+                                    className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                                />
+                            </label>
+                        ))}
+                    </div>
+
+                    <fieldset>
+                        <legend className="mb-2 text-xs font-semibold text-[var(--text-secondary)]">
+                            Impact rating (1 negligible — 5 catastrophic)
+                        </legend>
+                        <div className="space-y-2">
+                            {IMPACT_FIELDS.map(([key, label]) => (
+                                <div key={key} className="flex items-center gap-3">
+                                    <span className="w-28 shrink-0 text-xs text-[var(--text-secondary)]">{label}</span>
+                                    <input
+                                        type="range"
+                                        min={1}
+                                        max={5}
+                                        value={form[key]}
+                                        onChange={(event) =>
+                                            setForm({ ...form, [key]: Number(event.target.value) })
+                                        }
+                                        aria-label={`${label} impact`}
+                                        className="flex-1"
+                                    />
+                                    <span className="w-6 text-right text-sm font-bold text-[var(--text-primary)]">
+                                        {form[key]}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </fieldset>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="flex flex-col gap-2">
+                            <label className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                                <input
+                                    type="checkbox"
+                                    checked={form.bcpDocumented}
+                                    onChange={(event) =>
+                                        setForm({ ...form, bcpDocumented: event.target.checked })
+                                    }
+                                />
+                                BCP documented
+                            </label>
+                            <label className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                                <input
+                                    type="checkbox"
+                                    checked={form.drpDocumented}
+                                    onChange={(event) =>
+                                        setForm({ ...form, drpDocumented: event.target.checked })
+                                    }
+                                />
+                                DRP documented
+                            </label>
+                        </div>
+                        <label className="block">
+                            <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
+                                Last continuity test
+                            </span>
+                            <input
+                                type="date"
+                                value={form.lastTestedAt}
+                                onChange={(event) => setForm({ ...form, lastTestedAt: event.target.value })}
+                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                            />
+                        </label>
+                    </div>
+                </div>
+            </Modal>
         </DashboardLayout>
     );
 }

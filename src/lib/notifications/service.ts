@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import type { Role } from "@repo/database";
+import type { Role } from "@prisma/client";
 
 export type NotificationType = "INFO" | "SUCCESS" | "WARNING" | "ERROR";
 

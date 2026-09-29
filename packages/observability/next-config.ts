@@ -50,4 +50,25 @@ export const withSentry = (sourceConfig: object): object => {
   return withSentryConfig(configWithTranspile, sentryConfig);
 };
 
-export const withLogging = (config: object): object => withLogtail(config);
+export const withLogging = (config: object): object => {
+  const hasSourceToken = Boolean(
+    process.env.BETTER_STACK_SOURCE_TOKEN ||
+      process.env.NEXT_PUBLIC_BETTER_STACK_SOURCE_TOKEN ||
+      process.env.LOGTAIL_SOURCE_TOKEN ||
+      process.env.NEXT_PUBLIC_LOGTAIL_SOURCE_TOKEN,
+  );
+  const hasIngestUrl = Boolean(
+    process.env.BETTER_STACK_INGESTING_URL ||
+      process.env.NEXT_PUBLIC_BETTER_STACK_INGESTING_URL ||
+      process.env.LOGTAIL_URL ||
+      process.env.NEXT_PUBLIC_LOGTAIL_URL,
+  );
+  const hasCustomEndpoint = Boolean(process.env.NEXT_PUBLIC_BETTER_STACK_CUSTOM_ENDPOINT);
+
+  // Logging is optional. Avoid installing Better Stack rewrites until the
+  // complete provider configuration is present, so local builds and dev work
+  // cleanly without hosted observability credentials.
+  return (hasSourceToken && hasIngestUrl) || hasCustomEndpoint
+    ? withLogtail(config)
+    : config;
+};

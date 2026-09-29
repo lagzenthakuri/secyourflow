@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { DatePickerField } from "@/components/ui/DatePickerField";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { Modal } from "@/components/ui/Modal";
 import { EmptyState, Pill, ProgressBar, SectionCard } from "@/components/nis2/Nis2Primitives";
@@ -451,13 +450,23 @@ export default function Nis2VendorsPage() {
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Contract ends
                             </span>
-                            <DatePickerField label="Choose contract end date" value={form.contractEnd} onChange={(contractEnd) => setForm({ ...form, contractEnd })} />
+                            <input
+                                type="date"
+                                value={form.contractEnd}
+                                onChange={(event) => setForm({ ...form, contractEnd: event.target.value })}
+                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                            />
                         </label>
                         <label className="block">
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Last assessed
                             </span>
-                            <DatePickerField label="Choose last assessment date" value={form.lastAuditAt} onChange={(lastAuditAt) => setForm({ ...form, lastAuditAt })} />
+                            <input
+                                type="date"
+                                value={form.lastAuditAt}
+                                onChange={(event) => setForm({ ...form, lastAuditAt: event.target.value })}
+                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                            />
                         </label>
                     </div>
 

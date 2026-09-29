@@ -1,4 +1,4 @@
-import type { Severity, VulnSource } from "@repo/database";
+import type { Severity, VulnSource } from "@prisma/client";
 
 /**
  * Common contract for every scanner integration, so the run endpoint can

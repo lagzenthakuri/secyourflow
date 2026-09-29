@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { FilterSelect } from "@/components/ui/FilterSelect";
 import { ComplianceBarChart } from "@/components/charts/DashboardCharts";
 import { cn } from "@/lib/utils";
 import { Modal } from "@/components/ui/Modal";
@@ -957,18 +956,19 @@ export default function CompliancePage() {
                         size={14}
                         className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
                       />
-                      <FilterSelect
-                        label="Filter controls by status"
+                      <select
                         value={selectedStatus}
-                        onValueChange={(value) => setSelectedStatus(value as "ALL" | FrameworkControl["status"])}
-                        options={[
-                          { value: "ALL", label: "All Statuses" },
-                          { value: "COMPLIANT", label: "Compliant" },
-                          { value: "NON_COMPLIANT", label: "Non-Compliant" },
-                          { value: "PARTIALLY_COMPLIANT", label: "Partial" },
-                          { value: "NOT_ASSESSED", label: "Not Assessed" },
-                        ]}
-                      />
+                        onChange={(event) =>
+                          setSelectedStatus(event.target.value as "ALL" | FrameworkControl["status"])
+                        }
+                        className="h-11 w-full appearance-none rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] pl-9 pr-8 text-sm text-[var(--text-primary)] outline-none transition-colors duration-200 focus:border-sky-300/45"
+                      >
+                        <option value="ALL">All Statuses</option>
+                        <option value="COMPLIANT">Compliant</option>
+                        <option value="NON_COMPLIANT">Non-Compliant</option>
+                        <option value="PARTIALLY_COMPLIANT">Partial</option>
+                        <option value="NOT_ASSESSED">Not Assessed</option>
+                      </select>
                     </label>
 
                     <label className="relative block">
@@ -976,12 +976,22 @@ export default function CompliancePage() {
                         size={14}
                         className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
                       />
-                      <FilterSelect
-                        label="Filter controls by NIST function"
+                      <select
                         value={selectedNistFunction}
-                        onValueChange={(value) => setSelectedNistFunction(value as "ALL" | keyof typeof nistCsfConfig)}
-                        options={[{ value: "ALL", label: "All NIST Functions" }, ...Object.entries(nistCsfConfig).map(([key, item]) => ({ value: key, label: item.label }))]}
-                      />
+                        onChange={(event) =>
+                          setSelectedNistFunction(
+                            event.target.value as "ALL" | keyof typeof nistCsfConfig,
+                          )
+                        }
+                        className="h-11 w-full appearance-none rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] pl-9 pr-8 text-sm text-[var(--text-primary)] outline-none transition-colors duration-200 focus:border-sky-300/45"
+                      >
+                        <option value="ALL">All NIST Functions</option>
+                        {Object.entries(nistCsfConfig).map(([key, item]) => (
+                          <option key={key} value={key}>
+                            {item.label}
+                          </option>
+                        ))}
+                      </select>
                     </label>
 
                     <button

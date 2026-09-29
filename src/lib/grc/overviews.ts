@@ -1,4 +1,4 @@
-import type { ComplianceControl, ComplianceStatus, RiskAppetite, RiskAppetiteStatus } from "@repo/database";
+import type { ComplianceControl, ComplianceStatus, RiskAppetite, RiskAppetiteStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { scoreVendor } from "@/lib/nis2/vendors";
 import {

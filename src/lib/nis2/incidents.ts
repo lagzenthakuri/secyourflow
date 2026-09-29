@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import type { Nis2Incident, Nis2IncidentPhase } from "@repo/database";
+import type { Nis2Incident, Nis2IncidentPhase } from "@prisma/client";
 import { notifyMainOfficers } from "@/lib/notifications/service";
 
 const HOUR_MS = 60 * 60 * 1000;

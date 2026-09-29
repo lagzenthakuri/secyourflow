@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import type { Prisma, RemediationPlanStatus } from "@repo/database";
+import type { Prisma, RemediationPlanStatus } from "@prisma/client";
 
 export class RemediationPlanError extends Error {
   status: number;

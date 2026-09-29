@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Modal } from "@/components/ui/Modal";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
-import { DatePickerField } from "@/components/ui/DatePickerField";
 import { cn, formatLabel } from "@/lib/utils";
 import { Calendar, CheckCircle2, Paperclip, Plus, RefreshCw } from "lucide-react";
 
@@ -461,7 +460,12 @@ export default function RemediationPlansPage() {
             </div>
             <div>
               <label className="mb-1 block text-sm text-[var(--text-primary)]">Due Date</label>
-              <DatePickerField label="Choose due date and time" value={createForm.dueDate} includeTime onChange={(dueDate) => setCreateForm((prev) => ({ ...prev, dueDate }))} />
+              <input
+                type="datetime-local"
+                className="input"
+                value={createForm.dueDate}
+                onChange={(event) => setCreateForm((prev) => ({ ...prev, dueDate: event.target.value }))}
+              />
             </div>
           </div>
           <div>

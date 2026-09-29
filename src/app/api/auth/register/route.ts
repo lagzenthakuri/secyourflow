@@ -1,4 +1,4 @@
-import { Prisma } from "@repo/database";
+import { Prisma } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";

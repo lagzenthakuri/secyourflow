@@ -1,4 +1,4 @@
-import type { PolicyStatus } from "@repo/database";
+import type { PolicyStatus } from "@prisma/client";
 
 /**
  * Policy lifecycle: DRAFT -> UNDER_REVIEW -> ACTIVE, with review cycles back

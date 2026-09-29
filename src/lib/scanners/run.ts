@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@repo/database";
+import type { Prisma } from "@prisma/client";
 import { decryptSecret } from "@/lib/crypto/sealed-secrets";
 import { getScannerAdapter } from "@/lib/scanners/registry";
 import { DEFAULT_SCAN_TIMEOUT_MS, type NormalizedFinding } from "@/lib/scanners/types";

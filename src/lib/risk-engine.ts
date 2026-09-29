@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/logger";
 import { aiChatJson } from "@/lib/ai";
-import type { Prisma } from "@repo/database";
+import type { Prisma } from "@prisma/client";
 import {
     type RiskAnalysis,
     type RiskInputAsset,
@@ -11,7 +11,7 @@ import {
     parseCVSSVector,
     scoreFromAnalysis,
 } from "@/lib/risk/scoring";
-import type { RiskAnalysisSource } from "@repo/database";
+import type { RiskAnalysisSource } from "@prisma/client";
 
 export * from "@/lib/risk/scoring";
 

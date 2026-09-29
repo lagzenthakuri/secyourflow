@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import type { Nis2Article21Measure, Nis2ChecklistItem, Nis2ChecklistStatus } from "@repo/database";
+import type { Nis2Article21Measure, Nis2ChecklistItem, Nis2ChecklistStatus } from "@prisma/client";
 import {
     NIS2_ARTICLE_21_MEASURES,
     NIS2_CHECKLIST_TEMPLATE,
