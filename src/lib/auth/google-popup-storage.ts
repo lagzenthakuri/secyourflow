@@ -1,5 +1,9 @@
-export const GOOGLE_AUTH_POPUP_STORAGE_KEY = "secyourflow:google-auth-popup";
+export const GOOGLE_AUTH_POPUP_STORAGE_PREFIX = "secyourflow:google-auth-popup:";
 export const GOOGLE_AUTH_POPUP_NAME_PREFIX = "secyourflow-google-auth:";
+
+export function googleAuthPopupStorageKey(id: string): string {
+    return `${GOOGLE_AUTH_POPUP_STORAGE_PREFIX}${id}`;
+}
 
 export interface GoogleAuthPopupResult {
     id: string;
@@ -7,5 +11,5 @@ export interface GoogleAuthPopupResult {
 }
 
 export function publishGoogleAuthPopupResult(result: GoogleAuthPopupResult): void {
-    window.localStorage.setItem(GOOGLE_AUTH_POPUP_STORAGE_KEY, JSON.stringify(result));
+    window.localStorage.setItem(googleAuthPopupStorageKey(result.id), JSON.stringify(result));
 }

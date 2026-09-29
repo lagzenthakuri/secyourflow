@@ -53,6 +53,9 @@ if (googleClientId && googleClientSecret) {
         Google({
             clientId: googleClientId,
             clientSecret: googleClientSecret,
+            // Always show Google's account chooser instead of silently
+            // reusing an existing Google browser session.
+            authorization: { params: { prompt: "select_account" } },
             // Existing accounts predate the current OAuth client, so their
             // provider ids no longer match. Google asserts ownership of the
             // email it returns, so linking on a verified email address is

@@ -3,7 +3,7 @@
 import { signIn } from "next-auth/react";
 import {
     GOOGLE_AUTH_POPUP_NAME_PREFIX,
-    GOOGLE_AUTH_POPUP_STORAGE_KEY,
+    googleAuthPopupStorageKey,
     type GoogleAuthPopupResult,
 } from "./google-popup-storage";
 
@@ -34,8 +34,10 @@ export function openGoogleAuthPopup({
 
     onStart();
     let finished = false;
+    let popupClosedAt: number | undefined;
     let popupCheck: number | undefined;
     let timeout: number | undefined;
+    const resultKey = googleAuthPopupStorageKey(id);
 
     const cleanup = () => {
         window.removeEventListener("storage", onStorage);
@@ -59,25 +61,22 @@ export function openGoogleAuthPopup({
         onError(message);
     };
 
-    const onStorage = (event: StorageEvent) => {
-        if (event.key !== GOOGLE_AUTH_POPUP_STORAGE_KEY || !event.newValue) {
-            return;
-        }
-
+    const handleResult = (serialized: string | null) => {
+        if (!serialized || finished) return;
         let result: GoogleAuthPopupResult;
         try {
-            result = JSON.parse(event.newValue) as GoogleAuthPopupResult;
+            result = JSON.parse(serialized) as GoogleAuthPopupResult;
         } catch {
             return;
         }
 
-        if (result.id !== id || finished) {
+        if (result.id !== id) {
             return;
         }
 
         finished = true;
         cleanup();
-        window.localStorage.removeItem(GOOGLE_AUTH_POPUP_STORAGE_KEY);
+        window.localStorage.removeItem(resultKey);
 
         if (result.status === "success") {
             window.location.assign(redirectTo);
@@ -90,12 +89,29 @@ export function openGoogleAuthPopup({
         onError("Google sign-in could not be completed. Please try again.");
     };
 
+    const onStorage = (event: StorageEvent) => {
+        if (event.key === resultKey) handleResult(event.newValue);
+    };
+
     window.addEventListener("storage", onStorage);
     popupCheck = window.setInterval(() => {
-        if (!popup.closed) {
+        // Read the completion signal before inspecting the popup. OAuth can
+        // publish its result and close in the same task, racing the storage
+        // event against this polling interval.
+        handleResult(window.localStorage.getItem(resultKey));
+        if (finished || !popup.closed) {
+            popupClosedAt = undefined;
             return;
         }
-        fail("Google sign-in was closed before it finished.");
+
+        // Some browsers briefly report a popup as closed while its browsing
+        // context is being isolated/replaced. Give the callback time to
+        // publish its validated result before treating this as cancellation.
+        popupClosedAt ??= Date.now();
+        if (Date.now() - popupClosedAt >= 2_000) {
+            handleResult(window.localStorage.getItem(resultKey));
+            if (!finished) fail("Google sign-in was closed before it finished.");
+        }
     }, 500);
     timeout = window.setTimeout(() => {
         fail("Google sign-in timed out. Please try again.");
