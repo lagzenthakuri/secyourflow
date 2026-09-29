@@ -9,6 +9,7 @@ import { Mail, Lock, User, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import { Spinner } from "@repo/design-system/components/ui/spinner";
 import { openGoogleAuthPopup } from "@/lib/auth/google-popup";
 
 export default function SignUpPage() {
@@ -18,6 +19,7 @@ export default function SignUpPage() {
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -190,7 +192,10 @@ export default function SignUpPage() {
                             className="btn btn-primary w-full"
                         >
                             {isLoading ? (
-                                <div aria-hidden="true" className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                <>
+                                    <Spinner aria-label="Creating account" className="size-5 text-current" />
+                                    <span>Creating account…</span>
+                                </>
                             ) : (
                                 <>
                                     Create Account
@@ -208,13 +213,14 @@ export default function SignUpPage() {
 
                     <GoogleAuthButton
                         disabled={isLoading}
+                        loading={isGoogleLoading}
                         label="Sign up with Google"
                         onClick={() => {
                             setError(null);
                             openGoogleAuthPopup({
-                                onStart: () => setIsLoading(true),
+                                onStart: () => setIsGoogleLoading(true),
                                 onError: (message) => {
-                                    setIsLoading(false);
+                                    setIsGoogleLoading(false);
                                     setError(message);
                                 },
                             });

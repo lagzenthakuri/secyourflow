@@ -9,6 +9,7 @@ import Image from "next/image";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import { Spinner } from "@repo/design-system/components/ui/spinner";
 import { openGoogleAuthPopup } from "@/lib/auth/google-popup";
 import {
     GOOGLE_AUTH_POPUP_NAME_PREFIX,
@@ -55,6 +56,7 @@ export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     const [authError, setAuthError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -233,7 +235,10 @@ export default function LoginPage() {
                             className="btn btn-primary w-full"
                         >
                             {isLoading ? (
-                                <div aria-hidden="true" className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                <>
+                                    <Spinner aria-label="Signing in" className="size-5 text-current" />
+                                    <span>Signing in…</span>
+                                </>
                             ) : (
                                 <>
                                     Sign In
@@ -251,13 +256,14 @@ export default function LoginPage() {
 
                     <GoogleAuthButton
                         disabled={isLoading}
+                        loading={isGoogleLoading}
                         label="Continue with Google"
                         onClick={() => {
                             setAuthError(null);
                             openGoogleAuthPopup({
-                                onStart: () => setIsLoading(true),
+                                onStart: () => setIsGoogleLoading(true),
                                 onError: (message) => {
-                                    setIsLoading(false);
+                                    setIsGoogleLoading(false);
                                     setAuthError(message);
                                 },
                             });
