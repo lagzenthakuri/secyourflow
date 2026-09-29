@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
+import "@designcodeio/threeui/style.css";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { NavigationProgress } from "@/components/providers/NavigationProgress";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
@@ -62,7 +63,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={fonts} data-scroll-behavior="smooth" suppressHydrationWarning>
+    <html lang="en" className={`${fonts} theme-dark dark`} data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className="antialiased">
         <AnalyticsProvider>
           <Script id="theme-bootstrap" strategy="beforeInteractive">

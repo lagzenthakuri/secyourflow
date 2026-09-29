@@ -101,6 +101,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Start with the same theme on the server and client; browser preferences
   // are applied after hydration to avoid mismatched toggle markup.
   const [theme, setTheme] = useState<ThemeMode>("dark");
+  const [themeInitialized, setThemeInitialized] = useState(false);
   const transitionTimeoutRef = useRef<number | null>(null);
   const hasManualOverrideRef = useRef<boolean>(false);
 
@@ -108,6 +109,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const storedTheme = resolveStoredTheme();
     hasManualOverrideRef.current = storedTheme !== null;
     setTheme(storedTheme ?? resolveSystemTheme());
+    setThemeInitialized(true);
   }, []);
 
   useEffect(() => {
@@ -130,8 +132,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useLayoutEffect(() => {
+    if (!themeInitialized) {
+      return;
+    }
     applyTheme(theme);
-  }, [theme]);
+  }, [theme, themeInitialized]);
 
   useEffect(() => {
     return () => {

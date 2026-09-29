@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Bug, ClipboardCheck, FileSearch, Network, Radio, ScanSearch } from "lucide-react";
 import { Button } from "@repo/design-system/components/ui/button";
 import { marketingFeatures } from "../data/features";
-import { DashboardPreview } from "./DashboardPreview";
+import { NebulaHeroBackground } from "./NebulaHeroBackground";
 import { MarketingSiteShell } from "./MarketingShell";
 
 const previewSections = [
@@ -37,26 +37,26 @@ const featureIcons = [Network, Bug, FileSearch, ClipboardCheck, Radio, ScanSearc
 
 export function LandingPage() {
   return (
-    <MarketingSiteShell>
-      <section className="border-b border-border bg-muted/20 px-4 py-10 sm:px-6 sm:py-14 lg:px-8 lg:py-16">
-        <div className="mx-auto grid max-w-7xl items-center gap-9 lg:grid-cols-[0.78fr_1.22fr] lg:gap-12">
-          <div className="max-w-xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">Cyber risk operations</p>
-            <h1 className="mt-4 text-balance font-serif text-4xl font-medium leading-[1.08] tracking-[-0.035em] sm:text-5xl lg:text-[3.25rem]">
-              Security findings, assets, and follow-up in one workspace.
-            </h1>
-            <p className="mt-5 max-w-lg text-base leading-7 text-muted-foreground">
-              Track assets, review vulnerability and CVE records, assign remediation work, and keep risk and compliance activity connected.
-            </p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Button asChild size="lg"><Link href="/signup">Create a workspace<ArrowRight className="ml-2 size-4" /></Link></Button>
-              <Button asChild variant="outline" size="lg"><Link href="/features">Explore the features</Link></Button>
-            </div>
+    <MarketingSiteShell landing>
+      <section id="landing-hero" className="landing-hero relative isolate flex min-h-[min(820px,calc(100svh-4rem))] items-center overflow-hidden border-b border-border bg-[#09090b] px-4 py-16 text-white sm:px-6 lg:px-8">
+        <NebulaHeroBackground />
+        <div aria-hidden="true" className="landing-hero-scrim pointer-events-none absolute inset-0 z-0" />
+        <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center text-center">
+          <div className="landing-hero-wordmark mb-8 flex items-center gap-3" aria-label="SecYourFlow">
+            <Image src="/logo1.png" alt="" width={44} height={44} priority className="size-11" />
+            <span className="text-sm font-semibold tracking-[0.2em] text-white">SECYOURFLOW</span>
           </div>
-          <figure className="min-w-0">
-            <DashboardPreview />
-            <figcaption className="mt-2 text-right text-xs text-muted-foreground">Illustrative sample workspace</figcaption>
-          </figure>
+          <p className="landing-hero-eyebrow text-xs font-semibold uppercase tracking-[0.18em] text-white/70">Cyber risk operations</p>
+          <h1 className="mt-5 max-w-4xl text-balance font-serif text-4xl font-medium leading-[1.08] tracking-[-0.035em] sm:text-5xl lg:text-7xl">
+            Security findings, assets, and follow-up in one workspace.
+          </h1>
+          <p className="landing-hero-description mt-6 max-w-2xl text-base leading-7 text-white/75 sm:text-lg sm:leading-8">
+            Track assets, review vulnerability and CVE records, assign remediation work, and keep risk and compliance activity connected.
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Button asChild size="lg"><Link href="/signup">Create a workspace<ArrowRight className="ml-2 size-4" /></Link></Button>
+            <Button asChild variant="outline" size="lg" className="landing-hero-secondary border-white/25 bg-white/5 text-white hover:bg-white/10 hover:text-white"><Link href="/features">Explore the features</Link></Button>
+          </div>
         </div>
       </section>
 

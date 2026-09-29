@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { Button } from "@repo/design-system/components/ui/button";
+import { LandingBrand } from "./LandingBrand";
 
 export function Brand() {
   return (
@@ -15,11 +16,11 @@ export function Brand() {
   );
 }
 
-export function MarketingHeader() {
+export function MarketingHeader({ homeBrandTransition = false }: { homeBrandTransition?: boolean }) {
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        <Brand />
+        {homeBrandTransition ? <LandingBrand /> : <Brand />}
         <nav aria-label="Main navigation" className="hidden items-center gap-7 md:flex">
           <Link className="text-sm text-muted-foreground transition-colors hover:text-foreground" href="/features">Features</Link>
           <Link className="text-sm text-muted-foreground transition-colors hover:text-foreground" href="/about">About</Link>
@@ -82,10 +83,10 @@ export function MarketingFooter() {
   );
 }
 
-export function MarketingSiteShell({ children }: { children: ReactNode }) {
+export function MarketingSiteShell({ children, landing = false }: { children: ReactNode; landing?: boolean }) {
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground">
-      <MarketingHeader />
+      <MarketingHeader homeBrandTransition={landing} />
       <main className="flex-1">{children}</main>
       <MarketingFooter />
     </div>

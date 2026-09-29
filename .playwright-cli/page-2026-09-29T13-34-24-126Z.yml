@@ -1,0 +1,133 @@
+- generic [active] [ref=f16e1]:
+  - generic [ref=f16e2]:
+    - banner [ref=f16e3]:
+      - generic [ref=f16e4]:
+        - link "SecYourFlow home" [ref=f16e5] [cursor=pointer]:
+          - /url: /
+          - generic [ref=f16e6]: SECYOURFLOW
+        - link "Create workspace" [ref=f16e8] [cursor=pointer]:
+          - /url: /signup
+    - main [ref=f16e9]:
+      - generic [ref=f16e11]:
+        - generic [ref=f16e12]:
+          - paragraph [ref=f16e13]: Security operations
+          - heading "Find exposure. Assign the fix. Track the work." [level=1] [ref=f16e14]
+          - paragraph [ref=f16e15]: SecYourFlow brings asset inventory, vulnerability triage, threat context, remediation, and compliance records into one workspace.
+          - generic [ref=f16e16]:
+            - link "Create a workspace" [ref=f16e17] [cursor=pointer]:
+              - /url: /signup
+            - link "View product features" [ref=f16e18] [cursor=pointer]:
+              - /url: /features
+          - paragraph [ref=f16e19]: For security, IT, and governance teams.
+        - figure "CVE search and CISA KEV records Search, filter, and review affected products" [ref=f16e20]:
+          - link [ref=f16e21] [cursor=pointer]:
+            - /url: /features#cve-search
+            - img "SecYourFlow CVE search screen with the CISA Known Exploited Vulnerabilities table, product names, CVSS scores, and added dates." [ref=f16e22]
+          - generic [ref=f16e23]:
+            - generic [ref=f16e24]: CVE search and CISA KEV records
+            - generic [ref=f16e25]: Search, filter, and review affected products
+      - generic [ref=f16e27]:
+        - generic [ref=f16e28]:
+          - generic [ref=f16e29]:
+            - paragraph [ref=f16e30]: Product features
+            - heading "The work your team can do" [level=2] [ref=f16e31]
+          - link "All features" [ref=f16e32] [cursor=pointer]:
+            - /url: /features
+        - generic [ref=f16e35]:
+          - article [ref=f16e36]:
+            - generic [ref=f16e43]:
+              - heading "Asset inventory" [level=3] [ref=f16e44]
+              - paragraph [ref=f16e45]: Record asset type, environment, criticality, owner, location, network details, and cloud provider. Search, filter, and switch between list and map.
+              - link "Open asset inventory" [ref=f16e46] [cursor=pointer]:
+                - /url: /assets
+          - article [ref=f16e50]:
+            - generic [ref=f16e61]:
+              - heading "Vulnerability management" [level=3] [ref=f16e62]
+              - paragraph [ref=f16e63]: Review severity, CVE, workflow status, affected assets, assigned team, and SLA due date in one findings table.
+              - link "Open vulnerability management" [ref=f16e64] [cursor=pointer]:
+                - /url: /vulnerabilities
+          - article [ref=f16e68]:
+            - generic [ref=f16e75]:
+              - heading "CVE search" [level=3] [ref=f16e76]
+              - paragraph [ref=f16e77]: Search and filter public CVE records by vendor, product, severity, year, and CISA KEV status. Compare affected versions and references.
+              - link "Open cve search" [ref=f16e78] [cursor=pointer]:
+                - /url: /cves
+          - article [ref=f16e82]:
+            - generic [ref=f16e88]:
+              - heading "Remediation plans" [level=3] [ref=f16e89]
+              - paragraph [ref=f16e90]: Track the fix, its owner, due date, workflow state, and verification evidence.
+              - link "Open remediation plans" [ref=f16e91] [cursor=pointer]:
+                - /url: /vulnerabilities/remediation
+          - article [ref=f16e95]:
+            - generic [ref=f16e103]:
+              - heading "Threat intelligence" [level=3] [ref=f16e104]
+              - paragraph [ref=f16e105]: Review active threat indicators and known-exploited vulnerability records alongside operational findings.
+              - link "Open threat intelligence" [ref=f16e106] [cursor=pointer]:
+                - /url: /threats
+          - article [ref=f16e110]:
+            - generic [ref=f16e116]:
+              - heading "Risk and compliance" [level=3] [ref=f16e117]
+              - paragraph [ref=f16e118]: Keep risk records, policies, framework status, vendors, and NIS2 work in the same workspace.
+              - link "Open risk and compliance" [ref=f16e119] [cursor=pointer]:
+                - /url: /compliance
+      - generic [ref=f16e124]:
+        - generic [ref=f16e125]:
+          - paragraph [ref=f16e126]: CVE detail
+          - heading "Check affected products and versions." [level=2] [ref=f16e127]
+          - paragraph [ref=f16e128]: Compare the vendor, product, and version entries from the CVE record before deciding whether an installed product needs attention.
+          - link "See CVE search features" [ref=f16e129] [cursor=pointer]:
+            - /url: /features#cve-search
+        - figure "Affected-version table from a CVE record" [ref=f16e130]:
+          - img "SecYourFlow CVE detail screen showing affected vendor, product, and version rows in a filterable table." [ref=f16e131]
+      - generic [ref=f16e134]:
+        - generic [ref=f16e135]:
+          - heading "Start with your security workflow" [level=2] [ref=f16e136]
+          - paragraph [ref=f16e137]: Create a workspace or sign in to continue.
+        - generic [ref=f16e138]:
+          - link "Create workspace" [ref=f16e139] [cursor=pointer]:
+            - /url: /signup
+          - link "Sign in" [ref=f16e140] [cursor=pointer]:
+            - /url: /login
+    - contentinfo [ref=f16e141]:
+      - generic [ref=f16e142]:
+        - generic [ref=f16e143]:
+          - link "SecYourFlow home" [ref=f16e144] [cursor=pointer]:
+            - /url: /
+            - generic [ref=f16e145]: SECYOURFLOW
+          - paragraph [ref=f16e146]: Asset inventory, vulnerability triage, remediation tracking, and governance for security teams.
+          - paragraph [ref=f16e147]: A product of Shyena Technologies Pvt. Ltd.
+        - navigation "Footer navigation" [ref=f16e148]:
+          - generic [ref=f16e149]:
+            - heading "Product" [level=2] [ref=f16e150]
+            - link "Features" [ref=f16e151] [cursor=pointer]:
+              - /url: /features
+            - link "Assets" [ref=f16e152] [cursor=pointer]:
+              - /url: /assets
+            - link "Vulnerabilities" [ref=f16e153] [cursor=pointer]:
+              - /url: /vulnerabilities
+            - link "CVE search" [ref=f16e154] [cursor=pointer]:
+              - /url: /cves
+            - link "Compliance" [ref=f16e155] [cursor=pointer]:
+              - /url: /compliance
+          - generic [ref=f16e156]:
+            - heading "Company" [level=2] [ref=f16e157]
+            - link "About" [ref=f16e158] [cursor=pointer]:
+              - /url: /about
+            - link "Resources" [ref=f16e159] [cursor=pointer]:
+              - /url: /resources
+            - link "Contact" [ref=f16e160] [cursor=pointer]:
+              - /url: /contact
+          - generic [ref=f16e161]:
+            - heading "Account & legal" [level=2] [ref=f16e162]
+            - link "Sign in" [ref=f16e163] [cursor=pointer]:
+              - /url: /login
+            - link "Create workspace" [ref=f16e164] [cursor=pointer]:
+              - /url: /signup
+            - link "Privacy" [ref=f16e165] [cursor=pointer]:
+              - /url: /privacy-policy
+            - link "Terms" [ref=f16e166] [cursor=pointer]:
+              - /url: /terms-of-service
+      - generic [ref=f16e168]:
+        - generic [ref=f16e169]: © 2026 SecYourFlow
+        - generic [ref=f16e170]: Shyena Technologies Pvt. Ltd.
+  - button "Switch to light mode" [ref=f16e171] [cursor=pointer]
