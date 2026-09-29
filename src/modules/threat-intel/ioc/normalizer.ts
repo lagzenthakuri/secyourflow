@@ -1,4 +1,4 @@
-import type { IndicatorType } from "@prisma/client";
+import type { IndicatorType } from "@repo/database";
 
 function normalizeUrlValue(value: string): string {
   try {

@@ -14,6 +14,8 @@ import {
     ShieldCheck,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Button } from "@repo/design-system/components/ui/button";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@repo/design-system/components/ui/breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { Pill, SectionCard } from "@/components/nis2/Nis2Primitives";
@@ -274,13 +276,7 @@ export default function AssetOverviewPage() {
         return (
             <DashboardLayout>
                 <div className="space-y-4">
-                    <Link
-                        href="/assets"
-                        className="inline-flex items-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-blue-500"
-                    >
-                        <ArrowLeft size={14} />
-                        Back to assets
-                    </Link>
+                    <Button asChild variant="outline" size="sm"><Link href="/assets"><ArrowLeft />Back to assets</Link></Button>
                     <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
                         {error ?? "Asset not found"}
                     </div>
@@ -294,13 +290,10 @@ export default function AssetOverviewPage() {
     return (
         <DashboardLayout>
             <div className="space-y-5">
-                <Link
-                    href="/assets"
-                    className="inline-flex items-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-blue-500"
-                >
-                    <ArrowLeft size={14} />
-                    Back to assets
-                </Link>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <Breadcrumb><BreadcrumbList><BreadcrumbItem><BreadcrumbLink asChild><Link href="/dashboard">Dashboard</Link></BreadcrumbLink></BreadcrumbItem><BreadcrumbSeparator /><BreadcrumbItem><BreadcrumbLink asChild><Link href="/assets">Assets</Link></BreadcrumbLink></BreadcrumbItem><BreadcrumbSeparator /><BreadcrumbItem><BreadcrumbPage>{asset.name}</BreadcrumbPage></BreadcrumbItem></BreadcrumbList></Breadcrumb>
+                    <Button asChild variant="outline" size="sm"><Link href="/assets"><ArrowLeft />Back to assets</Link></Button>
+                </div>
 
                 <PageHeader
                     title={asset.name}

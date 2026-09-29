@@ -1,4 +1,4 @@
-import type { ControlFrequency, ControlType, NistCsfFunction } from "@prisma/client";
+import type { ControlFrequency, ControlType, NistCsfFunction } from "@repo/database";
 
 export type ComplianceTemplateId =
   | "iso27001_2022"

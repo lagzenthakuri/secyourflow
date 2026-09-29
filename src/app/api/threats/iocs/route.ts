@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import type { IndicatorType, Severity } from "@prisma/client";
+import type { IndicatorType, Severity } from "@repo/database";
 import { requireThreatIntelContext } from "@/modules/threat-intel/auth";
 import { ThreatIntelRepository } from "@/modules/threat-intel/persistence/repository";
 import { guessIndicatorType, isValidIndicatorValue, normalizeIndicatorValue } from "@/modules/threat-intel/ioc/normalizer";

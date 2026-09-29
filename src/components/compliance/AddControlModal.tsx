@@ -1,5 +1,10 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+import { Textarea as BoilerplateTextarea } from "@repo/design-system/components/ui/textarea";
 
+
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Loader2, AlertCircle } from "lucide-react";
@@ -87,11 +92,11 @@ export function AddControlModal({ isOpen, onClose, onSuccess, frameworkId }: Add
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Control ID *
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             required
                             placeholder="e.g., A.12.6.1"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.controlId}
                             onChange={(e) => setFormData({ ...formData, controlId: e.target.value })}
                         />
@@ -101,10 +106,10 @@ export function AddControlModal({ isOpen, onClose, onSuccess, frameworkId }: Add
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Category
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             placeholder="e.g., Asset Management"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.category}
                             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                         />
@@ -114,11 +119,11 @@ export function AddControlModal({ isOpen, onClose, onSuccess, frameworkId }: Add
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Title *
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             required
                             placeholder="e.g., Management of technical vulnerabilities"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                         />
@@ -128,8 +133,8 @@ export function AddControlModal({ isOpen, onClose, onSuccess, frameworkId }: Add
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Description
                         </label>
-                        <textarea
-                            className="input w-full min-h-[80px]"
+                        <BoilerplateTextarea
+                            className="w-full min-h-[80px]"
                             placeholder="Detailed description of the control..."
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -140,8 +145,8 @@ export function AddControlModal({ isOpen, onClose, onSuccess, frameworkId }: Add
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Objective
                         </label>
-                        <textarea
-                            className="input w-full min-h-[80px]"
+                        <BoilerplateTextarea
+                            className="w-full min-h-[80px]"
                             placeholder="What this control aims to achieve..."
                             value={formData.objective}
                             onChange={(e) => setFormData({ ...formData, objective: e.target.value })}
@@ -152,62 +157,68 @@ export function AddControlModal({ isOpen, onClose, onSuccess, frameworkId }: Add
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             NIST CSF Function
                         </label>
-                        <select
-                            className="input w-full"
-                            value={formData.nistCsfFunction}
-                            onChange={(e) => setFormData({ ...formData, nistCsfFunction: e.target.value })}
-                        >
-                            <option value="GOVERN">GOVERN</option>
-                            <option value="IDENTIFY">IDENTIFY</option>
-                            <option value="PROTECT">PROTECT</option>
-                            <option value="DETECT">DETECT</option>
-                            <option value="RESPOND">RESPOND</option>
-                            <option value="RECOVER">RECOVER</option>
-                        </select>
+                        <Select value={formData.nistCsfFunction} onValueChange={(e) => setFormData({ ...formData, nistCsfFunction: e })}>
+                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                            <SelectItem value="GOVERN">GOVERN</SelectItem>
+                            <SelectItem value="IDENTIFY">IDENTIFY</SelectItem>
+                            <SelectItem value="PROTECT">PROTECT</SelectItem>
+                            <SelectItem value="DETECT">DETECT</SelectItem>
+                            <SelectItem value="RESPOND">RESPOND</SelectItem>
+                            <SelectItem value="RECOVER">RECOVER</SelectItem>
+
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                     </div>
 
                     <div className="md:col-span-1">
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Control Type
                         </label>
-                        <select
-                            className="input w-full"
-                            value={formData.controlType}
-                            onChange={(e) => setFormData({ ...formData, controlType: e.target.value })}
-                        >
-                            <option value="PREVENTIVE">PREVENTIVE</option>
-                            <option value="DETECTIVE">DETECTIVE</option>
-                            <option value="CORRECTIVE">CORRECTIVE</option>
-                        </select>
+                        <Select value={formData.controlType} onValueChange={(e) => setFormData({ ...formData, controlType: e })}>
+                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                            <SelectItem value="PREVENTIVE">PREVENTIVE</SelectItem>
+                            <SelectItem value="DETECTIVE">DETECTIVE</SelectItem>
+                            <SelectItem value="CORRECTIVE">CORRECTIVE</SelectItem>
+
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                     </div>
 
                     <div className="md:col-span-1">
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Frequency
                         </label>
-                        <select
-                            className="input w-full"
-                            value={formData.frequency}
-                            onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
-                        >
-                            <option value="ANNUAL">ANNUAL</option>
-                            <option value="SEMI_ANNUAL">SEMI-ANNUAL</option>
-                            <option value="QUARTERLY">QUARTERLY</option>
-                            <option value="MONTHLY">MONTHLY</option>
-                            <option value="WEEKLY">WEEKLY</option>
-                            <option value="DAILY">DAILY</option>
-                            <option value="CONTINUOUS">CONTINUOUS</option>
-                        </select>
+                        <Select value={formData.frequency} onValueChange={(e) => setFormData({ ...formData, frequency: e })}>
+                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                            <SelectItem value="ANNUAL">ANNUAL</SelectItem>
+                            <SelectItem value="SEMI_ANNUAL">SEMI-ANNUAL</SelectItem>
+                            <SelectItem value="QUARTERLY">QUARTERLY</SelectItem>
+                            <SelectItem value="MONTHLY">MONTHLY</SelectItem>
+                            <SelectItem value="WEEKLY">WEEKLY</SelectItem>
+                            <SelectItem value="DAILY">DAILY</SelectItem>
+                            <SelectItem value="CONTINUOUS">CONTINUOUS</SelectItem>
+
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                     </div>
 
                     <div className="md:col-span-1">
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Owner Role
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             placeholder="e.g., CISO"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.ownerRole}
                             onChange={(e) => setFormData({ ...formData, ownerRole: e.target.value })}
                         />

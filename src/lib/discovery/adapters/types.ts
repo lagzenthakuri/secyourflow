@@ -1,4 +1,4 @@
-import type { AssetType, Criticality, Environment, AssetStatus, CloudProvider } from "@prisma/client";
+import type { AssetType, Criticality, Environment, AssetStatus, CloudProvider } from "@repo/database";
 
 export interface DiscoveredAssetRecord {
   externalId?: string;

@@ -7,7 +7,7 @@ import type {
   Criticality,
   ImplementationStatus,
   Severity,
-} from "@prisma/client";
+} from "@repo/database";
 
 interface ComplianceRiskAnalysis {
   controls_violated_iso27001?: string[];

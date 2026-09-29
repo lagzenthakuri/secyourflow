@@ -1,4 +1,4 @@
-import type { ThreatFeedType } from "@prisma/client";
+import type { ThreatFeedType } from "@repo/database";
 import type { NormalizedIndicatorInput } from "../types";
 
 export interface ThreatFeedAdapterHealth {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@repo/database";
 import { prisma } from "@/lib/prisma";
 import { requireSessionWithOrg } from "@/lib/api-auth";
 

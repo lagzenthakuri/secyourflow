@@ -1,4 +1,6 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+
 
 import { useState } from "react";
 import Link from "next/link";
@@ -7,7 +9,8 @@ import { Mail, Lock, User, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
-import { useAuthProviders } from "@/hooks/use-auth-providers";
+import { Spinner } from "@repo/design-system/components/ui/spinner";
+import { openGoogleAuthPopup } from "@/lib/auth/google-popup";
 
 export default function SignUpPage() {
     const router = useRouter();
@@ -16,8 +19,8 @@ export default function SignUpPage() {
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const { googleEnabled } = useAuthProviders();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -96,7 +99,7 @@ export default function SignUpPage() {
 
                         {/* Name */}
                         <div>
-                            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                            <label htmlFor="signup-name" className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                                 Full Name
                             </label>
                             <div className="relative">
@@ -104,14 +107,15 @@ export default function SignUpPage() {
                                     size={18}
                                     className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
                                 />
-                                <input
+                                <BoilerplateInput
+                                    id="signup-name"
                                     type="text"
                                     name="name"
                                     autoComplete="name"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     placeholder="John Doe"
-                                    className="input !pl-10"
+                                    className="!pl-10"
                                     required
                                 />
                             </div>
@@ -119,7 +123,7 @@ export default function SignUpPage() {
 
                         {/* Email */}
                         <div>
-                            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                            <label htmlFor="signup-email" className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                                 Email Address
                             </label>
                             <div className="relative">
@@ -127,14 +131,15 @@ export default function SignUpPage() {
                                     size={18}
                                     className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
                                 />
-                                <input
+                                <BoilerplateInput
+                                    id="signup-email"
                                     type="email"
                                     name="email"
                                     autoComplete="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder="you@company.com"
-                                    className="input !pl-10"
+                                    className="!pl-10"
                                     required
                                 />
                             </div>
@@ -142,7 +147,7 @@ export default function SignUpPage() {
 
                         {/* Password */}
                         <div>
-                            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                            <label htmlFor="signup-password" className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                                 Password
                             </label>
                             <div className="relative">
@@ -150,35 +155,47 @@ export default function SignUpPage() {
                                     size={18}
                                     className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
                                 />
-                                <input
+                                <BoilerplateInput
+                                    id="signup-password"
                                     type={showPassword ? "text" : "password"}
                                     name="password"
                                     autoComplete="new-password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="••••••••"
-                                    className="input !pl-10 !pr-10"
+                                    className="!pl-10 !pr-10"
                                     required
                                     minLength={8}
+                                    aria-describedby="signup-password-help"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
+                                    aria-pressed={showPassword}
+                                    aria-controls="signup-password"
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                                 >
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
                             </div>
+                            <p id="signup-password-help" className="mt-1.5 text-xs text-[var(--text-muted)]">
+                                Use at least 8 characters.
+                            </p>
                         </div>
 
                         {/* Submit Button */}
                         <button
                             type="submit"
-                            disabled={isLoading}
-                            className="btn btn-primary w-full"
+                            disabled={isLoading || isGoogleLoading}
+                            aria-label={isLoading ? "Creating account…" : undefined}
+                            className="btn btn-primary w-full disabled:opacity-100 disabled:text-primary-foreground"
                         >
                             {isLoading ? (
-                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                <>
+                                    <Spinner aria-label="Creating account" className="size-5 text-primary-foreground" />
+                                    <span className="text-primary-foreground">Creating account…</span>
+                                </>
                             ) : (
                                 <>
                                     Create Account
@@ -188,26 +205,27 @@ export default function SignUpPage() {
                         </button>
                     </form>
 
-                    {googleEnabled && (
-                        <>
-                            <div className="flex items-center gap-3 my-6">
-                                <span className="h-px flex-1 bg-[var(--border-color)]" />
-                                <span className="text-xs uppercase tracking-widest text-[var(--text-muted)]">
-                                    or
-                                </span>
-                                <span className="h-px flex-1 bg-[var(--border-color)]" />
-                            </div>
+                    <div className="flex items-center gap-3 my-6">
+                        <span className="h-px flex-1 bg-[var(--border-color)]" />
+                        <span className="text-xs uppercase tracking-widest text-[var(--text-muted)]">or</span>
+                        <span className="h-px flex-1 bg-[var(--border-color)]" />
+                    </div>
 
-                            <GoogleAuthButton
-                                disabled={isLoading}
-                                onClick={() => {
-                                    setError(null);
-                                    setIsLoading(true);
-                                    void signIn("google", { callbackUrl: "/dashboard" });
-                                }}
-                            />
-                        </>
-                    )}
+                    <GoogleAuthButton
+                        disabled={isLoading}
+                        loading={isGoogleLoading}
+                        label="Sign up with Google"
+                        onClick={() => {
+                            setError(null);
+                            openGoogleAuthPopup({
+                                onStart: () => setIsGoogleLoading(true),
+                                onError: (message) => {
+                                    setIsGoogleLoading(false);
+                                    setError(message);
+                                },
+                            });
+                        }}
+                    />
                 </div>
 
                 {/* Footer */}

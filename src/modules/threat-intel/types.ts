@@ -5,7 +5,7 @@ import type {
   ThreatFeedType,
   ThreatMatchStatus,
   AttackMappingSource,
-} from "@prisma/client";
+} from "@repo/database";
 
 export interface ThreatIngestionCheckpoint {
   cursor: string | null;

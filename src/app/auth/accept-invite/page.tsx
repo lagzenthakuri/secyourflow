@@ -1,4 +1,6 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+
 
 import { Suspense, useState } from "react";
 import Link from "next/link";
@@ -94,26 +96,26 @@ function AcceptInviteForm() {
 
       <label className="block">
         <span className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">Full name</span>
-        <input
+        <BoilerplateInput
           required
           minLength={2}
           value={name}
           onChange={(event) => setName(event.target.value)}
-          className="input w-full"
+          className="w-full"
           placeholder="Jane Okafor"
         />
       </label>
 
       <label className="block">
         <span className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">Password</span>
-        <input
+        <BoilerplateInput
           required
           type="password"
           minLength={8}
           autoComplete="new-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          className="input w-full"
+          className="w-full"
           placeholder="At least 8 characters"
         />
       </label>
@@ -122,14 +124,14 @@ function AcceptInviteForm() {
         <span className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
           Confirm password
         </span>
-        <input
+        <BoilerplateInput
           required
           type="password"
           minLength={8}
           autoComplete="new-password"
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
-          className="input w-full"
+          className="w-full"
         />
       </label>
 

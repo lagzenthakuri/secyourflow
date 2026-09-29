@@ -1,9 +1,14 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+import { Textarea as BoilerplateTextarea } from "@repo/design-system/components/ui/textarea";
 
+
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import { useState, useEffect } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Loader2, AlertCircle, Info } from "lucide-react";
-import { ComplianceStatus, ImplementationStatus } from "@prisma/client";
+import { ComplianceStatus, ImplementationStatus } from "@repo/database";
 import { cn } from "@/lib/utils";
 
 interface AssessControlModalProps {
@@ -131,10 +136,10 @@ export function AssessControlModal({ isOpen, onClose, onSuccess, control }: Asse
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Control Title
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             required
-                            className="input w-full"
+                            className="w-full"
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                         />
@@ -199,7 +204,7 @@ export function AssessControlModal({ isOpen, onClose, onSuccess, control }: Asse
                                     Maturity Level (0-5)
                                 </label>
                                 <div className="flex items-center gap-4">
-                                    <input
+                                    <BoilerplateInput
                                         type="range"
                                         min="0"
                                         max="5"
@@ -216,55 +221,61 @@ export function AssessControlModal({ isOpen, onClose, onSuccess, control }: Asse
                                 <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                                     Control Type
                                 </label>
-                                <select
-                                    className="input w-full"
-                                    value={formData.controlType}
-                                    onChange={(e) => setFormData({ ...formData, controlType: e.target.value })}
-                                >
+                                <Select value={formData.controlType} onValueChange={(e) => setFormData({ ...formData, controlType: e })}>
+                                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectGroup>
                                     {CONTROL_TYPES.map(type => (
-                                        <option key={type} value={type}>{type}</option>
+                                        <SelectItem key={type} value={type}>{type}</SelectItem>
                                     ))}
-                                </select>
+
+                                    </SelectGroup>
+                                  </SelectContent>
+                                </Select>
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                                     Assessment Frequency
                                 </label>
-                                <select
-                                    className="input w-full"
-                                    value={formData.frequency}
-                                    onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
-                                >
+                                <Select value={formData.frequency} onValueChange={(e) => setFormData({ ...formData, frequency: e })}>
+                                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectGroup>
                                     {CONTROL_FREQUENCIES.map(freq => (
-                                        <option key={freq} value={freq}>{freq.replace(/_/g, " ")}</option>
+                                        <SelectItem key={freq} value={freq}>{freq.replace(/_/g, " ")}</SelectItem>
                                     ))}
-                                </select>
+
+                                    </SelectGroup>
+                                  </SelectContent>
+                                </Select>
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                                     NIST CSF Function
                                 </label>
-                                <select
-                                    className="input w-full"
-                                    value={formData.nistCsfFunction || ""}
-                                    onChange={(e) => setFormData({ ...formData, nistCsfFunction: e.target.value || null })}
-                                >
-                                    <option value="">None</option>
+                                <Select value={formData.nistCsfFunction || "" || "__select_none__"} onValueChange={(e) => setFormData({ ...formData, nistCsfFunction: (e === "__select_none__" ? "" : e) || null })}>
+                                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectGroup>
+                                    <SelectItem value="__select_none__">None</SelectItem>
                                     {NIST_CSF_FUNCTIONS.map(func => (
-                                        <option key={func} value={func}>{func}</option>
+                                        <SelectItem key={func} value={func}>{func}</SelectItem>
                                     ))}
-                                </select>
+
+                                    </SelectGroup>
+                                  </SelectContent>
+                                </Select>
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                                     Owner Role
                                 </label>
-                                <input
+                                <BoilerplateInput
                                     type="text"
-                                    className="input w-full"
+                                    className="w-full"
                                     placeholder="e.g. CISO, IT Security, Risk Team"
                                     value={formData.ownerRole}
                                     onChange={(e) => setFormData({ ...formData, ownerRole: e.target.value })}
@@ -285,8 +296,8 @@ export function AssessControlModal({ isOpen, onClose, onSuccess, control }: Asse
                                 </div>
                             </div>
                         </div>
-                        <textarea
-                            className="input w-full min-h-[100px]"
+                        <BoilerplateTextarea
+                            className="w-full min-h-[100px]"
                             placeholder="e.g., Audit logs verified for Q4, Screenshots attached in DMS index #452"
                             value={formData.evidence}
                             onChange={(e) => setFormData({ ...formData, evidence: e.target.value })}
@@ -297,8 +308,8 @@ export function AssessControlModal({ isOpen, onClose, onSuccess, control }: Asse
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Internal Notes
                         </label>
-                        <textarea
-                            className="input w-full min-h-[80px]"
+                        <BoilerplateTextarea
+                            className="w-full min-h-[80px]"
                             placeholder="Add internal notes about the implementation or remediation plans..."
                             value={formData.notes}
                             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}

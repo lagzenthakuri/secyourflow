@@ -1,10 +1,14 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
 
+
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/Cards";
 import {
     Plus,
-    Search,                                                                                                                                                                                         
+    Search,
     MoreVertical,
     Shield,
     Mail,
@@ -144,10 +148,10 @@ export default function UsersPage() {
                                         size={16}
                                         className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
                                     />
-                                    <input
+                                    <BoilerplateInput
                                         type="text"
                                         placeholder="Search users..."
-                                        className="input pl-9 py-2 text-sm"
+                                        className="pl-9 py-2 text-sm"
                                     />
                                 </div>
                             </div>
@@ -181,17 +185,17 @@ export default function UsersPage() {
                                                 <div className="flex items-center gap-2 mb-0.5">
                                                     <h3 className="font-medium text-[var(--text-primary)]">{user.name}</h3>
                                                     {editingUser === user.id ? (
-                                                        <select
-                                                            value={user.role}
-                                                            onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                                                            onBlur={() => setEditingUser(null)}
-                                                            autoFocus
-                                                            className="text-xs bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded px-1 py-0.5 text-[var(--text-primary)]"
-                                                        >
+                                                        <Select value={user.role} onValueChange={(e) => handleRoleChange(user.id, e)}>
+                                                          <SelectTrigger className="w-full" onBlur={() => setEditingUser(null)} autoFocus><SelectValue /></SelectTrigger>
+                                                          <SelectContent>
+                                                            <SelectGroup>
                                                             {Object.keys(roleColors).map(role => (
-                                                                <option key={role} value={role}>{role}</option>
+                                                                <SelectItem key={role} value={role}>{role}</SelectItem>
                                                             ))}
-                                                        </select>
+
+                                                            </SelectGroup>
+                                                          </SelectContent>
+                                                        </Select>
                                                     ) : (
                                                         <span
                                                             className="px-2 py-0.5 rounded text-[10px] font-medium cursor-pointer hover:underline"

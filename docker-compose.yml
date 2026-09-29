@@ -10,7 +10,7 @@ services:
       context: .
       target: migrate
     environment: *app-env
-    env_file: [.env]
+    env_file: [.env.local]
     depends_on:
       postgres:
         condition: service_healthy
@@ -25,7 +25,7 @@ services:
     ports:
       - "3000:3000"
     environment: *app-env
-    env_file: [.env]
+    env_file: [.env.local]
     depends_on:
       postgres:
         condition: service_healthy
@@ -43,7 +43,7 @@ services:
       target: worker
     restart: unless-stopped
     environment: *app-env
-    env_file: [.env]
+    env_file: [.env.local]
     depends_on:
       postgres:
         condition: service_healthy
@@ -54,7 +54,7 @@ services:
     networks: [secyourflow]
 
   postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     restart: unless-stopped
     # Bound to loopback so `npm run dev` on the host can use the same compose
     # services without exposing the database on public network interfaces.

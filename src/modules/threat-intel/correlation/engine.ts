@@ -1,5 +1,5 @@
 import { prisma } from "../../../lib/prisma";
-import type { IndicatorType, ThreatMatchStatus } from "@prisma/client";
+import type { IndicatorType, ThreatMatchStatus } from "@repo/database";
 import type { ThreatIntelConfig } from "../config";
 import { normalizeIndicatorValue } from "../ioc/normalizer";
 import { ThreatIntelRepository } from "../persistence/repository";

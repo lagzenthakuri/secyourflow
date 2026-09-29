@@ -1,0 +1,2360 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Next Forge demo app sample data. It is kept separate from SecYourFlow's
+// product models while sharing the generated Prisma client.
+model Page {
+  id   Int    @id @default(autoincrement())
+  name String
+}
+
+model User {
+  id                                 String                            @id @default(cuid())
+  email                              String                            @unique
+  emailVerified                      DateTime?
+  name                               String?
+  password                           String?
+  image                              String?
+  role                               Role                              @default(ANALYST)
+  avatar                             String?
+  createdAt                          DateTime                          @default(now())
+  updatedAt                          DateTime                          @updatedAt
+  lastLogin                          DateTime?
+  organizationId                     String?
+  totpEnabled                        Boolean                           @default(false)
+  totpSecretEnc                      String?
+  totpVerifiedAt                     DateTime?
+  totpRecoveryCodesHash              Json?
+  totpLastUsedStep                   Int?
+  activeSessionId                    String?
+  activeSessionIp                    String?
+  accounts                           Account[]
+  assetChangeLogs                    AssetChangeLog[]                  @relation("AssetChangeActor")
+  createdAssetGroups                 AssetGroup[]                      @relation("AssetGroupCreatedBy")
+  assetLifecycleEvents               AssetLifecycleEvent[]             @relation("AssetLifecycleActor")
+  auditLogs                          AuditLog[]
+  comments                           Comment[]
+  complianceEvidenceUploaded         ComplianceEvidence[]              @relation("EvidenceUploadedBy")
+  complianceEvidenceVersionsUploaded ComplianceEvidenceVersion[]       @relation("EvidenceVersionUploadedBy")
+  createdInvitations                 Invitation[]                      @relation("InvitationCreatedBy")
+  dashboardViews                     DashboardView[]
+  dashboardViewSharesReceived        DashboardViewShare[]              @relation("DashboardViewSharedWith")
+  externalTickets                    ExternalTicket[]
+  nis2ChecklistItemsOwned            Nis2ChecklistItem[]               @relation("Nis2ChecklistOwner")
+  nis2IncidentsReported              Nis2Incident[]                    @relation("Nis2IncidentReporter")
+  nis2TimelineEntriesAuthored        Nis2IncidentTimelineEntry[]       @relation("Nis2TimelineAuthor")
+  notifications                      Notification[]
+  notificationRules                  NotificationRule[]
+  remediationEvidenceUploaded        RemediationEvidence[]             @relation("RemediationEvidenceUploadedBy")
+  remediationNotesAuthored           RemediationNote[]                 @relation("RemediationNoteAuthor")
+  remediationPlansOwned              RemediationPlan[]                 @relation("RemediationPlanOwner")
+  reports                            Report[]
+  reportSchedules                    ReportSchedule[]
+  sessions                           Session[]
+  organization                       Organization?                     @relation(fields: [organizationId], references: [id])
+  assignedVulnerabilities            Vulnerability[]                   @relation("VulnerabilityAssignee")
+  vulnerabilityTransitionsChanged    VulnerabilityWorkflowTransition[] @relation("WorkflowChangedBy")
+
+  @@index([email])
+  @@index([organizationId])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Invitation {
+  id             String    @id @default(cuid())
+  email          String
+  organizationId String
+  role           Role      @default(ANALYST)
+  token          String    @unique
+  expiresAt      DateTime
+  usedAt         DateTime?
+  createdById    String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  createdBy      User      @relation("InvitationCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([token])
+  @@index([organizationId])
+  @@index([expiresAt])
+  @@index([organizationId, email])
+}
+
+model Organization {
+  id                       String                            @id @default(cuid())
+  name                     String
+  domain                   String?
+  logo                     String?
+  createdAt                DateTime                          @default(now())
+  updatedAt                DateTime                          @updatedAt
+  assets                   Asset[]
+  assetChangeLogs          AssetChangeLog[]
+  discoveryRuns            AssetDiscoveryRun[]
+  assetGroups              AssetGroup[]
+  assetLifecycleEvents     AssetLifecycleEvent[]
+  assetRelationships       AssetRelationship[]
+  audits                   Audit[]
+  auditLogs                AuditLog[]
+  complianceEvidence       ComplianceEvidence[]
+  complianceFrameworks     ComplianceFramework[]
+  complianceTrendSnapshots ComplianceTrendSnapshot[]
+  dashboardViews           DashboardView[]
+  dashboardViewShares      DashboardViewShare[]
+  dataAssets               DataAsset[]
+  externalTickets          ExternalTicket[]
+  notificationRules        NotificationRule[]
+  invitations              Invitation[]
+  nis2BusinessProcesses    Nis2BusinessProcess[]
+  nis2ChecklistItems       Nis2ChecklistItem[]
+  nis2Incidents            Nis2Incident[]
+  nis2IncidentAssets       Nis2IncidentAsset[]
+  nis2ProcessAssetLinks    Nis2ProcessAssetDependency[]
+  nis2ProcessVendorLinks   Nis2ProcessVendorDependency[]
+  nis2Vendors              Nis2Vendor[]
+  policies                 Policy[]
+  remediationEvidence      RemediationEvidence[]
+  remediationNotes         RemediationNote[]
+  remediationPlans         RemediationPlan[]
+  reports                  Report[]
+  reportArtifacts          ReportArtifact[]
+  reportRuns               ReportRun[]
+  reportSchedules          ReportSchedule[]
+  riskAppetites            RiskAppetite[]
+  riskEntries              RiskRegister[]
+  riskSnapshots            RiskSnapshot[]
+  scanResults              ScanResult[]
+  scannerConfigs           ScannerConfig[]
+  settings                 Setting?
+  threatFeeds              ThreatFeed[]
+  threatFeedRuns           ThreatFeedRun[]
+  threatIndicators         ThreatIndicator[]
+  threatIndicatorMatch     ThreatIndicatorMatch[]
+  users                    User[]
+  vulnerabilities          Vulnerability[]
+  vulnerabilityTransitions VulnerabilityWorkflowTransition[]
+  wazuhAlerts              WazuhAlert[]
+
+  @@index([name])
+  jobRuns                  JobRun[]
+}
+
+model Asset {
+  id                  String                   @id @default(cuid())
+  name                String
+  type                AssetType
+  hostname            String?
+  ipAddress           String?
+  macAddress          String?
+  operatingSystem     String?
+  version             String?
+  environment         Environment              @default(PRODUCTION)
+  criticality         Criticality              @default(MEDIUM)
+  status              AssetStatus              @default(ACTIVE)
+  owner               String?
+  department          String?
+  location            String?
+  cloudProvider       CloudProvider?
+  cloudRegion         String?
+  cloudAccountId      String?
+  tags                String[]
+  metadata            Json?
+  lastSeen            DateTime?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  organizationId      String
+  organization        Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  changeLogs          AssetChangeLog[]
+  complianceControls  AssetComplianceControl[]
+  discoveryLinks      AssetDiscoveryRunAsset[]
+  groupMembers        AssetGroupMember[]
+  lifecycleEvents     AssetLifecycleEvent[]
+  parentRelationships AssetRelationship[]      @relation("AssetChild")
+  childRelationships  AssetRelationship[]      @relation("AssetParent")
+  vulnerabilities     AssetVulnerability[]
+  complianceEvidence  ComplianceEvidence[]
+  nis2IncidentLinks   Nis2IncidentAsset[]
+  nis2ProcessLinks    Nis2ProcessAssetDependency[]
+  riskEntries         RiskRegister[]
+  indicatorMatches    ThreatIndicatorMatch[]
+  vendorLinks         VendorAssetLink[]
+  dataLinks           AssetDataLink[]
+  policyLinks         PolicyAssetLink[]
+
+  @@index([name])
+  @@index([type])
+  @@index([ipAddress])
+  @@index([organizationId])
+  @@index([criticality])
+  @@index([organizationId, criticality])
+  @@index([organizationId, environment])
+  @@index([organizationId, status])
+  @@index([organizationId, type])
+  @@index([location])
+  @@index([hostname])
+}
+
+model Vulnerability {
+  id                  String                            @id @default(cuid())
+  cveId               String?
+  title               String
+  description         String?
+  severity            Severity
+  cvssScore           Float?
+  cvssVector          String?
+  epssScore           Float?
+  epssPercentile      Float?
+  cweId               String?
+  cweDescription      String?
+  isExploited         Boolean                           @default(false)
+  exploitMaturity     ExploitMaturity?
+  cisaKev             Boolean                           @default(false)
+  source              VulnSource
+  scannerId           String?
+  scannerName         String?
+  firstDetected       DateTime                          @default(now())
+  lastSeen            DateTime                          @default(now())
+  status              VulnStatus                        @default(OPEN)
+  solution            String?
+  references          String[]
+  patchAvailable      Boolean                           @default(false)
+  dueDate             DateTime?
+  fixedAt             DateTime?
+  riskScore           Float?
+  businessImpact      String?
+  metadata            Json?
+  createdAt           DateTime                          @default(now())
+  updatedAt           DateTime                          @updatedAt
+  organizationId      String
+  assignedTeam        String?
+  assignedUserId      String?
+  closedAt            DateTime?
+  resolvedAt          DateTime?
+  slaDueAt            DateTime?
+  triagedAt           DateTime?
+  workflowState       WorkflowState                     @default(NEW)
+  assets              AssetVulnerability[]
+  comments            Comment[]
+  externalTickets     ExternalTicket[]
+  remediationEvidence RemediationEvidence[]
+  remediationNotes    RemediationNote[]
+  remediationPlans    RemediationPlanVulnerability[]
+  riskEntries         RiskRegister[]
+  assignedUser        User?                             @relation("VulnerabilityAssignee", fields: [assignedUserId], references: [id])
+  organization        Organization                      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  attackTechniques    VulnerabilityAttackTechnique[]
+  complianceControls  VulnerabilityComplianceControl[]
+  threatActors        VulnerabilityThreatActor[]
+  workflowTransitions VulnerabilityWorkflowTransition[]
+
+  @@index([cveId])
+  @@index([severity])
+  @@index([status])
+  @@index([organizationId])
+  @@index([isExploited])
+  @@index([riskScore])
+  @@index([organizationId, severity])
+  @@index([organizationId, status])
+  @@index([organizationId, isExploited])
+  @@index([organizationId, cisaKev])
+  @@index([workflowState])
+  @@index([slaDueAt])
+  @@index([assignedUserId])
+  @@index([organizationId, workflowState])
+  @@index([organizationId, slaDueAt])
+  @@index([createdAt(sort: Desc)])
+  @@index([severity, status])
+  @@index([epssScore(sort: Desc)])
+}
+
+model AssetVulnerability {
+  id              String        @id @default(cuid())
+  assetId         String
+  vulnerabilityId String
+  port            Int?
+  protocol        String?
+  service         String?
+  path            String?
+  evidence        String?
+  status          VulnStatus    @default(OPEN)
+  firstDetected   DateTime      @default(now())
+  lastSeen        DateTime      @default(now())
+  asset           Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  vulnerability   Vulnerability @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, vulnerabilityId])
+  @@index([assetId])
+  @@index([vulnerabilityId])
+  @@index([status])
+}
+
+model ComplianceFramework {
+  id             String                    @id @default(cuid())
+  name           String
+  version        String?
+  description    String?
+  isActive       Boolean                   @default(true)
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  organizationId String
+  controls       ComplianceControl[]
+  organization   Organization              @relation(fields: [organizationId], references: [id])
+  trendSnapshots ComplianceTrendSnapshot[]
+
+  @@index([name])
+  @@index([organizationId])
+}
+
+model ComplianceControl {
+  id                   String                           @id @default(cuid())
+  controlId            String
+  title                String
+  description          String?
+  category             String?
+  objective            String?
+  status               ComplianceStatus                 @default(NOT_ASSESSED)
+  implementationStatus ImplementationStatus             @default(NOT_IMPLEMENTED)
+  evidence             String?
+  notes                String?
+  lastAssessed         DateTime?
+  nextAssessment       DateTime?
+  createdAt            DateTime                         @default(now())
+  updatedAt            DateTime                         @updatedAt
+  frameworkId          String
+  controlType          ControlType                      @default(PREVENTIVE)
+  evidenceRequired     String[]
+  frequency            ControlFrequency                 @default(ANNUAL)
+  mappedControls       Json?
+  maturityLevel        Int                              @default(0)
+  nistCsfFunction      NistCsfFunction?
+  ownerRole            String?
+  riskCategory         String?
+  assets               AssetComplianceControl[]
+  framework            ComplianceFramework              @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  evidenceFiles        ComplianceEvidence[]
+  vulnerabilities      VulnerabilityComplianceControl[]
+  policyLinks          PolicyControlLink[]
+
+  @@unique([frameworkId, controlId])
+  @@index([frameworkId])
+  @@index([status])
+  @@index([controlId])
+  @@index([maturityLevel])
+  @@index([nistCsfFunction])
+  @@index([frameworkId, status])
+}
+
+model AssetComplianceControl {
+  id         String            @id @default(cuid())
+  assetId    String
+  controlId  String
+  status     ComplianceStatus  @default(NOT_ASSESSED)
+  evidence   String?
+  assessedAt DateTime?
+  asset      Asset             @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  control    ComplianceControl @relation(fields: [controlId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, controlId])
+  @@index([assetId])
+  @@index([controlId])
+}
+
+model ComplianceEvidence {
+  id             String                      @id @default(cuid())
+  title          String
+  description    String?
+  controlId      String
+  assetId        String?
+  organizationId String
+  uploadedById   String?
+  currentVersion Int                         @default(1)
+  createdAt      DateTime                    @default(now())
+  updatedAt      DateTime                    @updatedAt
+  asset          Asset?                      @relation(fields: [assetId], references: [id])
+  control        ComplianceControl           @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  organization   Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedBy     User?                       @relation("EvidenceUploadedBy", fields: [uploadedById], references: [id])
+  versions       ComplianceEvidenceVersion[]
+
+  @@index([controlId])
+  @@index([assetId])
+  @@index([organizationId])
+  @@index([createdAt(sort: Desc)])
+}
+
+model ComplianceEvidenceVersion {
+  id           String             @id @default(cuid())
+  evidenceId   String
+  version      Int
+  fileName     String
+  mimeType     String
+  sizeBytes    Int
+  /// Legacy on-disk location. Retained so pre-migration rows stay downloadable.
+  storagePath  String
+  /// File content. Stored in the database, like ReportArtifact.data, so any
+  /// replica can serve a download and a container restart cannot lose evidence.
+  data         Bytes?
+  checksum     String?
+  notes        String?
+  uploadedById String?
+  createdAt    DateTime           @default(now())
+  evidence     ComplianceEvidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  uploadedBy   User?              @relation("EvidenceVersionUploadedBy", fields: [uploadedById], references: [id])
+
+  @@unique([evidenceId, version])
+  @@index([evidenceId])
+  @@index([createdAt(sort: Desc)])
+}
+
+model ComplianceTrendSnapshot {
+  id                   String              @id @default(cuid())
+  frameworkId          String
+  organizationId       String
+  snapshotDate         DateTime            @default(now())
+  totalControls        Int
+  compliant            Int
+  nonCompliant         Int
+  partiallyCompliant   Int
+  notAssessed          Int
+  compliancePercentage Float
+  framework            ComplianceFramework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  organization         Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([frameworkId, snapshotDate(sort: Desc)])
+  @@index([organizationId, snapshotDate(sort: Desc)])
+}
+
+model VulnerabilityComplianceControl {
+  id              String            @id @default(cuid())
+  vulnerabilityId String
+  controlId       String
+  impact          String?
+  control         ComplianceControl @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  vulnerability   Vulnerability     @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+
+  @@unique([vulnerabilityId, controlId])
+  @@index([vulnerabilityId])
+  @@index([controlId])
+}
+
+model ThreatFeed {
+  id             String            @id @default(cuid())
+  name           String
+  source         String
+  type           ThreatFeedType
+  format         ThreatFeedFormat  @default(JSON)
+  url            String?
+  apiKey         String?
+  checkpoint     String?
+  metadata       Json?
+  isActive       Boolean           @default(true)
+  lastSync       DateTime?
+  syncInterval   Int               @default(3600)
+  organizationId String
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  runs           ThreatFeedRun[]
+  indicators     ThreatIndicator[]
+
+  @@unique([organizationId, name])
+  @@index([name])
+  @@index([isActive])
+  @@index([organizationId])
+}
+
+model ThreatIndicator {
+  id              String                 @id @default(cuid())
+  type            IndicatorType
+  value           String
+  normalizedValue String
+  confidence      Int?
+  severity        Severity?
+  firstSeen       DateTime               @default(now())
+  lastSeen        DateTime               @default(now())
+  expiresAt       DateTime?
+  source          String?
+  description     String?
+  tags            String[]
+  metadata        Json?
+  tacticId        String?
+  techniqueId     String?
+  feedId          String
+  organizationId  String
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  feed            ThreatFeed             @relation(fields: [feedId], references: [id], onDelete: Cascade)
+  organization    Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  matches         ThreatIndicatorMatch[]
+
+  @@unique([organizationId, type, normalizedValue, feedId])
+  @@index([type])
+  @@index([value])
+  @@index([normalizedValue])
+  @@index([feedId])
+  @@index([organizationId])
+  @@index([expiresAt])
+}
+
+model ThreatFeedRun {
+  id             String       @id @default(cuid())
+  feedId         String
+  organizationId String
+  startedAt      DateTime     @default(now())
+  finishedAt     DateTime?
+  status         String       @default("RUNNING")
+  recordsFetched Int          @default(0)
+  recordsCreated Int          @default(0)
+  recordsUpdated Int          @default(0)
+  recordsSkipped Int          @default(0)
+  checkpoint     String?
+  errors         Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  feed           ThreatFeed   @relation(fields: [feedId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([feedId, startedAt(sort: Desc)])
+  @@index([organizationId, startedAt(sort: Desc)])
+}
+
+model AttackTactic {
+  id          String                  @id @default(cuid())
+  externalId  String                  @unique
+  name        String
+  shortName   String?
+  description String?
+  platforms   String[]
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  techniques  AttackTechniqueTactic[]
+
+  @@index([name])
+}
+
+model AttackTechnique {
+  id                 String                         @id @default(cuid())
+  externalId         String                         @unique
+  name               String
+  description        String?
+  isSubTechnique     Boolean                        @default(false)
+  revoked            Boolean                        @default(false)
+  platforms          String[]
+  createdAt          DateTime                       @default(now())
+  updatedAt          DateTime                       @updatedAt
+  tactics            AttackTechniqueTactic[]
+  actorLinks         ThreatActorTechnique[]
+  campaignLinks      ThreatCampaignTechnique[]
+  vulnerabilityLinks VulnerabilityAttackTechnique[]
+
+  @@index([name])
+}
+
+model AttackTechniqueTactic {
+  id          String          @id @default(cuid())
+  techniqueId String
+  tacticId    String
+  createdAt   DateTime        @default(now())
+  tactic      AttackTactic    @relation(fields: [tacticId], references: [id], onDelete: Cascade)
+  technique   AttackTechnique @relation(fields: [techniqueId], references: [id], onDelete: Cascade)
+
+  @@unique([techniqueId, tacticId])
+  @@index([tacticId])
+}
+
+model VulnerabilityAttackTechnique {
+  id              String              @id @default(cuid())
+  vulnerabilityId String
+  techniqueId     String
+  mappingSource   AttackMappingSource
+  confidence      Int?
+  notes           String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  technique       AttackTechnique     @relation(fields: [techniqueId], references: [id], onDelete: Cascade)
+  vulnerability   Vulnerability       @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+
+  @@unique([vulnerabilityId, techniqueId, mappingSource])
+  @@index([techniqueId])
+}
+
+model ThreatIndicatorMatch {
+  id             String            @id @default(cuid())
+  indicatorId    String
+  assetId        String
+  organizationId String
+  matchField     String
+  matchValue     String
+  status         ThreatMatchStatus @default(ACTIVE)
+  confidence     Int?
+  firstMatchedAt DateTime          @default(now())
+  lastMatchedAt  DateTime          @default(now())
+  resolvedAt     DateTime?
+  notes          String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  asset          Asset             @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  indicator      ThreatIndicator   @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([indicatorId, assetId, matchField])
+  @@index([organizationId, status])
+  @@index([assetId, status])
+}
+
+model ThreatActor {
+  id                 String                     @id @default(cuid())
+  externalId         String?                    @unique
+  name               String
+  description        String?
+  aliases            String[]
+  source             String?
+  lastSeen           DateTime?
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  techniques         ThreatActorTechnique[]
+  campaigns          ThreatCampaign[]
+  vulnerabilityLinks VulnerabilityThreatActor[]
+
+  @@index([name])
+}
+
+model ThreatCampaign {
+  id          String                    @id @default(cuid())
+  externalId  String?                   @unique
+  name        String
+  description String?
+  firstSeen   DateTime?
+  lastSeen    DateTime?
+  actorId     String?
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+  actor       ThreatActor?              @relation(fields: [actorId], references: [id])
+  techniques  ThreatCampaignTechnique[]
+
+  @@index([name])
+  @@index([actorId])
+}
+
+model ThreatActorTechnique {
+  id          String          @id @default(cuid())
+  actorId     String
+  techniqueId String
+  createdAt   DateTime        @default(now())
+  actor       ThreatActor     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  technique   AttackTechnique @relation(fields: [techniqueId], references: [id], onDelete: Cascade)
+
+  @@unique([actorId, techniqueId])
+  @@index([techniqueId])
+}
+
+model ThreatCampaignTechnique {
+  id          String          @id @default(cuid())
+  campaignId  String
+  techniqueId String
+  createdAt   DateTime        @default(now())
+  campaign    ThreatCampaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  technique   AttackTechnique @relation(fields: [techniqueId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, techniqueId])
+  @@index([techniqueId])
+}
+
+model VulnerabilityThreatActor {
+  id              String              @id @default(cuid())
+  vulnerabilityId String
+  actorId         String
+  source          AttackMappingSource
+  notes           String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  actor           ThreatActor         @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  vulnerability   Vulnerability       @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+
+  @@unique([vulnerabilityId, actorId, source])
+  @@index([actorId])
+}
+
+model AuditLog {
+  id             String       @id @default(cuid())
+  action         String
+  entityType     String
+  entityId       String
+  oldValue       Json?
+  newValue       Json?
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  createdAt      DateTime     @default(now())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([organizationId])
+  @@index([createdAt(sort: Desc)])
+  @@index([entityType, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([ipAddress])
+}
+
+model Comment {
+  id              String         @id @default(cuid())
+  content         String
+  entityType      String
+  entityId        String
+  userId          String
+  vulnerabilityId String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vulnerability   Vulnerability? @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+
+  @@index([entityType, entityId])
+  @@index([userId])
+}
+
+model ScannerConfig {
+  id             String       @id @default(cuid())
+  name           String
+  type           VulnSource
+  endpoint       String?
+  apiKey         String?
+  username       String?
+  password       String?
+  isActive       Boolean      @default(true)
+  lastSync       DateTime?
+  syncInterval   Int          @default(86400)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organizationId String
+  scanResults    ScanResult[]
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([type])
+  @@index([isActive])
+  @@index([organizationId])
+}
+
+model ScanResult {
+  id             String        @id @default(cuid())
+  scanId         String
+  startTime      DateTime
+  endTime        DateTime?
+  status         ScanStatus    @default(RUNNING)
+  totalHosts     Int           @default(0)
+  totalVulns     Int           @default(0)
+  rawData        Json?
+  scannerId      String
+  createdAt      DateTime      @default(now())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  scanner        ScannerConfig @relation(fields: [scannerId], references: [id], onDelete: Cascade)
+
+  @@index([scanId])
+  @@index([scannerId])
+  @@index([organizationId])
+  @@index([organizationId, startTime(sort: Desc)])
+  @@index([organizationId, status])
+  @@index([status])
+}
+
+model RiskSnapshot {
+  id               String       @id @default(cuid())
+  date             DateTime     @default(now())
+  totalAssets      Int
+  criticalAssets   Int
+  totalVulns       Int
+  criticalVulns    Int
+  highVulns        Int
+  mediumVulns      Int
+  lowVulns         Int
+  exploitedVulns   Int
+  cisaKevVulns     Int
+  overallRiskScore Float
+  complianceScore  Float?
+  metadata         Json?
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([date])
+  @@index([organizationId])
+  @@index([organizationId, date(sort: Desc)])
+}
+
+model Setting {
+  id                      String       @id @default(cuid())
+  organizationId          String       @unique
+  timezone                String       @default("UTC")
+  dateFormat              String       @default("MMM DD, YYYY")
+  notifyCritical          Boolean      @default(true)
+  notifyExploited         Boolean      @default(true)
+  notifyCompliance        Boolean      @default(true)
+  notifyScan              Boolean      @default(false)
+  notifyWeekly            Boolean      @default(true)
+  require2FA              Boolean      @default(false)
+  sessionTimeout          Int          @default(30)
+  passwordPolicy          String       @default("STRONG")
+  updatedAt               DateTime     @updatedAt
+  aiRiskAssessmentEnabled Boolean      @default(true)
+  aiProvider              String       @default("OLLAMA")
+  aiModel                 String?
+  aiEndpoint              String?
+  // Sealed with lib/crypto/sealed-secrets (AES-256-GCM), never returned to the
+  // client. Falls back to the provider's environment variable when unset.
+  aiApiKey                String?
+  organization            Organization @relation(fields: [organizationId], references: [id])
+}
+
+model Report {
+  id             String              @id @default(cuid())
+  name           String
+  type           String
+  description    String?
+  format         String              @default("PDF")
+  frequency      String?
+  status         String              @default("PENDING")
+  url            String?
+  size           String?
+  organizationId String
+  userId         String
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  outputFormat   ReportOutputFormat?
+  scheduleId     String?
+  templateKey    ReportTemplateKey?
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  schedule       ReportSchedule?     @relation(fields: [scheduleId], references: [id])
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  runs           ReportRun[]
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([scheduleId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("INFO")
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+}
+
+model RiskRegister {
+  id               String        @id @default(cuid())
+  assetId          String
+  vulnerabilityId  String
+  organizationId   String
+  riskScore        Float
+  impactScore      Float
+  likelihoodScore  Float
+  // Was an unconstrained String, so a client could PATCH it to any value while
+  // the UI branched on three magic strings.
+  status           RiskEntryStatus @default(PROCESSING)
+  // Whether a model actually produced this assessment, or it came from the
+  // deterministic fallback. The UI must never present the two identically.
+  analysisSource   RiskAnalysisSource @default(DETERMINISTIC)
+  failureReason    String?
+  aiAnalysis       Json
+  treatmentOption  String?
+  responsibleParty String?
+  confidence       Float?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  actionPlan       String?
+  currentControls  String?
+  isResolved       Boolean       @default(false)
+  remarks          String?
+  riskCategory2    String?
+  selectedControls String?
+  /// Optional direct attribution to a vendor. Risks on a vendor's assets are
+  /// reached through the asset; this is for risks the vendor itself carries
+  /// (contract, service continuity, supplier breach).
+  vendorId         String?
+  asset            Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  organization     Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vulnerability    Vulnerability @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+  vendor           Nis2Vendor?   @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  policyLinks      PolicyRiskLink[]
+
+  @@index([assetId])
+  @@index([vulnerabilityId])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([riskScore(sort: Desc)])
+  @@index([organizationId, riskScore(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@index([assetId, vulnerabilityId])
+  @@index([vendorId])
+  // One live assessment per vulnerability-on-asset. Without this the engine
+  // created a new row on every run, filling the register with stale
+  // PROCESSING/FAILED duplicates and hiding the good result.
+  @@unique([organizationId, assetId, vulnerabilityId])
+}
+
+model VulnerabilityWorkflowTransition {
+  id              String         @id @default(cuid())
+  vulnerabilityId String
+  organizationId  String
+  fromState       WorkflowState?
+  toState         WorkflowState
+  changedById     String?
+  note            String?
+  changedAt       DateTime       @default(now())
+  createdAt       DateTime       @default(now())
+  changedBy       User?          @relation("WorkflowChangedBy", fields: [changedById], references: [id])
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vulnerability   Vulnerability  @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+
+  @@index([vulnerabilityId, changedAt(sort: Desc)])
+  @@index([organizationId, changedAt(sort: Desc)])
+  @@index([changedById])
+}
+
+model RemediationPlan {
+  id              String                         @id @default(cuid())
+  organizationId  String
+  ownerId         String?
+  name            String
+  description     String?
+  status          RemediationPlanStatus          @default(DRAFT)
+  dueDate         DateTime?
+  completedAt     DateTime?
+  metadata        Json?
+  createdAt       DateTime                       @default(now())
+  updatedAt       DateTime                       @updatedAt
+  tickets         ExternalTicket[]
+  evidence        RemediationEvidence[]
+  notes           RemediationNote[]
+  organization    Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner           User?                          @relation("RemediationPlanOwner", fields: [ownerId], references: [id])
+  vulnerabilities RemediationPlanVulnerability[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, dueDate])
+  @@index([ownerId])
+}
+
+model RemediationPlanVulnerability {
+  id              String          @id @default(cuid())
+  planId          String
+  vulnerabilityId String
+  progress        Int             @default(0)
+  createdAt       DateTime        @default(now())
+  plan            RemediationPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  vulnerability   Vulnerability   @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, vulnerabilityId])
+  @@index([vulnerabilityId])
+}
+
+model RemediationNote {
+  id              String           @id @default(cuid())
+  organizationId  String
+  planId          String?
+  vulnerabilityId String?
+  authorId        String?
+  content         String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  author          User?            @relation("RemediationNoteAuthor", fields: [authorId], references: [id])
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan            RemediationPlan? @relation(fields: [planId], references: [id], onDelete: Cascade)
+  vulnerability   Vulnerability?   @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([planId])
+  @@index([vulnerabilityId])
+  @@index([authorId])
+}
+
+model RemediationEvidence {
+  id              String           @id @default(cuid())
+  organizationId  String
+  planId          String?
+  vulnerabilityId String?
+  uploadedById    String?
+  title           String
+  fileName        String
+  mimeType        String
+  sizeBytes       Int
+  storagePath     String
+  checksum        String?
+  notes           String?
+  createdAt       DateTime         @default(now())
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan            RemediationPlan? @relation(fields: [planId], references: [id], onDelete: Cascade)
+  uploadedBy      User?            @relation("RemediationEvidenceUploadedBy", fields: [uploadedById], references: [id])
+  vulnerability   Vulnerability?   @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([planId])
+  @@index([vulnerabilityId])
+  @@index([uploadedById])
+}
+
+model ExternalTicket {
+  id              String           @id @default(cuid())
+  organizationId  String
+  provider        TicketProvider
+  syncStatus      TicketSyncStatus @default(LINKED)
+  externalId      String
+  externalKey     String?
+  externalUrl     String?
+  externalStatus  String?
+  title           String?
+  payload         Json?
+  vulnerabilityId String?
+  planId          String?
+  userId          String?
+  lastSyncedAt    DateTime?
+  lastSyncError   String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan            RemediationPlan? @relation(fields: [planId], references: [id], onDelete: Cascade)
+  user            User?            @relation(fields: [userId], references: [id])
+  vulnerability   Vulnerability?   @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, externalId])
+  @@index([organizationId, provider])
+  @@index([syncStatus, lastSyncedAt])
+  @@index([vulnerabilityId])
+  @@index([planId])
+}
+
+model ReportSchedule {
+  id             String             @id @default(cuid())
+  organizationId String
+  userId         String
+  name           String
+  templateKey    ReportTemplateKey
+  frequency      ReportFrequency
+  outputFormat   ReportOutputFormat @default(PDF)
+  recipients     String[]           @default([])
+  filters        Json?
+  isActive       Boolean            @default(true)
+  nextRunAt      DateTime
+  lastRunAt      DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  reports        Report[]
+  runs           ReportRun[]
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, isActive])
+  @@index([nextRunAt, isActive])
+  @@index([userId])
+}
+
+model ReportRun {
+  id             String           @id @default(cuid())
+  organizationId String
+  scheduleId     String?
+  reportId       String?
+  status         String           @default("PENDING")
+  startedAt      DateTime         @default(now())
+  completedAt    DateTime?
+  errorMessage   String?
+  metadata       Json?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  artifacts      ReportArtifact[]
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  report         Report?          @relation(fields: [reportId], references: [id])
+  schedule       ReportSchedule?  @relation(fields: [scheduleId], references: [id])
+
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([scheduleId, createdAt(sort: Desc)])
+  @@index([status])
+}
+
+model ReportArtifact {
+  id             String             @id @default(cuid())
+  organizationId String
+  reportRunId    String
+  format         ReportOutputFormat
+  fileName       String
+  mimeType       String
+  sizeBytes      Int
+  data           Bytes
+  checksum       String?
+  createdAt      DateTime           @default(now())
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reportRun      ReportRun          @relation(fields: [reportRunId], references: [id], onDelete: Cascade)
+
+  @@index([reportRunId])
+  @@index([organizationId, createdAt(sort: Desc)])
+}
+
+model DashboardView {
+  id             String               @id @default(cuid())
+  organizationId String
+  userId         String
+  name           String
+  layout         Json
+  isDefault      Boolean              @default(false)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shares         DashboardViewShare[]
+
+  @@index([organizationId, userId])
+  @@index([organizationId, isDefault])
+}
+
+model DashboardViewShare {
+  id               String        @id @default(cuid())
+  dashboardViewId  String
+  organizationId   String
+  sharedWithUserId String?
+  sharedWithRole   Role?
+  canEdit          Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  dashboardView    DashboardView @relation(fields: [dashboardViewId], references: [id], onDelete: Cascade)
+  organization     Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sharedWithUser   User?         @relation("DashboardViewSharedWith", fields: [sharedWithUserId], references: [id], onDelete: Cascade)
+
+  @@unique([dashboardViewId, sharedWithUserId, sharedWithRole])
+  @@index([organizationId, sharedWithRole])
+  @@index([sharedWithUserId])
+}
+
+model AssetRelationship {
+  id               String                @id @default(cuid())
+  organizationId   String
+  parentAssetId    String
+  childAssetId     String
+  relationshipType AssetRelationshipType
+  notes            String?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  childAsset       Asset                 @relation("AssetChild", fields: [childAssetId], references: [id], onDelete: Cascade)
+  organization     Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parentAsset      Asset                 @relation("AssetParent", fields: [parentAssetId], references: [id], onDelete: Cascade)
+
+  @@unique([parentAssetId, childAssetId, relationshipType])
+  @@index([organizationId, parentAssetId])
+  @@index([organizationId, childAssetId])
+}
+
+model AssetGroup {
+  id             String             @id @default(cuid())
+  organizationId String
+  createdById    String?
+  name           String
+  description    String?
+  color          String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  createdBy      User?              @relation("AssetGroupCreatedBy", fields: [createdById], references: [id])
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members        AssetGroupMember[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model AssetGroupMember {
+  id      String     @id @default(cuid())
+  groupId String
+  assetId String
+  addedAt DateTime   @default(now())
+  asset   Asset      @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  group   AssetGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, assetId])
+  @@index([assetId])
+}
+
+model AssetLifecycleEvent {
+  id              String             @id @default(cuid())
+  organizationId  String
+  assetId         String
+  actorId         String?
+  eventType       LifecycleEventType
+  fromEnvironment Environment?
+  toEnvironment   Environment?
+  fromOwner       String?
+  toOwner         String?
+  notes           String?
+  occurredAt      DateTime           @default(now())
+  createdAt       DateTime           @default(now())
+  actor           User?              @relation("AssetLifecycleActor", fields: [actorId], references: [id])
+  asset           Asset              @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, occurredAt(sort: Desc)])
+  @@index([organizationId, occurredAt(sort: Desc)])
+}
+
+model AssetChangeLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  assetId        String
+  changedById    String?
+  field          String
+  oldValue       Json?
+  newValue       Json?
+  changedAt      DateTime     @default(now())
+  asset          Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  changedBy      User?        @relation("AssetChangeActor", fields: [changedById], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, changedAt(sort: Desc)])
+  @@index([organizationId, changedAt(sort: Desc)])
+}
+
+model AssetDiscoveryRun {
+  id              String                   @id @default(cuid())
+  organizationId  String
+  source          String
+  status          String                   @default("PENDING")
+  startedAt       DateTime                 @default(now())
+  finishedAt      DateTime?
+  discoveredCount Int                      @default(0)
+  createdCount    Int                      @default(0)
+  updatedCount    Int                      @default(0)
+  rawInput        Json?
+  errorMessage    String?
+  metadata        Json?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  organization    Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assets          AssetDiscoveryRunAsset[]
+
+  @@index([organizationId, startedAt(sort: Desc)])
+  @@index([source, status])
+}
+
+model AssetDiscoveryRunAsset {
+  id             String            @id @default(cuid())
+  discoveryRunId String
+  assetId        String
+  action         String
+  asset          Asset             @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  discoveryRun   AssetDiscoveryRun @relation(fields: [discoveryRunId], references: [id], onDelete: Cascade)
+
+  @@unique([discoveryRunId, assetId])
+  @@index([assetId])
+}
+
+model NotificationRule {
+  id               String              @id @default(cuid())
+  organizationId   String
+  userId           String
+  name             String
+  isActive         Boolean             @default(true)
+  channel          NotificationChannel @default(IN_APP)
+  eventType        String
+  minimumSeverity  Severity?
+  includeExploited Boolean             @default(false)
+  includeKev       Boolean             @default(false)
+  recipients       String[]            @default([])
+  webhookUrl       String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  organization     Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, isActive])
+  @@index([userId, isActive])
+  @@index([eventType])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model Cve {
+  id             String                   @id
+  cveId          String                   @unique
+  description    String
+  publishedAt    DateTime
+  lastModifiedAt DateTime
+  severity       Severity
+  cweIds         String[]
+  searchVector   Unsupported("tsvector")?
+  status         CveStatus                @default(ACTIVE)
+  isKev          Boolean                  @default(false)
+  epssScore      Float?
+  epssPercentile Float?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime
+  CveCpe         CveCpe[]
+  CveCvss        CveCvss[]
+  CveProvenance  CveProvenance[]
+  CveReference   CveReference[]
+  KevEntry       KevEntry?
+
+  @@index([cveId])
+  @@index([cveId], map: "Cve_cveId_pattern_idx")
+  @@index([epssScore])
+  @@index([isKev, severity])
+  @@index([publishedAt(sort: Desc)])
+  @@index([severity, publishedAt])
+  @@index([status, lastModifiedAt])
+  @@index([status, publishedAt])
+  @@index([status, severity, publishedAt(sort: Desc)], map: "Cve_status_severity_published_idx")
+  @@index([cveId(ops: raw("gin_trgm_ops"))], map: "Cve_cveId_trgm_idx", type: Gin)
+  @@index([searchVector], type: Gin)
+}
+
+model CveCpe {
+  id                    String  @id
+  cveId                 String
+  cpeUri                String
+  vendor                String
+  product               String
+  version               String
+  versionStartIncluding String?
+  versionEndExcluding   String?
+  vulnerable            Boolean
+  Cve                   Cve     @relation(fields: [cveId], references: [cveId])
+
+  @@index([cveId])
+  @@index([vendor, product])
+}
+
+model CveCvss {
+  id                  String @id
+  cveId               String
+  version             String
+  vectorString        String
+  baseScore           Float
+  baseSeverity        String
+  exploitabilityScore Float?
+  impactScore         Float?
+  Cve                 Cve    @relation(fields: [cveId], references: [cveId])
+
+  @@index([cveId])
+}
+
+model CveProvenance {
+  id          String   @id
+  cveId       String
+  source      String
+  field       String
+  lastUpdated DateTime
+  checksum    String
+  Cve         Cve      @relation(fields: [cveId], references: [cveId])
+
+  @@index([cveId, source])
+  @@index([source, lastUpdated(sort: Desc)])
+}
+
+model CveReference {
+  id     String   @id
+  cveId  String
+  url    String
+  source String
+  tags   String[]
+  Cve    Cve      @relation(fields: [cveId], references: [cveId])
+
+  @@index([cveId])
+}
+
+model IngestionState {
+  id               String    @id
+  source           String    @unique
+  lastSyncAt       DateTime
+  lastSuccessAt    DateTime?
+  status           String
+  errorMessage     String?
+  recordsProcessed Int       @default(0)
+
+  @@index([source])
+}
+
+model KevEntry {
+  id                String   @id
+  cveId             String   @unique
+  vulnerabilityName String
+  dateAdded         DateTime
+  dueDate           DateTime
+  requiredAction    String
+  notes             String?
+  Cve               Cve      @relation(fields: [cveId], references: [cveId])
+
+  @@index([cveId])
+  @@index([dueDate])
+}
+
+model Policy {
+  id             String       @id @default(cuid())
+  title          String
+  description    String?
+  version        String       @default("1.0")
+  status         PolicyStatus @default(DRAFT)
+  /// Document level in the policy hierarchy: POLICY | STANDARD | PROCEDURE | GUIDELINE.
+  type           String?
+  url            String?
+  owner          String?
+  lastReview     DateTime?
+  nextReview     DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  /// What the policy applies to: Policy -> Risks -> Assets -> Vendors -> Data -> Controls.
+  riskLinks      PolicyRiskLink[]
+  assetLinks     PolicyAssetLink[]
+  vendorLinks    PolicyVendorLink[]
+  dataLinks      PolicyDataLink[]
+  controlLinks   PolicyControlLink[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([organizationId, status])
+  @@index([nextReview])
+}
+
+// ---------------------------------------------------------------------------
+// GRC interconnection core — Vendor <-> Asset <-> Data <-> Risk <-> Policy <-> Control.
+//
+// Relationships are explicit join models rather than ID arrays so that both
+// sides can be traversed with a single query and deleted rows stay consistent
+// through referential cascades.
+// ---------------------------------------------------------------------------
+
+/// Catalog of the data the organization handles. One row per data type
+/// (e.g. "Customer PII"), shared by every vendor and asset that touches it —
+/// never duplicated per relationship.
+model DataAsset {
+  id             String             @id @default(cuid())
+  organizationId String
+  name           String
+  category       DataCategory       @default(BUSINESS_SENSITIVE)
+  classification DataClassification @default(INTERNAL)
+  description    String?
+  retentionNotes String?
+  tags           String[]           @default([])
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  vendorLinks VendorDataLink[]
+  assetLinks  AssetDataLink[]
+  policyLinks PolicyDataLink[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@index([organizationId, category])
+  @@index([organizationId, classification])
+}
+
+/// How a vendor relates to an asset: which vendor provides, manages, hosts or
+/// otherwise interacts with it.
+model VendorAssetLink {
+  id               String                    @id @default(cuid())
+  vendorId         String
+  assetId          String
+  relationshipType VendorAssetRelationshipType @default(MANAGES)
+  notes            String?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  vendor           Nis2Vendor                @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  asset            Asset                     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([vendorId, assetId])
+  @@index([assetId])
+}
+
+/// What a vendor does with a data type: collects, accesses, stores, processes or shares it.
+model VendorDataLink {
+  id           String              @id @default(cuid())
+  vendorId     String
+  dataAssetId  String
+  accessType   VendorDataAccessType @default(ACCESSES)
+  notes        String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  vendor       Nis2Vendor          @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  dataAsset    DataAsset           @relation(fields: [dataAssetId], references: [id], onDelete: Cascade)
+
+  @@unique([vendorId, dataAssetId])
+  @@index([dataAssetId])
+}
+
+/// What an asset does with a data type: stores, processes or transits it.
+model AssetDataLink {
+  id          String     @id @default(cuid())
+  assetId     String
+  dataAssetId String
+  dataRole    AssetDataRole @default(STORES)
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  asset       Asset      @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  dataAsset   DataAsset  @relation(fields: [dataAssetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, dataAssetId])
+  @@index([dataAssetId])
+}
+
+/// Board-level statement of how much residual risk (1-25 scale) the
+/// organization accepts in a risk category. Risks are evaluated against the
+/// tolerance of their category to decide whether they sit within appetite,
+/// are approaching the threshold, or exceed it.
+model RiskAppetite {
+  id             String            @id @default(cuid())
+  organizationId String
+  /// Risk category this statement governs, matched case-insensitively against
+  /// the risk's primary category. The literal "ALL" acts as the catch-all.
+  category       String
+  appetiteLevel  RiskAppetiteLevel @default(MODERATE)
+  /// Maximum acceptable residual risk score on the 1-25 (impact x likelihood) scale.
+  toleranceMax   Int
+  statement      String
+  boardApproved  Boolean           @default(false)
+  boardApprovedAt DateTime?
+  reviewDate     DateTime?
+  owner          String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, category])
+  @@index([organizationId])
+}
+
+model PolicyRiskLink {
+  id        String      @id @default(cuid())
+  policyId  String
+  riskId    String
+  createdAt DateTime    @default(now())
+  policy    Policy      @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  risk      RiskRegister @relation(fields: [riskId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, riskId])
+  @@index([riskId])
+}
+
+model PolicyAssetLink {
+  id        String   @id @default(cuid())
+  policyId  String
+  assetId   String
+  createdAt DateTime @default(now())
+  policy    Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, assetId])
+  @@index([assetId])
+}
+
+model PolicyVendorLink {
+  id        String       @id @default(cuid())
+  policyId  String
+  vendorId  String
+  createdAt DateTime     @default(now())
+  policy    Policy       @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  vendor    Nis2Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, vendorId])
+  @@index([vendorId])
+}
+
+model PolicyDataLink {
+  id          String    @id @default(cuid())
+  policyId    String
+  dataAssetId String
+  createdAt   DateTime  @default(now())
+  policy      Policy    @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  dataAsset   DataAsset @relation(fields: [dataAssetId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, dataAssetId])
+  @@index([dataAssetId])
+}
+
+model PolicyControlLink {
+  id        String           @id @default(cuid())
+  policyId  String
+  controlId String
+  createdAt DateTime         @default(now())
+  policy    Policy           @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  control   ComplianceControl @relation(fields: [controlId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, controlId])
+  @@index([controlId])
+}
+
+model Audit {
+  id              String       @id @default(cuid())
+  title           String
+  type            AuditType    @default(INTERNAL)
+  status          AuditStatus  @default(PLANNED)
+  scope           String?
+  findings        String?
+  recommendations String?
+  startDate       DateTime?
+  endDate         DateTime?
+  periodStart     DateTime?
+  periodEnd       DateTime?
+  auditor         String?
+  reportUrl       String?
+  organizationId  String
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([type])
+}
+
+model WazuhAlert {
+  id             String       @id
+  level          Int
+  ruleId         String
+  agentId        String
+  timestamp      DateTime
+  raw            Json
+  organizationId String
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([level])
+  @@index([ruleId])
+  @@index([agentId])
+  @@index([timestamp])
+}
+
+
+
+enum Role {
+  IT_OFFICER
+  PENTESTER
+  ANALYST
+  MAIN_OFFICER
+}
+
+enum AssetType {
+  SERVER
+  WORKSTATION
+  NETWORK_DEVICE
+  CLOUD_INSTANCE
+  CONTAINER
+  DATABASE
+  APPLICATION
+  API
+  DOMAIN
+  CERTIFICATE
+  IOT_DEVICE
+  MOBILE_DEVICE
+  OTHER
+}
+
+enum Environment {
+  PRODUCTION
+  STAGING
+  DEVELOPMENT
+  TESTING
+  DR
+}
+
+enum Criticality {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFORMATIONAL
+}
+
+enum AssetStatus {
+  ACTIVE
+  INACTIVE
+  DECOMMISSIONED
+  MAINTENANCE
+}
+
+enum CloudProvider {
+  AWS
+  AZURE
+  GCP
+  ORACLE
+  IBM
+  ALIBABA
+  OTHER
+}
+
+enum Severity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFORMATIONAL
+}
+
+enum VulnStatus {
+  OPEN
+  IN_PROGRESS
+  MITIGATED
+  FIXED
+  ACCEPTED
+  FALSE_POSITIVE
+}
+
+enum VulnSource {
+  NESSUS
+  OPENVAS
+  NMAP
+  TRIVY
+  QUALYS
+  RAPID7
+  CROWDSTRIKE
+  MANUAL
+  API
+  OTHER
+  TENABLE
+}
+
+enum ExploitMaturity {
+  NOT_DEFINED
+  UNPROVEN
+  POC
+  FUNCTIONAL
+  HIGH
+}
+
+enum ComplianceStatus {
+  COMPLIANT
+  NON_COMPLIANT
+  PARTIALLY_COMPLIANT
+  NOT_ASSESSED
+  NOT_APPLICABLE
+}
+
+enum ImplementationStatus {
+  IMPLEMENTED
+  PARTIALLY_IMPLEMENTED
+  PLANNED
+  NOT_IMPLEMENTED
+  NOT_APPLICABLE
+}
+
+enum ThreatFeedType {
+  CVE
+  MALWARE
+  IOC
+  THREAT_ACTOR
+  CAMPAIGN
+}
+
+enum ThreatFeedFormat {
+  JSON
+  CSV
+  TAXII
+}
+
+enum AttackMappingSource {
+  CVE_REFERENCE
+  CWE_MAPPING
+  MANUAL
+  ACTOR_REFERENCE
+  TECHNIQUE_INFERENCE
+}
+
+enum ThreatMatchStatus {
+  ACTIVE
+  EXPIRED
+  RESOLVED
+}
+
+enum IndicatorType {
+  IP_ADDRESS
+  DOMAIN
+  URL
+  FILE_HASH_MD5
+  FILE_HASH_SHA1
+  FILE_HASH_SHA256
+  EMAIL
+  CVE
+  REGISTRY_KEY
+  USER_AGENT
+}
+
+enum ScanStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum CveStatus {
+  ACTIVE
+  REJECTED
+  RESERVED
+}
+
+enum ControlType {
+  PREVENTIVE
+  DETECTIVE
+  CORRECTIVE
+}
+
+enum ControlFrequency {
+  CONTINUOUS
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  SEMI_ANNUAL
+  ANNUAL
+}
+
+enum NistCsfFunction {
+  GOVERN
+  IDENTIFY
+  PROTECT
+  DETECT
+  RESPOND
+  RECOVER
+}
+
+enum WorkflowState {
+  NEW
+  TRIAGED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum RemediationPlanStatus {
+  DRAFT
+  ACTIVE
+  BLOCKED
+  COMPLETED
+  ARCHIVED
+}
+
+enum TicketProvider {
+  GITHUB
+  JIRA
+}
+
+enum TicketSyncStatus {
+  LINKED
+  OUT_OF_SYNC
+  ERROR
+  DISCONNECTED
+}
+
+enum ReportTemplateKey {
+  EXECUTIVE_POSTURE
+  RISK_TREND
+  TOP_RISKS
+  COMPLIANCE_SUMMARY
+  VULN_ASSESSMENT
+  PENTEST_FINDINGS
+  ASSET_INVENTORY
+  REMEDIATION_TRACKING
+}
+
+enum ReportOutputFormat {
+  PDF
+  CSV
+  XLSX
+}
+
+enum ReportFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum AssetRelationshipType {
+  HOSTS
+  RUNS_ON
+  DEPENDS_ON
+  CONNECTS_TO
+  CONTAINS
+}
+
+enum LifecycleEventType {
+  CREATED
+  TRANSFERRED
+  OWNERSHIP_CHANGED
+  DECOMMISSION_REQUESTED
+  DECOMMISSIONED
+  REACTIVATED
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  WEBHOOK
+}
+
+enum PolicyStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+  UNDER_REVIEW
+}
+
+enum DataCategory {
+  CUSTOMER_PII
+  EMPLOYEE_DATA
+  FINANCIAL_DATA
+  AUTHENTICATION_CREDENTIALS
+  BUSINESS_SENSITIVE
+  HEALTH_DATA
+  TELEMETRY
+  OTHER
+}
+
+enum DataClassification {
+  PUBLIC
+  INTERNAL
+  CONFIDENTIAL
+  RESTRICTED
+}
+
+enum VendorAssetRelationshipType {
+  PROVIDES
+  MANAGES
+  HOSTS
+  OPERATES
+  SUPPORTS
+}
+
+enum VendorDataAccessType {
+  COLLECTS
+  ACCESSES
+  STORES
+  PROCESSES
+  SHARES
+}
+
+enum AssetDataRole {
+  STORES
+  PROCESSES
+  TRANSITS
+}
+
+/// Strategic willingness to take risk, from averse (lowest tolerance) to hungry.
+enum RiskAppetiteLevel {
+  AVERSE
+  CAUTIOUS
+  MODERATE
+  OPEN
+  HUNGRY
+}
+
+/// Where a risk's score sits relative to its category's tolerance:
+/// WITHIN — comfortably below, APPROACHING — near the threshold,
+/// EXCEEDED — above the acceptable appetite, NOT_EVALUATED — no statement matches.
+enum RiskAppetiteStatus {
+  WITHIN
+  APPROACHING
+  EXCEEDED
+  NOT_EVALUATED
+}
+
+enum AuditType {
+  INTERNAL
+  EXTERNAL
+  REGULATORY
+  THIRD_PARTY
+}
+
+enum AuditStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// ---------------------------------------------------------------------------
+// NIS2 Directive (EU 2022/2555) — Art. 21 governance, Art. 23 incident
+// reporting, Art. 18 supply chain, and Business Impact Analysis.
+// ---------------------------------------------------------------------------
+
+model Nis2ChecklistItem {
+  id               String                @id @default(cuid())
+  organizationId   String
+  code             String
+  measure          Nis2Article21Measure
+  title            String
+  description      String
+  verificationMode Nis2VerificationMode  @default(MANUAL)
+  status           Nis2ChecklistStatus   @default(NOT_STARTED)
+  ownerId          String?
+  dueDate          DateTime?
+  documentUrl      String?
+  notes            String?
+  escalated        Boolean               @default(false)
+  escalationReason String?
+  escalatedAt      DateTime?
+  lastReviewedAt   DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  organization     Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner            User?                 @relation("Nis2ChecklistOwner", fields: [ownerId], references: [id])
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@index([organizationId, measure])
+  @@index([organizationId, status])
+  @@index([organizationId, escalated])
+  @@index([ownerId])
+}
+
+model Nis2Incident {
+  id                        String                     @id @default(cuid())
+  organizationId            String
+  reference                 String
+  title                     String
+  description               String
+  severity                  Severity                   @default(HIGH)
+  status                    Nis2IncidentStatus         @default(OPEN)
+  phase                     Nis2IncidentPhase          @default(EARLY_WARNING)
+  detectedAt                DateTime
+  earlyWarningDueAt         DateTime
+  notificationDueAt         DateTime
+  finalReportDueAt          DateTime
+  earlyWarningSubmittedAt   DateTime?
+  notificationSubmittedAt   DateTime?
+  finalReportSubmittedAt    DateTime?
+  earlyWarningPayload       Json?
+  notificationPayload       Json?
+  finalReportPayload        Json?
+  significantImpact         Boolean                    @default(true)
+  crossBorder               Boolean                    @default(false)
+  taxonomy                  String?
+  iocs                      Json?
+  affectedUsersEstimate     Int?
+  reportedById              String
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  organization              Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reportedBy                User                       @relation("Nis2IncidentReporter", fields: [reportedById], references: [id])
+  affectedAssets            Nis2IncidentAsset[]
+  timeline                  Nis2IncidentTimelineEntry[]
+  alerts                    Nis2IncidentAlert[]
+
+  @@unique([organizationId, reference])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, phase])
+  @@index([organizationId, detectedAt(sort: Desc)])
+  @@index([earlyWarningDueAt])
+  @@index([notificationDueAt])
+  @@index([finalReportDueAt])
+  @@index([reportedById])
+}
+
+model Nis2IncidentAsset {
+  id             String       @id @default(cuid())
+  incidentId     String
+  assetId        String
+  organizationId String
+  createdAt      DateTime     @default(now())
+  incident       Nis2Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  asset          Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([incidentId, assetId])
+  @@index([assetId])
+  @@index([organizationId])
+}
+
+model Nis2IncidentTimelineEntry {
+  id          String       @id @default(cuid())
+  incidentId  String
+  occurredAt  DateTime
+  description String
+  authorId    String?
+  createdAt   DateTime     @default(now())
+  incident    Nis2Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  author      User?        @relation("Nis2TimelineAuthor", fields: [authorId], references: [id])
+
+  @@index([incidentId, occurredAt])
+  @@index([authorId])
+}
+
+model Nis2IncidentAlert {
+  id         String                @id @default(cuid())
+  incidentId String
+  phase      Nis2IncidentPhase
+  kind       Nis2DeadlineAlertKind
+  dispatchedAt DateTime            @default(now())
+  incident   Nis2Incident          @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@unique([incidentId, phase, kind])
+  @@index([incidentId])
+}
+
+model Nis2Vendor {
+  id               String                        @id @default(cuid())
+  organizationId   String
+  name             String
+  description      String?
+  serviceProvided  String
+  criticality      Nis2VendorCriticality         @default(LEVEL_3)
+  dataAccessLevel  Nis2DataAccessLevel           @default(NONE)
+  country          String?
+  euBased          Boolean                       @default(false)
+  certifications   String[]
+  contractStart    DateTime?
+  contractEnd      DateTime?
+  slaDefined       Boolean                       @default(false)
+  auditRights      Boolean                       @default(false)
+  securityClauses  Boolean                       @default(false)
+  breachNotifiedIn Int?
+  lastAuditAt      DateTime?
+  securityScore    Int?
+  scoreBreakdown   Json?
+  scoredAt         DateTime?
+  acnRelevant      Boolean                       @default(false)
+  contactEmail     String?
+  notes            String?
+  createdAt        DateTime                      @default(now())
+  updatedAt        DateTime                      @updatedAt
+  organization     Organization                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  processLinks     Nis2ProcessVendorDependency[]
+  assetLinks       VendorAssetLink[]
+  dataLinks        VendorDataLink[]
+  policyLinks      PolicyVendorLink[]
+  riskEntries      RiskRegister[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@index([organizationId, criticality])
+  @@index([organizationId, acnRelevant])
+  @@index([securityScore])
+}
+
+model Nis2BusinessProcess {
+  id                 String                        @id @default(cuid())
+  organizationId     String
+  name               String
+  description        String?
+  owner              String?
+  criticality        Nis2ProcessCriticality        @default(IMPORTANT)
+  rtoHours           Int?
+  rpoHours           Int?
+  mtpdHours          Int?
+  financialImpact    Int                           @default(1)
+  operationalImpact  Int                           @default(1)
+  reputationalImpact Int                           @default(1)
+  regulatoryImpact   Int                           @default(1)
+  safetyImpact       Int                           @default(1)
+  impactScore        Float?
+  bcpDocumented      Boolean                       @default(false)
+  drpDocumented      Boolean                       @default(false)
+  lastTestedAt       DateTime?
+  createdAt          DateTime                      @default(now())
+  updatedAt          DateTime                      @updatedAt
+  organization       Organization                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assetDependencies  Nis2ProcessAssetDependency[]
+  vendorDependencies Nis2ProcessVendorDependency[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@index([organizationId, criticality])
+  @@index([impactScore(sort: Desc)])
+}
+
+model Nis2ProcessAssetDependency {
+  id             String              @id @default(cuid())
+  processId      String
+  assetId        String
+  organizationId String
+  createdAt      DateTime            @default(now())
+  process        Nis2BusinessProcess @relation(fields: [processId], references: [id], onDelete: Cascade)
+  asset          Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([processId, assetId])
+  @@index([assetId])
+  @@index([organizationId])
+}
+
+model Nis2ProcessVendorDependency {
+  id             String              @id @default(cuid())
+  processId      String
+  vendorId       String
+  organizationId String
+  createdAt      DateTime            @default(now())
+  process        Nis2BusinessProcess @relation(fields: [processId], references: [id], onDelete: Cascade)
+  vendor         Nis2Vendor          @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([processId, vendorId])
+  @@index([vendorId])
+  @@index([organizationId])
+}
+
+enum Nis2Article21Measure {
+  RISK_ANALYSIS
+  INCIDENT_HANDLING
+  BUSINESS_CONTINUITY
+  SUPPLY_CHAIN
+  SECURE_ACQUISITION
+  EFFECTIVENESS_ASSESSMENT
+  CYBER_HYGIENE
+  CRYPTOGRAPHY
+  HUMAN_RESOURCES
+  ACCESS_CONTROL
+}
+
+enum Nis2VerificationMode {
+  AUTOMATED
+  PARTIAL
+  MANUAL
+}
+
+enum Nis2ChecklistStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  IMPLEMENTED
+  NOT_APPLICABLE
+}
+
+enum Nis2IncidentPhase {
+  EARLY_WARNING
+  INCIDENT_NOTIFICATION
+  FINAL_REPORT
+  COMPLETE
+}
+
+enum Nis2IncidentStatus {
+  OPEN
+  CONTAINED
+  RESOLVED
+  CLOSED
+}
+
+enum Nis2DeadlineAlertKind {
+  PRE_DEADLINE
+  BREACH
+}
+
+enum Nis2VendorCriticality {
+  LEVEL_1
+  LEVEL_2
+  LEVEL_3
+  LEVEL_4
+}
+
+enum Nis2DataAccessLevel {
+  NONE
+  PUBLIC
+  INTERNAL
+  CONFIDENTIAL
+  RESTRICTED
+}
+
+enum Nis2ProcessCriticality {
+  VITAL
+  CRITICAL
+  IMPORTANT
+  SUPPORTING
+}
+
+/// Durable record of a background job. BullMQ owns the queue; this owns the
+/// history, so the UI can poll progress and operators can audit what ran.
+model JobRun {
+  id             String        @id @default(cuid())
+  queue          String
+  jobName        String
+  /// BullMQ job id, absent while a job runs inline (no Redis configured).
+  jobId          String?
+  status         JobStatus     @default(QUEUED)
+  organizationId String?
+  /// Domain object this job acts on, for "is my analysis done yet" lookups.
+  entityType     String?
+  entityId       String?
+  payload        Json?
+  result         Json?
+  error          String?
+  attempts       Int           @default(0)
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([queue, status])
+  @@index([entityType, entityId])
+  @@index([status, createdAt])
+  @@index([createdAt(sort: Desc)])
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum RiskEntryStatus {
+  PROCESSING
+  ACTIVE
+  FAILED
+  /// Kept for history after a newer assessment replaced it.
+  SUPERSEDED
+}
+
+enum RiskAnalysisSource {
+  AI
+  DETERMINISTIC
+}

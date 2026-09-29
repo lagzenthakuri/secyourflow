@@ -1,4 +1,4 @@
-import type { ThreatFeed } from "@prisma/client";
+import type { ThreatFeed } from "@repo/database";
 import { getThreatIntelConfig, type ThreatIntelConfig } from "./config";
 import { ThreatIntelRepository } from "./persistence/repository";
 import type { ThreatFeedAdapter } from "./adapters/types";

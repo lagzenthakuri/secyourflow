@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@repo/database";
 import { prisma } from "@/lib/prisma";
 import type { TotpUserStore, TotpUserUpdate } from "@/lib/security/totp-service";
 

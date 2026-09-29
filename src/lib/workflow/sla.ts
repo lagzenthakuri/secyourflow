@@ -1,4 +1,4 @@
-import type { Severity } from "@prisma/client";
+import type { Severity } from "@repo/database";
 
 const DEFAULT_SLA_DAYS: Record<Severity, number> = {
   CRITICAL: 7,

@@ -1,4 +1,4 @@
-import type { ReportOutputFormat, ReportTemplateKey } from "@prisma/client";
+import type { ReportOutputFormat, ReportTemplateKey } from "@repo/database";
 
 export interface ReportContext {
   organizationId: string;
