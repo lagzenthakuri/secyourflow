@@ -1,4 +1,7 @@
 "use client";
+import { Checkbox as BoilerplateCheckbox } from "@repo/design-system/components/ui/checkbox";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+
 
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
@@ -866,8 +869,8 @@ export default function ReportsPage() {
               <div className="mt-4 space-y-3">
                 <div>
                   <label className="mb-1 block text-xs text-[var(--text-muted)]">View Name</label>
-                  <input
-                    className="input"
+                  <BoilerplateInput
+                    className=""
                     value={viewName}
                     onChange={(event) => setViewName(event.target.value)}
                     placeholder="SOC Operations View"
@@ -891,10 +894,9 @@ export default function ReportsPage() {
                     </Select>
                   </label>
                   <label className="flex items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2 text-xs text-[var(--text-secondary)]">
-                    <input
-                      type="checkbox"
+                    <BoilerplateCheckbox
                       checked={viewDefault}
-                      onChange={(event) => setViewDefault(event.target.checked)}
+                      onCheckedChange={(checked) => setViewDefault(Boolean(checked))}
                     />
                     Default View
                   </label>
