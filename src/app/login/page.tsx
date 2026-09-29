@@ -232,12 +232,12 @@ export default function LoginPage() {
                             type="submit"
                             disabled={isLoading || isGoogleLoading}
                             aria-label={isLoading ? "Signing in…" : undefined}
-                            className="btn btn-primary w-full"
+                            className="btn btn-primary w-full disabled:opacity-100 disabled:text-primary-foreground"
                         >
                             {isLoading ? (
                                 <>
-                                    <Spinner aria-label="Signing in" className="size-5 text-current" />
-                                    <span>Signing in…</span>
+                                    <Spinner aria-label="Signing in" className="size-5 text-primary-foreground" />
+                                    <span className="text-primary-foreground">Signing in…</span>
                                 </>
                             ) : (
                                 <>

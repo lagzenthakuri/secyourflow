@@ -189,12 +189,12 @@ export default function SignUpPage() {
                             type="submit"
                             disabled={isLoading || isGoogleLoading}
                             aria-label={isLoading ? "Creating account…" : undefined}
-                            className="btn btn-primary w-full"
+                            className="btn btn-primary w-full disabled:opacity-100 disabled:text-primary-foreground"
                         >
                             {isLoading ? (
                                 <>
-                                    <Spinner aria-label="Creating account" className="size-5 text-current" />
-                                    <span>Creating account…</span>
+                                    <Spinner aria-label="Creating account" className="size-5 text-primary-foreground" />
+                                    <span className="text-primary-foreground">Creating account…</span>
                                 </>
                             ) : (
                                 <>

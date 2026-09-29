@@ -20,7 +20,7 @@ export function GoogleAuthButton({ disabled = false, loading = false, label = "C
             className="h-10 w-full gap-3 bg-background font-medium text-foreground disabled:cursor-wait disabled:opacity-100 disabled:text-foreground"
         >
             {loading ? (
-                <Spinner aria-label="Connecting to Google" className="size-[18px] shrink-0 text-primary" />
+                <Spinner aria-label="Connecting to Google" className="size-[18px] shrink-0 text-foreground" />
             ) : (
                 <FcGoogle aria-hidden="true" className="size-[18px] shrink-0" />
             )}
