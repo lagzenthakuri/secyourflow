@@ -1,4 +1,7 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+import { Textarea as BoilerplateTextarea } from "@repo/design-system/components/ui/textarea";
+
 
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
@@ -133,10 +136,10 @@ export function AssessControlModal({ isOpen, onClose, onSuccess, control }: Asse
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Control Title
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             required
-                            className="input w-full"
+                            className="w-full"
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                         />
@@ -201,7 +204,7 @@ export function AssessControlModal({ isOpen, onClose, onSuccess, control }: Asse
                                     Maturity Level (0-5)
                                 </label>
                                 <div className="flex items-center gap-4">
-                                    <input
+                                    <BoilerplateInput
                                         type="range"
                                         min="0"
                                         max="5"
@@ -270,9 +273,9 @@ export function AssessControlModal({ isOpen, onClose, onSuccess, control }: Asse
                                 <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                                     Owner Role
                                 </label>
-                                <input
+                                <BoilerplateInput
                                     type="text"
-                                    className="input w-full"
+                                    className="w-full"
                                     placeholder="e.g. CISO, IT Security, Risk Team"
                                     value={formData.ownerRole}
                                     onChange={(e) => setFormData({ ...formData, ownerRole: e.target.value })}
@@ -293,8 +296,8 @@ export function AssessControlModal({ isOpen, onClose, onSuccess, control }: Asse
                                 </div>
                             </div>
                         </div>
-                        <textarea
-                            className="input w-full min-h-[100px]"
+                        <BoilerplateTextarea
+                            className="w-full min-h-[100px]"
                             placeholder="e.g., Audit logs verified for Q4, Screenshots attached in DMS index #452"
                             value={formData.evidence}
                             onChange={(e) => setFormData({ ...formData, evidence: e.target.value })}
@@ -305,8 +308,8 @@ export function AssessControlModal({ isOpen, onClose, onSuccess, control }: Asse
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Internal Notes
                         </label>
-                        <textarea
-                            className="input w-full min-h-[80px]"
+                        <BoilerplateTextarea
+                            className="w-full min-h-[80px]"
                             placeholder="Add internal notes about the implementation or remediation plans..."
                             value={formData.notes}
                             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}

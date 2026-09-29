@@ -1,4 +1,7 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+import { Textarea as BoilerplateTextarea } from "@repo/design-system/components/ui/textarea";
+
 
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
@@ -89,11 +92,11 @@ export function AddControlModal({ isOpen, onClose, onSuccess, frameworkId }: Add
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Control ID *
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             required
                             placeholder="e.g., A.12.6.1"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.controlId}
                             onChange={(e) => setFormData({ ...formData, controlId: e.target.value })}
                         />
@@ -103,10 +106,10 @@ export function AddControlModal({ isOpen, onClose, onSuccess, frameworkId }: Add
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Category
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             placeholder="e.g., Asset Management"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.category}
                             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                         />
@@ -116,11 +119,11 @@ export function AddControlModal({ isOpen, onClose, onSuccess, frameworkId }: Add
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Title *
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             required
                             placeholder="e.g., Management of technical vulnerabilities"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                         />
@@ -130,8 +133,8 @@ export function AddControlModal({ isOpen, onClose, onSuccess, frameworkId }: Add
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Description
                         </label>
-                        <textarea
-                            className="input w-full min-h-[80px]"
+                        <BoilerplateTextarea
+                            className="w-full min-h-[80px]"
                             placeholder="Detailed description of the control..."
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -142,8 +145,8 @@ export function AddControlModal({ isOpen, onClose, onSuccess, frameworkId }: Add
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Objective
                         </label>
-                        <textarea
-                            className="input w-full min-h-[80px]"
+                        <BoilerplateTextarea
+                            className="w-full min-h-[80px]"
                             placeholder="What this control aims to achieve..."
                             value={formData.objective}
                             onChange={(e) => setFormData({ ...formData, objective: e.target.value })}
@@ -212,10 +215,10 @@ export function AddControlModal({ isOpen, onClose, onSuccess, frameworkId }: Add
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Owner Role
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             placeholder="e.g., CISO"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.ownerRole}
                             onChange={(e) => setFormData({ ...formData, ownerRole: e.target.value })}
                         />

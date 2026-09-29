@@ -1,4 +1,7 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+import { Textarea as BoilerplateTextarea } from "@repo/design-system/components/ui/textarea";
+
 
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
@@ -944,7 +947,7 @@ export default function CompliancePage() {
                         size={16}
                         className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
                       />
-                      <input
+                      <BoilerplateInput
                         type="text"
                         placeholder="Search control ID, title, owner, category..."
                         value={searchQuery}
@@ -953,11 +956,7 @@ export default function CompliancePage() {
                       />
                     </label>
 
-                    <label className="relative block">
-                      <Filter
-                        size={14}
-                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
-                      />
+                    <div className="min-w-0">
                       <Select value={selectedStatus} onValueChange={(event) =>
                           setSelectedStatus(event as "ALL" | FrameworkControl["status"])}>
                         <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
@@ -972,13 +971,9 @@ export default function CompliancePage() {
                           </SelectGroup>
                         </SelectContent>
                       </Select>
-                    </label>
+                    </div>
 
-                    <label className="relative block">
-                      <Layers
-                        size={14}
-                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
-                      />
+                    <div className="min-w-0">
                       <Select value={selectedNistFunction} onValueChange={(event) =>
                           setSelectedNistFunction(
                             event as "ALL" | keyof typeof nistCsfConfig,
@@ -996,7 +991,7 @@ export default function CompliancePage() {
                           </SelectGroup>
                         </SelectContent>
                       </Select>
-                    </label>
+                    </div>
 
                     <button
                       type="button"
@@ -1325,11 +1320,11 @@ export default function CompliancePage() {
             <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
               Framework Name *
             </label>
-            <input
+            <BoilerplateInput
               type="text"
               required
               placeholder="e.g. NIST CSF 2.0 or ISO 27001"
-              className="input w-full"
+              className="w-full"
               value={newFramework.name}
               onChange={(event) =>
                 setNewFramework((prev) => ({ ...prev, name: event.target.value }))
@@ -1340,9 +1335,9 @@ export default function CompliancePage() {
             <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
               Description
             </label>
-            <textarea
+            <BoilerplateTextarea
               placeholder="Brief description of the framework..."
-              className="input min-h-[100px] w-full py-2"
+              className="min-h-[100px] w-full py-2"
               value={newFramework.description}
               onChange={(event) =>
                 setNewFramework((prev) => ({ ...prev, description: event.target.value }))
@@ -1383,10 +1378,10 @@ export default function CompliancePage() {
             <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
               Framework Name
             </label>
-            <input
+            <BoilerplateInput
               type="text"
               required
-              className="input w-full"
+              className="w-full"
               value={selectedFramework?.frameworkName || ""}
               onChange={(event) =>
                 setSelectedFramework((prev) =>
@@ -1404,8 +1399,8 @@ export default function CompliancePage() {
             <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
               Description
             </label>
-            <textarea
-              className="input min-h-[100px] w-full py-2"
+            <BoilerplateTextarea
+              className="min-h-[100px] w-full py-2"
               value={selectedFramework?.description || ""}
               onChange={(event) =>
                 setSelectedFramework((prev) =>
