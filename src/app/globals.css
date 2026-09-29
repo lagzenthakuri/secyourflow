@@ -323,6 +323,15 @@ textarea {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
+input[aria-invalid="true"]:focus-visible,
+textarea[aria-invalid="true"]:focus-visible,
+select[aria-invalid="true"]:focus-visible,
+[role="combobox"][aria-invalid="true"]:focus-visible {
+  outline-color: var(--destructive);
+  border-color: var(--destructive);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--destructive) 24%, transparent);
+}
+
 .text-intent-accent {
   color: var(--intent-accent) !important;
 }
@@ -524,6 +533,12 @@ html.theme-light .bg-gradient-radial {
   outline: none;
   border-color: var(--ring);
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 20%, transparent);
+}
+
+.input[aria-invalid="true"]:focus,
+.input[aria-invalid="true"]:focus-visible {
+  border-color: var(--destructive);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--destructive) 24%, transparent);
 }
 
 /* Premium Sidebar Link */
