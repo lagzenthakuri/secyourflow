@@ -1,4 +1,7 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+import { Textarea as BoilerplateTextarea } from "@repo/design-system/components/ui/textarea";
+
 
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
@@ -427,7 +430,7 @@ export default function DataCatalogPage() {
                 <div className="space-y-4">
                     <label className="block">
                         <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">Name</span>
-                        <input
+                        <BoilerplateInput
                             value={form.name}
                             onChange={(event) => setForm({ ...form, name: event.target.value })}
                             placeholder="Customer PII, Payment records…"
@@ -478,7 +481,7 @@ export default function DataCatalogPage() {
                         <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                             Description
                         </span>
-                        <textarea
+                        <BoilerplateTextarea
                             value={form.description}
                             onChange={(event) => setForm({ ...form, description: event.target.value })}
                             rows={3}
@@ -490,7 +493,7 @@ export default function DataCatalogPage() {
                         <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                             Retention notes
                         </span>
-                        <input
+                        <BoilerplateInput
                             value={form.retentionNotes}
                             onChange={(event) => setForm({ ...form, retentionNotes: event.target.value })}
                             placeholder="Retained 24 months, then anonymized"
