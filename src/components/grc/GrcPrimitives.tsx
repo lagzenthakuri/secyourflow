@@ -1,4 +1,6 @@
 "use client";
+import { Checkbox as BoilerplateCheckbox } from "@repo/design-system/components/ui/checkbox";
+
 
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
@@ -275,11 +277,9 @@ export function RelationshipPicker({
                                 }`}
                             >
                                 <label className="flex cursor-pointer items-center gap-2 text-xs">
-                                    <input
-                                        type="checkbox"
+                                    <BoilerplateCheckbox
                                         checked={isSelected}
-                                        onChange={() => onToggle(option.id)}
-                                        className="accent-blue-500"
+                                        onCheckedChange={() => onToggle(option.id)}
                                     />
                                     <span
                                         className={
