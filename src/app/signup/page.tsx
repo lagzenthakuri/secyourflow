@@ -7,6 +7,7 @@ import { Mail, Lock, User, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import { openGoogleAuthPopup } from "@/lib/auth/google-popup";
 
 export default function SignUpPage() {
     const router = useRouter();
@@ -197,8 +198,13 @@ export default function SignUpPage() {
                         label="Sign up with Google"
                         onClick={() => {
                             setError(null);
-                            setIsLoading(true);
-                            void signIn("google", { callbackUrl: "/dashboard" });
+                            openGoogleAuthPopup({
+                                onStart: () => setIsLoading(true),
+                                onError: (message) => {
+                                    setIsLoading(false);
+                                    setError(message);
+                                },
+                            });
                         }}
                     />
                 </div>

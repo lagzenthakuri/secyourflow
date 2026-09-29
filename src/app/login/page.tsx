@@ -6,6 +6,11 @@ import Image from "next/image";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import { openGoogleAuthPopup } from "@/lib/auth/google-popup";
+import {
+    GOOGLE_AUTH_POPUP_NAME_PREFIX,
+    publishGoogleAuthPopupResult,
+} from "@/lib/auth/google-popup-storage";
 
 function getAuthErrorMessage(error: string | null, code: string | null): string | null {
     if (!error) {
@@ -56,6 +61,14 @@ export default function LoginPage() {
         const message = getAuthErrorMessage(error, code);
         if (message) {
             setAuthError(message);
+
+            const popupId = window.name.startsWith(GOOGLE_AUTH_POPUP_NAME_PREFIX)
+                ? window.name.slice(GOOGLE_AUTH_POPUP_NAME_PREFIX.length)
+                : "";
+            if (popupId) {
+                publishGoogleAuthPopupResult({ id: popupId, status: "error" });
+                window.setTimeout(() => window.close(), 100);
+            }
         }
 
         // Auth.js puts its internal error class in the query string. Display
@@ -241,8 +254,13 @@ export default function LoginPage() {
                         label="Continue with Google"
                         onClick={() => {
                             setAuthError(null);
-                            setIsLoading(true);
-                            void signIn("google", { callbackUrl: "/dashboard" });
+                            openGoogleAuthPopup({
+                                onStart: () => setIsLoading(true),
+                                onError: (message) => {
+                                    setIsLoading(false);
+                                    setAuthError(message);
+                                },
+                            });
                         }}
                     />
                 </div>
