@@ -1,4 +1,7 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+import { Textarea as BoilerplateTextarea } from "@repo/design-system/components/ui/textarea";
+
 
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
@@ -670,8 +673,8 @@ export default function AssetsPage() {
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                <input
-                  className="input h-10 text-sm"
+                <BoilerplateInput
+                  className="h-10 text-sm"
                   value={bulkValue}
                   onChange={(event) => setBulkValue(event.target.value)}
                   placeholder={
@@ -702,7 +705,7 @@ export default function AssetsPage() {
                 size={15}
                 className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] transition-colors duration-200"
               />
-              <input
+              <BoilerplateInput
                 type="text"
                 value={searchQuery}
                 onChange={(event) => {
@@ -710,15 +713,11 @@ export default function AssetsPage() {
                   setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
                 placeholder="Search by name, IP, or hostname"
-                className="input h-10 w-full !pl-9 text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30 text-[var(--text-primary)] placeholder-[var(--text-muted)] border-[var(--border-color)] bg-[var(--bg-secondary)]"
+                className="h-10 w-full !pl-9 text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30 text-[var(--text-primary)] placeholder-[var(--text-muted)] border-[var(--border-color)] bg-[var(--bg-secondary)]"
               />
             </label>
 
-            <label className="relative block">
-              <Box
-                size={14}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] transition-colors duration-200"
-              />
+            <div className="min-w-0">
               <Select value={selectedType} onValueChange={(event) => {
                   setSelectedType(event);
                   setPagination((prev) => ({ ...prev, page: 1 }));
@@ -736,13 +735,9 @@ export default function AssetsPage() {
                   </SelectGroup>
                 </SelectContent>
               </Select>
-            </label>
+            </div>
 
-            <label className="relative block">
-              <Filter
-                size={14}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] transition-colors duration-200"
-              />
+            <div className="min-w-0">
               <Select value={selectedStatus} onValueChange={(event) => {
                   setSelectedStatus(event);
                   setPagination((prev) => ({ ...prev, page: 1 }));
@@ -760,7 +755,7 @@ export default function AssetsPage() {
                   </SelectGroup>
                 </SelectContent>
               </Select>
-            </label>
+            </div>
 
             <Select value={selectedCriticality} onValueChange={(event) => {
                 setSelectedCriticality(event);
@@ -780,7 +775,7 @@ export default function AssetsPage() {
               </SelectContent>
             </Select>
 
-            <input
+            <BoilerplateInput
               type="text"
               value={selectedTag}
               onChange={(event) => {
@@ -788,7 +783,7 @@ export default function AssetsPage() {
                 setPagination((prev) => ({ ...prev, page: 1 }));
               }}
               placeholder="Filter tag"
-              className="input h-10 w-full text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30"
+              className="h-10 w-full text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30"
             />
 
             <Select value={selectedGroupId} onValueChange={(event) => {
@@ -1264,8 +1259,8 @@ export default function AssetsPage() {
             {discoveryMode === "json" ? (
               <div>
                 <label className="mb-1 block text-sm text-[var(--text-primary)]">Source</label>
-                <input
-                  className="input"
+                <BoilerplateInput
+                  className=""
                   value={discoverySource}
                   onChange={(event) => setDiscoverySource(event.target.value)}
                 />
@@ -1276,8 +1271,8 @@ export default function AssetsPage() {
             <label className="mb-1 block text-sm text-[var(--text-primary)]">
               {discoveryMode === "nmap" ? "Nmap XML" : "JSON payload"}
             </label>
-            <textarea
-              className="input min-h-[260px] font-mono text-xs"
+            <BoilerplateTextarea
+              className="min-h-[260px] font-mono text-xs"
               placeholder={
                 discoveryMode === "nmap"
                   ? "<nmaprun>...</nmaprun>"
@@ -1352,8 +1347,8 @@ export default function AssetsPage() {
           {lifecycleAction === "ownership_change" ? (
             <div>
               <label className="mb-1 block text-sm text-[var(--text-primary)]">New Owner</label>
-              <input
-                className="input"
+              <BoilerplateInput
+                className=""
                 value={lifecycleToOwner}
                 onChange={(event) => setLifecycleToOwner(event.target.value)}
               />
@@ -1361,8 +1356,8 @@ export default function AssetsPage() {
           ) : null}
           <div>
             <label className="mb-1 block text-sm text-[var(--text-primary)]">Notes</label>
-            <textarea
-              className="input min-h-[100px]"
+            <BoilerplateTextarea
+              className="min-h-[100px]"
               value={lifecycleNotes}
               onChange={(event) => setLifecycleNotes(event.target.value)}
             />
