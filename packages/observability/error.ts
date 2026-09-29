@@ -1,5 +1,3 @@
-// biome-ignore lint/performance/noNamespaceImport: Sentry SDK convention
-import * as Sentry from "@sentry/nextjs";
 import { log } from "./log";
 
 export const parseError = (error: unknown): string => {
@@ -14,10 +12,17 @@ export const parseError = (error: unknown): string => {
   }
 
   try {
-    Sentry.captureException(error);
     log.error(`Parsing error: ${message}`);
   } catch (newError) {
     console.error("Error parsing error:", newError);
+  }
+
+  if (process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN) {
+    void import("@sentry/nextjs")
+      .then((sentry) => sentry.captureException(error))
+      .catch((reportingError) => {
+        console.error("Could not report application error:", reportingError);
+      });
   }
 
   return message;

@@ -41,6 +41,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: appDirectory,
   },
+  transpilePackages: ["@prisma/client", "@prisma/adapter-pg", "pg"],
   serverExternalPackages: ["exceljs"],
 
   // Enable React strict mode
