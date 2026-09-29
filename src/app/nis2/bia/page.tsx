@@ -1,11 +1,16 @@
 "use client";
+import { Checkbox as BoilerplateCheckbox } from "@repo/design-system/components/ui/checkbox";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+
 
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import { useCallback, useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Alert, AlertDescription } from "@repo/design-system/components/ui/alert";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
+import { DatePickerField } from "@/components/ui/DatePickerField";
 import { Modal } from "@/components/ui/Modal";
 import { EmptyState, Pill, ProgressBar, SectionCard } from "@/components/nis2/Nis2Primitives";
 import { Activity, AlertTriangle, LifeBuoy, Plus, TimerReset, Workflow } from "lucide-react";
@@ -103,6 +108,7 @@ export default function Nis2BiaPage() {
     const [summary, setSummary] = useState<BiaSummary | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [formError, setFormError] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [form, setForm] = useState(emptyForm);
@@ -131,7 +137,7 @@ export default function Nis2BiaPage() {
     const createProcess = useCallback(async () => {
         setIsSaving(true);
         try {
-            setError(null);
+            setFormError(null);
             const response = await fetch("/api/nis2/bia", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -163,7 +169,7 @@ export default function Nis2BiaPage() {
             setForm(emptyForm);
             await load();
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to add the process");
+            setFormError(err instanceof Error ? err.message : "Failed to add the process");
         } finally {
             setIsSaving(false);
         }
@@ -194,7 +200,7 @@ export default function Nis2BiaPage() {
                     actions={
                         <button
                             type="button"
-                            onClick={() => setIsModalOpen(true)}
+                            onClick={() => { setFormError(null); setIsModalOpen(true); }}
                             className="btn btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
                         >
                             <Plus size={14} />
@@ -360,11 +366,12 @@ export default function Nis2BiaPage() {
                     </div>
                 }
             >
+                {formError ? <Alert variant="destructive" className="mb-4"><AlertDescription>{formError}</AlertDescription></Alert> : null}
                 <div className="space-y-4">
                     <div className="grid gap-4 sm:grid-cols-2">
                         <label className="block">
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">Name</span>
-                            <input
+                            <BoilerplateInput
                                 value={form.name}
                                 onChange={(event) => setForm({ ...form, name: event.target.value })}
                                 className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
@@ -375,7 +382,7 @@ export default function Nis2BiaPage() {
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Owner
                             </span>
-                            <input
+                            <BoilerplateInput
                                 value={form.owner}
                                 onChange={(event) => setForm({ ...form, owner: event.target.value })}
                                 className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
@@ -414,7 +421,7 @@ export default function Nis2BiaPage() {
                                 <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                     {label}
                                 </span>
-                                <input
+                                <BoilerplateInput
                                     type="number"
                                     min={0}
                                     value={form[key]}
@@ -433,7 +440,7 @@ export default function Nis2BiaPage() {
                             {IMPACT_FIELDS.map(([key, label]) => (
                                 <div key={key} className="flex items-center gap-3">
                                     <span className="w-28 shrink-0 text-xs text-[var(--text-secondary)]">{label}</span>
-                                    <input
+                                    <BoilerplateInput
                                         type="range"
                                         min={1}
                                         max={5}
@@ -455,21 +462,19 @@ export default function Nis2BiaPage() {
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div className="flex flex-col gap-2">
                             <label className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                                <input
-                                    type="checkbox"
+                                <BoilerplateCheckbox
                                     checked={form.bcpDocumented}
-                                    onChange={(event) =>
-                                        setForm({ ...form, bcpDocumented: event.target.checked })
+                                    onCheckedChange={(checked) =>
+                                        setForm({ ...form, bcpDocumented: Boolean(checked) })
                                     }
                                 />
                                 BCP documented
                             </label>
                             <label className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                                <input
-                                    type="checkbox"
+                                <BoilerplateCheckbox
                                     checked={form.drpDocumented}
-                                    onChange={(event) =>
-                                        setForm({ ...form, drpDocumented: event.target.checked })
+                                    onCheckedChange={(checked) =>
+                                        setForm({ ...form, drpDocumented: Boolean(checked) })
                                     }
                                 />
                                 DRP documented
@@ -479,12 +484,7 @@ export default function Nis2BiaPage() {
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Last continuity test
                             </span>
-                            <input
-                                type="date"
-                                value={form.lastTestedAt}
-                                onChange={(event) => setForm({ ...form, lastTestedAt: event.target.value })}
-                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                            />
+                            <DatePickerField label="Choose continuity test date" value={form.lastTestedAt} onChange={(lastTestedAt) => setForm({ ...form, lastTestedAt })} />
                         </label>
                     </div>
                 </div>
