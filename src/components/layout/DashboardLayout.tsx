@@ -107,7 +107,6 @@ const navigationGroups = [
     {
         name: "Administration",
         items: [
-            { name: "Settings", href: "/settings", icon: Settings, roles: ALL_ROLES },
             { name: "Users", href: "/users", icon: Users, roles: ["MAIN_OFFICER"] },
         ],
     },
