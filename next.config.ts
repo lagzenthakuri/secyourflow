@@ -112,7 +112,9 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Cross-Origin-Opener-Policy",
-            value: "same-origin",
+            // OAuth sign-in opens a cross-origin Google popup and needs the
+            // opener relationship to remain observable until its callback.
+            value: "same-origin-allow-popups",
           },
           {
             key: "Cross-Origin-Resource-Policy",
