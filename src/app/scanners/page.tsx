@@ -1,4 +1,7 @@
 "use client";
+import { Checkbox as BoilerplateCheckbox } from "@repo/design-system/components/ui/checkbox";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+
 
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
@@ -431,7 +434,7 @@ export default function ScannersPage() {
                             <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                                 Name
                             </label>
-                            <input
+                            <BoilerplateInput
                                 className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                                 placeholder={`e.g. Local ${newScannerCapability?.label ?? "Scanner"}`}
                                 value={newScanner.name}
@@ -446,7 +449,7 @@ export default function ScannersPage() {
                                     <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                                         Endpoint
                                     </label>
-                                    <input
+                                    <BoilerplateInput
                                         className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                                         placeholder="https://scanner.internal:8834"
                                         value={newScanner.endpoint}
@@ -461,7 +464,7 @@ export default function ScannersPage() {
                                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                                             API Key
                                         </label>
-                                        <input
+                                        <BoilerplateInput
                                             type="password"
                                             className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                                             placeholder="accessKey;secretKey"
@@ -480,7 +483,7 @@ export default function ScannersPage() {
                                             <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                                                 Username
                                             </label>
-                                            <input
+                                            <BoilerplateInput
                                                 className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                                                 value={newScanner.username}
                                                 onChange={(e) =>
@@ -492,7 +495,7 @@ export default function ScannersPage() {
                                             <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                                                 Password
                                             </label>
-                                            <input
+                                            <BoilerplateInput
                                                 type="password"
                                                 className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                                                 value={newScanner.password}
@@ -612,7 +615,7 @@ export default function ScannersPage() {
                             <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                                 Target {selectedAsset ? "(overrides the asset address)" : ""}
                             </label>
-                            <input
+                            <BoilerplateInput
                                 className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                                 placeholder={
                                     selectedCapability?.targetHint ??
@@ -631,12 +634,11 @@ export default function ScannersPage() {
                         </div>
 
                         <label className="flex items-start gap-2.5 cursor-pointer">
-                            <input
-                                type="checkbox"
+                            <BoilerplateCheckbox
                                 className="mt-0.5"
                                 checked={scanConfig.aiTriage}
-                                onChange={(e) =>
-                                    setScanConfig({ ...scanConfig, aiTriage: e.target.checked })
+                                onCheckedChange={(checked) =>
+                                    setScanConfig({ ...scanConfig, aiTriage: Boolean(checked) })
                                 }
                             />
                             <span className="text-sm text-[var(--text-secondary)]">
