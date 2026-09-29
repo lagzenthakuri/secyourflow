@@ -98,12 +98,16 @@ export function useTheme(): ThemeContextValue {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [theme, setTheme] = useState<ThemeMode>(() => resolveInitialTheme());
+  // Start with the same theme on the server and client; browser preferences
+  // are applied after hydration to avoid mismatched toggle markup.
+  const [theme, setTheme] = useState<ThemeMode>("dark");
   const transitionTimeoutRef = useRef<number | null>(null);
   const hasManualOverrideRef = useRef<boolean>(false);
 
   useEffect(() => {
-    hasManualOverrideRef.current = resolveStoredTheme() !== null;
+    const storedTheme = resolveStoredTheme();
+    hasManualOverrideRef.current = storedTheme !== null;
+    setTheme(storedTheme ?? resolveSystemTheme());
   }, []);
 
   useEffect(() => {

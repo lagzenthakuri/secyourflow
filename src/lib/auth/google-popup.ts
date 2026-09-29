@@ -34,16 +34,11 @@ export function openGoogleAuthPopup({
 
     onStart();
     let finished = false;
-    let popupClosedAt: number | undefined;
-    let popupCheck: number | undefined;
     let timeout: number | undefined;
     const resultKey = googleAuthPopupStorageKey(id);
 
     const cleanup = () => {
         window.removeEventListener("storage", onStorage);
-        if (popupCheck !== undefined) {
-            window.clearInterval(popupCheck);
-        }
         if (timeout !== undefined) {
             window.clearTimeout(timeout);
         }
@@ -93,28 +88,14 @@ export function openGoogleAuthPopup({
         if (event.key === resultKey) handleResult(event.newValue);
     };
 
+    // Do not use WindowProxy.closed to infer cancellation. Browsers can sever
+    // the opener relationship when OAuth crosses origins and report the
+    // Google window as closed even while it is still returning to this app.
+    // The same-origin completion page publishes the verified result instead.
     window.addEventListener("storage", onStorage);
-    popupCheck = window.setInterval(() => {
-        // Read the completion signal before inspecting the popup. OAuth can
-        // publish its result and close in the same task, racing the storage
-        // event against this polling interval.
-        handleResult(window.localStorage.getItem(resultKey));
-        if (finished || !popup.closed) {
-            popupClosedAt = undefined;
-            return;
-        }
-
-        // Some browsers briefly report a popup as closed while its browsing
-        // context is being isolated/replaced. Give the callback time to
-        // publish its validated result before treating this as cancellation.
-        popupClosedAt ??= Date.now();
-        if (Date.now() - popupClosedAt >= 2_000) {
-            handleResult(window.localStorage.getItem(resultKey));
-            if (!finished) fail("Google sign-in was closed before it finished.");
-        }
-    }, 500);
     timeout = window.setTimeout(() => {
-        fail("Google sign-in timed out. Please try again.");
+        handleResult(window.localStorage.getItem(resultKey));
+        if (!finished) fail("Google sign-in timed out. Please try again.");
     }, POPUP_TIMEOUT_MS);
 
     void signIn("google", {

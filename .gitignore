@@ -267,6 +267,9 @@ $RECYCLE.BIN/
 # Database
 packages/database/generated
 
+# Full app screenshots include account/workspace details; keep the user-supplied references local.
+/screenshots/references/
+
 # react.email
 .react-email
 
