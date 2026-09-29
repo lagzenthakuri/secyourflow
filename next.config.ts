@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { withLogging, withSentry } from "@repo/observability/next-config";
+import { withToolbar } from "@repo/feature-flags/lib/toolbar";
 
 const appDirectory = dirname(fileURLToPath(import.meta.url));
 
@@ -146,5 +147,7 @@ let configuredNext = (betterStackConfigured ? withLogging(nextConfig) : nextConf
 if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
   configuredNext = withSentry(configuredNext) as NextConfig;
 }
+
+configuredNext = withToolbar(configuredNext) as NextConfig;
 
 export default configuredNext;
