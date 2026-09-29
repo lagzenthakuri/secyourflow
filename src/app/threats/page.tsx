@@ -1,4 +1,7 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+import { Textarea as BoilerplateTextarea } from "@repo/design-system/components/ui/textarea";
+
 
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
@@ -707,12 +710,12 @@ export default function ThreatsPage() {
               <div className="mt-3 grid gap-2 md:grid-cols-[1.2fr_0.8fr]">
                 <label className="relative block">
                   <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-                  <input
+                  <BoilerplateInput
                     type="text"
                     value={indicatorSearch}
                     onChange={(event) => setIndicatorSearch(event.target.value)}
                     placeholder="Search indicators"
-                    className="input h-9 w-full !pl-9 text-sm bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
+                    className="h-9 w-full !pl-9 text-sm bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                   />
                 </label>
 
@@ -750,12 +753,12 @@ export default function ThreatsPage() {
             <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4">
               <h3 className="text-sm font-semibold text-[var(--text-primary)]">Add Manual IOC</h3>
               <div className="mt-2 flex gap-2">
-                <input
+                <BoilerplateInput
                   type="text"
                   value={newIocValue}
                   onChange={(event) => setNewIocValue(event.target.value)}
                   placeholder="e.g. malicious.example.com or 1.2.3.4"
-                  className="input h-9 flex-1 text-sm bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
+                  className="h-9 flex-1 text-sm bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
                 />
                 <button
                   type="button"
@@ -789,7 +792,7 @@ export default function ThreatsPage() {
                   Import
                 </button>
               </div>
-              <textarea
+              <BoilerplateTextarea
                 value={importPayload}
                 onChange={(event) => setImportPayload(event.target.value)}
                 placeholder={
@@ -797,7 +800,7 @@ export default function ThreatsPage() {
                     ? '[{"value":"bad.example.com","type":"DOMAIN"}]'
                     : "value,type,severity\nbad.example.com,DOMAIN,HIGH"
                 }
-                className="input mt-2 min-h-[150px] w-full text-xs font-mono bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
+                className="mt-2 min-h-[150px] w-full text-xs font-mono bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
               />
             </article>
 
