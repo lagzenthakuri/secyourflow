@@ -1,4 +1,6 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+
 
 import Link from "next/link";
 import Image from "next/image";
@@ -417,7 +419,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                         size={18}
                         className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-blue-600 dark:group-focus-within:text-blue-400 transition-colors"
                     />
-                    <input
+                    <BoilerplateInput
                         type="text"
                         role="combobox"
                         aria-expanded={showSearchResults}
@@ -468,7 +470,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                             }
                         }}
                         placeholder="Search assets, vulnerabilities, or CVEs..."
-                        className="input !pl-10 py-2.5 text-sm bg-[var(--bg-tertiary)]"
+                        className="!pl-10 py-2.5 text-sm bg-[var(--bg-tertiary)]"
                     />
                     {showSearchResults && (
                         <div className="absolute left-0 right-0 top-full mt-2 overflow-hidden rounded-xl border border-[var(--overlay-border,var(--border-color))] bg-[var(--overlay-surface,var(--bg-elevated))] shadow-[var(--overlay-shadow,var(--shadow-lg))]">
