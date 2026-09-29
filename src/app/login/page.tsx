@@ -230,7 +230,7 @@ export default function LoginPage() {
                         {/* Submit Button */}
                         <button
                             type="submit"
-                            disabled={isLoading}
+                            disabled={isLoading || isGoogleLoading}
                             aria-label={isLoading ? "Signing in…" : undefined}
                             className="btn btn-primary w-full"
                         >

@@ -187,7 +187,7 @@ export default function SignUpPage() {
                         {/* Submit Button */}
                         <button
                             type="submit"
-                            disabled={isLoading}
+                            disabled={isLoading || isGoogleLoading}
                             aria-label={isLoading ? "Creating account…" : undefined}
                             className="btn btn-primary w-full"
                         >
