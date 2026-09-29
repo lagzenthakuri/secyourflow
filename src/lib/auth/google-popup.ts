@@ -3,7 +3,7 @@
 import { signIn } from "next-auth/react";
 import {
     GOOGLE_AUTH_POPUP_NAME_PREFIX,
-    GOOGLE_AUTH_POPUP_STORAGE_KEY,
+    googleAuthPopupStorageKey,
     type GoogleAuthPopupResult,
 } from "./google-popup-storage";
 
@@ -34,14 +34,11 @@ export function openGoogleAuthPopup({
 
     onStart();
     let finished = false;
-    let popupCheck: number | undefined;
     let timeout: number | undefined;
+    const resultKey = googleAuthPopupStorageKey(id);
 
     const cleanup = () => {
         window.removeEventListener("storage", onStorage);
-        if (popupCheck !== undefined) {
-            window.clearInterval(popupCheck);
-        }
         if (timeout !== undefined) {
             window.clearTimeout(timeout);
         }
@@ -59,25 +56,22 @@ export function openGoogleAuthPopup({
         onError(message);
     };
 
-    const onStorage = (event: StorageEvent) => {
-        if (event.key !== GOOGLE_AUTH_POPUP_STORAGE_KEY || !event.newValue) {
-            return;
-        }
-
+    const handleResult = (serialized: string | null) => {
+        if (!serialized || finished) return;
         let result: GoogleAuthPopupResult;
         try {
-            result = JSON.parse(event.newValue) as GoogleAuthPopupResult;
+            result = JSON.parse(serialized) as GoogleAuthPopupResult;
         } catch {
             return;
         }
 
-        if (result.id !== id || finished) {
+        if (result.id !== id) {
             return;
         }
 
         finished = true;
         cleanup();
-        window.localStorage.removeItem(GOOGLE_AUTH_POPUP_STORAGE_KEY);
+        window.localStorage.removeItem(resultKey);
 
         if (result.status === "success") {
             window.location.assign(redirectTo);
@@ -90,15 +84,18 @@ export function openGoogleAuthPopup({
         onError("Google sign-in could not be completed. Please try again.");
     };
 
+    const onStorage = (event: StorageEvent) => {
+        if (event.key === resultKey) handleResult(event.newValue);
+    };
+
+    // Do not use WindowProxy.closed to infer cancellation. Browsers can sever
+    // the opener relationship when OAuth crosses origins and report the
+    // Google window as closed even while it is still returning to this app.
+    // The same-origin completion page publishes the verified result instead.
     window.addEventListener("storage", onStorage);
-    popupCheck = window.setInterval(() => {
-        if (!popup.closed) {
-            return;
-        }
-        fail("Google sign-in was closed before it finished.");
-    }, 500);
     timeout = window.setTimeout(() => {
-        fail("Google sign-in timed out. Please try again.");
+        handleResult(window.localStorage.getItem(resultKey));
+        if (!finished) fail("Google sign-in timed out. Please try again.");
     }, POPUP_TIMEOUT_MS);
 
     void signIn("google", {

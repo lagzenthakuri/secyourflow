@@ -1,4 +1,7 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+import { Textarea as BoilerplateTextarea } from "@repo/design-system/components/ui/textarea";
+
 
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
@@ -7,8 +10,11 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft, Link2, Save, ScrollText, ShieldCheck } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Button } from "@repo/design-system/components/ui/button";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@repo/design-system/components/ui/breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
+import { DatePickerField } from "@/components/ui/DatePickerField";
 import { Pill, SectionCard } from "@/components/nis2/Nis2Primitives";
 import {
     CompliancePill,
@@ -309,13 +315,7 @@ export default function PolicyDetailPage() {
         return (
             <DashboardLayout>
                 <div className="space-y-4">
-                    <Link
-                        href="/policies"
-                        className="inline-flex items-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-blue-500"
-                    >
-                        <ArrowLeft size={14} />
-                        Back to policies
-                    </Link>
+                    <Button asChild variant="outline" size="sm"><Link href="/policies"><ArrowLeft />Back to policies</Link></Button>
                     <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
                         {error}
                     </div>
@@ -329,13 +329,10 @@ export default function PolicyDetailPage() {
     return (
         <DashboardLayout>
             <div className="space-y-5">
-                <Link
-                    href="/policies"
-                    className="inline-flex items-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-blue-500"
-                >
-                    <ArrowLeft size={14} />
-                    Back to policies
-                </Link>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <Breadcrumb><BreadcrumbList><BreadcrumbItem><BreadcrumbLink asChild><Link href="/dashboard">Dashboard</Link></BreadcrumbLink></BreadcrumbItem><BreadcrumbSeparator /><BreadcrumbItem><BreadcrumbLink asChild><Link href="/policies">Policies</Link></BreadcrumbLink></BreadcrumbItem><BreadcrumbSeparator /><BreadcrumbItem><BreadcrumbPage>{policy.title}</BreadcrumbPage></BreadcrumbItem></BreadcrumbList></Breadcrumb>
+                    <Button asChild variant="outline" size="sm"><Link href="/policies"><ArrowLeft />Back to policies</Link></Button>
+                </div>
 
                 <PageHeader
                     title={policy.title}
@@ -451,7 +448,7 @@ export default function PolicyDetailPage() {
                     <div className="grid gap-4 sm:grid-cols-2">
                         <label className="block">
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">Title</span>
-                            <input
+                            <BoilerplateInput
                                 value={form.title}
                                 onChange={(event) => setForm({ ...form, title: event.target.value })}
                                 className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
@@ -459,7 +456,7 @@ export default function PolicyDetailPage() {
                         </label>
                         <label className="block">
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">Owner</span>
-                            <input
+                            <BoilerplateInput
                                 value={form.owner}
                                 onChange={(event) => setForm({ ...form, owner: event.target.value })}
                                 className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
@@ -483,7 +480,7 @@ export default function PolicyDetailPage() {
                         </label>
                         <label className="block">
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">Version</span>
-                            <input
+                            <BoilerplateInput
                                 value={form.version}
                                 onChange={(event) => setForm({ ...form, version: event.target.value })}
                                 className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
@@ -493,7 +490,7 @@ export default function PolicyDetailPage() {
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Document URL
                             </span>
-                            <input
+                            <BoilerplateInput
                                 value={form.url}
                                 onChange={(event) => setForm({ ...form, url: event.target.value })}
                                 placeholder="https://…"
@@ -504,18 +501,13 @@ export default function PolicyDetailPage() {
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Next review
                             </span>
-                            <input
-                                type="date"
-                                value={form.nextReview}
-                                onChange={(event) => setForm({ ...form, nextReview: event.target.value })}
-                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                            />
+                            <DatePickerField label="Choose next review date" value={form.nextReview} onChange={(nextReview) => setForm({ ...form, nextReview })} />
                         </label>
                     </div>
 
                     <label className="mt-4 block">
                         <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">Description</span>
-                        <textarea
+                        <BoilerplateTextarea
                             value={form.description}
                             onChange={(event) => setForm({ ...form, description: event.target.value })}
                             rows={5}

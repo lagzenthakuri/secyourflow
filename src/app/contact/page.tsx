@@ -1,283 +1,55 @@
-"use client";
-
-import Image from "next/image";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, Mail, Phone, MapPin, Send, ArrowRight } from "lucide-react";
-import { useState } from "react";
+import { ArrowUpRight, Mail, MapPin, Phone } from "lucide-react";
+import { MarketingSiteShell } from "@/modules/marketing/ui/MarketingShell";
+import { ContactForm } from "@/modules/marketing/ui/ContactForm";
 
-export default function Contact() {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    message: "",
-  });
+export const metadata: Metadata = {
+  title: "Contact SecYourFlow",
+  description: "Contact the SecYourFlow team about the product and workspaces.",
+};
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<{
-    type: "success" | "error" | null;
-    message: string;
-  }>({ type: null, message: "" });
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setSubmitStatus({ type: null, message: "" });
-
-    try {
-      const response = await fetch("https://api.web3forms.com/submit", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          access_key: process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY,
-          name: formData.name,
-          email: formData.email,
-          message: formData.message,
-          subject: "New Contact Form Submission from SecYourFlow",
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setSubmitStatus({
-          type: "success",
-          message: "Thank you! Your message has been sent successfully.",
-        });
-        setFormData({ name: "", email: "", message: "" });
-      } else {
-        setSubmitStatus({
-          type: "error",
-          message: "Something went wrong. Please try again.",
-        });
-      }
-    } catch (error) {
-      setSubmitStatus({
-        type: "error",
-        message: "Failed to send message. Please try again later.",
-      });
-      console.error("Form submission error:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
+export default function ContactPage() {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)]">
-      {/* Background Effects */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-grid opacity-30" />
-        <div className="hero-radial-soft absolute -top-56 left-1/2 h-[680px] w-[980px] -translate-x-1/2 rounded-full" />
-      </div>
-
-      {/* Navigation */}
-      <nav className="marketing-nav-glass fixed top-0 z-50 w-full border-b backdrop-blur-xl" role="navigation" aria-label="Main navigation">
-        <div className="mx-auto flex h-20 w-full max-w-6xl items-center justify-between px-6">
-          <Link href="/" className="inline-flex items-center gap-3" aria-label="SecYourFlow home">
-            <Image
-              src="/logo1.png"
-              alt="SecYourFlow logo"
-              width={40}
-              height={40}
-            />
-            <span className="text-xs font-semibold tracking-[0.25em] text-[var(--text-primary)] sm:text-sm">
-              SECYOUR<span className="text-intent-accent">FLOW</span>
-            </span>
-          </Link>
-
-          <div className="hidden items-center gap-8 md:flex">
-            <Link href="/#features" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
-              Platform
-            </Link>
-            <Link href="/#workflow" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
-              Workflow
-            </Link>
-            <Link href="/#use-cases" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
-              Use Cases
-            </Link>
-            <Link href="/#outcomes" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
-              Outcomes
-            </Link>
-            <Link href="/contact" className="text-sm text-intent-accent transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
-              Contact
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 shadow-[0_10px_28px_-16px_rgba(56,189,248,0.9)] transition hover:bg-sky-200 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)]"
-            >
-              Dashboard
-              <ArrowRight size={16} />
-            </Link>
-          </div>
+    <MarketingSiteShell>
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+        <div className="mb-10 max-w-2xl">
+          <p className="text-sm font-medium text-primary">Contact</p>
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">Let’s talk about your security workflow.</h1>
+          <p className="mt-4 text-base leading-7 text-muted-foreground">Questions about SecYourFlow, setting up a workspace, or whether it fits your team? Send us a note or reach out directly.</p>
         </div>
-      </nav>
 
-      {/* Main Content */}
-      <div className="relative z-10 pt-20">
-        <div className="min-h-screen flex items-center justify-center px-6 py-12">
-          <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-16 items-center">
-            
-            {/* Left Side - Contact Info */}
-            <div className="space-y-12">
-              <Link
-                href="/"
-                className="inline-flex items-center gap-2 text-sm text-intent-accent hover:text-intent-accent-strong transition-colors group"
-              >
-                <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                BACK TO HOME
+        <div className="grid items-start gap-6 lg:grid-cols-[0.82fr_1.18fr]">
+          <aside className="rounded-2xl border border-border bg-muted/20 p-6 sm:p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Get in touch</p>
+            <h2 className="mt-2 text-xl font-semibold">Shyena Technologies Pvt. Ltd.</h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">SecYourFlow is developed and maintained by Shyena Technologies in Kathmandu, Nepal.</p>
+
+            <div className="mt-7 space-y-3">
+              <Link href="mailto:thakurizen2@gmail.com" className="group flex items-start gap-3 rounded-xl border border-border bg-background p-4 transition-colors hover:border-primary/40 hover:bg-muted/30">
+                <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"><Mail className="size-4" /></span>
+                <span className="min-w-0 flex-1"><span className="block text-xs text-muted-foreground">Email</span><span className="mt-1 block break-all text-sm font-medium">thakurizen2@gmail.com</span></span>
+                <ArrowUpRight className="mt-1 size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
               </Link>
-
-              <div>
-                <h1 className="text-5xl lg:text-6xl font-bold text-[var(--text-primary)] mb-6">
-                  Contact <span className="text-intent-accent">Us</span>
-                </h1>
-                <p className="text-lg text-[var(--text-muted)] leading-relaxed">
-                  Get in touch with us. We would love to hear from you!
-                </p>
-              </div>
-
-              <div className="space-y-8">
-                <h2 className="text-sm font-semibold text-intent-accent uppercase tracking-wider">
-                  GET IN TOUCH
-                </h2>
-
-                <div className="space-y-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-5 h-5 flex items-center justify-center">
-                      <Mail size={20} className="text-intent-accent" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-1">EMAIL</p>
-                      <p className="text-[var(--text-primary)] font-medium">thakurizen2@gmail.com</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <div className="w-5 h-5 flex items-center justify-center">
-                      <Phone size={20} className="text-intent-accent" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-1">PHONE</p>
-                      <p className="text-[var(--text-primary)] font-medium">+977 9849291185</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <div className="w-5 h-5 flex items-center justify-center">
-                      <MapPin size={20} className="text-intent-accent" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-1">ADDRESS</p>
-                      <p className="text-[var(--text-primary)] font-medium">Kathmandu 44600</p>
-                    </div>
-                  </div>
-                </div>
+              <Link href="tel:+9779849291185" className="group flex items-start gap-3 rounded-xl border border-border bg-background p-4 transition-colors hover:border-primary/40 hover:bg-muted/30">
+                <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"><Phone className="size-4" /></span>
+                <span className="min-w-0 flex-1"><span className="block text-xs text-muted-foreground">Phone</span><span className="mt-1 block text-sm font-medium">+977 9849291185</span></span>
+                <ArrowUpRight className="mt-1 size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
+              </Link>
+              <div className="flex items-start gap-3 rounded-xl border border-border bg-background p-4">
+                <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"><MapPin className="size-4" /></span>
+                <span><span className="block text-xs text-muted-foreground">Location</span><span className="mt-1 block text-sm font-medium">Kathmandu 44600, Nepal</span></span>
               </div>
             </div>
 
-            {/* Right Side - Contact Form */}
-            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-8 backdrop-blur-sm">
-              <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-8 uppercase tracking-wide">
-                SEND US A MESSAGE
-              </h2>
-
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {submitStatus.type && (
-                  <div
-                    className={`p-4 rounded-lg border ${
-                      submitStatus.type === "success"
-                        ? "bg-green-500/10 border-green-500/50 text-green-700 dark:text-green-400"
-                        : "bg-red-500/10 border-red-500/50 text-intent-danger"
-                    }`}
-                  >
-                    {submitStatus.message}
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-3">
-                      NAME
-                    </label>
-                    <input
-                      type="text"
-                      id="name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      required
-                      className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-4 text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-all duration-300 focus:border-blue-400/50 focus:outline-none focus:ring-1 focus:ring-blue-400/50"
-                      placeholder="Your name"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-3">
-                      EMAIL
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      required
-                      className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-4 text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-all duration-300 focus:border-blue-400/50 focus:outline-none focus:ring-1 focus:ring-blue-400/50"
-                      placeholder="your@email.com"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="message" className="block text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-3">
-                    MESSAGE
-                  </label>
-                  <textarea
-                    id="message"
-                    name="message"
-                    value={formData.message}
-                    onChange={handleChange}
-                    required
-                    rows={6}
-                    className="w-full resize-none rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-4 text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-all duration-300 focus:border-blue-400/50 focus:outline-none focus:ring-1 focus:ring-blue-400/50"
-                    placeholder="Your message here..."
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full px-6 py-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group uppercase tracking-wide"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      SENDING...
-                    </>
-                  ) : (
-                    <>
-                      <Send size={18} className="group-hover:translate-x-1 transition-transform" />
-                      SEND MESSAGE
-                    </>
-                  )}
-                </button>
-              </form>
+            <div className="mt-7 border-t border-border pt-5 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">A note about your message</p>
+              <p className="mt-1 leading-6">Please avoid including passwords, access tokens, or sensitive vulnerability details in this form.</p>
             </div>
-          </div>
+          </aside>
+          <ContactForm />
         </div>
-      </div>
-    </div>
+      </section>
+    </MarketingSiteShell>
   );
 }

@@ -1,4 +1,7 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+import { Textarea as BoilerplateTextarea } from "@repo/design-system/components/ui/textarea";
+
 
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
@@ -245,8 +248,8 @@ export function EvidenceUploadModal({
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm text-[var(--text-secondary)]">Title</label>
-              <input
-                className="input w-full"
+              <BoilerplateInput
+                className="w-full"
                 placeholder="Evidence title"
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
@@ -254,8 +257,8 @@ export function EvidenceUploadModal({
             </div>
             <div>
               <label className="mb-1 block text-sm text-[var(--text-secondary)]">Asset ID (optional)</label>
-              <input
-                className="input w-full"
+              <BoilerplateInput
+                className="w-full"
                 placeholder="Asset ID"
                 value={assetId}
                 onChange={(event) => setAssetId(event.target.value)}
@@ -265,8 +268,8 @@ export function EvidenceUploadModal({
 
           <div>
             <label className="mb-1 block text-sm text-[var(--text-secondary)]">Description</label>
-            <textarea
-              className="input w-full min-h-[70px]"
+            <BoilerplateTextarea
+              className="w-full min-h-[70px]"
               placeholder="Describe what this evidence proves"
               value={description}
               onChange={(event) => setDescription(event.target.value)}
@@ -275,8 +278,8 @@ export function EvidenceUploadModal({
 
           <div>
             <label className="mb-1 block text-sm text-[var(--text-secondary)]">Version Notes</label>
-            <textarea
-              className="input w-full min-h-[60px]"
+            <BoilerplateTextarea
+              className="w-full min-h-[60px]"
               placeholder="What changed in this evidence version"
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
@@ -285,9 +288,9 @@ export function EvidenceUploadModal({
 
           <div>
             <label className="mb-1 block text-sm text-[var(--text-secondary)]">File</label>
-            <input
+            <BoilerplateInput
               type="file"
-              className="input w-full"
+              className="w-full"
               accept=".pdf,.png,.jpg,.jpeg,.txt,.log,.csv,.json"
               onChange={(event) => setFile(event.target.files?.[0] || null)}
             />

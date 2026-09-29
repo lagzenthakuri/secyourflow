@@ -24,6 +24,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
+import { TimePickerField } from "@/components/ui/TimePickerField";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { TwoFactorSettingsPanel } from "@/components/settings/TwoFactorSettingsPanel";
@@ -808,23 +809,13 @@ function SOCRoutingSection({ featureFlags, updateFeatureFlags, handleSaveFeature
                             <label className="block text-sm font-medium text-foreground mb-2">
                                 Quiet Hours Start
                             </label>
-                            <Input
-                                type="time"
-                                value={featureFlags.quietHoursStart || "22:00"}
-                                onChange={(e) => updateFeatureFlags({ quietHoursStart: e.target.value })}
-                                className="input bg-background border-border text-foreground"
-                            />
+                            <TimePickerField label="Quiet hours start" value={featureFlags.quietHoursStart || "22:00"} onChange={(quietHoursStart) => updateFeatureFlags({ quietHoursStart })} />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-2">
                                 Quiet Hours End
                             </label>
-                            <Input
-                                type="time"
-                                value={featureFlags.quietHoursEnd || "06:00"}
-                                onChange={(e) => updateFeatureFlags({ quietHoursEnd: e.target.value })}
-                                className="input bg-background border-border text-foreground"
-                            />
+                            <TimePickerField label="Quiet hours end" value={featureFlags.quietHoursEnd || "06:00"} onChange={(quietHoursEnd) => updateFeatureFlags({ quietHoursEnd })} />
                         </div>
                     </div>
                 )}

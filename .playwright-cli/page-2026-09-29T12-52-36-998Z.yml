@@ -1,0 +1,84 @@
+- generic [ref=f4e2]:
+  - generic [ref=f4e5]:
+    - link "SecYourFlow SECYOURFLOW" [ref=f4e7] [cursor=pointer]:
+      - /url: /dashboard
+      - img "SecYourFlow" [ref=f4e8]
+      - generic [ref=f4e9]: SECYOURFLOW
+    - generic [ref=f4e10]:
+      - generic [ref=f4e11]:
+        - generic [ref=f4e12]: Overview
+        - list [ref=f4e14]:
+          - listitem [ref=f4e15]:
+            - link "Dashboard" [ref=f4e16] [cursor=pointer]:
+              - /url: /dashboard
+          - listitem [ref=f4e23]:
+            - link "Reports" [ref=f4e24] [cursor=pointer]:
+              - /url: /reports
+      - generic [ref=f4e28]:
+        - generic [ref=f4e29]: Exposure
+        - list [ref=f4e31]:
+          - listitem [ref=f4e32]:
+            - link "Assets" [ref=f4e33] [cursor=pointer]:
+              - /url: /assets
+          - listitem [ref=f4e38]:
+            - link "Vulnerabilities" [ref=f4e39] [cursor=pointer]:
+              - /url: /vulnerabilities
+          - listitem [ref=f4e43]:
+            - link "Threats" [ref=f4e44] [cursor=pointer]:
+              - /url: /threats
+          - listitem [ref=f4e48]:
+            - link "Scanners" [ref=f4e49] [cursor=pointer]:
+              - /url: /scanners
+          - listitem [ref=f4e56]:
+            - link "CVE Search" [ref=f4e57] [cursor=pointer]:
+              - /url: /cves
+      - generic [ref=f4e63]:
+        - generic [ref=f4e64]: Risk & governance
+        - list [ref=f4e66]:
+          - listitem [ref=f4e67]:
+            - link "Risk Register" [ref=f4e68] [cursor=pointer]:
+              - /url: /risk-register
+          - listitem [ref=f4e73]:
+            - link "Risk Appetite" [ref=f4e74] [cursor=pointer]:
+              - /url: /risk-appetite
+          - listitem [ref=f4e80]:
+            - link "Policies" [ref=f4e81] [cursor=pointer]:
+              - /url: /policies
+          - listitem [ref=f4e86]:
+            - link "Compliance" [ref=f4e87] [cursor=pointer]:
+              - /url: /compliance
+          - listitem [ref=f4e93]:
+            - link "NIS2 Governance" [ref=f4e94] [cursor=pointer]:
+              - /url: /nis2/governance
+          - listitem [ref=f4e100]:
+            - link "NIS2 Incidents" [ref=f4e101] [cursor=pointer]:
+              - /url: /nis2/incidents
+          - listitem [ref=f4e108]:
+            - link "Vendors" [ref=f4e109] [cursor=pointer]:
+              - /url: /vendors
+          - listitem [ref=f4e115]:
+            - link "Supply Chain" [ref=f4e116] [cursor=pointer]:
+              - /url: /nis2/vendors
+          - listitem [ref=f4e123]:
+            - link "Data Catalog" [ref=f4e124] [cursor=pointer]:
+              - /url: /data
+          - listitem [ref=f4e130]:
+            - link "Business Impact" [ref=f4e131] [cursor=pointer]:
+              - /url: /nis2/bia
+    - button "Open profile menu" [ref=f4e141] [cursor=pointer]:
+      - generic [ref=f4e142]: U
+      - generic [ref=f4e144]:
+        - generic [ref=f4e145]: User
+        - generic [ref=f4e146]: ANALYST
+  - main [ref=f4e149]:
+    - generic [ref=f4e150]:
+      - generic [ref=f4e151]:
+        - button "Toggle Sidebar" [ref=f4e152] [cursor=pointer]
+        - combobox "Search assets, vulnerabilities, or CVEs..." [ref=f4e157]
+      - generic [ref=f4e158]:
+        - link "0 Active Threats" [ref=f4e159] [cursor=pointer]:
+          - /url: /threats
+        - button "Toggle theme" [ref=f4e162] [cursor=pointer]
+        - button "Toggle notifications" [ref=f4e164] [cursor=pointer]
+    - main [ref=f4e165]:
+      - img "Loading" [ref=f4e167]

@@ -1,4 +1,7 @@
 "use client";
+import { Checkbox as BoilerplateCheckbox } from "@repo/design-system/components/ui/checkbox";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -6,6 +9,7 @@ import Image from "next/image";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import { Spinner } from "@repo/design-system/components/ui/spinner";
 import { openGoogleAuthPopup } from "@/lib/auth/google-popup";
 import {
     GOOGLE_AUTH_POPUP_NAME_PREFIX,
@@ -52,6 +56,7 @@ export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     const [authError, setAuthError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -150,7 +155,7 @@ export default function LoginPage() {
 
                         {/* Email */}
                         <div>
-                            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                            <label htmlFor="login-email" className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                                 Email Address
                             </label>
                             <div className="relative">
@@ -158,14 +163,15 @@ export default function LoginPage() {
                                     size={18}
                                     className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
                                 />
-                                <input
+                                <BoilerplateInput
+                                    id="login-email"
                                     type="email"
                                     name="email"
                                     autoComplete="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder="you@company.com"
-                                    className="input !pl-10"
+                                    className="!pl-10"
                                     required
                                 />
                             </div>
@@ -174,36 +180,32 @@ export default function LoginPage() {
                         {/* Password */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <label className="block text-sm font-medium text-[var(--text-primary)]">
+                                <label htmlFor="login-password" className="block text-sm font-medium text-[var(--text-primary)]">
                                     Password
                                 </label>
-                                <button
-                                    type="button"
-                                    disabled
-                                    aria-disabled="true"
-                                    className="text-xs text-[var(--text-muted)] cursor-not-allowed"
-                                >
-                                    Forgot password? (Coming soon)
-                                </button>
                             </div>
                             <div className="relative">
                                 <Lock
                                     size={18}
                                     className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
                                 />
-                                <input
+                                <BoilerplateInput
+                                    id="login-password"
                                     type={showPassword ? "text" : "password"}
                                     name="password"
                                     autoComplete="current-password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="••••••••"
-                                    className="input !pl-10 !pr-10"
+                                    className="!pl-10 !pr-10"
                                     required
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
+                                    aria-pressed={showPassword}
+                                    aria-controls="login-password"
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                                 >
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -213,8 +215,7 @@ export default function LoginPage() {
 
                         {/* Remember Me */}
                         <div className="flex items-center">
-                            <input
-                                type="checkbox"
+                            <BoilerplateCheckbox
                                 id="remember"
                                 className="w-4 h-4 rounded border-[var(--border-color)] bg-[var(--bg-tertiary)] text-blue-500 focus:ring-blue-500"
                             />
@@ -229,11 +230,15 @@ export default function LoginPage() {
                         {/* Submit Button */}
                         <button
                             type="submit"
-                            disabled={isLoading}
-                            className="btn btn-primary w-full"
+                            disabled={isLoading || isGoogleLoading}
+                            aria-label={isLoading ? "Signing in…" : undefined}
+                            className="btn btn-primary w-full disabled:opacity-100 disabled:text-primary-foreground"
                         >
                             {isLoading ? (
-                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                <>
+                                    <Spinner aria-label="Signing in" className="size-5 text-primary-foreground" />
+                                    <span className="text-primary-foreground">Signing in…</span>
+                                </>
                             ) : (
                                 <>
                                     Sign In
@@ -251,13 +256,14 @@ export default function LoginPage() {
 
                     <GoogleAuthButton
                         disabled={isLoading}
+                        loading={isGoogleLoading}
                         label="Continue with Google"
                         onClick={() => {
                             setAuthError(null);
                             openGoogleAuthPopup({
-                                onStart: () => setIsLoading(true),
+                                onStart: () => setIsGoogleLoading(true),
                                 onError: (message) => {
-                                    setIsLoading(false);
+                                    setIsGoogleLoading(false);
                                     setAuthError(message);
                                 },
                             });

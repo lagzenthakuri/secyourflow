@@ -1,4 +1,6 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+
 
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
@@ -146,10 +148,10 @@ export default function UsersPage() {
                                         size={16}
                                         className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
                                     />
-                                    <input
+                                    <BoilerplateInput
                                         type="text"
                                         placeholder="Search users..."
-                                        className="input pl-9 py-2 text-sm"
+                                        className="pl-9 py-2 text-sm"
                                     />
                                 </div>
                             </div>

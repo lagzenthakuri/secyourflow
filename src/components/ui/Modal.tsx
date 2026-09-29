@@ -29,7 +29,12 @@ export function Modal({
 }: ModalProps) {
     const modalRef = useRef<HTMLDivElement>(null);
     const previousActiveElementRef = useRef<HTMLElement | null>(null);
+    const onCloseRef = useRef(onClose);
     const titleId = useId();
+
+    useEffect(() => {
+        onCloseRef.current = onClose;
+    }, [onClose]);
 
     const FOCUSABLE_SELECTOR =
         'a[href], button:not([disabled]), textarea, input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -38,7 +43,7 @@ export function Modal({
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
                 e.preventDefault();
-                onClose();
+                onCloseRef.current();
                 return;
             }
 
@@ -89,6 +94,7 @@ export function Modal({
 
                 const preferredTarget =
                     (initialFocusSelector ? dialog.querySelector<HTMLElement>(initialFocusSelector) : null) ||
+                    dialog.querySelector<HTMLElement>('input:not([disabled]), textarea:not([disabled]), [contenteditable="true"]') ||
                     dialog.querySelector<HTMLElement>(FOCUSABLE_SELECTOR) ||
                     dialog;
 
@@ -105,7 +111,7 @@ export function Modal({
                 previous.focus();
             }
         };
-    }, [FOCUSABLE_SELECTOR, initialFocusSelector, isOpen, onClose]);
+    }, [FOCUSABLE_SELECTOR, initialFocusSelector, isOpen]);
 
     if (!isOpen) return null;
 
@@ -120,7 +126,7 @@ export function Modal({
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
             <div
-                className="absolute inset-0 bg-[var(--overlay-scrim)] backdrop-blur-sm"
+                className="absolute inset-0 bg-[var(--overlay-scrim)] backdrop-blur-md"
                 onClick={onClose}
             />
             <div
@@ -140,7 +146,7 @@ export function Modal({
                         {title}
                     </h2>
                     <button
-                        onClick={onClose}
+                        onClick={() => onCloseRef.current()}
                         className="p-1 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] transition-all duration-300 ease-in-out"
                         aria-label={closeButtonLabel}
                     >

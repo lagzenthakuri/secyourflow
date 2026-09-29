@@ -1,4 +1,6 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
@@ -378,9 +380,9 @@ export function TwoFactorSettingsPanel() {
                                 <label className="block text-sm text-[var(--text-primary)] font-medium">
                                     Verify with 6-digit code
                                 </label>
-                                <input
+                                <BoilerplateInput
                                     type="text"
-                                    className="input"
+                                    className=""
                                     value={verifyCode}
                                     onChange={(event) => setVerifyCode(event.target.value)}
                                     placeholder="123456"

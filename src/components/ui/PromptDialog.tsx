@@ -1,4 +1,6 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+
 
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
@@ -73,7 +75,7 @@ export function PromptDialog({
         <p id="prompt-dialog-description" className="text-sm text-[var(--text-secondary)]">
           {message}
         </p>
-        <input
+        <BoilerplateInput
           data-dialog-input="prompt"
           type="text"
           value={value}
@@ -85,7 +87,7 @@ export function PromptDialog({
             }
           }}
           placeholder={placeholder}
-          className="input"
+          className=""
         />
         {error ? <p className="text-xs text-red-600 dark:text-red-300">{error}</p> : null}
       </div>

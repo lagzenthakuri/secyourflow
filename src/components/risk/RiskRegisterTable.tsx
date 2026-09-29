@@ -1,3 +1,5 @@
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+import { Textarea as BoilerplateTextarea } from "@repo/design-system/components/ui/textarea";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import React, { useEffect, useState } from "react";
 import {
@@ -237,7 +239,7 @@ export function RiskRegisterTable() {
             <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-color)]">
                 <div className="relative flex-1 min-w-[200px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
-                    <input
+                    <BoilerplateInput
                         type="text"
                         placeholder="Search risks using threat, CVE, or ID..."
                         value={searchQuery}
@@ -440,7 +442,7 @@ export function RiskRegisterTable() {
                                                         <div>
                                                             <h4 className="text-xs uppercase text-[var(--text-muted)] font-semibold mb-2">Remediation Action Plan</h4>
                                                             {isEditing ? (
-                                                                <textarea
+                                                                <BoilerplateTextarea
                                                                     className="w-full bg-[var(--bg-primary)] border border-blue-500/50 rounded-md p-3 text-sm min-h-[100px] focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                                     value={editForm.actionPlan || ""}
                                                                     onChange={e => setEditForm({ ...editForm, actionPlan: e.target.value })}
@@ -460,7 +462,7 @@ export function RiskRegisterTable() {
                                                             <div className="p-3 bg-[var(--bg-primary)] rounded-lg border border-[var(--border-color)]">
                                                                 <span className="text-[10px] uppercase text-[var(--text-muted)] block mb-1">Risk Category II</span>
                                                                 {isEditing ? (
-                                                                    <input
+                                                                    <BoilerplateInput
                                                                         className="w-full bg-transparent border-b border-[var(--border-color)] text-sm focus:outline-none focus:border-blue-500"
                                                                         value={editForm.riskCategory2 || ""}
                                                                         onChange={e => setEditForm({ ...editForm, riskCategory2: e.target.value })}
@@ -472,7 +474,7 @@ export function RiskRegisterTable() {
                                                             <div className="p-3 bg-[var(--bg-primary)] rounded-lg border border-[var(--border-color)]">
                                                                 <span className="text-[10px] uppercase text-[var(--text-muted)] block mb-1">Responsible Party</span>
                                                                 {isEditing ? (
-                                                                    <input
+                                                                    <BoilerplateInput
                                                                         className="w-full bg-transparent border-b border-[var(--border-color)] text-sm focus:outline-none focus:border-blue-500"
                                                                         value={editForm.responsibleParty || ""}
                                                                         onChange={e => setEditForm({ ...editForm, responsibleParty: e.target.value })}
@@ -487,7 +489,7 @@ export function RiskRegisterTable() {
                                                             <div>
                                                                 <span className="text-xs text-[var(--text-muted)] block mb-1">Current Controls</span>
                                                                 {isEditing ? (
-                                                                    <input
+                                                                    <BoilerplateInput
                                                                         className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded px-2 py-1 text-sm"
                                                                         value={editForm.currentControls || ""}
                                                                         onChange={e => setEditForm({ ...editForm, currentControls: e.target.value })}
@@ -513,7 +515,7 @@ export function RiskRegisterTable() {
                                                             <div>
                                                                 <span className="text-xs text-[var(--text-muted)] block mb-1">Remarks</span>
                                                                 {isEditing ? (
-                                                                    <input
+                                                                    <BoilerplateInput
                                                                         className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded px-2 py-1 text-sm"
                                                                         value={editForm.remarks || ""}
                                                                         onChange={e => setEditForm({ ...editForm, remarks: e.target.value })}

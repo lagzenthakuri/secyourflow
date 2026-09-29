@@ -112,7 +112,9 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Cross-Origin-Opener-Policy",
-            value: "same-origin",
+            // OAuth sign-in opens a cross-origin Google popup and needs the
+            // opener relationship to remain observable until its callback.
+            value: "same-origin-allow-popups",
           },
           {
             key: "Cross-Origin-Resource-Policy",
@@ -121,6 +123,18 @@ const nextConfig: NextConfig = {
           {
             key: "X-Permitted-Cross-Domain-Policies",
             value: "none",
+          },
+        ],
+      },
+      {
+        // The Nebula effect runs inside an opaque, sandboxed srcDoc iframe.
+        // Permit that frame to load only its local Three.js runtime without
+        // weakening the same-origin policy for other public assets.
+        source: '/vendor/three-r128.min.js',
+        headers: [
+          {
+            key: 'Cross-Origin-Resource-Policy',
+            value: 'cross-origin',
           },
         ],
       },

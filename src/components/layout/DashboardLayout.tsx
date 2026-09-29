@@ -1,4 +1,6 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+
 
 import Link from "next/link";
 import Image from "next/image";
@@ -163,19 +165,23 @@ export function Sidebar() {
                     );
                 })}
             </SidebarContent>
-            <SidebarFooter className="border-t border-sidebar-border p-2 group-data-[collapsible=icon]:p-1">
+            <SidebarFooter className={cn("flex items-center border-t border-sidebar-border p-2", state === "collapsed" && "justify-center px-1")}>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <button title={state === "collapsed" ? `${userName} · Profile menu` : undefined} className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left outline-none transition-[background-color,padding] duration-200 hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0" aria-label="Open profile menu">
-                            <Avatar className="size-9 border">
+                        <button title={state === "collapsed" ? `${userName} · Profile menu` : undefined} className={cn("flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left outline-none transition-[background-color,padding] duration-200 hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring", state === "collapsed" && "mx-auto size-10 justify-center p-0")} aria-label="Open profile menu">
+                            <Avatar className="size-9 shrink-0 border">
                                 {session?.user?.image ? <AvatarImage src={session.user.image} alt="" /> : null}
                                 <AvatarFallback className="bg-primary text-sm font-semibold text-primary-foreground">{userInitials}</AvatarFallback>
                             </Avatar>
-                            <span className={cn("min-w-0 flex-1 overflow-hidden transition-[opacity,width] duration-200 ease-linear", state === "collapsed" && "w-0 flex-none opacity-0")}>
-                                <span className="block truncate text-sm font-medium">{userName}</span>
-                                <span className="block truncate text-xs text-muted-foreground">{session?.user?.email || userRole.replaceAll("_", " ")}</span>
-                            </span>
-                            <ChevronDown size={16} className={cn("shrink-0 text-muted-foreground transition-opacity duration-150", state === "collapsed" && "w-0 opacity-0")} />
+                            {state === "expanded" ? (
+                                <>
+                                    <span className="min-w-0 flex-1 overflow-hidden">
+                                        <span className="block truncate text-sm font-medium">{userName}</span>
+                                        <span className="block truncate text-xs text-muted-foreground">{session?.user?.email || userRole.replaceAll("_", " ")}</span>
+                                    </span>
+                                    <ChevronDown size={16} className="shrink-0 text-muted-foreground" />
+                                </>
+                            ) : null}
                         </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent side="top" align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-56">
@@ -417,7 +423,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                         size={18}
                         className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-blue-600 dark:group-focus-within:text-blue-400 transition-colors"
                     />
-                    <input
+                    <BoilerplateInput
                         type="text"
                         role="combobox"
                         aria-expanded={showSearchResults}
@@ -468,7 +474,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                             }
                         }}
                         placeholder="Search assets, vulnerabilities, or CVEs..."
-                        className="input !pl-10 py-2.5 text-sm bg-[var(--bg-tertiary)]"
+                        className="!pl-10 py-2.5 text-sm bg-[var(--bg-tertiary)]"
                     />
                     {showSearchResults && (
                         <div className="absolute left-0 right-0 top-full mt-2 overflow-hidden rounded-xl border border-[var(--overlay-border,var(--border-color))] bg-[var(--overlay-surface,var(--bg-elevated))] shadow-[var(--overlay-shadow,var(--shadow-lg))]">

@@ -1,4 +1,6 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -343,11 +345,11 @@ export default function TwoFactorChallengePage() {
                                     <span className="text-sm font-medium text-[var(--text-primary)]">Authenticator Code</span>
                                     <div className="relative mt-2">
                                         <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={16} />
-                                        <input
+                                        <BoilerplateInput
                                             type="text"
                                             value={verifyCode}
                                             onChange={(event) => setVerifyCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-                                            className="input !pl-9"
+                                            className="!pl-9"
                                             placeholder="123456"
                                             autoFocus
                                             autoComplete="one-time-code"
@@ -367,11 +369,11 @@ export default function TwoFactorChallengePage() {
                             <span className="text-sm font-medium text-[var(--text-primary)]">Authenticator or Recovery Code</span>
                             <div className="relative mt-2">
                                 <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={16} />
-                                <input
+                                <BoilerplateInput
                                     type="text"
                                     value={code}
                                     onChange={(event) => setCode(event.target.value)}
-                                    className="input !pl-9"
+                                    className="!pl-9"
                                     placeholder="123456 or ABCDE-FGHIJ"
                                     autoFocus
                                     autoComplete="one-time-code"

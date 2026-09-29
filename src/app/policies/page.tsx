@@ -1,4 +1,7 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+import { Textarea as BoilerplateTextarea } from "@repo/design-system/components/ui/textarea";
+
 
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
@@ -6,8 +9,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ClipboardList, Eye, Plus, ScrollText, ShieldCheck } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Alert, AlertDescription } from "@repo/design-system/components/ui/alert";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
+import { DatePickerField } from "@/components/ui/DatePickerField";
 import { Modal } from "@/components/ui/Modal";
 import { EmptyState, Pill, SectionCard } from "@/components/nis2/Nis2Primitives";
 import { PolicyStatusPill, RelationshipTable, type PolicyStatus } from "@/components/grc/GrcPrimitives";
@@ -71,6 +76,7 @@ export default function PoliciesPage() {
     const [policies, setPolicies] = useState<PolicyListRow[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [formError, setFormError] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [form, setForm] = useState(emptyForm);
@@ -97,7 +103,7 @@ export default function PoliciesPage() {
     const createPolicy = useCallback(async () => {
         setIsSaving(true);
         try {
-            setError(null);
+            setFormError(null);
             const response = await fetch("/api/policies", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -116,7 +122,7 @@ export default function PoliciesPage() {
             setForm(emptyForm);
             await load();
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to create the policy");
+            setFormError(err instanceof Error ? err.message : "Failed to create the policy");
         } finally {
             setIsSaving(false);
         }
@@ -193,7 +199,7 @@ export default function PoliciesPage() {
                     actions={
                         <button
                             type="button"
-                            onClick={() => setIsModalOpen(true)}
+                            onClick={() => { setFormError(null); setIsModalOpen(true); }}
                             className="btn btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
                         >
                             <Plus size={14} />
@@ -372,10 +378,11 @@ export default function PoliciesPage() {
                     </div>
                 }
             >
+                {formError ? <Alert variant="destructive" className="mb-4"><AlertDescription>{formError}</AlertDescription></Alert> : null}
                 <div className="space-y-4">
                     <label className="block">
                         <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">Title</span>
-                        <input
+                        <BoilerplateInput
                             value={form.title}
                             onChange={(event) => setForm({ ...form, title: event.target.value })}
                             placeholder="Access Control Policy"
@@ -402,7 +409,7 @@ export default function PoliciesPage() {
                         </label>
                         <label className="block">
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">Version</span>
-                            <input
+                            <BoilerplateInput
                                 value={form.version}
                                 onChange={(event) => setForm({ ...form, version: event.target.value })}
                                 className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
@@ -410,7 +417,7 @@ export default function PoliciesPage() {
                         </label>
                         <label className="block">
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">Owner</span>
-                            <input
+                            <BoilerplateInput
                                 value={form.owner}
                                 onChange={(event) => setForm({ ...form, owner: event.target.value })}
                                 placeholder="CISO office"
@@ -421,7 +428,7 @@ export default function PoliciesPage() {
 
                     <label className="block">
                         <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">Description</span>
-                        <textarea
+                        <BoilerplateTextarea
                             value={form.description}
                             onChange={(event) => setForm({ ...form, description: event.target.value })}
                             rows={4}
@@ -433,12 +440,7 @@ export default function PoliciesPage() {
                         <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                             Next review
                         </span>
-                        <input
-                            type="date"
-                            value={form.nextReview}
-                            onChange={(event) => setForm({ ...form, nextReview: event.target.value })}
-                            className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                        />
+                        <DatePickerField label="Choose next review date" value={form.nextReview} onChange={(nextReview) => setForm({ ...form, nextReview })} />
                     </label>
                 </div>
             </Modal>

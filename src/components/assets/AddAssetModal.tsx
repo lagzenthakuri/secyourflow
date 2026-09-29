@@ -1,4 +1,7 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+import { FieldError } from "@repo/design-system/components/ui/field";
+
 
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
@@ -33,6 +36,7 @@ const CLOUD_PROVIDERS: CloudProvider[] = ["AWS", "AZURE", "GCP", "ORACLE", "IBM"
 export function AddAssetModal({ isOpen, onClose, onSuccess }: AddAssetModalProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [nameError, setNameError] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
         name: "",
@@ -53,6 +57,12 @@ export function AddAssetModal({ isOpen, onClose, onSuccess }: AddAssetModalProps
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!formData.name.trim()) {
+            setNameError("Asset Name is required.");
+            setError(null);
+            return;
+        }
+        setNameError(null);
         setIsSubmitting(true);
         setError(null);
 
@@ -119,14 +129,21 @@ export function AddAssetModal({ isOpen, onClose, onSuccess }: AddAssetModalProps
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Asset Name *
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
+                            name="assetName"
                             required
+                            aria-invalid={Boolean(nameError) || undefined}
+                            aria-describedby={nameError ? "asset-name-error" : undefined}
                             placeholder="e.g., Production Web Server 01"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            onChange={(e) => {
+                                setFormData({ ...formData, name: e.target.value });
+                                if (e.target.value.trim()) setNameError(null);
+                            }}
                         />
+                        {nameError ? <FieldError id="asset-name-error" className="mt-1 text-sm font-medium dark:text-destructive-foreground">{nameError}</FieldError> : null}
                     </div>
 
                     <div>
@@ -209,10 +226,10 @@ export function AddAssetModal({ isOpen, onClose, onSuccess }: AddAssetModalProps
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             IP Address
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             placeholder="e.g., 192.168.1.10"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.ipAddress}
                             onChange={(e) => setFormData({ ...formData, ipAddress: e.target.value })}
                         />
@@ -222,10 +239,10 @@ export function AddAssetModal({ isOpen, onClose, onSuccess }: AddAssetModalProps
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Hostname
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             placeholder="e.g., web-prod-01"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.hostname}
                             onChange={(e) => setFormData({ ...formData, hostname: e.target.value })}
                         />
@@ -235,10 +252,10 @@ export function AddAssetModal({ isOpen, onClose, onSuccess }: AddAssetModalProps
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Operating System
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             placeholder="e.g., Ubuntu 22.04 LTS"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.operatingSystem}
                             onChange={(e) => setFormData({ ...formData, operatingSystem: e.target.value })}
                         />
@@ -268,10 +285,10 @@ export function AddAssetModal({ isOpen, onClose, onSuccess }: AddAssetModalProps
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Owner
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             placeholder="e.g., IT Security Team"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.owner}
                             onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
                         />
@@ -281,10 +298,10 @@ export function AddAssetModal({ isOpen, onClose, onSuccess }: AddAssetModalProps
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Department
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             placeholder="e.g., Operations"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.department}
                             onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                         />
@@ -294,10 +311,10 @@ export function AddAssetModal({ isOpen, onClose, onSuccess }: AddAssetModalProps
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Country / Location
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             placeholder="e.g., USA / East Data Center"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.location}
                             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                         />
@@ -307,10 +324,10 @@ export function AddAssetModal({ isOpen, onClose, onSuccess }: AddAssetModalProps
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Cloud Region
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             placeholder="e.g., us-east-1"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.cloudRegion}
                             onChange={(e) => setFormData({ ...formData, cloudRegion: e.target.value })}
                         />
@@ -320,10 +337,10 @@ export function AddAssetModal({ isOpen, onClose, onSuccess }: AddAssetModalProps
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Tags (comma separated)
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             placeholder="e.g., production, external, web"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.tags}
                             onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                         />
