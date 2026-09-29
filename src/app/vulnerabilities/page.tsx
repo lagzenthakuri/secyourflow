@@ -1,4 +1,6 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -552,7 +554,7 @@ function VulnerabilitiesContent() {
                 size={15}
                 className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
               />
-              <input
+              <BoilerplateInput
                 type="text"
                 value={searchQuery}
                 onChange={(event) => {
@@ -560,7 +562,7 @@ function VulnerabilitiesContent() {
                   setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
                 placeholder="Search by CVE ID, title, or description"
-                className="input h-10 w-full !pl-9 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] border-[var(--border-color)] bg-[var(--bg-secondary)]"
+                className="h-10 w-full !pl-9 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] border-[var(--border-color)] bg-[var(--bg-secondary)]"
               />
             </label>
 
