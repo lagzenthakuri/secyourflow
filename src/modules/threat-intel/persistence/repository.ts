@@ -7,7 +7,7 @@ import type {
   ThreatFeedFormat,
   ThreatFeedType,
   ThreatMatchStatus,
-} from "@prisma/client";
+} from "@repo/database";
 import type {
   AttackTechniqueMappingInput,
   NormalizedIndicatorInput,

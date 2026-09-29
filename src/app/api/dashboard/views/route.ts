@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSessionWithOrg } from "@/lib/api-auth";
-import type { Prisma, Role } from "@prisma/client";
+import type { Prisma, Role } from "@repo/database";
 
 const createSchema = z.object({
   name: z.string().min(2).max(120),

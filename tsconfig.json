@@ -1,4 +1,5 @@
 {
+  "extends": "@repo/typescript-config/nextjs.json",
   "compilerOptions": {
     "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext"],
@@ -6,6 +7,8 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
@@ -19,16 +22,26 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@repo/*": ["./packages/*"],
+      "@repo/design-system/*": ["./packages/design-system/*"]
     }
   },
   "include": [
     "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "scripts/import-framework-template.ts",
+    "scripts/import-iso27001-template.ts",
+    "scripts/import-nistcsf-template.ts",
+    "scripts/import-pcidss-template.ts",
+    "scripts/import-soc2-template.ts",
+    "scripts/security-verify.ts",
+    "scripts/verify-invitation-security.ts",
+    "scripts/grc-smoke.ts",
+    "next.config.ts",
+    "vitest.config.mts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "src/__tests__"]
+  "exclude": ["node_modules", "apps", "packages", ".next"]
 }

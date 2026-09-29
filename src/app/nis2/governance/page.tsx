@@ -1,5 +1,7 @@
 "use client";
 
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -377,24 +379,23 @@ export default function Nis2GovernancePage() {
                                                 )}
                                             </td>
                                             <td className="px-3 py-3">
-                                                <select
-                                                    value={item.status}
-                                                    disabled={savingId === item.id}
-                                                    onChange={(event) =>
+                                                <Select value={item.status} onValueChange={(event) =>
                                                         void updateStatus(
                                                             item.id,
-                                                            event.target.value as ChecklistStatus,
-                                                        )
-                                                    }
-                                                    aria-label={`Status for ${item.code}`}
-                                                    className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-1.5 text-xs text-[var(--text-primary)] disabled:opacity-60"
-                                                >
+                                                            event as ChecklistStatus,
+                                                        )} disabled={savingId === item.id}>
+                                                  <SelectTrigger className="w-full" aria-label={`Status for ${item.code}`}><SelectValue /></SelectTrigger>
+                                                  <SelectContent>
+                                                    <SelectGroup>
                                                     {STATUS_OPTIONS.map((status) => (
-                                                        <option key={status} value={status}>
+                                                        <SelectItem key={status} value={status}>
                                                             {STATUS_LABELS[status]}
-                                                        </option>
+                                                        </SelectItem>
                                                     ))}
-                                                </select>
+
+                                                    </SelectGroup>
+                                                  </SelectContent>
+                                                </Select>
                                                 <div className="mt-1.5">
                                                     <Pill tone={STATUS_TONE[item.status]}>
                                                         {STATUS_LABELS[item.status]}

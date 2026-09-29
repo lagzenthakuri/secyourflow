@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { AssetStatus, AssetType, Criticality, Prisma } from "@prisma/client";
+import { AssetStatus, AssetType, Criticality, Prisma } from "@repo/database";
 import { requireSessionWithOrg } from "@/lib/api-auth";
 
 const createAssetSchema = z.object({

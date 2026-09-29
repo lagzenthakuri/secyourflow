@@ -1,4 +1,4 @@
-import type { IndicatorType, Severity } from "@prisma/client";
+import type { IndicatorType, Severity } from "@repo/database";
 import type { ThreatIntelConfig } from "../config";
 import { fetchJsonWithRetry } from "../utils/http";
 import type { AdapterContext, AdapterFetchResult, ThreatFeedAdapter, ThreatFeedAdapterHealth } from "./types";

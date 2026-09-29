@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import "@repo/design-system/styles/globals.css";
 
 /* =============================================
    SecYourFlow - Cyber Risk Operations Platform
@@ -323,6 +323,15 @@ textarea {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
+input[aria-invalid="true"]:focus-visible,
+textarea[aria-invalid="true"]:focus-visible,
+select[aria-invalid="true"]:focus-visible,
+[role="combobox"][aria-invalid="true"]:focus-visible {
+  outline-color: var(--destructive);
+  border-color: var(--destructive);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--destructive) 24%, transparent);
+}
+
 .text-intent-accent {
   color: var(--intent-accent) !important;
 }
@@ -459,91 +468,77 @@ html.theme-light .bg-gradient-radial {
 /* Redesigned Premium Cards */
 .card {
   background: var(--bg-card);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius);
   padding: 24px;
-  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--gradient-surface);
-  pointer-events: none;
+  transition: border-color 160ms ease, background-color 160ms ease;
 }
 
 .card:hover {
-  transform: translateY(-4px) scale(1.01);
   border-color: var(--border-hover);
-  box-shadow: var(--shadow-premium), var(--shadow-glow);
 }
 
 /* Premium Buttons */
 .btn {
-  padding: 10px 20px;
-  border-radius: var(--radius-md);
-  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: calc(var(--radius) - 2px);
+  font-weight: 500;
   font-size: 14px;
-  line-height: 1.4;
-  letter-spacing: 0.02em;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  line-height: 1.25rem;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   cursor: pointer;
   border: 1px solid transparent;
 }
 
 .btn-primary {
-  background: var(--color-primary-600);
-  border-color: var(--color-primary-500);
-  color: #fff;
-  box-shadow: 0 8px 16px -4px rgba(59, 130, 246, 0.3);
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-foreground);
 }
 
 .btn-primary:hover {
-  transform: translateY(-2px);
-  background: var(--color-primary-500);
-  border-color: var(--color-primary-400);
-  box-shadow: 0 12px 24px -6px rgba(59, 130, 246, 0.4);
-  filter: none;
+  background: color-mix(in oklab, var(--primary) 90%, transparent);
+  border-color: transparent;
 }
 
 .btn-secondary {
-  background: var(--bg-tertiary);
+  background: var(--background);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
 }
 
 .btn-secondary:hover {
-  background: var(--bg-elevated);
+  background: var(--accent);
   border-color: var(--border-active);
 }
 
 /* Advanced Inputs */
 .input {
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 8px 16px;
+  background: var(--background);
+  border: 1px solid var(--input);
+  border-radius: calc(var(--radius) - 2px);
+  padding: 8px 12px;
   color: var(--text-primary);
   font-size: 14px;
   line-height: 1.4;
-  transition: all 0.3s ease;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
   width: 100%;
 }
 
 .input:focus {
   outline: none;
-  border-color: var(--color-primary-500);
-  background: var(--bg-elevated);
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 20%, transparent);
+}
+
+.input[aria-invalid="true"]:focus,
+.input[aria-invalid="true"]:focus-visible {
+  border-color: var(--destructive);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--destructive) 24%, transparent);
 }
 
 /* Premium Sidebar Link */
@@ -755,14 +750,14 @@ html.theme-light .bg-gradient-radial {
 
 /* Topbar Premium */
 .topbar {
-  background: rgba(12, 12, 20, 0.8);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border-color);
+  background: color-mix(in oklab, var(--background) 88%, transparent);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
 }
 
 html.theme-light .topbar {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
+  background: color-mix(in oklab, var(--background) 92%, transparent);
+  backdrop-filter: blur(16px);
 }
 
 /* Advanced Animations */
@@ -1531,4 +1526,41 @@ html.theme-light [class*="text-[var(--text-secondary)]"] {
 
 html.theme-light [class*="text-[var(--text-primary)]"] {
   color: #0f172a !important;
+}
+
+/* Legacy SecYourFlow component classes now resolve to Next Forge's neutral
+   shadcn tokens so every route shares the same surfaces and theme behavior. */
+:root,
+html.theme-light,
+html.theme-dark,
+html.dark {
+  --bg-primary: var(--background);
+  --bg-secondary: var(--sidebar);
+  --bg-tertiary: var(--muted);
+  --bg-card: var(--card);
+  --bg-elevated: var(--accent);
+  --border-color: var(--border);
+  --border-hover: var(--ring);
+  --text-primary: var(--foreground);
+  --text-secondary: var(--muted-foreground);
+  --text-muted: var(--muted-foreground);
+  --intent-accent: var(--foreground);
+  --intent-accent-strong: var(--foreground);
+  --focus-ring-offset: var(--background);
+}
+
+html.theme-dark,
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--primary) 24%, transparent);
 }

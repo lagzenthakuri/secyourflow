@@ -8,7 +8,7 @@ Consolidate security signals from scanners, CVE feeds, and compliance frameworks
 
 ---
 
-[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=for-the-badge&logo=postgresql)](https://www.postgresql.org/)
 [![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?style=for-the-badge&logo=prisma)](https://www.prisma.io/)
@@ -16,6 +16,10 @@ Consolidate security signals from scanners, CVE feeds, and compliance frameworks
 </div>
 
 ---
+
+## Monorepo Layout
+
+SecYourFlow is the application at this repository root. Next Forge's companion apps remain under `apps/`, and shared packages—including the design system, database, analytics, and observability—remain under `packages/`. SecYourFlow uses NextAuth; the separate Next Forge demo retains its sample authentication setup.
 
 ## What is SecYourFlow?
 
@@ -80,9 +84,9 @@ Business-focused security insights for leadership.
 ## Technology Stack
 
 **Frontend**
-- Next.js 15 with React 19
+- Next.js 16 with React 19
 - TypeScript for type safety
-- TailwindCSS for styling
+- Tailwind CSS 4 and the shared Next Forge shadcn design system
 - Recharts for data visualization
 - Fully responsive design
 
@@ -114,50 +118,39 @@ Business-focused security insights for leadership.
 
 Before you begin, ensure you have:
 
-- Node.js 20 or higher
-- PostgreSQL 16 or higher
-- Redis (optional, recommended for production)
+- Bun 1.3.9 (or Node.js 20 or higher)
+- Docker Desktop, or PostgreSQL 16 and Redis 7
 
 ### Installation
 
-Clone the repository:
+From the monorepo root, install all workspace dependencies:
 
 ```bash
-git clone <repository-url>
-cd secyourflow
+bun install
 ```
 
-Install dependencies:
-
-```bash
-npm install
-```
-
-Configure environment variables:
+Create `.env.local` from the example, then set two local-only secrets. The database URL in the example matches the bundled Compose services.
 
 ```bash
 cp .env.example .env.local
+openssl rand -base64 48
+openssl rand -base64 32
 ```
 
-Edit `.env.local` with your configuration settings.
+Put the first generated value in `AUTH_SECRET` and the second in `TOTP_ENCRYPTION_KEY`. Keep `.env.local` private and use separate secrets for every deployed environment.
 
-Initialize the database:
+Generate the shared Prisma client and apply SecYourFlow's migrations from the repository root:
 
 ```bash
-# Generate Prisma client
-npx prisma generate
-
-# Apply database migrations
-npx prisma migrate deploy
-
-# Seed database with initial data (optional)
-npx prisma db seed
+docker compose up -d postgres redis
+bun run db:generate
+bun run db:migrate
 ```
 
-Start the development server:
+Run the app:
 
 ```bash
-npm run dev
+bun run dev
 ```
 
 Open your browser and navigate to `http://localhost:3000`
@@ -196,6 +189,8 @@ REDIS_URL=redis://localhost:6379
 REAL_API_TESTS=false
 ```
 
+The authoritative Prisma schema and SecYourFlow migrations live in `packages/database/prisma`. Prisma commands load the root `.env.local` (or `.env`) automatically. The Next Forge demonstration app remains in `apps/demo` and uses the shared generated client; its sample `Page` table is separate from SecYourFlow's models and existing migrations.
+
 ---
 
 ## Security Architecture
@@ -232,13 +227,19 @@ SecYourFlow implements enterprise-grade security controls to protect your data a
 Run the complete test suite:
 
 ```bash
-npm test
+bun run test
 ```
 
-Run integration tests with real API endpoints:
+Run the background worker in another terminal if you want queued scans and ingestion jobs processed locally:
 
 ```bash
-REAL_API_TESTS=true npm test
+bun run worker:dev
+```
+
+Run integration tests with live external APIs:
+
+```bash
+REAL_API_TESTS=true bun run test
 ```
 
 ---
@@ -277,7 +278,7 @@ https://secyourflow.vercel.app/api/auth/callback/google
 Apply migrations to the hosted database before enabling the Vercel deployment:
 
 ```bash
-DATABASE_URL='<hosted-pooled-database-url>' npx prisma migrate deploy
+DATABASE_URL='<hosted-pooled-database-url>' bun run db:migrate
 ```
 
 `GET /api/health` returns `503` when PostgreSQL is unavailable. A healthy
@@ -289,19 +290,19 @@ reported as `degraded` without taking login offline.
 Build the application for production:
 
 ```bash
-npm run build
+bun run build
 ```
 
 Apply database migrations:
 
 ```bash
-npx prisma migrate deploy
+bun run db:migrate
 ```
 
 Start the production server:
 
 ```bash
-npm start
+bun run start
 ```
 
 ### Docker Deployment
@@ -313,17 +314,14 @@ Configure your `.env` file with the required variables. The `docker-compose.yml`
 Build and start all services:
 
 ```bash
-docker-compose up --build -d
+docker compose up --build -d
 ```
 
 Initialize the database:
 
 ```bash
 # Apply migrations
-docker-compose run --rm web npx prisma migrate deploy
-
-# Seed database (optional)
-docker-compose run --rm web npx prisma db seed
+docker compose run --rm migrate
 ```
 
 Access the application at `http://localhost:3000`
@@ -340,7 +338,9 @@ docker-compose down
 
 ```
 secyourflow/
-├── prisma/              # Database schema and migrations
+├── apps/                # Next Forge demo, web, API, docs, and tooling apps
+├── packages/            # Shared Next Forge packages and SecYourFlow database
+│   └── database/prisma/ # SecYourFlow schema and migrations
 ├── public/              # Static assets
 ├── src/
 │   ├── app/            # Next.js app directory
@@ -349,7 +349,7 @@ secyourflow/
 │   └── types/          # TypeScript type definitions
 ├── .env.example        # Environment variable template
 ├── docker-compose.yml  # Docker configuration
-└── package.json        # Project dependencies
+└── package.json        # Root application and workspace scripts
 ```
 
 ---

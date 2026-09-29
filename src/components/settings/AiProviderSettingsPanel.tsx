@@ -1,4 +1,7 @@
 "use client";
+import { Checkbox as BoilerplateCheckbox } from "@repo/design-system/components/ui/checkbox";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+
 
 import { useCallback, useEffect, useState } from "react";
 import { Bot, CheckCircle2, HardDrive, Loader2, Cloud, Save, Zap, AlertTriangle } from "lucide-react";
@@ -238,7 +241,7 @@ export function AiProviderSettingsPanel() {
                         <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                             Model
                         </span>
-                        <input
+                        <BoilerplateInput
                             value={model}
                             onChange={(event) => setModel(event.target.value)}
                             placeholder={selected?.defaultModel ?? ""}
@@ -259,7 +262,7 @@ export function AiProviderSettingsPanel() {
                         <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                             Endpoint
                         </span>
-                        <input
+                        <BoilerplateInput
                             value={endpoint}
                             onChange={(event) => setEndpoint(event.target.value)}
                             placeholder={selected?.defaultEndpoint ?? ""}
@@ -278,7 +281,7 @@ export function AiProviderSettingsPanel() {
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 API key
                             </span>
-                            <input
+                            <BoilerplateInput
                                 type="password"
                                 autoComplete="off"
                                 value={apiKey}
@@ -341,10 +344,9 @@ export function AiProviderSettingsPanel() {
             )}
 
             <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                <input
-                    type="checkbox"
+                <BoilerplateCheckbox
                     checked={enabled}
-                    onChange={(event) => setEnabled(event.target.checked)}
+                    onCheckedChange={(checked) => setEnabled(Boolean(checked))}
                 />
                 Use AI for risk assessment (deterministic scoring is always used as a fallback)
             </label>

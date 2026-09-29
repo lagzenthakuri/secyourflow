@@ -1,11 +1,26 @@
 "use client";
 
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Modal } from "@/components/ui/Modal";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
+import { DatePickerField } from "@/components/ui/DatePickerField";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { cn, formatLabel } from "@/lib/utils";
-import { Calendar, CheckCircle2, Paperclip, Plus, RefreshCw } from "lucide-react";
+import { CheckCircle2, ClipboardCheck, Paperclip, Plus, RefreshCw, Search } from "lucide-react";
+import { Alert, AlertDescription } from "@repo/design-system/components/ui/alert";
+import { Badge } from "@repo/design-system/components/ui/badge";
+import { Button } from "@repo/design-system/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/design-system/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@repo/design-system/components/ui/dialog";
+import { Input } from "@repo/design-system/components/ui/input";
+import { Label } from "@repo/design-system/components/ui/label";
+import { Progress } from "@repo/design-system/components/ui/progress";
+import { Textarea } from "@repo/design-system/components/ui/textarea";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/design-system/components/ui/table";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@repo/design-system/components/ui/breadcrumb";
 
 type RemediationStatus = "DRAFT" | "ACTIVE" | "BLOCKED" | "COMPLETED" | "ARCHIVED";
 
@@ -81,6 +96,9 @@ export default function RemediationPlansPage() {
   const [isEvidenceOpen, setIsEvidenceOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<RemediationPlanRecord | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<RemediationStatus | "ALL">("ALL");
 
   const [createForm, setCreateForm] = useState({
     name: "",
@@ -131,7 +149,7 @@ export default function RemediationPlansPage() {
   const handleCreate = useCallback(async () => {
     try {
       setIsSubmitting(true);
-      setError(null);
+      setFormError(null);
 
       const response = await fetch("/api/remediation-plans", {
         method: "POST",
@@ -163,7 +181,7 @@ export default function RemediationPlansPage() {
       });
       await fetchPlans({ silent: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create remediation plan");
+      setFormError(err instanceof Error ? err.message : "Failed to create remediation plan");
     } finally {
       setIsSubmitting(false);
     }
@@ -197,7 +215,7 @@ export default function RemediationPlansPage() {
 
     try {
       setIsSubmitting(true);
-      setError(null);
+      setFormError(null);
 
       const response = await fetch(`/api/remediation-plans/${selectedPlan.id}/evidence`, {
         method: "POST",
@@ -227,7 +245,7 @@ export default function RemediationPlansPage() {
       });
       await fetchPlans({ silent: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to upload evidence");
+      setFormError(err instanceof Error ? err.message : "Failed to upload evidence");
     } finally {
       setIsSubmitting(false);
     }
@@ -239,6 +257,21 @@ export default function RemediationPlansPage() {
     const blocked = plans.filter((plan) => plan.status === "BLOCKED").length;
     return { completed, active, blocked };
   }, [plans]);
+
+  const visiblePlans = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return plans.filter((plan) => {
+      const matchesStatus = statusFilter === "ALL" || plan.status === statusFilter;
+      const matchesQuery = !query || [
+        plan.name,
+        plan.description ?? "",
+        plan.owner?.name ?? "",
+        plan.owner?.email ?? "",
+        ...plan.vulnerabilities.map(({ vulnerability }) => `${vulnerability.title} ${vulnerability.id}`),
+      ].some((value) => value.toLowerCase().includes(query));
+      return matchesStatus && matchesQuery;
+    });
+  }, [plans, search, statusFilter]);
 
   if (isLoading && plans.length === 0) {
     return (
@@ -252,314 +285,136 @@ export default function RemediationPlansPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-5">
-        <section className="rounded-3xl border border-[var(--border-color)] bg-[linear-gradient(132deg,rgba(56,189,248,0.2),rgba(18,18,26,0.9)_44%,rgba(18,18,26,0.96))] p-6 sm:p-8">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold text-[var(--text-primary)] sm:text-3xl">Remediation Plans</h1>
-              <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                Track plan ownership, linked vulnerabilities, evidence, and completion progress.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--text-primary)]">
-                <span className="rounded-full border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-3 py-1">
-                  {plans.length} plans
-                </span>
-                <span className="rounded-full border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-3 py-1">
-                  {summary.active} active
-                </span>
-                <span className="rounded-full border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-3 py-1">
-                  {summary.blocked} blocked
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => void fetchPlans({ silent: true })}
-                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
-              >
-                <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
-                Refresh
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsCreateOpen(true)}
-                className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-200"
-              >
-                <Plus size={14} />
-                New Plan
-              </button>
-            </div>
+      <div className="mx-auto w-full max-w-screen-2xl space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem><BreadcrumbLink asChild><Link href="/dashboard">Dashboard</Link></BreadcrumbLink></BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem><BreadcrumbLink asChild><Link href="/vulnerabilities">Vulnerabilities</Link></BreadcrumbLink></BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem><BreadcrumbPage>Remediation plans</BreadcrumbPage></BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <Button variant="outline" size="sm" asChild><Link href="/vulnerabilities"><ArrowLeft className="size-4" />Back to vulnerabilities</Link></Button>
+        </div>
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">Vulnerability management</p>
+            <h1 className="text-2xl font-semibold tracking-tight">Remediation plans</h1>
+            <p className="text-sm text-muted-foreground">Coordinate fixes, owners, deadlines, and verification evidence.</p>
           </div>
-        </section>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" onClick={() => void fetchPlans({ silent: true })} disabled={isRefreshing}>
+              <RefreshCw className={cn("size-4", isRefreshing && "animate-spin")} />
+              Refresh
+            </Button>
+            <Button type="button" onClick={() => { setFormError(null); setIsCreateOpen(true); }}>
+              <Plus className="size-4" /> New plan
+            </Button>
+          </div>
+        </header>
 
-        {error ? (
-          <section className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
-            {error}
-          </section>
-        ) : null}
+        {error ? <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert> : null}
 
-        <section className="grid gap-4 sm:grid-cols-3">
+        <section aria-label="Remediation plan summary" className="grid gap-3 sm:grid-cols-3">
           {[
-            { label: "Completed", value: summary.completed, tone: "text-emerald-700 dark:text-emerald-200" },
-            { label: "Active", value: summary.active, tone: "text-sky-700 dark:text-sky-200" },
-            { label: "Blocked", value: summary.blocked, tone: "text-red-700 dark:text-red-200" },
+            { label: "Active", value: summary.active, note: "In progress" },
+            { label: "Blocked", value: summary.blocked, note: "Needs attention" },
+            { label: "Completed", value: summary.completed, note: "Verified plans" },
           ].map((item) => (
-            <article
-              key={item.label}
-              className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4"
-            >
-              <p className="text-sm text-[var(--text-muted)]">{item.label}</p>
-              <p className={cn("mt-2 text-2xl font-semibold", item.tone)}>{item.value}</p>
-            </article>
+            <Card key={item.label}>
+              <CardContent className="flex items-center justify-between gap-3 p-4">
+                <div><p className="text-sm font-medium">{item.label}</p><p className="mt-1 text-xs text-muted-foreground">{item.note}</p></div>
+                <span className="text-2xl font-semibold tabular-nums">{item.value}</span>
+              </CardContent>
+            </Card>
           ))}
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
-          <header className="border-b border-[var(--border-color)] px-5 py-4">
-            <h2 className="text-base font-semibold text-[var(--text-primary)]">Plan Tracker</h2>
-          </header>
-
-          {plans.length === 0 ? (
-            <div className="p-12 text-center">
-              <CheckCircle2 className="mx-auto h-10 w-10 text-[var(--text-muted)]" />
-              <p className="mt-3 text-sm text-[var(--text-muted)]">No remediation plans yet.</p>
+        <Card>
+          <CardHeader className="gap-4 border-b sm:flex-row sm:items-center sm:justify-between">
+            <div><CardTitle>All plans</CardTitle><CardDescription>{plans.length} total · showing {visiblePlans.length}</CardDescription></div>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              <div className="relative min-w-0 sm:w-72">
+                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input aria-label="Search remediation plans" placeholder="Search plans, owners, vulnerabilities" value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" />
+              </div>
+              <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as RemediationStatus | "ALL")}>
+                <SelectTrigger aria-label="Filter by status" className="sm:w-40"><SelectValue placeholder="All statuses" /></SelectTrigger>
+                <SelectContent><SelectGroup><SelectItem value="ALL">All statuses</SelectItem>{statusOptions.map((status) => <SelectItem key={status} value={status}>{formatLabel(status)}</SelectItem>)}</SelectGroup></SelectContent>
+              </Select>
             </div>
+          </CardHeader>
+          {plans.length === 0 ? (
+            <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
+              <span className="grid size-11 place-items-center rounded-full bg-muted"><ClipboardCheck className="size-5 text-muted-foreground" /></span>
+              <div><h2 className="font-medium">No remediation plans yet</h2><p className="mt-1 text-sm text-muted-foreground">Create a plan to coordinate vulnerability fixes and evidence.</p></div>
+              <Button onClick={() => setIsCreateOpen(true)}><Plus className="size-4" /> Create a plan</Button>
+            </CardContent>
+          ) : visiblePlans.length === 0 ? (
+            <CardContent className="py-12 text-center text-sm text-muted-foreground">No plans match these filters.</CardContent>
           ) : (
-            <div className="divide-y divide-[var(--border-color)]">
-              {plans.map((plan) => {
-                const progress = calculateProgress(plan);
-                return (
-                  <div key={plan.id} className="px-5 py-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{plan.name}</p>
-                          <span
-                            className={cn(
-                              "rounded-full border px-2 py-0.5 text-[11px]",
-                              statusTone[plan.status],
-                            )}
-                          >
-                            {formatLabel(plan.status)}
-                          </span>
-                          <span className="rounded-full border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]">
-                            {progress}% complete
-                          </span>
-                        </div>
-                        {plan.description ? (
-                          <p className="mt-1 text-xs text-[var(--text-muted)]">{plan.description}</p>
-                        ) : null}
-                        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)]">
-                          <span>
-                            Owner {plan.owner?.name || plan.owner?.email || "Unassigned"}
-                          </span>
-                          <span>{plan.vulnerabilities.length} linked vulnerabilities</span>
-                          <span>{plan._count?.evidence || 0} evidence items</span>
-                          {plan.dueDate ? (
-                            <span className="inline-flex items-center gap-1">
-                              <Calendar size={12} />
-                              Due {new Date(plan.dueDate).toLocaleDateString()}
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <select
-                          value={plan.status}
-                          onChange={(event) =>
-                            void updatePlanStatus(plan.id, event.target.value as RemediationStatus)
-                          }
-                          className="input h-9 w-[130px] text-xs"
-                        >
-                          {statusOptions.map((status) => (
-                            <option key={status} value={status}>
-                              {formatLabel(status)}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedPlan(plan);
-                            setIsEvidenceOpen(true);
-                          }}
-                          className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)]"
-                        >
-                          <Paperclip size={12} />
-                          Add Evidence
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader><TableRow><TableHead>Plan</TableHead><TableHead>Status</TableHead><TableHead className="min-w-44">Progress</TableHead><TableHead>Owner & due date</TableHead><TableHead>Work items</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                <TableBody>{visiblePlans.map((plan) => {
+                  const progress = calculateProgress(plan);
+                  return <TableRow key={plan.id}>
+                    <TableCell className="min-w-56"><p className="font-medium">{plan.name}</p><p className="mt-1 max-w-sm truncate text-xs text-muted-foreground">{plan.description || "No description"}</p></TableCell>
+                    <TableCell><Badge variant="outline" className={cn("font-medium", statusTone[plan.status])}>{formatLabel(plan.status)}</Badge></TableCell>
+                    <TableCell><div className="flex items-center gap-3"><Progress value={progress} className="h-2 min-w-20" /><span className="w-10 text-right text-xs tabular-nums text-muted-foreground">{progress}%</span></div><p className="mt-1 text-xs text-muted-foreground">{plan.vulnerabilities.filter(({ vulnerability }) => ["RESOLVED", "CLOSED"].includes(vulnerability.workflowState)).length} of {plan.vulnerabilities.length} resolved</p></TableCell>
+                    <TableCell className="min-w-40"><p className="text-sm">{plan.owner?.name || plan.owner?.email || "Unassigned"}</p><p className="mt-1 text-xs text-muted-foreground">{plan.dueDate ? `Due ${new Date(plan.dueDate).toLocaleDateString()}` : "No due date"}</p></TableCell>
+                    <TableCell className="whitespace-nowrap text-sm text-muted-foreground">{plan.vulnerabilities.length} vulnerabilities · {plan._count?.evidence || 0} evidence</TableCell>
+                    <TableCell><div className="flex justify-end gap-2">
+                      <Select value={plan.status} onValueChange={(value) => void updatePlanStatus(plan.id, value as RemediationStatus)}><SelectTrigger aria-label={`Change status for ${plan.name}`} className="h-9 w-32"><SelectValue /></SelectTrigger><SelectContent><SelectGroup>{statusOptions.map((status) => <SelectItem key={status} value={status}>{formatLabel(status)}</SelectItem>)}</SelectGroup></SelectContent></Select>
+                      <Button variant="outline" size="sm" onClick={() => { setSelectedPlan(plan); setIsEvidenceOpen(true); }}><Paperclip className="size-4" /><span className="sr-only sm:not-sr-only">Evidence</span></Button>
+                    </div></TableCell>
+                  </TableRow>;
+                })}</TableBody>
+              </Table>
             </div>
           )}
-        </section>
+        </Card>
       </div>
 
-      <Modal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        title="Create Remediation Plan"
-        footer={
-          <div className="flex justify-end gap-2">
-            <button className="btn btn-secondary" onClick={() => setIsCreateOpen(false)}>
-              Cancel
-            </button>
-            <button
-              className="btn btn-primary"
-              onClick={() => void handleCreate()}
-              disabled={!createForm.name.trim() || isSubmitting}
-            >
-              {isSubmitting ? "Creating..." : "Create Plan"}
-            </button>
-          </div>
-        }
-      >
-        <div className="space-y-3">
-          <div>
-            <label className="mb-1 block text-sm text-[var(--text-primary)]">Plan Name</label>
-            <input
-              className="input"
-              value={createForm.name}
-              onChange={(event) => setCreateForm((prev) => ({ ...prev, name: event.target.value }))}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-[var(--text-primary)]">Description</label>
-            <textarea
-              className="input min-h-[96px]"
-              value={createForm.description}
-              onChange={(event) =>
-                setCreateForm((prev) => ({ ...prev, description: event.target.value }))
-              }
-            />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-sm text-[var(--text-primary)]">Status</label>
-              <select
-                className="input"
-                value={createForm.status}
-                onChange={(event) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    status: event.target.value as RemediationStatus,
-                  }))
-                }
-              >
-                {statusOptions.map((status) => (
-                  <option key={status} value={status}>
-                    {formatLabel(status)}
-                  </option>
-                ))}
-              </select>
+      <Dialog open={isCreateOpen} onOpenChange={(open) => { setIsCreateOpen(open); if (open) setFormError(null); }}>
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-xl">
+          <DialogHeader><DialogTitle>Create remediation plan</DialogTitle><DialogDescription>Set the scope and target date for this remediation effort.</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            {formError ? <Alert variant="destructive"><AlertDescription>{formError}</AlertDescription></Alert> : null}
+            <div className="space-y-2"><Label htmlFor="plan-name">Plan name</Label><Input id="plan-name" autoFocus value={createForm.name} onChange={(event) => setCreateForm((prev) => ({ ...prev, name: event.target.value }))} /></div>
+            <div className="space-y-2"><Label htmlFor="plan-description">Description</Label><Textarea id="plan-description" rows={3} value={createForm.description} onChange={(event) => setCreateForm((prev) => ({ ...prev, description: event.target.value }))} /></div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2"><Label>Status</Label>
+                <Select value={createForm.status} onValueChange={(value) => setCreateForm((prev) => ({ ...prev, status: value as RemediationStatus }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectGroup>{statusOptions.map((status) => <SelectItem key={status} value={status}>{formatLabel(status)}</SelectItem>)}</SelectGroup></SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2"><Label>Due date and time</Label><DatePickerField label="Choose a due date" includeTime value={createForm.dueDate} onChange={(dueDate) => setCreateForm((prev) => ({ ...prev, dueDate }))} /></div>
             </div>
-            <div>
-              <label className="mb-1 block text-sm text-[var(--text-primary)]">Due Date</label>
-              <input
-                type="datetime-local"
-                className="input"
-                value={createForm.dueDate}
-                onChange={(event) => setCreateForm((prev) => ({ ...prev, dueDate: event.target.value }))}
-              />
-            </div>
+            <div className="space-y-2"><Label htmlFor="plan-vulnerabilities">Vulnerability IDs</Label><Input id="plan-vulnerabilities" placeholder="Paste IDs separated by commas" value={createForm.vulnerabilityIds} onChange={(event) => setCreateForm((prev) => ({ ...prev, vulnerabilityIds: event.target.value }))} /><p className="text-xs text-muted-foreground">Separate multiple IDs with commas.</p></div>
           </div>
-          <div>
-            <label className="mb-1 block text-sm text-[var(--text-primary)]">Vulnerability IDs (comma separated)</label>
-            <input
-              className="input"
-              placeholder="vuln-id-1,vuln-id-2"
-              value={createForm.vulnerabilityIds}
-              onChange={(event) =>
-                setCreateForm((prev) => ({ ...prev, vulnerabilityIds: event.target.value }))
-              }
-            />
-          </div>
-        </div>
-      </Modal>
+          <DialogFooter><Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button><Button onClick={() => void handleCreate()} disabled={!createForm.name.trim() || isSubmitting}>{isSubmitting ? "Creating…" : "Create plan"}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      <Modal
-        isOpen={isEvidenceOpen}
-        onClose={() => setIsEvidenceOpen(false)}
-        title="Attach Evidence"
-        footer={
-          <div className="flex justify-end gap-2">
-            <button className="btn btn-secondary" onClick={() => setIsEvidenceOpen(false)}>
-              Cancel
-            </button>
-            <button
-              className="btn btn-primary"
-              onClick={() => void submitEvidence()}
-              disabled={!evidenceForm.title.trim() || isSubmitting}
-            >
-              {isSubmitting ? "Submitting..." : "Add Evidence"}
-            </button>
-          </div>
-        }
-      >
-        <div className="space-y-3">
-          <p className="text-xs text-[var(--text-muted)]">
-            Plan: {selectedPlan?.name || "N/A"} ({selectedPlan?.id || "no id"})
-          </p>
-          <div>
-            <label className="mb-1 block text-sm text-[var(--text-primary)]">Title</label>
-            <input
-              className="input"
-              value={evidenceForm.title}
-              onChange={(event) =>
-                setEvidenceForm((prev) => ({ ...prev, title: event.target.value }))
-              }
-            />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-sm text-[var(--text-primary)]">File Name</label>
-              <input
-                className="input"
-                value={evidenceForm.fileName}
-                onChange={(event) =>
-                  setEvidenceForm((prev) => ({ ...prev, fileName: event.target.value }))
-                }
-              />
+      <Dialog open={isEvidenceOpen} onOpenChange={(open) => { setIsEvidenceOpen(open); if (!open) setSelectedPlan(null); }}>
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-xl">
+          <DialogHeader><DialogTitle>Add evidence</DialogTitle><DialogDescription>Attach verification material to {selectedPlan?.name || "this plan"}.</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            {formError ? <Alert variant="destructive"><AlertDescription>{formError}</AlertDescription></Alert> : null}
+            <div className="space-y-2"><Label htmlFor="evidence-title">Title</Label><Input id="evidence-title" autoFocus value={evidenceForm.title} onChange={(event) => setEvidenceForm((prev) => ({ ...prev, title: event.target.value }))} /></div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2"><Label htmlFor="evidence-file">File name</Label><Input id="evidence-file" value={evidenceForm.fileName} onChange={(event) => setEvidenceForm((prev) => ({ ...prev, fileName: event.target.value }))} /></div>
+              <div className="space-y-2"><Label htmlFor="evidence-mime">Content type</Label><Input id="evidence-mime" value={evidenceForm.mimeType} onChange={(event) => setEvidenceForm((prev) => ({ ...prev, mimeType: event.target.value }))} /></div>
             </div>
-            <div>
-              <label className="mb-1 block text-sm text-[var(--text-primary)]">MIME Type</label>
-              <input
-                className="input"
-                value={evidenceForm.mimeType}
-                onChange={(event) =>
-                  setEvidenceForm((prev) => ({ ...prev, mimeType: event.target.value }))
-                }
-              />
-            </div>
+            <div className="space-y-2"><Label htmlFor="evidence-notes">Notes</Label><Textarea id="evidence-notes" rows={3} value={evidenceForm.notes} onChange={(event) => setEvidenceForm((prev) => ({ ...prev, notes: event.target.value }))} /></div>
+            <div className="space-y-2"><Label htmlFor="evidence-content">Text evidence</Label><Textarea id="evidence-content" rows={5} className="font-mono text-xs" placeholder="Paste command output, test results, or a log excerpt" value={evidenceForm.content} onChange={(event) => setEvidenceForm((prev) => ({ ...prev, content: event.target.value }))} /></div>
           </div>
-          <div>
-            <label className="mb-1 block text-sm text-[var(--text-primary)]">Notes</label>
-            <textarea
-              className="input min-h-[84px]"
-              value={evidenceForm.notes}
-              onChange={(event) =>
-                setEvidenceForm((prev) => ({ ...prev, notes: event.target.value }))
-              }
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-[var(--text-primary)]">Content (text)</label>
-            <textarea
-              className="input min-h-[120px] font-mono text-xs"
-              placeholder="Paste command output, evidence notes, or log excerpt"
-              value={evidenceForm.content}
-              onChange={(event) =>
-                setEvidenceForm((prev) => ({ ...prev, content: event.target.value }))
-              }
-            />
-          </div>
-        </div>
-      </Modal>
+          <DialogFooter><Button variant="outline" onClick={() => setIsEvidenceOpen(false)}>Cancel</Button><Button onClick={() => void submitEvidence()} disabled={!evidenceForm.title.trim() || isSubmitting}>{isSubmitting ? "Saving…" : "Add evidence"}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

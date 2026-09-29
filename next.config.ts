@@ -1,4 +1,10 @@
 import type { NextConfig } from "next";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { withLogging, withSentry } from "@repo/observability/next-config";
+import { withToolbar } from "@repo/feature-flags/lib/toolbar";
+
+const appDirectory = dirname(fileURLToPath(import.meta.url));
 
 function buildCspHeaderValue(): string {
   const isProd = process.env.NODE_ENV === "production";
@@ -34,8 +40,9 @@ function buildCspHeaderValue(): string {
 const nextConfig: NextConfig = {
   // Turbopack for faster dev builds
   turbopack: {
-    root: process.cwd(),
+    root: appDirectory,
   },
+  transpilePackages: ["@prisma/client", "@prisma/adapter-pg", "pg"],
   serverExternalPackages: ["exceljs"],
 
   // Enable React strict mode
@@ -105,7 +112,9 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Cross-Origin-Opener-Policy",
-            value: "same-origin",
+            // OAuth sign-in opens a cross-origin Google popup and needs the
+            // opener relationship to remain observable until its callback.
+            value: "same-origin-allow-popups",
           },
           {
             key: "Cross-Origin-Resource-Policy",
@@ -121,4 +130,26 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+const betterStackSourceToken =
+  process.env.BETTER_STACK_SOURCE_TOKEN ||
+  process.env.NEXT_PUBLIC_BETTER_STACK_SOURCE_TOKEN ||
+  process.env.LOGTAIL_SOURCE_TOKEN ||
+  process.env.NEXT_PUBLIC_LOGTAIL_SOURCE_TOKEN;
+const betterStackIngestUrl =
+  process.env.BETTER_STACK_INGESTING_URL ||
+  process.env.NEXT_PUBLIC_BETTER_STACK_INGESTING_URL ||
+  process.env.LOGTAIL_URL ||
+  process.env.NEXT_PUBLIC_LOGTAIL_URL;
+const betterStackConfigured = Boolean(betterStackSourceToken && betterStackIngestUrl);
+
+// The Next Forge adapter logs warnings whenever it is enabled without ingest
+// credentials. Keep it optional and enable rewrites only when fully configured.
+let configuredNext = (betterStackConfigured ? withLogging(nextConfig) : nextConfig) as NextConfig;
+
+if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+  configuredNext = withSentry(configuredNext) as NextConfig;
+}
+
+configuredNext = withToolbar(configuredNext) as NextConfig;
+
+export default configuredNext;

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import type { Severity } from "@prisma/client";
+import type { Severity } from "@repo/database";
 
 interface VulnerabilityNotificationInput {
   organizationId: string;

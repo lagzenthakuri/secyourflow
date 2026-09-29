@@ -1,508 +1,227 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
 import {
   Activity,
   ArrowRight,
-  ChevronRight,
+  ArrowUpRight,
   FileCheck2,
-  Gauge,
-  LockKeyhole,
   Radar,
   ShieldCheck,
-  Siren,
+  Workflow,
   Users,
-  Zap,
-  TrendingUp,
+  Gauge,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Button } from "@repo/design-system/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/design-system/components/ui/card";
 
-const capabilityCards = [
+const capabilities = [
   {
     icon: Radar,
-    title: "Threat Signal Correlation",
-    description:
-      "Combine vulnerability exposure, threat intelligence, and asset criticality in one clear queue.",
+    title: "See what is exposed",
+    description: "Bring assets, vulnerability findings, and threat indicators into one operational view.",
   },
   {
     icon: ShieldCheck,
-    title: "Risk-Weighted Prioritization",
-    description:
-      "Score what matters first so analysts spend time on business impact instead of noisy severity lists.",
+    title: "Prioritize by business risk",
+    description: "Give teams the context to focus remediation on the issues that matter to the organization.",
   },
   {
     icon: FileCheck2,
-    title: "Compliance Context",
-    description:
-      "Track control drift and tie findings directly to SOC 2, ISO 27001, and your internal policy controls.",
+    title: "Connect risk to controls",
+    description: "Keep compliance work close to operational findings, owners, and evidence.",
   },
 ];
 
-const workflowSteps = [
-  {
-    step: "01",
-    title: "Ingest Security Data",
-    description:
-      "Connect scanner output, asset inventories, and threat feeds without replacing your existing tools.",
-  },
-  {
-    step: "02",
-    title: "Correlate and Score",
-    description:
-      "Blend CVSS, EPSS, exploit status, and business criticality into one operational risk model.",
-  },
-  {
-    step: "03",
-    title: "Act and Report",
-    description:
-      "Assign remediation owners, monitor SLA progress, and publish leadership-ready updates quickly.",
-  },
+const workflow = [
+  ["01", "Collect", "Connect scanner output, asset inventories, and threat feeds."],
+  ["02", "Understand", "Correlate exposure with exploit signals and business context."],
+  ["03", "Respond", "Assign work, follow remediation, and report progress."],
 ];
-
-const signalRows = [
-  { label: "External Attack Surface", level: 91, tone: "bg-sky-300" },
-  { label: "Exploit Activity Monitoring", level: 84, tone: "bg-cyan-300" },
-  { label: "Compliance Control Coverage", level: 88, tone: "bg-blue-300" },
-];
-
-const outcomeCards = [
-  { value: "< 5 min", label: "Average triage cycle" },
-  { value: "24x7", label: "Continuous monitoring" },
-  { value: "SOC-ready", label: "Audit evidence trail" },
-];
-
-const statsData = [
-  { icon: Users, value: 500, suffix: "+", label: "Security Teams" },
-  { icon: Zap, value: 98, suffix: "%", label: "Faster Triage" },
-  { icon: TrendingUp, value: 10000, suffix: "+", label: "Threats Analyzed" },
-];
-
-
-
-function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: string }) {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    const duration = 2000;
-    const steps = 60;
-    const increment = target / steps;
-    let current = 0;
-
-    const timer = setInterval(() => {
-      current += increment;
-      if (current >= target) {
-        setCount(target);
-        clearInterval(timer);
-      } else {
-        setCount(Math.floor(current));
-      }
-    }, duration / steps);
-
-    return () => clearInterval(timer);
-  }, [target]);
-
-  return (
-    <span>
-      {count.toLocaleString()}
-      {suffix}
-    </span>
-  );
-}
 
 export default function Home() {
-  const [isVisible, setIsVisible] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
-  const [sectionsVisible, setSectionsVisible] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    // Set visibility after mount to trigger animations
-    const timer = setTimeout(() => setIsVisible(true), 0);
-    
-    const cleanup = () => clearTimeout(timer);
-
-    // Parallax scroll effect
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-    };
-
-    // Intersection Observer for scroll animations
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setSectionsVisible((prev) => ({
-              ...prev,
-              [entry.target.id]: true,
-            }));
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    // Observe all sections
-    const sections = document.querySelectorAll('[data-animate]');
-    sections.forEach((section) => observer.observe(section));
-
-    // Smooth scroll for anchor links
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const anchor = target.closest('a[href^="#"]');
-      if (anchor) {
-        e.preventDefault();
-        const href = anchor.getAttribute("href");
-        if (href) {
-          const element = document.querySelector(href);
-          element?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    document.addEventListener("click", handleClick);
-    
-    return () => {
-      cleanup();
-      window.removeEventListener("scroll", handleScroll);
-      document.removeEventListener("click", handleClick);
-      sections.forEach((section) => observer.unobserve(section));
-    };
-  }, []);
-
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)] scroll-smooth">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-grid opacity-45" />
-        <div 
-          className="hero-radial-primary absolute -top-56 left-1/2 h-[680px] w-[980px] -translate-x-1/2 rounded-full transition-transform duration-300"
-          style={{ transform: `translate(-50%, ${scrollY * 0.15}px)` }}
-        />
-        <div 
-          className="hero-radial-secondary absolute bottom-[-220px] right-[-140px] h-[420px] w-[420px] rounded-full transition-transform duration-300"
-          style={{ transform: `translate(0, ${-scrollY * 0.1}px)` }}
-        />
-      </div>
-
-      <nav className="marketing-nav-glass fixed top-0 z-50 w-full border-b backdrop-blur-xl" role="navigation" aria-label="Main navigation">
-        <div className="mx-auto flex h-20 w-full max-w-6xl items-center justify-between px-6">
-          <Link href="/" className="inline-flex items-center gap-3" aria-label="SecYourFlow home">
-            <Image
-              src="/logo1.png"
-              alt="SecYourFlow logo"
-              width={48}
-              height={48}
-            />
-            <span className="text-sm font-semibold tracking-[0.25em] text-[var(--text-primary)] sm:text-base">
-              SECYOUR<span className="text-intent-accent">FLOW</span>
-            </span>
+    <div className="min-h-dvh bg-background text-foreground">
+      <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          <Link href="/" className="flex items-center gap-2.5" aria-label="SecYourFlow home">
+            <Image src="/logo1.png" alt="" width={32} height={32} priority />
+            <span className="text-sm font-semibold tracking-[0.14em]">SECYOUR<span className="text-muted-foreground">FLOW</span></span>
           </Link>
-
-          <div className="hidden items-center gap-8 md:flex">
-            <a href="#features" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
-              Platform
-            </a>
-            <a href="#workflow" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
-              Workflow
-            </a>
-            <a href="#use-cases" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
-              Use Cases
-            </a>
-            <a href="#outcomes" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
-              Outcomes
-            </a>
-            <Link href="/contact" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
-              Contact
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 shadow-[0_10px_28px_-16px_rgba(56,189,248,0.9)] transition hover:bg-sky-200 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)]"
-            >
-              Dashboard
-              <ArrowRight size={16} />
-            </Link>
+          <nav aria-label="Main navigation" className="hidden items-center gap-6 md:flex">
+            <a className="text-sm text-muted-foreground transition-colors hover:text-foreground" href="#platform">Platform</a>
+            <a className="text-sm text-muted-foreground transition-colors hover:text-foreground" href="#workflow">Workflow</a>
+            <Link className="text-sm text-muted-foreground transition-colors hover:text-foreground" href="/contact">Contact</Link>
+          </nav>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex"><Link href="/login">Sign in</Link></Button>
+              <Button asChild size="sm"><Link href="/signup">Get started<ArrowUpRight className="ml-1 size-4" /></Link></Button>
           </div>
         </div>
-      </nav>
+      </header>
 
-      <main className="relative z-10">
-        <section className="px-6 pb-20 pt-32" aria-label="Hero section">
-          <div className="mx-auto grid w-full max-w-6xl gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-            <div className={`transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
-              <div className="inline-flex items-center gap-2 rounded-full border border-sky-300/30 bg-sky-300/10 px-3 py-1.5 text-xs font-medium text-sky-700 dark:text-sky-200">
-                <Activity size={14} />
-                SOC-grade cyber risk command center
-              </div>
-
-              <h1 className="mt-6 text-4xl font-semibold leading-tight text-[var(--text-primary)] sm:text-5xl xl:text-6xl">
-                Operationalize cyber risk with
-                <span className="animate-gradient bg-gradient-to-r from-sky-200 via-cyan-200 to-blue-300 bg-clip-text text-transparent bg-[length:200%_auto]">
-                  {" "}
-                  live SOC clarity
-                </span>
-                .
-              </h1>
-
-              <p className="mt-6 max-w-2xl text-base leading-relaxed text-[var(--text-secondary)] sm:text-lg">
-                SecYourFlow unifies exposure, active threats, and compliance drift into one
-                focused workspace so your team can prioritize what matters first.
-              </p>
-
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link
-                  href="/dashboard"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-300 px-6 py-3 text-sm font-semibold text-slate-950 shadow-[0_14px_32px_-18px_rgba(56,189,248,0.95)] transition hover:bg-sky-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)]"
-                >
-                  Open Dashboard
-                  <ChevronRight size={16} />
-                </Link>
-                <Link
-                  href="/risk-register"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-6 py-3 text-sm font-medium text-[var(--text-primary)] transition hover:border-[var(--border-hover)] hover:bg-[var(--bg-elevated)] hover:scale-105 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)]"
-                >
-                  Review Risk Register
-                </Link>
-              </div>
-
-              <div className="mt-8 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
-                {["Signal-first workflows", "Analyst-ready context", "Executive-level clarity"].map((item) => (
-                  <span key={item} className="rounded-full border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-1.5">
-                    {item}
-                  </span>
-                ))}
-              </div>
+      <main>
+        <section className="relative isolate overflow-hidden bg-muted/30 px-4 py-16 sm:px-6 sm:py-24 lg:px-8 lg:py-28">
+          <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_70%,rgba(87,139,255,0.12),transparent_56%),radial-gradient(var(--border)_0.7px,transparent_0.7px)] bg-[length:100%_100%,12px_12px] [mask-image:linear-gradient(to_bottom,black_35%,transparent_100%)]" />
+          <div className="mx-auto flex max-w-7xl flex-col items-center text-center">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+              <Activity className="size-3.5" /> Security operations, connected
             </div>
+            <h1 className="max-w-4xl font-serif text-4xl font-medium leading-tight tracking-tight sm:text-5xl lg:text-6xl">A clearer way to secure your digital estate.</h1>
+            <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
+              SecYourFlow brings exposure, active threats, and compliance work into one focused workspace for security teams.
+            </p>
+            <div className="mt-7 flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row">
+              <Button asChild size="lg"><Link href="/signup">Create your workspace<ArrowRight className="ml-2 size-4" /></Link></Button>
+              <Button asChild variant="outline" size="lg"><Link href="#platform">Explore the platform</Link></Button>
+            </div>
+            <p className="mt-4 text-sm text-muted-foreground">A practical flow from security signal to accountable response.</p>
+          </div>
 
-            <article className={`transition-all duration-700 delay-150 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"} rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-6 shadow-[0_30px_70px_-34px_rgba(56,189,248,0.65)]`} aria-label="Live security metrics">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                  Live SOC Snapshot
-                </p>
-                <h2 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">
-                  Current posture: controlled
-                </h2>
+          <Card className="mx-auto mt-12 w-full max-w-5xl overflow-hidden rounded-xl border-border bg-card text-card-foreground shadow-lg">
+            <CardHeader className="border-b border-border bg-muted/50 px-5 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">WORKSPACE PREVIEW</p>
+                  <CardTitle className="mt-1 text-base">Security overview</CardTitle>
+                </div>
+                <span className="rounded-md border border-border bg-background px-2 py-1 text-xs text-muted-foreground">Dashboard</span>
               </div>
-
-              <div className="mt-7 space-y-5">
-                {signalRows.map((signal, idx) => (
-                  <div key={signal.label} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-[var(--text-secondary)]">{signal.label}</span>
-                      <span className="font-medium text-[var(--text-primary)]">{signal.level}%</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-[var(--bg-tertiary)] overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${signal.tone} transition-all duration-1000 ease-out`}
-                        style={{ 
-                          width: isVisible ? `${signal.level}%` : '0%',
-                          transitionDelay: `${600 + idx * 150}ms`
-                        }}
-                      />
-                    </div>
+            </CardHeader>
+            <CardContent className="space-y-4 p-5">
+              <div className="grid gap-3 sm:grid-cols-3">
+                {["Assets", "Vulnerabilities", "Compliance"].map((label) => (
+                  <div key={label} className="rounded-lg border border-border bg-background p-3">
+                    <p className="text-xs text-muted-foreground">{label}</p>
+                    <div className="mt-3 h-2 w-2/3 rounded-full bg-primary/20" />
+                    <div className="mt-2 h-2 w-full rounded-full bg-muted" />
                   </div>
                 ))}
               </div>
-
-              <div className="mt-7 grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3">
-                  <p className="text-xs text-[var(--text-muted)]">Open High Risk</p>
-                  <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">14</p>
+              <div className="rounded-lg border border-border p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div><p className="text-sm font-medium">Exposure and response</p><p className="mt-1 text-xs text-muted-foreground">A shared view of work that needs attention</p></div>
+                  <Workflow className="size-5 shrink-0 text-muted-foreground" />
                 </div>
-                <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3">
-                  <p className="text-xs text-[var(--text-muted)]">Control Drift</p>
-                  <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">6</p>
+                <div className="mt-5 space-y-3" aria-hidden="true">
+                  {["Threat intelligence", "Risk prioritization", "Remediation tracking"].map((item, index) => (
+                    <div key={item} className="flex items-center gap-3">
+                      <span className="flex size-7 items-center justify-center rounded-full border border-border bg-muted text-xs text-muted-foreground">{index + 1}</span>
+                      <span className="h-2 flex-1 rounded-full bg-muted"><span className={`block h-full rounded-full bg-primary/40 ${index === 0 ? "w-4/5" : index === 1 ? "w-3/5" : "w-2/3"}`} /></span>
+                      <span className="w-36 truncate text-right text-xs text-muted-foreground">{item}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </article>
-          </div>
-        </section>
-
-        <section className="marketing-section-surface px-6 py-16" aria-label="Platform statistics">
-          <div className="mx-auto w-full max-w-6xl">
-            <div className="grid gap-8 md:grid-cols-3">
-              {statsData.map((stat, index) => {
-                const Icon = stat.icon;
-                return (
-                  <div
-                    key={stat.label}
-                    className={`text-center transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
-                    style={{ transitionDelay: `${300 + index * 100}ms` }}
-                  >
-                    <div className="inline-flex rounded-full border border-sky-300/30 bg-sky-300/10 p-3 text-sky-700 dark:text-sky-200">
-                      <Icon size={24} />
-                    </div>
-                    <p className="mt-4 text-4xl font-bold text-[var(--text-primary)]">
-                      <AnimatedCounter target={stat.value} suffix={stat.suffix} />
-                    </p>
-                    <p className="mt-2 text-sm text-[var(--text-secondary)]">{stat.label}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        <section id="features" data-animate="features" className="scroll-mt-28 px-6 py-20" aria-labelledby="features-heading">
-          <div className="mx-auto w-full max-w-6xl">
-            <div className={`max-w-3xl transition-all duration-700 ${sectionsVisible.features ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-intent-accent">
-                Platform
-              </p>
-              <h2 className="mt-4 text-3xl font-semibold text-[var(--text-primary)] sm:text-4xl">
-                Built for teams that need signal over noise.
-              </h2>
-              <p className="mt-4 text-[var(--text-secondary)]">
-                Every panel is designed to answer one question quickly: what creates the
-                most business risk right now?
-              </p>
-            </div>
-
-            <div className="mt-10 grid gap-5 md:grid-cols-3">
-              {capabilityCards.map((item, idx) => {
-                const Icon = item.icon;
-                return (
-                  <article
-                    key={item.title}
-                    className={`marketing-card-surface group rounded-2xl border p-6 transition-all duration-700 hover:-translate-y-1 hover:border-sky-400/50 dark:hover:border-sky-300/35 hover:bg-[var(--marketing-card-bg-strong)] ${sectionsVisible.features ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
-                    style={{ transitionDelay: `${idx * 100}ms` }}
-                  >
-                    <div className="inline-flex rounded-lg border border-sky-300/35 bg-sky-300/10 p-2.5 text-sky-700 dark:text-sky-200 transition-all duration-300 group-hover:scale-110">
-                      <Icon size={18} />
-                    </div>
-                    <h3 className="mt-5 text-lg font-semibold text-[var(--text-primary)]">{item.title}</h3>
-                    <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">
-                      {item.description}
-                    </p>
-                  </article>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        <section
-          id="workflow"
-          data-animate="workflow"
-          className="hero-section-surface scroll-mt-28 border-y border-[var(--border-color)] px-6 py-20"
-        >
-          <div className="mx-auto w-full max-w-6xl">
-            <div className={`flex flex-col gap-4 md:flex-row md:items-end md:justify-between transition-all duration-700 ${sectionsVisible.workflow ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-              <div className="max-w-3xl">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-intent-accent">
-                  Workflow
-                </p>
-                <h2 className="mt-4 text-3xl font-semibold text-[var(--text-primary)] sm:text-4xl">
-                  A practical flow from intake to remediation.
-                </h2>
+              <div className="flex items-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
+                <ShieldCheck className="size-4 shrink-0" /> A workspace designed around your security workflow.
               </div>
-              <Link
-                href="/dashboard"
-                className="inline-flex items-center gap-2 text-sm font-medium text-sky-800 dark:text-sky-200 transition hover:text-sky-900 dark:hover:text-sky-100"
-              >
-                See it in dashboard
-                <ArrowRight size={15} />
-              </Link>
-            </div>
+            </CardContent>
+          </Card>
+        </section>
 
-            <div className="mt-10 grid gap-4 lg:grid-cols-3">
-              {workflowSteps.map((item, idx) => (
-                <article
-                  key={item.step}
-                  className={`marketing-card-surface group rounded-2xl border p-6 transition-all duration-700 hover:border-sky-400/40 dark:hover:border-sky-300/30 hover:bg-[var(--marketing-card-bg-strong)] hover:-translate-y-1 ${sectionsVisible.workflow ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
-                  style={{ transitionDelay: `${idx * 100}ms` }}
-                >
-                  <div className="text-xs font-semibold tracking-[0.22em] text-intent-accent">
-                    STEP {item.step}
-                  </div>
-                  <h3 className="mt-4 text-lg font-semibold text-[var(--text-primary)]">{item.title}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">{item.description}</p>
-                  <div className="mt-4 h-1 w-0 rounded-full bg-gradient-to-r from-sky-400 to-cyan-400 transition-all duration-500 group-hover:w-12" />
-                </article>
+        <section id="platform" className="scroll-mt-20 border-y border-border bg-background">
+          <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+            <div className="max-w-2xl">
+              <p className="text-sm font-medium text-muted-foreground">The platform</p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">One workspace for the work behind security decisions.</h2>
+              <p className="mt-4 leading-7 text-muted-foreground">Keep operational signals, ownership, and governance connected as teams investigate and respond.</p>
+            </div>
+            <div className="mt-9 grid gap-4 md:grid-cols-3">
+              {capabilities.map(({ icon: Icon, title, description }) => (
+                <Card key={title} className="rounded-xl border-border bg-card text-card-foreground shadow-none">
+                  <CardContent className="p-6">
+                    <span className="flex size-10 items-center justify-center rounded-lg border border-border bg-muted/50"><Icon className="size-5" /></span>
+                    <h3 className="mt-5 font-semibold">{title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </div>
         </section>
 
-        <section id="outcomes" data-animate="outcomes" className="scroll-mt-20 px-6 py-24">
-          <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className={`transition-all duration-700 ${sectionsVisible.outcomes ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-              <p className="text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
-                Outcomes
-              </p>
-              <h2 className="mt-3 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">
-                Security leadership gets clean answers, fast
-              </h2>
-              <p className="mt-4 max-w-2xl text-[var(--text-muted)] leading-relaxed">
-                Analysts move faster, priorities stay defensible, and reporting stays ready
-                for leadership and audits.
-              </p>
-
-              <div className="mt-10 grid gap-4 sm:grid-cols-3">
-                {outcomeCards.map((item, idx) => (
-                  <article 
-                    key={item.label} 
-                    className={`rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-5 backdrop-blur-sm transition-all duration-700 hover:border-[var(--border-hover)] hover:bg-[var(--bg-elevated)] hover:-translate-y-0.5 ${sectionsVisible.outcomes ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
-                    style={{ transitionDelay: `${idx * 100}ms` }}
-                  >
-                    <p className="text-2xl font-black text-[var(--text-primary)]">{item.value}</p>
-                    <p className="mt-2 text-sm text-[var(--text-muted)]">{item.label}</p>
-                  </article>
+        <section className="border-b border-border bg-background px-4 py-16 sm:px-6 lg:px-8">
+          <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-2 lg:items-center">
+            <div className="rounded-xl border border-border bg-muted/30 p-6 sm:p-9">
+              <div className="grid grid-cols-2 gap-3">
+                {["Applications", "Identity", "Cloud assets", "Infrastructure"].map((item, index) => (
+                  <div key={item} className="flex min-h-28 flex-col items-center justify-center gap-3 rounded-lg border border-border bg-card p-4 text-center shadow-sm">
+                    <span className="flex size-10 items-center justify-center rounded-full border border-primary/20 bg-primary/5 text-primary">{index === 0 ? <Radar className="size-5" /> : index === 1 ? <Users className="size-5" /> : index === 2 ? <ShieldCheck className="size-5" /> : <Workflow className="size-5" />}</span>
+                    <span className="text-sm font-medium">{item}</span>
+                  </div>
                 ))}
               </div>
             </div>
+            <div className="max-w-xl">
+              <p className="text-sm font-medium text-muted-foreground">Why it matters</p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight">Security needs a continuous view.</h2>
+              <p className="mt-4 leading-7 text-muted-foreground">Systems change every day. A connected workspace helps teams keep exposure, ownership, and control work visible as those changes happen.</p>
+              <ul className="mt-6 space-y-3 text-sm text-foreground">
+                <li className="flex items-center gap-2"><ShieldCheck className="size-4 text-primary" /> Keep asset and finding context together</li>
+                <li className="flex items-center gap-2"><Activity className="size-4 text-primary" /> Follow investigation through remediation</li>
+                <li className="flex items-center gap-2"><FileCheck2 className="size-4 text-primary" /> Tie operational work to compliance evidence</li>
+              </ul>
+            </div>
+          </div>
+        </section>
 
-            <aside className={`group relative overflow-hidden rounded-xl border border-sky-400/30 bg-gradient-to-br from-sky-100/60 to-[var(--bg-tertiary)] dark:border-sky-400/20 dark:from-sky-400/10 p-7 backdrop-blur-sm transition-all duration-700 hover:border-sky-400/50 dark:hover:border-sky-400/30 ${sectionsVisible.outcomes ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`} style={{ transitionDelay: '300ms' }}>
-              <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-sky-500/10 blur-3xl transition-all duration-700 group-hover:bg-sky-500/20" />
-              <div className="relative inline-flex rounded-lg border border-sky-400/30 bg-sky-400/10 p-2.5 text-intent-accent transition-all duration-300 group-hover:scale-110">
-                <LockKeyhole size={18} />
-              </div>
-              <h3 className="relative mt-5 text-xl font-bold text-[var(--text-primary)]">
-                Ready for a cleaner security command surface?
-              </h3>
-              <p className="relative mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">
-                Move from scattered data to a single operational view built for
-                high-confidence decisions.
-              </p>
+        <section id="workflow" className="scroll-mt-20 bg-muted/30 px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div><p className="text-sm font-medium text-muted-foreground">A practical workflow</p><h2 className="mt-3 text-3xl font-semibold tracking-tight">From intake to response.</h2></div>
+            <Button asChild variant="outline"><Link href="/dashboard">Explore the workspace<ArrowRight className="ml-2 size-4" /></Link></Button>
+          </div>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {workflow.map(([step, title, description]) => (
+              <Card key={step} className="rounded-xl border-border bg-card text-card-foreground shadow-none">
+                <CardContent className="p-6"><p className="text-xs font-medium tabular-nums text-muted-foreground">STEP {step}</p><h3 className="mt-4 text-lg font-semibold">{title}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p></CardContent>
+              </Card>
+            ))}
+          </div>
+          </div>
+        </section>
 
-              <div className="relative mt-6 space-y-2.5 text-sm text-[var(--text-secondary)]">
-                <div className="flex items-center gap-2.5 transition-all duration-300 hover:translate-x-1 hover:text-[var(--text-primary)]">
-                  <Gauge size={15} className="text-sky-600 dark:text-sky-400" />
-                  Risk score clarity for every critical asset
-                </div>
-                <div className="flex items-center gap-2.5 transition-all duration-300 hover:translate-x-1 hover:text-[var(--text-primary)]">
-                  <Siren size={15} className="text-sky-600 dark:text-sky-400" />
-                  Prioritized response queue for exploited issues
-                </div>
-                <div className="flex items-center gap-2.5 transition-all duration-300 hover:translate-x-1 hover:text-[var(--text-primary)]">
-                  <FileCheck2 size={15} className="text-sky-600 dark:text-sky-400" />
-                  Compliance mapping tied to remediation
-                </div>
+        <section className="border-t border-border bg-background px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+          <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-2 lg:items-center">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Built for the whole team</p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight">Security work that fits each role.</h2>
+              <p className="mt-4 max-w-xl leading-7 text-muted-foreground">Give practitioners, security leaders, and governance teams a shared source of context with views suited to their day-to-day work.</p>
+              <div className="mt-7 divide-y divide-border rounded-xl border border-border">
+                {[
+                  ["Engineering teams", "Understand which findings need attention and why."],
+                  ["Security leaders", "Track risk, ownership, and response across the organization."],
+                  ["Compliance teams", "Connect control status with operational evidence."],
+                ].map(([role, detail]) => (
+                  <div key={role} className="flex items-start gap-3 px-4 py-4"><span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/5 text-primary"><Users className="size-3.5" /></span><div><p className="text-sm font-medium">{role}</p><p className="mt-1 text-sm text-muted-foreground">{detail}</p></div></div>
+                ))}
               </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                { icon: Radar, title: "Shared visibility", description: "Bring asset, threat, and vulnerability context together." },
+                { icon: Gauge, title: "Risk prioritization", description: "Focus investigation around business impact." },
+                { icon: Workflow, title: "Clear ownership", description: "Keep findings connected to accountable response." },
+                { icon: FileCheck2, title: "Useful reporting", description: "Carry evidence and progress into governance reviews." },
+              ].map(({ icon: Icon, title, description }) => (
+                <Card key={title} className="rounded-xl border-border bg-card text-card-foreground shadow-none"><CardContent className="p-5"><Icon className="size-5 text-primary" /><h3 className="mt-4 text-sm font-semibold">{title}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p></CardContent></Card>
+              ))}
+            </div>
+          </div>
+        </section>
 
-              <div className="relative mt-7 flex flex-col gap-3 sm:flex-row lg:flex-col">
-                <Link
-                  href="/dashboard"
-                  className="group/btn inline-flex items-center justify-center gap-2 rounded-lg bg-sky-400 px-5 py-2.5 text-sm font-semibold text-slate-950 transition-all duration-300 hover:bg-sky-300"
-                >
-                  Launch Platform
-                  <ChevronRight size={15} className="transition-transform group-hover/btn:translate-x-0.5" />
-                </Link>
-                <Link
-                  href="/login"
-                  className="inline-flex items-center justify-center rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-5 py-2.5 text-sm text-[var(--text-secondary)] backdrop-blur-sm transition-all duration-300 hover:border-[var(--border-hover)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
-                >
-                  Sign In
-                </Link>
-              </div>
-            </aside>
+        <section className="border-t border-border bg-background">
+          <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-12 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+            <div><h2 className="text-xl font-semibold">Bring your security work into focus.</h2><p className="mt-1 text-sm text-muted-foreground">Sign in or create a SecYourFlow workspace to get started.</p></div>
+            <Button asChild><Link href="/signup">Get started<ArrowRight className="ml-2 size-4" /></Link></Button>
           </div>
         </section>
       </main>
-
-
+      <footer className="border-t border-border bg-muted text-muted-foreground">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-6 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+          <span>© {new Date().getFullYear()} SecYourFlow</span><div className="flex gap-5"><Link className="hover:text-foreground" href="/contact">Contact</Link><Link className="hover:text-foreground" href="/login">Sign in</Link></div>
+        </div>
+      </footer>
     </div>
   );
 }

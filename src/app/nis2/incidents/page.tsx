@@ -1,9 +1,17 @@
 "use client";
+import { Checkbox as BoilerplateCheckbox } from "@repo/design-system/components/ui/checkbox";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+import { Textarea as BoilerplateTextarea } from "@repo/design-system/components/ui/textarea";
 
+
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Alert, AlertDescription } from "@repo/design-system/components/ui/alert";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
+import { DatePickerField } from "@/components/ui/DatePickerField";
 import { Modal } from "@/components/ui/Modal";
 import { EmptyState, Pill, SectionCard, formatDuration } from "@/components/nis2/Nis2Primitives";
 import { formatDateTime } from "@/lib/utils";
@@ -94,6 +102,7 @@ export default function Nis2IncidentsPage() {
     const [incidents, setIncidents] = useState<Incident[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [formError, setFormError] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [form, setForm] = useState(emptyForm);
@@ -122,7 +131,7 @@ export default function Nis2IncidentsPage() {
     const createIncident = useCallback(async () => {
         setIsSaving(true);
         try {
-            setError(null);
+            setFormError(null);
             const response = await fetch("/api/nis2/incidents", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -146,7 +155,7 @@ export default function Nis2IncidentsPage() {
             setForm(emptyForm);
             await load();
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to register the incident");
+            setFormError(err instanceof Error ? err.message : "Failed to register the incident");
         } finally {
             setIsSaving(false);
         }
@@ -232,7 +241,7 @@ export default function Nis2IncidentsPage() {
                     actions={
                         <button
                             type="button"
-                            onClick={() => setIsModalOpen(true)}
+                            onClick={() => { setFormError(null); setIsModalOpen(true); }}
                             className="btn btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
                         >
                             <AlertOctagon size={14} />
@@ -385,6 +394,7 @@ export default function Nis2IncidentsPage() {
                     </div>
                 }
             >
+                {formError ? <Alert variant="destructive" className="mb-4"><AlertDescription>{formError}</AlertDescription></Alert> : null}
                 <div className="space-y-4">
                     <p className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
                         All three Art. 23 deadlines are anchored on the time you became aware of the incident, not the
@@ -393,7 +403,7 @@ export default function Nis2IncidentsPage() {
 
                     <label className="block">
                         <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">Title</span>
-                        <input
+                        <BoilerplateInput
                             value={form.title}
                             onChange={(event) => setForm({ ...form, title: event.target.value })}
                             className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
@@ -405,7 +415,7 @@ export default function Nis2IncidentsPage() {
                         <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                             Description
                         </span>
-                        <textarea
+                        <BoilerplateTextarea
                             value={form.description}
                             onChange={(event) => setForm({ ...form, description: event.target.value })}
                             rows={4}
@@ -419,29 +429,26 @@ export default function Nis2IncidentsPage() {
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Became aware at
                             </span>
-                            <input
-                                type="datetime-local"
-                                value={form.detectedAt}
-                                onChange={(event) => setForm({ ...form, detectedAt: event.target.value })}
-                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                            />
+                            <DatePickerField label="Choose when you became aware" includeTime value={form.detectedAt} onChange={(detectedAt) => setForm({ ...form, detectedAt })} />
                         </label>
 
                         <label className="block">
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Severity
                             </span>
-                            <select
-                                value={form.severity}
-                                onChange={(event) => setForm({ ...form, severity: event.target.value })}
-                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                            >
+                            <Select value={form.severity} onValueChange={(event) => setForm({ ...form, severity: event })}>
+                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
                                 {["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"].map((severity) => (
-                                    <option key={severity} value={severity}>
+                                    <SelectItem key={severity} value={severity}>
                                         {severity}
-                                    </option>
+                                    </SelectItem>
                                 ))}
-                            </select>
+
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
                         </label>
                     </div>
 
@@ -449,7 +456,7 @@ export default function Nis2IncidentsPage() {
                         <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                             Taxonomy (optional)
                         </span>
-                        <input
+                        <BoilerplateInput
                             value={form.taxonomy}
                             onChange={(event) => setForm({ ...form, taxonomy: event.target.value })}
                             className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
@@ -459,20 +466,18 @@ export default function Nis2IncidentsPage() {
 
                     <div className="flex flex-wrap gap-4">
                         <label className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                            <input
-                                type="checkbox"
+                            <BoilerplateCheckbox
                                 checked={form.significantImpact}
-                                onChange={(event) =>
-                                    setForm({ ...form, significantImpact: event.target.checked })
+                                onCheckedChange={(checked) =>
+                                    setForm({ ...form, significantImpact: Boolean(checked) })
                                 }
                             />
                             Significant impact (Art. 23(3))
                         </label>
                         <label className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                            <input
-                                type="checkbox"
+                            <BoilerplateCheckbox
                                 checked={form.crossBorder}
-                                onChange={(event) => setForm({ ...form, crossBorder: event.target.checked })}
+                                onCheckedChange={(checked) => setForm({ ...form, crossBorder: Boolean(checked) })}
                             />
                             Cross-border impact
                         </label>

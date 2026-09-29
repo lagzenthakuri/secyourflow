@@ -1,5 +1,10 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+import { FieldError } from "@repo/design-system/components/ui/field";
 
+
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import { useState, useEffect } from "react";
 import { Modal } from "@/components/ui/Modal";
 import {
@@ -8,7 +13,7 @@ import {
     Criticality,
     AssetStatus,
     CloudProvider
-} from "@prisma/client";
+} from "@repo/database";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Asset } from "@/types";
 
@@ -33,6 +38,7 @@ const CLOUD_PROVIDERS: CloudProvider[] = ["AWS", "AZURE", "GCP", "ORACLE", "IBM"
 export function EditAssetModal({ isOpen, onClose, onSuccess, asset }: EditAssetModalProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [nameError, setNameError] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
         name: asset.name,
@@ -74,6 +80,12 @@ export function EditAssetModal({ isOpen, onClose, onSuccess, asset }: EditAssetM
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!formData.name.trim()) {
+            setNameError("Asset Name is required.");
+            setError(null);
+            return;
+        }
+        setNameError(null);
         setIsSubmitting(true);
         setError(null);
 
@@ -124,92 +136,107 @@ export function EditAssetModal({ isOpen, onClose, onSuccess, asset }: EditAssetM
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Asset Name *
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
+                            name="assetName"
                             required
+                            aria-invalid={Boolean(nameError) || undefined}
+                            aria-describedby={nameError ? "asset-name-error" : undefined}
                             placeholder="e.g., Production Web Server 01"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            onChange={(e) => {
+                                setFormData({ ...formData, name: e.target.value });
+                                if (e.target.value.trim()) setNameError(null);
+                            }}
                         />
+                        {nameError ? <FieldError id="asset-name-error" className="mt-1 text-sm font-medium dark:text-destructive-foreground">{nameError}</FieldError> : null}
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Type *
                         </label>
-                        <select
-                            className="input w-full"
-                            value={formData.type}
-                            onChange={(e) => setFormData({ ...formData, type: e.target.value as AssetType })}
-                        >
+                        <Select value={formData.type} onValueChange={(e) => setFormData({ ...formData, type: e as AssetType })}>
+                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
                             {ASSET_TYPES.map((t) => (
-                                <option key={t} value={t}>
+                                <SelectItem key={t} value={t}>
                                     {t.replace(/_/g, " ")}
-                                </option>
+                                </SelectItem>
                             ))}
-                        </select>
+
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Environment *
                         </label>
-                        <select
-                            className="input w-full"
-                            value={formData.environment}
-                            onChange={(e) => setFormData({ ...formData, environment: e.target.value as Environment })}
-                        >
+                        <Select value={formData.environment} onValueChange={(e) => setFormData({ ...formData, environment: e as Environment })}>
+                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
                             {ENVIRONMENTS.map((e) => (
-                                <option key={e} value={e}>
+                                <SelectItem key={e} value={e}>
                                     {e}
-                                </option>
+                                </SelectItem>
                             ))}
-                        </select>
+
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Criticality *
                         </label>
-                        <select
-                            className="input w-full"
-                            value={formData.criticality}
-                            onChange={(e) => setFormData({ ...formData, criticality: e.target.value as Criticality })}
-                        >
+                        <Select value={formData.criticality} onValueChange={(e) => setFormData({ ...formData, criticality: e as Criticality })}>
+                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
                             {CRITICALITIES.map((c) => (
-                                <option key={c} value={c}>
+                                <SelectItem key={c} value={c}>
                                     {c}
-                                </option>
+                                </SelectItem>
                             ))}
-                        </select>
+
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Status *
                         </label>
-                        <select
-                            className="input w-full"
-                            value={formData.status}
-                            onChange={(e) => setFormData({ ...formData, status: e.target.value as AssetStatus })}
-                        >
+                        <Select value={formData.status} onValueChange={(e) => setFormData({ ...formData, status: e as AssetStatus })}>
+                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
                             {STATUSES.map((s) => (
-                                <option key={s} value={s}>
+                                <SelectItem key={s} value={s}>
                                     {s}
-                                </option>
+                                </SelectItem>
                             ))}
-                        </select>
+
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             IP Address
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             placeholder="e.g., 192.168.1.10"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.ipAddress}
                             onChange={(e) => setFormData({ ...formData, ipAddress: e.target.value })}
                         />
@@ -219,10 +246,10 @@ export function EditAssetModal({ isOpen, onClose, onSuccess, asset }: EditAssetM
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Hostname
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             placeholder="e.g., web-prod-01"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.hostname}
                             onChange={(e) => setFormData({ ...formData, hostname: e.target.value })}
                         />
@@ -232,10 +259,10 @@ export function EditAssetModal({ isOpen, onClose, onSuccess, asset }: EditAssetM
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Operating System
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             placeholder="e.g., Ubuntu 22.04 LTS"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.operatingSystem}
                             onChange={(e) => setFormData({ ...formData, operatingSystem: e.target.value })}
                         />
@@ -245,28 +272,30 @@ export function EditAssetModal({ isOpen, onClose, onSuccess, asset }: EditAssetM
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Cloud Provider
                         </label>
-                        <select
-                            className="input w-full"
-                            value={formData.cloudProvider}
-                            onChange={(e) => setFormData({ ...formData, cloudProvider: e.target.value as CloudProvider })}
-                        >
-                            <option value="">None / On-Premise</option>
+                        <Select value={formData.cloudProvider || "__select_none__"} onValueChange={(e) => setFormData({ ...formData, cloudProvider: (e === "__select_none__" ? "" : e) as CloudProvider })}>
+                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                            <SelectItem value="__select_none__">None / On-Premise</SelectItem>
                             {CLOUD_PROVIDERS.map((p) => (
-                                <option key={p} value={p}>
+                                <SelectItem key={p} value={p}>
                                     {p}
-                                </option>
+                                </SelectItem>
                             ))}
-                        </select>
+
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Owner
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             placeholder="e.g., IT Security Team"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.owner}
                             onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
                         />
@@ -276,10 +305,10 @@ export function EditAssetModal({ isOpen, onClose, onSuccess, asset }: EditAssetM
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Department
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             placeholder="e.g., Operations"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.department}
                             onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                         />
@@ -289,10 +318,10 @@ export function EditAssetModal({ isOpen, onClose, onSuccess, asset }: EditAssetM
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Country / Location
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             placeholder="e.g., USA / East Data Center"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.location}
                             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                         />
@@ -302,10 +331,10 @@ export function EditAssetModal({ isOpen, onClose, onSuccess, asset }: EditAssetM
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Cloud Region
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             placeholder="e.g., us-east-1"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.cloudRegion}
                             onChange={(e) => setFormData({ ...formData, cloudRegion: e.target.value })}
                         />
@@ -315,10 +344,10 @@ export function EditAssetModal({ isOpen, onClose, onSuccess, asset }: EditAssetM
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                             Tags (comma separated)
                         </label>
-                        <input
+                        <BoilerplateInput
                             type="text"
                             placeholder="e.g., production, external, web"
-                            className="input w-full"
+                            className="w-full"
                             value={formData.tags}
                             onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                         />

@@ -1,10 +1,17 @@
 "use client";
+import { Checkbox as BoilerplateCheckbox } from "@repo/design-system/components/ui/checkbox";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
 
+
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Alert, AlertDescription } from "@repo/design-system/components/ui/alert";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
+import { DatePickerField } from "@/components/ui/DatePickerField";
 import { Modal } from "@/components/ui/Modal";
 import { EmptyState, Pill, ProgressBar, SectionCard } from "@/components/nis2/Nis2Primitives";
 import { AlertTriangle, Building2, Eye, Network, Plus, ShieldCheck, Sigma } from "lucide-react";
@@ -75,6 +82,7 @@ export default function Nis2VendorsPage() {
     const [vendors, setVendors] = useState<Vendor[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [formError, setFormError] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [form, setForm] = useState(emptyForm);
@@ -103,7 +111,7 @@ export default function Nis2VendorsPage() {
     const createVendor = useCallback(async () => {
         setIsSaving(true);
         try {
-            setError(null);
+            setFormError(null);
             const response = await fetch("/api/nis2/vendors", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -124,7 +132,7 @@ export default function Nis2VendorsPage() {
             setForm(emptyForm);
             await load();
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to add the supplier");
+            setFormError(err instanceof Error ? err.message : "Failed to add the supplier");
         } finally {
             setIsSaving(false);
         }
@@ -175,7 +183,7 @@ export default function Nis2VendorsPage() {
                     actions={
                         <button
                             type="button"
-                            onClick={() => setIsModalOpen(true)}
+                            onClick={() => { setFormError(null); setIsModalOpen(true); }}
                             className="btn btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
                         >
                             <Plus size={14} />
@@ -377,11 +385,12 @@ export default function Nis2VendorsPage() {
                     </div>
                 }
             >
+                {formError ? <Alert variant="destructive" className="mb-4"><AlertDescription>{formError}</AlertDescription></Alert> : null}
                 <div className="space-y-4">
                     <div className="grid gap-4 sm:grid-cols-2">
                         <label className="block">
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">Name</span>
-                            <input
+                            <BoilerplateInput
                                 value={form.name}
                                 onChange={(event) => setForm({ ...form, name: event.target.value })}
                                 className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
@@ -391,7 +400,7 @@ export default function Nis2VendorsPage() {
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Service provided
                             </span>
-                            <input
+                            <BoilerplateInput
                                 value={form.serviceProvided}
                                 onChange={(event) => setForm({ ...form, serviceProvided: event.target.value })}
                                 className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
@@ -405,33 +414,37 @@ export default function Nis2VendorsPage() {
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Criticality
                             </span>
-                            <select
-                                value={form.criticality}
-                                onChange={(event) => setForm({ ...form, criticality: event.target.value })}
-                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                            >
+                            <Select value={form.criticality} onValueChange={(event) => setForm({ ...form, criticality: event })}>
+                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
                                 {Object.entries(CRITICALITY_LABELS).map(([value, label]) => (
-                                    <option key={value} value={value}>
+                                    <SelectItem key={value} value={value}>
                                         {label}
-                                    </option>
+                                    </SelectItem>
                                 ))}
-                            </select>
+
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
                         </label>
                         <label className="block">
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Data access level
                             </span>
-                            <select
-                                value={form.dataAccessLevel}
-                                onChange={(event) => setForm({ ...form, dataAccessLevel: event.target.value })}
-                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                            >
+                            <Select value={form.dataAccessLevel} onValueChange={(event) => setForm({ ...form, dataAccessLevel: event })}>
+                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
                                 {["NONE", "PUBLIC", "INTERNAL", "CONFIDENTIAL", "RESTRICTED"].map((level) => (
-                                    <option key={level} value={level}>
+                                    <SelectItem key={level} value={level}>
                                         {level}
-                                    </option>
+                                    </SelectItem>
                                 ))}
-                            </select>
+
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
                         </label>
                     </div>
 
@@ -440,7 +453,7 @@ export default function Nis2VendorsPage() {
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Country
                             </span>
-                            <input
+                            <BoilerplateInput
                                 value={form.country}
                                 onChange={(event) => setForm({ ...form, country: event.target.value })}
                                 className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
@@ -450,23 +463,13 @@ export default function Nis2VendorsPage() {
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Contract ends
                             </span>
-                            <input
-                                type="date"
-                                value={form.contractEnd}
-                                onChange={(event) => setForm({ ...form, contractEnd: event.target.value })}
-                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                            />
+                            <DatePickerField label="Choose contract end date" value={form.contractEnd} onChange={(contractEnd) => setForm({ ...form, contractEnd })} />
                         </label>
                         <label className="block">
                             <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                 Last assessed
                             </span>
-                            <input
-                                type="date"
-                                value={form.lastAuditAt}
-                                onChange={(event) => setForm({ ...form, lastAuditAt: event.target.value })}
-                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                            />
+                            <DatePickerField label="Choose last assessed date" value={form.lastAuditAt} onChange={(lastAuditAt) => setForm({ ...form, lastAuditAt })} />
                         </label>
                     </div>
 
@@ -507,10 +510,9 @@ export default function Nis2VendorsPage() {
                                 key={key}
                                 className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)]"
                             >
-                                <input
-                                    type="checkbox"
+                                <BoilerplateCheckbox
                                     checked={form[key]}
-                                    onChange={(event) => setForm({ ...form, [key]: event.target.checked })}
+                                    onCheckedChange={(checked) => setForm({ ...form, [key]: Boolean(checked) })}
                                 />
                                 {label}
                             </label>

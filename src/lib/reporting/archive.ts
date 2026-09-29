@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
-import type { ReportOutputFormat, ReportTemplateKey } from "@prisma/client";
+import { Prisma } from "@repo/database";
+import type { ReportOutputFormat, ReportTemplateKey } from "@repo/database";
 import type { RenderedReport } from "@/lib/reporting/types";
 
 interface PersistReportRunParams {

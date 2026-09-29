@@ -1,4 +1,4 @@
-import type { WorkflowState } from "@prisma/client";
+import type { WorkflowState } from "@repo/database";
 
 const transitionMap: Record<WorkflowState, WorkflowState[]> = {
   NEW: ["TRIAGED", "IN_PROGRESS", "CLOSED"],

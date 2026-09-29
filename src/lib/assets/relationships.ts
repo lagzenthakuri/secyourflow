@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import type { AssetRelationshipType } from "@prisma/client";
+import type { AssetRelationshipType } from "@repo/database";
 
 export async function createAssetRelationship(params: {
   organizationId: string;

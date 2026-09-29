@@ -11,9 +11,9 @@ interface FrameworkActionsProps {
     isDeleting?: boolean;
 }
 
-export function FrameworkActions({ 
-    framework, 
-    onEdit, 
+export function FrameworkActions({
+    framework,
+    onEdit,
     onDelete,
     isDeleting = false
 }: FrameworkActionsProps) {
@@ -50,8 +50,8 @@ export function FrameworkActions({
                 onClick={handleToggle}
                 className={cn(
                     "p-1.5 rounded-lg transition-all duration-300 ease-in-out border bg-[var(--bg-tertiary)] border-[var(--border-color)]",
-                    isOpen 
-                        ? "text-[var(--text-primary)] border-blue-500/50" 
+                    isOpen
+                        ? "text-[var(--text-primary)] border-blue-500/50"
                         : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 )}
                 disabled={isDeleting}
@@ -64,7 +64,7 @@ export function FrameworkActions({
             </button>
 
             {isOpen && (
-                <div 
+                <div
                     className="absolute right-0 mt-2 w-48 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-color)] shadow-2xl z-[50] overflow-hidden"
                 >
                     {!isConfirming ? (

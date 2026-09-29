@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSessionWithOrg } from "@/lib/api-auth";
 import { generateRenderedReport } from "@/lib/reporting/engine";
 import { persistReportRun } from "@/lib/reporting/archive";
-import type { ReportOutputFormat, ReportTemplateKey } from "@prisma/client";
+import type { ReportOutputFormat, ReportTemplateKey } from "@repo/database";
 
 const templateAliasMap: Record<string, ReportTemplateKey> = {
   executive: "EXECUTIVE_POSTURE",

@@ -1,4 +1,6 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+
 
 import Link from "next/link";
 import Image from "next/image";
@@ -43,181 +45,155 @@ import {
     type NotificationsResponse,
 } from "@/lib/notification-state";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import {
+    Sidebar as ForgeSidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarGroup,
+    SidebarGroupContent,
+    SidebarGroupLabel,
+    SidebarHeader,
+    SidebarInset,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarProvider,
+    useSidebar,
+} from "@repo/design-system/components/ui/sidebar";
+import { Button } from "@repo/design-system/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@repo/design-system/components/ui/avatar";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@repo/design-system/components/ui/dropdown-menu";
 
 const ALL_ROLES = ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"];
 
-const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ALL_ROLES },
-    { name: "Assets", href: "/assets", icon: Server, roles: ALL_ROLES },
-    { name: "Vulnerabilities", href: "/vulnerabilities", icon: Shield, roles: ALL_ROLES },
-    { name: "Threats", href: "/threats", icon: AlertTriangle, roles: ALL_ROLES },
-    { name: "Risk Register", href: "/risk-register", icon: ClipboardList, roles: ALL_ROLES },
-    { name: "Risk Appetite", href: "/risk-appetite", icon: Target, roles: ALL_ROLES },
-    { name: "Policies", href: "/policies", icon: ScrollText, roles: ALL_ROLES },
-    { name: "Compliance", href: "/compliance", icon: FileCheck, roles: ALL_ROLES },
-    { name: "NIS2 Governance", href: "/nis2/governance", icon: Scale, roles: ALL_ROLES },
-    { name: "NIS2 Incidents", href: "/nis2/incidents", icon: Siren, roles: ALL_ROLES },
-    { name: "Vendors", href: "/vendors", icon: Building2, roles: ALL_ROLES },
-    { name: "Supply Chain", href: "/nis2/vendors", icon: Network, roles: ALL_ROLES },
-    { name: "Data Catalog", href: "/data", icon: Files, roles: ALL_ROLES },
-    { name: "Business Impact", href: "/nis2/bia", icon: LifeBuoy, roles: ALL_ROLES },
-    { name: "Reports", href: "/reports", icon: BarChart3, roles: ALL_ROLES },
-    { name: "Scanners", href: "/scanners", icon: Scan, roles: ALL_ROLES },
-    { name: "CVE Search", href: "/cves", icon: Database, roles: ALL_ROLES },
+const navigationGroups = [
+    {
+        name: "Overview",
+        items: [
+            { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ALL_ROLES },
+            { name: "Reports", href: "/reports", icon: BarChart3, roles: ALL_ROLES },
+        ],
+    },
+    {
+        name: "Exposure",
+        items: [
+            { name: "Assets", href: "/assets", icon: Server, roles: ALL_ROLES },
+            { name: "Vulnerabilities", href: "/vulnerabilities", icon: Shield, roles: ALL_ROLES },
+            { name: "Threats", href: "/threats", icon: AlertTriangle, roles: ALL_ROLES },
+            { name: "Scanners", href: "/scanners", icon: Scan, roles: ALL_ROLES },
+            { name: "CVE Search", href: "/cves", icon: Database, roles: ALL_ROLES },
+        ],
+    },
+    {
+        name: "Risk & governance",
+        items: [
+            { name: "Risk Register", href: "/risk-register", icon: ClipboardList, roles: ALL_ROLES },
+            { name: "Risk Appetite", href: "/risk-appetite", icon: Target, roles: ALL_ROLES },
+            { name: "Policies", href: "/policies", icon: ScrollText, roles: ALL_ROLES },
+            { name: "Compliance", href: "/compliance", icon: FileCheck, roles: ALL_ROLES },
+            { name: "NIS2 Governance", href: "/nis2/governance", icon: Scale, roles: ALL_ROLES },
+            { name: "NIS2 Incidents", href: "/nis2/incidents", icon: Siren, roles: ALL_ROLES },
+            { name: "Vendors", href: "/vendors", icon: Building2, roles: ALL_ROLES },
+            { name: "Supply Chain", href: "/nis2/vendors", icon: Network, roles: ALL_ROLES },
+            { name: "Data Catalog", href: "/data", icon: Files, roles: ALL_ROLES },
+            { name: "Business Impact", href: "/nis2/bia", icon: LifeBuoy, roles: ALL_ROLES },
+        ],
+    },
+    {
+        name: "Administration",
+        items: [
+            { name: "Users", href: "/users", icon: Users, roles: ["MAIN_OFFICER"] },
+        ],
+    },
 ];
 
-const secondaryNav = [
-    { name: "Users", href: "/users", icon: Users, roles: ["MAIN_OFFICER"] },
-    { name: "Settings", href: "/settings", icon: Settings, roles: ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"] },
-];
-
-interface SidebarProps {
-    isOpen: boolean;
-    setIsOpen: (open: boolean) => void;
-}
-
-export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
+export function Sidebar() {
     const pathname = usePathname();
     const { data: session } = useSession();
-    const [showSignOut, setShowSignOut] = useState(false);
+    const { isMobile, setOpenMobile, state } = useSidebar();
 
     const userRole = session?.user?.role || "ANALYST";
     const userName = session?.user?.name || "User";
     const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
-    const filteredNav = navigation.filter(item => item.roles.includes(userRole));
-    const filteredSecondaryNav = secondaryNav.filter(item => item.roles.includes(userRole));
+    const closeMobileSidebar = () => {
+        if (isMobile) setOpenMobile(false);
+    };
+
+    const renderNavigation = (items: (typeof navigationGroups)[number]["items"]) => items.map((item) => {
+        const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        return (
+            <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton asChild isActive={isActive} tooltip={item.name}>
+                    <Link href={item.href} onClick={closeMobileSidebar}>
+                        <item.icon aria-hidden="true" />
+                        <span>{item.name}</span>
+                    </Link>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+        );
+    });
 
     return (
-        <>
-            {/* Mobile Overlay */}
-            {isOpen && (
-                <div
-                    className="lg:hidden fixed inset-0 bg-[var(--overlay-scrim)] z-30 transition-opacity duration-300 ease-in-out"
-                    onClick={() => setIsOpen(false)}
-                />
-            )}
-
-            {/* Sidebar */}
-            <aside
-                className={cn(
-                    "sidebar fixed top-0 left-0 bottom-0 z-[70] flex flex-col transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1)",
-                    isOpen ? "translate-x-0" : "-translate-x-full"
-                )}
-            >
-                {/* Logo */}
-                <div className="p-5 border-b border-[var(--border-color)]">
-                    <Link href="/dashboard" className="flex items-center gap-3">
-                        <Image
-                            src="/logo1.png"
-                            alt="SecYourFlow"
-                            width={40}
-                            height={40}
-                        />
-                        <span className="text-[14px] font-bold tracking-[0.22em] text-[var(--text-primary)]">
-                            SECYOUR<span className="text-intent-accent">FLOW</span>
-                        </span>
-                    </Link>
-                </div>
-
-                {/* Navigation */}
-                <nav className="flex-1 px-4 py-6 space-y-8 overflow-y-auto custom-scrollbar">
-                    {/* Main Menu */}
-                    <div>
-                        <div className="px-5 mb-4">
-                            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                                Intelligence
+        <ForgeSidebar collapsible="icon" variant="inset" className="border-sidebar-border">
+            <SidebarHeader className="h-16 justify-center overflow-hidden border-b border-sidebar-border px-2 group-data-[collapsible=icon]:px-1">
+                <Link href="/dashboard" title="SecYourFlow" className="flex min-w-0 items-center justify-center gap-3" onClick={closeMobileSidebar}>
+                    <Image src="/logo1.png" alt="SecYourFlow" width={32} height={32} />
+                    <span className={cn("whitespace-nowrap text-sm font-semibold tracking-[0.14em] transition-[opacity,width,margin] duration-200 ease-linear", state === "collapsed" && "w-0 overflow-hidden opacity-0") }>
+                        SECYOUR<span className="text-muted-foreground">FLOW</span>
+                    </span>
+                </Link>
+            </SidebarHeader>
+            <SidebarContent className="gap-1">
+                {navigationGroups.map((group) => {
+                    const visibleItems = group.items.filter((item) => item.roles.includes(userRole));
+                    if (visibleItems.length === 0) return null;
+                    return (
+                        <SidebarGroup key={group.name}>
+                            <SidebarGroupLabel>{group.name}</SidebarGroupLabel>
+                            <SidebarGroupContent>
+                                <SidebarMenu>{renderNavigation(visibleItems)}</SidebarMenu>
+                            </SidebarGroupContent>
+                        </SidebarGroup>
+                    );
+                })}
+            </SidebarContent>
+            <SidebarFooter className="border-t border-sidebar-border p-2 group-data-[collapsible=icon]:p-1">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button title={state === "collapsed" ? `${userName} · Profile menu` : undefined} className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left outline-none transition-[background-color,padding] duration-200 hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0" aria-label="Open profile menu">
+                            <Avatar className="size-9 border">
+                                {session?.user?.image ? <AvatarImage src={session.user.image} alt="" /> : null}
+                                <AvatarFallback className="bg-primary text-sm font-semibold text-primary-foreground">{userInitials}</AvatarFallback>
+                            </Avatar>
+                            <span className={cn("min-w-0 flex-1 overflow-hidden transition-[opacity,width] duration-200 ease-linear", state === "collapsed" && "w-0 flex-none opacity-0")}>
+                                <span className="block truncate text-sm font-medium">{userName}</span>
+                                <span className="block truncate text-xs text-muted-foreground">{session?.user?.email || userRole.replaceAll("_", " ")}</span>
                             </span>
-                        </div>
-                        <div className="space-y-1">
-                            {filteredNav.map((item) => {
-                                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                                return (
-                                    <Link
-                                        key={item.href}
-                                        href={item.href}
-                                        className={cn("sidebar-link", isActive && "active")}
-                                        onClick={() => {
-                                            if (window.innerWidth < 1024) setIsOpen(false);
-                                        }}
-                                    >
-                                        <item.icon size={20} className={cn("transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-[var(--text-muted)]")} />
-                                        <span className="font-semibold">{item.name}</span>
-                                    </Link>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {/* Administration */}
-                    <div>
-                        <div className="px-5 mb-4">
-                            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                                Control Center
-                            </span>
-                        </div>
-                        <div className="space-y-1">
-                            {filteredSecondaryNav.map((item) => {
-                                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                                return (
-                                    <Link
-                                        key={item.href}
-                                        href={item.href}
-                                        className={cn("sidebar-link", isActive && "active")}
-                                        onClick={() => {
-                                            if (window.innerWidth < 1024) setIsOpen(false);
-                                        }}
-                                    >
-                                        <item.icon size={20} className={cn("transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-[var(--text-muted)]")} />
-                                        <span className="font-semibold">{item.name}</span>
-                                    </Link>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </nav>
-
-                {/* User Section Redesigned */}
-                <div className="p-6 mt-auto">
-                    <div className="relative">
-                        <button
-                            onClick={() => setShowSignOut(!showSignOut)}
-                            className="w-full flex items-center gap-4 p-4 rounded-2xl bg-[var(--bg-tertiary)]/50 backdrop-blur-md border border-[var(--border-color)] hover:border-blue-500/30 transition-all group"
-                        >
-                            <div className="relative shrink-0">
-                                <div className="absolute inset-0 bg-blue-500/20 rounded-xl blur-lg group-hover:bg-blue-500/30 transition-all" />
-                                <div className="w-11 h-11 rounded-xl bg-[var(--color-primary-600)] flex items-center justify-center text-white text-base font-bold relative z-10 shadow-lg border border-white/10">
-                                    {userInitials}
-                                </div>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-[var(--text-primary)] truncate">
-                                    {userName}
-                                </p>
-                                <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
-                                    {userRole.replace('_', ' ')}
-                                </p>
-                            </div>
-                            <ChevronDown size={16} className={cn("text-[var(--text-muted)] transition-transform duration-300", showSignOut && "rotate-180")} />
+                            <ChevronDown size={16} className={cn("shrink-0 text-muted-foreground transition-opacity duration-150", state === "collapsed" && "w-0 opacity-0")} />
                         </button>
-
-                        {showSignOut && (
-                            <div className="absolute bottom-full left-0 w-full mb-3 z-[80] animate-fade-in">
-                                <div className="bg-[var(--bg-elevated)] backdrop-blur-xl border border-[var(--border-color)] rounded-2xl shadow-2xl p-2 overflow-hidden">
-                                    <button
-                                        onClick={() => signOut({ callbackUrl: "/" })}
-                                        className="w-full flex items-center gap-2 p-2.5 text-sm text-intent-danger rounded-lg hover:bg-red-500/10 transition-colors"
-                                    >
-                                        <LogOut size={18} />
-                                        Sign Out
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </aside>
-        </>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent side="top" align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-56">
+                        <DropdownMenuLabel className="font-normal">
+                            <span className="block truncate text-sm font-medium">{userName}</span>
+                            <span className="mt-1 block truncate text-xs text-muted-foreground">{session?.user?.email || userRole.replaceAll("_", " ")}</span>
+                        </DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild><Link href="/settings"><Settings />Settings</Link></DropdownMenuItem>
+                        {userRole === "MAIN_OFFICER" ? <DropdownMenuItem asChild><Link href="/users"><Users />User management</Link></DropdownMenuItem> : null}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem variant="destructive" onSelect={() => void signOut({ callbackUrl: "/" })}><LogOut />Sign out</DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </SidebarFooter>
+        </ForgeSidebar>
     );
 }
 
@@ -263,7 +239,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
     const userRole = session?.user?.role || "ANALYST";
     const searchableRoutes = useMemo(
         () =>
-            [...navigation, ...secondaryNav]
+            navigationGroups.flatMap((group) => group.items)
                 .filter((item) => item.roles.includes(userRole))
                 .map((item) => ({
                     name: item.name,
@@ -426,22 +402,24 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
     };
 
     return (
-        <header className="h-20 topbar px-10 flex items-center justify-between sticky top-0 z-[40]">
-            <div className="flex items-center gap-8 flex-1 max-w-2xl">
-                <button
+        <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-3 topbar px-3 sm:px-5 lg:px-6">
+            <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-5">
+                <Button
+                    type="button"
                     onClick={onToggleSidebar}
-                    className="p-3 rounded-xl bg-[var(--bg-tertiary)]/50 border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-white hover:border-blue-500/50 transition-all active:scale-95"
+                    variant="ghost"
+                    size="icon"
                     aria-label="Toggle Sidebar"
                 >
-                    <Menu size={22} />
-                </button>
+                    <Menu size={20} aria-hidden="true" />
+                </Button>
 
-                <div className="relative flex-1" ref={searchContainerRef}>
+                <div className="relative hidden w-full max-w-xl flex-1 sm:block" ref={searchContainerRef}>
                     <Search
                         size={18}
                         className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-blue-600 dark:group-focus-within:text-blue-400 transition-colors"
                     />
-                    <input
+                    <BoilerplateInput
                         type="text"
                         role="combobox"
                         aria-expanded={showSearchResults}
@@ -492,7 +470,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                             }
                         }}
                         placeholder="Search assets, vulnerabilities, or CVEs..."
-                        className="input !pl-10 py-2.5 text-sm bg-[var(--bg-tertiary)]"
+                        className="!pl-10 py-2.5 text-sm bg-[var(--bg-tertiary)]"
                     />
                     {showSearchResults && (
                         <div className="absolute left-0 right-0 top-full mt-2 overflow-hidden rounded-xl border border-[var(--overlay-border,var(--border-color))] bg-[var(--overlay-surface,var(--bg-elevated))] shadow-[var(--overlay-shadow,var(--shadow-lg))]">
@@ -526,32 +504,35 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
             </div>
 
             {/* Right Section */}
-            <div className="flex items-center gap-3 ml-4">
+            <div className="ml-2 flex shrink-0 items-center gap-1 sm:gap-2">
                 {/* Live Threats Indicator */}
                 <Link href="/threats">
-                    <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all duration-300 ease-in-out cursor-pointer">
-                        <span className="live-indicator text-xs font-medium text-intent-danger">
+                    <div className={cn("hidden items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-medium md:flex", threatsCount > 0 ? "border-destructive/30 bg-destructive/10 text-destructive" : "border-border bg-muted text-muted-foreground")}>
+                        <span>
                             {threatsCount} Active Threats
                         </span>
                     </div>
                 </Link>
 
-                <button
+                <Button
                     type="button"
                     onClick={toggleTheme}
                     aria-label={mounted ? `Switch to ${theme === "dark" ? "light" : "dark"} mode` : "Toggle theme"}
                     title={mounted ? `Switch to ${theme === "dark" ? "light" : "dark"} mode` : "Toggle theme"}
-                    className="relative p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all duration-300 ease-in-out"
+                    variant="ghost"
+                    size="icon"
                 >
                     {mounted ? (theme === "dark" ? <Sun size={20} /> : <Moon size={20} />) : <Sun size={20} />}
-                </button>
+                </Button>
 
                 <div className="flex items-center gap-2">
-                    <button
+                    <Button
                         type="button"
                         onClick={() => setShowNotifications((current) => !current)}
                         aria-label="Toggle notifications"
-                        className="relative p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all duration-300 ease-in-out"
+                        variant="ghost"
+                        size="icon"
+                        className="relative"
                     >
                         <Bell size={20} />
                         {notificationsCount > 0 ? (
@@ -559,7 +540,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                                 {notificationsCount > 99 ? "99+" : notificationsCount}
                             </span>
                         ) : null}
-                    </button>
+                    </Button>
 
                     {/* Dropdown */}
                     {showNotifications && (
@@ -613,39 +594,24 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
     );
 }
 
-export function DashboardLayout({ children }: { children: React.ReactNode }) {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
+function DashboardFrame({ children }: { children: React.ReactNode }) {
+    const { toggleSidebar } = useSidebar();
     // Audit login events with IP and user agent
     useLoginAudit();
 
-    // Close sidebar on initial mobile load
-    useEffect(() => {
-        const handleResize = () => {
-            if (window.innerWidth < 1024) {
-                setIsSidebarOpen(false);
-            } else {
-                setIsSidebarOpen(true);
-            }
-        };
-
-        // Set initial state
-        handleResize();
-
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
     return (
-        <div className="min-h-screen bg-[var(--bg-primary)] bg-grid">
-            <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
-            <div className={cn(
-                "transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1)",
-                isSidebarOpen ? "lg:ml-[280px]" : "lg:ml-0"
-            )}>
-                <TopBar onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
-                <main className="min-h-[calc(100vh-4rem)] p-4 sm:p-6">{children}</main>
-            </div>
-        </div>
+        <SidebarInset className="min-w-0 bg-background text-foreground">
+            <TopBar onToggleSidebar={toggleSidebar} />
+        <main className="min-h-[calc(100vh-4rem)] bg-background p-4 sm:p-6">{children}</main>
+        </SidebarInset>
+    );
+}
+
+export function DashboardLayout({ children }: { children: React.ReactNode }) {
+    return (
+        <SidebarProvider defaultOpen>
+            <Sidebar />
+            <DashboardFrame>{children}</DashboardFrame>
+        </SidebarProvider>
     );
 }

@@ -1,4 +1,6 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -209,8 +211,8 @@ export default function ReportsActivityPage() {
               size={15}
               className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
             />
-            <input
-              className="input h-10 w-full !pl-9 text-sm"
+            <BoilerplateInput
+              className="h-10 w-full !pl-9 text-sm"
               placeholder="Search activities, users, entity types, IP addresses..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}

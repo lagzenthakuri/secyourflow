@@ -1,4 +1,7 @@
 "use client";
+import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+import { Textarea as BoilerplateTextarea } from "@repo/design-system/components/ui/textarea";
+
 
 import Image from "next/image";
 import Link from "next/link";
@@ -211,7 +214,7 @@ export default function Contact() {
                     <label htmlFor="name" className="block text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-3">
                       NAME
                     </label>
-                    <input
+                    <BoilerplateInput
                       type="text"
                       id="name"
                       name="name"
@@ -227,7 +230,7 @@ export default function Contact() {
                     <label htmlFor="email" className="block text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-3">
                       EMAIL
                     </label>
-                    <input
+                    <BoilerplateInput
                       type="email"
                       id="email"
                       name="email"
@@ -244,7 +247,7 @@ export default function Contact() {
                   <label htmlFor="message" className="block text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-3">
                     MESSAGE
                   </label>
-                  <textarea
+                  <BoilerplateTextarea
                     id="message"
                     name="message"
                     value={formData.message}

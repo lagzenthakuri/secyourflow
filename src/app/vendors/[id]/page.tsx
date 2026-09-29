@@ -14,6 +14,8 @@ import {
     ShieldCheck,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Button } from "@repo/design-system/components/ui/button";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@repo/design-system/components/ui/breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { EmptyState, Pill, ProgressBar, SectionCard } from "@/components/nis2/Nis2Primitives";
@@ -315,13 +317,7 @@ export default function VendorOverviewPage() {
         return (
             <DashboardLayout>
                 <div className="space-y-4">
-                    <Link
-                        href="/vendors"
-                        className="inline-flex items-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-blue-500"
-                    >
-                        <ArrowLeft size={14} />
-                        Back to vendors
-                    </Link>
+                    <Button asChild variant="outline" size="sm"><Link href="/vendors"><ArrowLeft />Back to vendors</Link></Button>
                     <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
                         {error ?? "Vendor not found"}
                     </div>
@@ -335,13 +331,10 @@ export default function VendorOverviewPage() {
     return (
         <DashboardLayout>
             <div className="space-y-5">
-                <Link
-                    href="/vendors"
-                    className="inline-flex items-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-blue-500"
-                >
-                    <ArrowLeft size={14} />
-                    Back to vendors
-                </Link>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <Breadcrumb><BreadcrumbList><BreadcrumbItem><BreadcrumbLink asChild><Link href="/dashboard">Dashboard</Link></BreadcrumbLink></BreadcrumbItem><BreadcrumbSeparator /><BreadcrumbItem><BreadcrumbLink asChild><Link href="/vendors">Vendors</Link></BreadcrumbLink></BreadcrumbItem><BreadcrumbSeparator /><BreadcrumbItem><BreadcrumbPage>{vendor.name}</BreadcrumbPage></BreadcrumbItem></BreadcrumbList></Breadcrumb>
+                    <Button asChild variant="outline" size="sm"><Link href="/vendors"><ArrowLeft />Back to vendors</Link></Button>
+                </div>
 
                 <PageHeader
                     title={vendor.name}

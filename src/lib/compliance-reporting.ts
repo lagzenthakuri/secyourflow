@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { prisma } from "@/lib/prisma";
-import type { ComplianceStatus } from "@prisma/client";
+import type { ComplianceStatus } from "@repo/database";
 
 interface ComplianceTrendPoint {
   date: string;

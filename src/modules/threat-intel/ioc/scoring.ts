@@ -1,4 +1,4 @@
-import type { IndicatorType, Severity } from "@prisma/client";
+import type { IndicatorType, Severity } from "@repo/database";
 import type { ThreatIntelConfig } from "../config";
 
 const SOURCE_TRUST_WEIGHTS: Record<string, number> = {
