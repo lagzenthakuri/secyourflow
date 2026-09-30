@@ -15,6 +15,12 @@ import {
     GOOGLE_AUTH_POPUP_NAME_PREFIX,
     publishGoogleAuthPopupResult,
 } from "@/lib/auth/google-popup-storage";
+import { getSafeCallbackUrl as resolveSafeCallbackUrl } from "@/lib/auth/callback-url";
+
+function getSafeCallbackUrl(): string {
+    const callbackUrl = new URLSearchParams(window.location.search).get("callbackUrl");
+    return resolveSafeCallbackUrl(callbackUrl, window.location.origin);
+}
 
 function getAuthErrorMessage(error: string | null, code: string | null): string | null {
     if (!error) {
@@ -102,7 +108,7 @@ export default function LoginPage() {
                 email,
                 password,
                 redirect: false,
-                callbackUrl: "/dashboard",
+                callbackUrl: getSafeCallbackUrl(),
             });
 
             if (!result || result.error) {
@@ -261,6 +267,7 @@ export default function LoginPage() {
                         onClick={() => {
                             setAuthError(null);
                             openGoogleAuthPopup({
+                                redirectTo: getSafeCallbackUrl(),
                                 onStart: () => setIsGoogleLoading(true),
                                 onError: (message) => {
                                     setIsGoogleLoading(false);

@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import { authConfig } from "@/lib/auth.config";
 import { NextResponse } from "next/server";
+import { isProtectedAppRoute } from "@/lib/auth/protected-routes";
 
 const { auth } = NextAuth(authConfig);
 
@@ -38,6 +39,10 @@ export default auth((request) => {
         if (!isPublicApiPath(pathname) && request.method !== "OPTIONS" && !request.auth?.user) {
             return NextResponse.json({ error: "Unauthorized. Sign in required." }, { status: 401 });
         }
+    } else if (isProtectedAppRoute(pathname) && !request.auth?.user) {
+        const loginUrl = new URL("/login", request.url);
+        loginUrl.searchParams.set("callbackUrl", `${pathname}${request.nextUrl.search}`);
+        return NextResponse.redirect(loginUrl);
     }
 
     return null;
@@ -58,8 +63,12 @@ export const config = {
         "/users/:path*",
         "/scanners/:path*",
         "/risk-register/:path*",
+        "/risk-appetite/:path*",
         "/cves/:path*",
         "/nis2/:path*",
-        "/licensing",
+        "/licensing/:path*",
+        "/policies/:path*",
+        "/vendors/:path*",
+        "/data/:path*",
     ],
 };
