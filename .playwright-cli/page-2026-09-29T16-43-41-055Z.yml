@@ -1,0 +1,163 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "SecYourFlow home" [ref=e5] [cursor=pointer]:
+          - /url: /
+          - text: FLOW
+        - navigation "Main navigation" [ref=e6]:
+          - link "Features" [ref=e7] [cursor=pointer]:
+            - /url: /features
+          - link "About" [ref=e8] [cursor=pointer]:
+            - /url: /about
+          - link "Contact" [ref=e9] [cursor=pointer]:
+            - /url: /contact
+        - generic [ref=e10]:
+          - link "Sign in" [ref=e11] [cursor=pointer]:
+            - /url: /login
+          - link "Create workspace" [ref=e12] [cursor=pointer]:
+            - /url: /signup
+    - main [ref=e13]:
+      - generic [ref=e15]:
+        - generic "SecYourFlow" [ref=e16]: SECYOURFLOW
+        - paragraph [ref=e18]: Cyber risk operations
+        - heading "Security findings, assets, and follow-up in one workspace." [level=1] [ref=e19]
+        - paragraph [ref=e20]: Track assets, review vulnerability and CVE records, assign remediation work, and keep risk and compliance activity connected.
+        - generic [ref=e21]:
+          - link "Create a workspace" [ref=e22] [cursor=pointer]:
+            - /url: /signup
+          - link "Explore the features" [ref=e23] [cursor=pointer]:
+            - /url: /features
+      - generic [ref=e25]:
+        - generic [ref=e26]:
+          - generic [ref=e27]:
+            - paragraph [ref=e28]: Explore the workspace
+            - heading "See how each part works." [level=2] [ref=e29]
+          - link "All product features" [ref=e30] [cursor=pointer]:
+            - /url: /features
+        - generic [ref=e33]:
+          - article [ref=e34]:
+            - generic [ref=e41]:
+              - heading "Asset inventory" [level=3] [ref=e42]
+              - paragraph [ref=e43]: Keep ownership and environment details with each asset, then search and filter the inventory.
+              - link "See assets" [ref=e44] [cursor=pointer]:
+                - /url: /features/assets
+          - article [ref=e48]:
+            - generic [ref=e59]:
+              - heading "Vulnerability management" [level=3] [ref=e60]
+              - paragraph [ref=e61]: Track severity, status, ownership, affected assets, and due dates for findings.
+              - link "See vulnerabilities" [ref=e62] [cursor=pointer]:
+                - /url: /features/vulnerabilities
+          - article [ref=e66]:
+            - generic [ref=e73]:
+              - heading "CVE search" [level=3] [ref=e74]
+              - paragraph [ref=e75]: Search public vulnerability records and CISA KEV entries, then inspect affected products and versions.
+              - link "See cve search" [ref=e76] [cursor=pointer]:
+                - /url: /features/cve-search
+          - article [ref=e80]:
+            - generic [ref=e86]:
+              - heading "Remediation plans" [level=3] [ref=e87]
+              - paragraph [ref=e88]: Coordinate vulnerability fixes with owners, plan status, deadlines, and verification evidence.
+              - link "See remediation" [ref=e89] [cursor=pointer]:
+                - /url: /features/remediation
+          - article [ref=e93]:
+            - generic [ref=e101]:
+              - heading "Threat intelligence" [level=3] [ref=e102]
+              - paragraph [ref=e103]: Review CISA KEV context, indicators, ATT&CK views, and matched assets in the threat workspace.
+              - link "See threat intelligence" [ref=e104] [cursor=pointer]:
+                - /url: /features/threat-intelligence
+          - article [ref=e108]:
+            - generic [ref=e117]:
+              - heading "Risk and compliance" [level=3] [ref=e118]
+              - paragraph [ref=e119]: Connect risk records, policies, framework controls, evidence, and NIS2 checklist work.
+              - link "See risk & compliance" [ref=e120] [cursor=pointer]:
+                - /url: /features/risk-compliance
+          - article [ref=e124]:
+            - generic [ref=e131]:
+              - heading "AI assistance" [level=3] [ref=e132]
+              - paragraph [ref=e133]: Use AI for risk assessment and field suggestions with redaction and human-review controls.
+              - link "See ai assistance" [ref=e134] [cursor=pointer]:
+                - /url: /features/ai-assistance
+      - generic [ref=e139]:
+        - generic [ref=e140]:
+          - paragraph [ref=e141]: Product screens
+          - heading "From inventory to action." [level=2] [ref=e142]
+          - paragraph [ref=e143]: These are sections of the SecYourFlow workspace. Public CVE records shown in the search preview come from the supplied app screen.
+        - generic [ref=e144]:
+          - link [ref=e145] [cursor=pointer]:
+            - /url: /features/cve-search
+            - img "CVE search results with filters and a paginated CISA KEV table." [ref=e147]
+            - generic [ref=e148]:
+              - heading "CVE search" [level=3] [ref=e149]
+              - paragraph [ref=e150]: Review public records, CVSS scores, products, and CISA KEV entries.
+          - link [ref=e151] [cursor=pointer]:
+            - /url: /features/ai-assistance
+            - img "AI Assist settings showing human review and data-redaction controls." [ref=e153]
+            - generic [ref=e154]:
+              - heading "AI controls" [level=3] [ref=e155]
+              - paragraph [ref=e156]: Set human review and data-redaction rules for AI assistance.
+          - link [ref=e157] [cursor=pointer]:
+            - /url: /features/risk-compliance
+            - img "NIS2 governance coverage and checklist controls." [ref=e159]
+            - generic [ref=e160]:
+              - heading "NIS2 governance" [level=3] [ref=e161]
+              - paragraph [ref=e162]: Track directive measures by coverage, owner, and implementation status.
+      - generic [ref=e164]:
+        - generic [ref=e165]:
+          - paragraph [ref=e166]: AI with review controls
+          - heading "Assistance stays inside the workflow." [level=2] [ref=e167]
+        - generic [ref=e168]:
+          - paragraph [ref=e169]: When an asset is linked to a vulnerability, SecYourFlow can run an AI-assisted risk assessment. Risk Register Autofill can suggest fields from the threat and CIA impacts.
+          - paragraph [ref=e170]: Teams can require human review before AI-generated content is accepted. Data-redaction settings let administrators control what context is sent for analysis.
+          - figure "AI controls shown in workspace settings" [ref=e171]:
+            - img "SecYourFlow AI Assist settings showing a master switch, risk register autofill, human review, and data redaction controls." [ref=e172]
+      - generic [ref=e175]:
+        - paragraph [ref=e176]: Use the product screens above to see how SecYourFlow organizes the work.
+        - generic [ref=e177]:
+          - link "Create workspace" [ref=e178] [cursor=pointer]:
+            - /url: /signup
+          - link "Sign in" [ref=e179] [cursor=pointer]:
+            - /url: /login
+    - contentinfo [ref=e180]:
+      - generic [ref=e181]:
+        - generic [ref=e182]:
+          - link "SecYourFlow home" [ref=e183] [cursor=pointer]:
+            - /url: /
+            - generic [ref=e184]: SECYOURFLOW
+          - paragraph [ref=e185]: Asset inventory, vulnerability triage, remediation tracking, and governance for security teams.
+          - paragraph [ref=e186]: A product of Shyena Technologies Pvt. Ltd.
+        - navigation "Footer navigation" [ref=e187]:
+          - generic [ref=e188]:
+            - heading "Product" [level=2] [ref=e189]
+            - link "Features" [ref=e190] [cursor=pointer]:
+              - /url: /features
+            - link "Assets" [ref=e191] [cursor=pointer]:
+              - /url: /features/assets
+            - link "Vulnerabilities" [ref=e192] [cursor=pointer]:
+              - /url: /features/vulnerabilities
+            - link "CVE search" [ref=e193] [cursor=pointer]:
+              - /url: /features/cve-search
+            - link "Risk & compliance" [ref=e194] [cursor=pointer]:
+              - /url: /features/risk-compliance
+          - generic [ref=e195]:
+            - heading "Company" [level=2] [ref=e196]
+            - link "About" [ref=e197] [cursor=pointer]:
+              - /url: /about
+            - link "Resources" [ref=e198] [cursor=pointer]:
+              - /url: /resources
+            - link "Contact" [ref=e199] [cursor=pointer]:
+              - /url: /contact
+          - generic [ref=e200]:
+            - heading "Account & legal" [level=2] [ref=e201]
+            - link "Sign in" [ref=e202] [cursor=pointer]:
+              - /url: /login
+            - link "Create workspace" [ref=e203] [cursor=pointer]:
+              - /url: /signup
+            - link "Privacy" [ref=e204] [cursor=pointer]:
+              - /url: /privacy-policy
+            - link "Terms" [ref=e205] [cursor=pointer]:
+              - /url: /terms-of-service
+      - generic [ref=e207]:
+        - generic [ref=e208]: © 2026 SecYourFlow
+        - generic [ref=e209]: Shyena Technologies Pvt. Ltd.
+  - button "Switch to light mode" [ref=e210] [cursor=pointer]

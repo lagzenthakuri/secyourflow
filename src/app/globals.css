@@ -1564,3 +1564,42 @@ body {
 ::selection {
   background: color-mix(in oklab, var(--primary) 24%, transparent);
 }
+/* The landing Nebula keeps its authored dark palette in both themes. Light mode
+   inverts only the artwork layer and switches the hero copy to dark ink. */
+.landing-hero-scrim {
+  background: radial-gradient(ellipse at center, rgb(9 9 11 / 12%) 5%, rgb(9 9 11 / 48%) 75%, rgb(9 9 11 / 78%) 100%);
+}
+
+.theme-light #landing-hero {
+  background-color: #f3f5fa;
+  color: #171923;
+}
+
+.theme-light #landing-hero .landing-hero-nebula {
+  filter: invert(1) hue-rotate(180deg) saturate(0.78) brightness(1.04);
+}
+
+.theme-light #landing-hero .landing-hero-scrim {
+  background: radial-gradient(ellipse at center, rgb(255 255 255 / 8%) 5%, rgb(255 255 255 / 48%) 72%, rgb(255 255 255 / 82%) 100%);
+}
+
+.theme-light #landing-hero .landing-hero-wordmark,
+.theme-light #landing-hero .landing-hero-wordmark > span,
+.theme-light #landing-hero .landing-hero-eyebrow {
+  color: #171923;
+}
+
+.theme-light #landing-hero .landing-hero-description {
+  color: #414a5d;
+}
+
+.theme-light #landing-hero .landing-hero-secondary {
+  border-color: rgb(23 25 35 / 22%);
+  background-color: rgb(255 255 255 / 64%);
+  color: #171923;
+}
+
+.theme-light #landing-hero .landing-hero-secondary:hover {
+  background-color: #fff;
+  color: #171923;
+}
