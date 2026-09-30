@@ -1,26 +1,14 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { MarketingSiteShell } from "@/modules/marketing/ui/MarketingShell";
 
 export default function CookiePolicy() {
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
-      <div className="mx-auto max-w-4xl px-6 py-12">
-        <Link
-          className="mb-8 inline-flex items-center gap-2 text-sky-600 text-sm transition-colors hover:text-intent-accent-strong dark:text-sky-400"
-          href="/"
-        >
-          <ArrowLeft size={16} />
-          Back to Home
-        </Link>
-
-        <h1 className="mb-4 font-bold text-4xl text-[var(--text-primary)]">
-          Cookie Policy
-        </h1>
-        <p className="mb-8 text-[var(--text-muted)] text-sm">
-          Last updated: February 8, 2026
-        </p>
+    <MarketingSiteShell>
+      <div className="max-w-4xl mx-auto px-6 py-12">
+        <h1 className="text-4xl font-bold text-[var(--text-primary)] mb-4">Cookie Policy</h1>
+        <p className="text-sm text-[var(--text-muted)] mb-8">Last updated: February 8, 2026</p>
 
         <div className="prose prose-slate dark:prose-invert max-w-none space-y-6 text-[var(--text-secondary)]">
           <section>
@@ -293,13 +281,7 @@ export default function CookiePolicy() {
             </div>
           </section>
         </div>
-
-        <div className="mt-12 border-[var(--border-color)] border-t pt-8">
-          <p className="text-center text-[var(--text-muted)] text-sm">
-            © 2026 SECYOURALL. ALL RIGHTS RESERVED.
-          </p>
-        </div>
       </div>
-    </div>
+    </MarketingSiteShell>
   );
 }

@@ -6,6 +6,7 @@
       "name": "next-forge",
       "dependencies": {
         "@auth/prisma-adapter": "2.11.0",
+        "@designcodeio/threeui": "1.2.0",
         "@prisma/client": "7.4.2",
         "@repo/ai": "*",
         "@repo/analytics": "*",
@@ -55,6 +56,9 @@
         "recharts": "^3.7.0",
         "require-in-the-middle": "8.0.1",
         "tailwind-merge": "^3.4.0",
+        "three": "0.160.1",
+        "three128": "npm:three@0.128.0",
+        "three165": "npm:three@0.165.0",
         "tsx": "^4.21.0",
         "zod": "^4.3.6",
       },
@@ -631,6 +635,9 @@
       },
     },
   },
+  "patchedDependencies": {
+    "@designcodeio/threeui@1.2.0": "patches/@designcodeio%2Fthreeui@1.2.0.patch",
+  },
   "overrides": {
     "parse5": "^7.2.1",
   },
@@ -996,6 +1003,8 @@
     "@date-fns/tz": ["@date-fns/tz@1.5.0", "", {}, "sha512-lwYN/vDPeNRULcepoE/LO2Pgx+7/RV+S9ARfbc9lr2DtGkOD7pAiruHvbR1RX3Qyf6ja47EWJDMsNK5vK08DJg=="],
 
     "@daybrush/utils": ["@daybrush/utils@1.13.0", "", {}, "sha512-ALK12C6SQNNHw1enXK+UO8bdyQ+jaWNQ1Af7Z3FNxeAwjYhQT7do+TRE4RASAJ3ObaS2+TJ7TXR3oz2Gzbw0PQ=="],
+
+    "@designcodeio/threeui": ["@designcodeio/threeui@1.2.0", "", { "dependencies": { "three128": "npm:three@0.128.0", "three165": "npm:three@0.165.0" }, "peerDependencies": { "react": ">=18 <20", "react-dom": ">=18 <20", "three": ">=0.149 <1" } }, "sha512-E6F/+IPfLKYatB5W62H3gK1bp9WYvfO6xuWBaBh8oLVR7fbTeeEwgLqqy7ZPMA0zmDpAy03nKYOIswBXsstL2g=="],
 
     "@discoveryjs/json-ext": ["@discoveryjs/json-ext@0.5.7", "", {}, "sha512-dBVuXR082gk3jsFp7Rd/JI4kytwGHecnCoTtXFb7DB6CNHp4rg5k1bhg0nWdLGLnOV71lmDzGQaLMy8iPLY0pw=="],
 
@@ -4530,6 +4539,12 @@
     "third-party-capital": ["third-party-capital@1.0.20", "", {}, "sha512-oB7yIimd8SuGptespDAZnNkzIz+NWaJCu2RMsbs4Wmp9zSDUM8Nhi3s2OOcqYuv3mN4hitXc8DVx+LyUmbUDiA=="],
 
     "thirty-two": ["thirty-two@1.0.2", "", {}, "sha512-OEI0IWCe+Dw46019YLl6V10Us5bi574EvlJEOcAkB29IzQ/mYD1A6RyNHLjZPiHCmuodxvgF6U+vZO1L15lxVA=="],
+
+    "three": ["three@0.160.1", "", {}, "sha512-Bgl2wPJypDOZ1stAxwfWAcJ0WQf7QzlptsxkjYiURPz+n5k4RBDLsq+6f9Y75TYxn6aHLcWz+JNmwTOXWrQTBQ=="],
+
+    "three128": ["three@0.128.0", "", {}, "sha512-i0ap/E+OaSfzw7bD1TtYnPo3VEplkl70WX5fZqZnfZsE3k3aSFudqrrC9ldFZfYFkn1zwDmBcdGfiIm/hnbyZA=="],
+
+    "three165": ["three@0.165.0", "", {}, "sha512-cc96IlVYGydeceu0e5xq70H8/yoVT/tXBxV/W8A/U6uOq7DXc4/s1Mkmnu6SqoYGhSRWWYFOhVwvq6V0VtbplA=="],
 
     "throttleit": ["throttleit@2.1.0", "", {}, "sha512-nt6AMGKW1p/70DF/hGBdJB57B8Tspmbp5gfJ8ilhLnt7kkr2ye7hzD6NVG8GGErk2HWF34igrL2CXmNIkzKqKw=="],
 

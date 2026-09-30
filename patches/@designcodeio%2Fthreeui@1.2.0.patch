@@ -1,0 +1,66 @@
+diff --git a/node_modules/@designcodeio/threeui/.bun-tag-c0f10bfec1591bf7 b/.bun-tag-c0f10bfec1591bf7
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/lib-dist/shaders/neuform-isolated/sources/julian-vance-nebula.html.js b/lib-dist/shaders/neuform-isolated/sources/julian-vance-nebula.html.js
+index 4b150af2cb0362019cbf2f9c68f2786a98290de6..98c65f37e586d1a0db4bfc5102784943f676fbb1 100644
+--- a/lib-dist/shaders/neuform-isolated/sources/julian-vance-nebula.html.js
++++ b/lib-dist/shaders/neuform-isolated/sources/julian-vance-nebula.html.js
+@@ -6,7 +6,7 @@ const n = `<!DOCTYPE html>
+ <title>Julian Vance — Digital Craftsman</title>
+ <script src="https://cdn.tailwindcss.com"><\/script>
+ <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"><\/script>
+-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>
++<script src="/vendor/three-r128.min.js"><\/script>
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"><\/script>
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"><\/script>
+ <link rel="preconnect" href="https://fonts.googleapis.com">
+@@ -142,7 +142,7 @@ const n = `<!DOCTYPE html>
+     (function () {
+       const canvas = document.getElementById('bg-canvas');
+       const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: false });
+-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
++      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+       renderer.setSize(window.innerWidth, window.innerHeight);
+ 
+       const scene = new THREE.Scene();
+@@ -261,13 +261,37 @@ const n = `<!DOCTYPE html>
+       });
+ 
+       const clock = new THREE.Clock();
+-      (function animate() {
+-        requestAnimationFrame(animate);
++      let animationFrame = 0;
++      let canvasVisible = true;
++      const animate = function () {
++        if (!canvasVisible || document.hidden) {
++          animationFrame = 0;
++          return;
++        }
++        animationFrame = requestAnimationFrame(animate);
+         uniforms.u_time.value = clock.getElapsedTime();
+         uniforms.u_mouse.value.x += (mouseTarget.x - uniforms.u_mouse.value.x) * 0.03;
+         uniforms.u_mouse.value.y += (mouseTarget.y - uniforms.u_mouse.value.y) * 0.03;
+         renderer.render(scene, camera);
+-      })();
++      };
++      const visibilityObserver = new IntersectionObserver(function ([entry]) {
++        canvasVisible = entry.isIntersecting;
++        if (canvasVisible && !document.hidden && animationFrame === 0) animate();
++        if (!canvasVisible && animationFrame !== 0) {
++          cancelAnimationFrame(animationFrame);
++          animationFrame = 0;
++        }
++      });
++      visibilityObserver.observe(canvas);
++      document.addEventListener('visibilitychange', function () {
++        if (document.hidden && animationFrame !== 0) {
++          cancelAnimationFrame(animationFrame);
++          animationFrame = 0;
++        } else if (!document.hidden && canvasVisible && animationFrame === 0) {
++          animate();
++        }
++      });
++      animate();
+     })();
+ 
+     // ---------- GSAP entrance choreography & ScrollTrigger ----------
