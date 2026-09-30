@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
 
-export async function buildAssetImpactAnalysis(organizationId: string, assetId: string) {
+export async function buildAssetImpactAnalysis(
+  organizationId: string,
+  assetId: string
+) {
   const rootAsset = await prisma.asset.findFirst({
     where: { id: assetId, organizationId },
     include: {
@@ -21,10 +24,22 @@ export async function buildAssetImpactAnalysis(organizationId: string, assetId: 
     },
     include: {
       parentAsset: {
-        select: { id: true, name: true, type: true, criticality: true, status: true },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          criticality: true,
+          status: true,
+        },
       },
       childAsset: {
-        select: { id: true, name: true, type: true, criticality: true, status: true },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          criticality: true,
+          status: true,
+        },
       },
     },
   });
@@ -50,8 +65,13 @@ export async function buildAssetImpactAnalysis(organizationId: string, assetId: 
       })
     : [];
 
-  const criticalDependencies = connectedAssets.filter((asset) => asset.criticality === "CRITICAL").length;
-  const connectedOpenVulns = connectedAssets.reduce((sum, asset) => sum + asset._count.vulnerabilities, 0);
+  const criticalDependencies = connectedAssets.filter(
+    (asset) => asset.criticality === "CRITICAL"
+  ).length;
+  const connectedOpenVulns = connectedAssets.reduce(
+    (sum, asset) => sum + asset._count.vulnerabilities,
+    0
+  );
 
   return {
     root: {

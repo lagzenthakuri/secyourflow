@@ -1,14 +1,14 @@
 import { assertSafeOutboundUrl } from "@/lib/security/outbound-url";
 
 export interface FetchWithRetryOptions {
-  url: string;
-  method?: string;
-  headers?: Record<string, string>;
-  body?: string;
-  timeoutMs?: number;
-  maxRetries?: number;
   baseBackoffMs?: number;
+  body?: string;
+  headers?: Record<string, string>;
   maxRedirects?: number;
+  maxRetries?: number;
+  method?: string;
+  timeoutMs?: number;
+  url: string;
 }
 
 function delay(ms: number): Promise<void> {
@@ -20,15 +20,23 @@ function shouldRetry(status: number): boolean {
 }
 
 function computeBackoff(attempt: number, baseBackoffMs: number): number {
-  const exp = baseBackoffMs * Math.pow(2, attempt);
+  const exp = baseBackoffMs * 2 ** attempt;
   return Math.min(exp, 30_000);
 }
 
 function isRedirect(status: number): boolean {
-  return status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
+  return (
+    status === 301 ||
+    status === 302 ||
+    status === 303 ||
+    status === 307 ||
+    status === 308
+  );
 }
 
-export async function fetchWithRetry(options: FetchWithRetryOptions): Promise<Response> {
+export async function fetchWithRetry(
+  options: FetchWithRetryOptions
+): Promise<Response> {
   const {
     url,
     method = "GET",
@@ -115,7 +123,9 @@ export async function fetchWithRetry(options: FetchWithRetryOptions): Promise<Re
   throw lastError ?? new Error(`Request failed for ${url}`);
 }
 
-export async function fetchJsonWithRetry<T>(options: FetchWithRetryOptions): Promise<T> {
+export async function fetchJsonWithRetry<T>(
+  options: FetchWithRetryOptions
+): Promise<T> {
   const response = await fetchWithRetry(options);
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} from ${options.url}`);

@@ -1,10 +1,22 @@
 import "dotenv/config";
-import { Worker, Queue, type Job } from "bullmq";
-import { createRedisConnection, isRedisConfigured } from "@/lib/queue/connection";
-import { loadHandlers } from "@/lib/queue/handlers";
-import { markJobFailed, markJobRunning, markJobSucceeded } from "@/lib/queue/job-run";
-import { QUEUE_CONCURRENCY, QUEUE_NAMES, type JobName, type QueueName } from "@/lib/queue/types";
+import { type Job, Queue, Worker } from "bullmq";
 import { prisma } from "@/lib/prisma";
+import {
+  createRedisConnection,
+  isRedisConfigured,
+} from "@/lib/queue/connection";
+import { loadHandlers } from "@/lib/queue/handlers";
+import {
+  markJobFailed,
+  markJobRunning,
+  markJobSucceeded,
+} from "@/lib/queue/job-run";
+import {
+  type JobName,
+  QUEUE_CONCURRENCY,
+  QUEUE_NAMES,
+  type QueueName,
+} from "@/lib/queue/types";
 
 /**
  * Background job processor.
@@ -16,7 +28,9 @@ import { prisma } from "@/lib/prisma";
  * client gave up and left rows stranded in PROCESSING.
  */
 
-const SHUTDOWN_TIMEOUT_MS = Number(process.env.WORKER_SHUTDOWN_TIMEOUT_MS ?? 30_000);
+const SHUTDOWN_TIMEOUT_MS = Number(
+  process.env.WORKER_SHUTDOWN_TIMEOUT_MS ?? 30_000
+);
 
 /** Repeating housekeeping. Cron in UTC. */
 const REPEATABLE_JOBS: Array<{ name: JobName; pattern: string }> = [
@@ -28,7 +42,9 @@ const REPEATABLE_JOBS: Array<{ name: JobName; pattern: string }> = [
 ];
 
 async function registerRepeatableJobs(): Promise<Queue> {
-  const queue = new Queue("maintenance", { connection: createRedisConnection() });
+  const queue = new Queue("maintenance", {
+    connection: createRedisConnection(),
+  });
 
   for (const job of REPEATABLE_JOBS) {
     // Keyed by job name, so N workers converge on one schedule instead of
@@ -40,7 +56,7 @@ async function registerRepeatableJobs(): Promise<Queue> {
         name: job.name,
         data: {},
         opts: { removeOnComplete: { count: 20 }, removeOnFail: { count: 50 } },
-      },
+      }
     );
   }
 
@@ -56,7 +72,10 @@ async function runJob(job: Job): Promise<unknown> {
     throw new Error(`No handler registered for job '${job.name}'`);
   }
 
-  const { __jobRunId: jobRunId, ...payload } = job.data as Record<string, unknown> & {
+  const { __jobRunId: jobRunId, ...payload } = job.data as Record<
+    string,
+    unknown
+  > & {
     __jobRunId?: string;
   };
 
@@ -86,7 +105,7 @@ async function main() {
   if (!isRedisConfigured()) {
     console.error(
       "[worker] REDIS_URL is not set. In this mode the web process runs jobs " +
-        "in-process and a separate worker has nothing to consume — exiting.",
+        "in-process and a separate worker has nothing to consume — exiting."
     );
     process.exit(1);
   }
@@ -100,7 +119,10 @@ async function main() {
     });
 
     worker.on("failed", (job, error) => {
-      console.error(`[worker:${queueName}] job ${job?.name} failed:`, error?.message);
+      console.error(
+        `[worker:${queueName}] job ${job?.name} failed:`,
+        error?.message
+      );
     });
     worker.on("error", (error) => {
       console.error(`[worker:${queueName}] error:`, error.message);
@@ -114,7 +136,9 @@ async function main() {
 
   let shuttingDown = false;
   const shutdown = async (signal: string) => {
-    if (shuttingDown) return;
+    if (shuttingDown) {
+      return;
+    }
     shuttingDown = true;
     console.log(`[worker] ${signal} received; finishing in-flight jobs`);
 

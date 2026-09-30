@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { requireSessionWithOrg } from "@/lib/api-auth";
-import { generateInvitationToken, getInvitationExpiry } from "@/lib/invitation-utils";
-import { buildInvitationEmail, isMailConfigured, sendMail } from "@/lib/mail";
+import {
+  generateInvitationToken,
+  getInvitationExpiry,
+} from "@/lib/invitation-utils";
 import { logActivity } from "@/lib/logger";
+import { buildInvitationEmail, isMailConfigured, sendMail } from "@/lib/mail";
+import { prisma } from "@/lib/prisma";
 
 const createInvitationSchema = z.object({
   email: z.string().email("Invalid email address"),
-  role: z.enum(["IT_OFFICER", "PENTESTER", "ANALYST", "MAIN_OFFICER"]).default("ANALYST"),
+  role: z
+    .enum(["IT_OFFICER", "PENTESTER", "ANALYST", "MAIN_OFFICER"])
+    .default("ANALYST"),
   expiresInHours: z.number().min(1).max(168).optional().default(48), // Max 7 days
 });
 
@@ -28,7 +33,11 @@ export async function POST(req: Request) {
 
     const { context } = authResult;
     const body = await req.json();
-    const { email: rawEmail, role, expiresInHours } = createInvitationSchema.parse(body);
+    const {
+      email: rawEmail,
+      role,
+      expiresInHours,
+    } = createInvitationSchema.parse(body);
     const email = rawEmail.trim().toLowerCase();
 
     // Check if user already exists
@@ -48,12 +57,13 @@ export async function POST(req: Request) {
           { error: "User with this email already exists in your organization" },
           { status: 409 }
         );
-      } else {
-        return NextResponse.json(
-          { error: "User with this email already exists in another organization" },
-          { status: 409 }
-        );
       }
+      return NextResponse.json(
+        {
+          error: "User with this email already exists in another organization",
+        },
+        { status: 409 }
+      );
     }
 
     // Check for existing pending invitation
@@ -132,7 +142,9 @@ export async function POST(req: Request) {
     });
 
     if (!mailResult.sent) {
-      console.warn(`[invitations] not emailed to ${invitation.email}: ${mailResult.reason}`);
+      console.warn(
+        `[invitations] not emailed to ${invitation.email}: ${mailResult.reason}`
+      );
     }
 
     return NextResponse.json(
@@ -157,7 +169,10 @@ export async function POST(req: Request) {
       );
     }
 
-    console.error("Create invitation error:", error instanceof Error ? error.message : String(error));
+    console.error(
+      "Create invitation error:",
+      error instanceof Error ? error.message : String(error)
+    );
 
     return NextResponse.json(
       { error: "Failed to create invitation" },
@@ -208,7 +223,10 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ invitations });
   } catch (error) {
-    console.error("List invitations error:", error instanceof Error ? error.message : String(error));
+    console.error(
+      "List invitations error:",
+      error instanceof Error ? error.message : String(error)
+    );
 
     return NextResponse.json(
       { error: "Failed to list invitations" },

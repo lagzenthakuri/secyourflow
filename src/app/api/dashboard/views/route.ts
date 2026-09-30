@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-import { prisma } from "@/lib/prisma";
-import { requireSessionWithOrg } from "@/lib/api-auth";
 import type { Prisma, Role } from "@repo/database";
+import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { requireSessionWithOrg } from "@/lib/api-auth";
+import { prisma } from "@/lib/prisma";
 
 const createSchema = z.object({
   name: z.string().min(2).max(120),
@@ -12,9 +12,11 @@ const createSchema = z.object({
     .array(
       z.object({
         sharedWithUserId: z.string().optional(),
-        sharedWithRole: z.enum(["IT_OFFICER", "PENTESTER", "ANALYST", "MAIN_OFFICER"]).optional(),
+        sharedWithRole: z
+          .enum(["IT_OFFICER", "PENTESTER", "ANALYST", "MAIN_OFFICER"])
+          .optional(),
         canEdit: z.boolean().default(false),
-      }),
+      })
     )
     .optional(),
 });
@@ -25,7 +27,9 @@ const patchSchema = createSchema.partial().extend({
 
 export async function GET(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const data = await prisma.dashboardView.findMany({
     where: {
@@ -55,13 +59,18 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const parsed = createSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid dashboard view payload", details: parsed.error.flatten() },
-      { status: 400 },
+      {
+        error: "Invalid dashboard view payload",
+        details: parsed.error.flatten(),
+      },
+      { status: 400 }
     );
   }
 
@@ -102,13 +111,18 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const parsed = patchSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid dashboard view update payload", details: parsed.error.flatten() },
-      { status: 400 },
+      {
+        error: "Invalid dashboard view update payload",
+        details: parsed.error.flatten(),
+      },
+      { status: 400 }
     );
   }
 
@@ -135,7 +149,10 @@ export async function PATCH(request: NextRequest) {
   });
 
   if (!view) {
-    return NextResponse.json({ error: "Dashboard view not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Dashboard view not found" },
+      { status: 404 }
+    );
   }
 
   if (rest.isDefault) {
@@ -149,7 +166,9 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (shares) {
-    await prisma.dashboardViewShare.deleteMany({ where: { dashboardViewId: id } });
+    await prisma.dashboardViewShare.deleteMany({
+      where: { dashboardViewId: id },
+    });
 
     if (shares.length) {
       await prisma.dashboardViewShare.createMany({
@@ -176,7 +195,9 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const id = request.nextUrl.searchParams.get("id");
   if (!id) {
@@ -193,7 +214,10 @@ export async function DELETE(request: NextRequest) {
   });
 
   if (!view) {
-    return NextResponse.json({ error: "Dashboard view not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Dashboard view not found" },
+      { status: 404 }
+    );
   }
 
   await prisma.dashboardView.delete({ where: { id } });

@@ -1,9 +1,9 @@
-import { prisma } from "@/lib/prisma";
 import type { Severity } from "@repo/database";
+import { prisma } from "@/lib/prisma";
 
 interface VulnerabilityNotificationInput {
-  organizationId: string;
   eventType: string;
+  organizationId: string;
   vulnerability: {
     id: string;
     title: string;
@@ -22,11 +22,15 @@ const severityWeight: Record<Severity, number> = {
 };
 
 export function isSeverityAllowed(actual: Severity, minimum?: Severity | null) {
-  if (!minimum) return true;
+  if (!minimum) {
+    return true;
+  }
   return severityWeight[actual] >= severityWeight[minimum];
 }
 
-export async function dispatchVulnerabilityNotifications(input: VulnerabilityNotificationInput) {
+export async function dispatchVulnerabilityNotifications(
+  input: VulnerabilityNotificationInput
+) {
   const rules = await prisma.notificationRule.findMany({
     where: {
       organizationId: input.organizationId,
@@ -41,9 +45,15 @@ export async function dispatchVulnerabilityNotifications(input: VulnerabilityNot
   for (const rule of rules) {
     const vuln = input.vulnerability;
 
-    if (!isSeverityAllowed(vuln.severity, rule.minimumSeverity)) continue;
-    if (rule.includeExploited && !vuln.isExploited) continue;
-    if (rule.includeKev && !vuln.cisaKev) continue;
+    if (!isSeverityAllowed(vuln.severity, rule.minimumSeverity)) {
+      continue;
+    }
+    if (rule.includeExploited && !vuln.isExploited) {
+      continue;
+    }
+    if (rule.includeKev && !vuln.cisaKev) {
+      continue;
+    }
 
     const title = `[${vuln.severity}] ${vuln.title}`;
     const message = `Vulnerability ${vuln.id} matched notification rule '${rule.name}'.`;

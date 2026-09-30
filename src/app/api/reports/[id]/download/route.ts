@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { requireSessionWithOrg } from "@/lib/api-auth";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const { id } = await params;
   const { organizationId } = authResult.context;
@@ -34,14 +36,17 @@ export async function GET(
 
   const artifact = report.runs[0]?.artifacts[0];
   if (!artifact) {
-    return NextResponse.json({ error: "Report artifact not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Report artifact not found" },
+      { status: 404 }
+    );
   }
 
   return new NextResponse(artifact.data, {
     status: 200,
     headers: {
       "Content-Type": artifact.mimeType,
-      "Content-Disposition": `attachment; filename=\"${artifact.fileName}\"`,
+      "Content-Disposition": `attachment; filename="${artifact.fileName}"`,
       "Content-Length": String(artifact.sizeBytes),
     },
   });

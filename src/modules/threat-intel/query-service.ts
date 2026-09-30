@@ -9,7 +9,10 @@ const severityRank: Record<Exclude<Severity, never>, number> = {
   INFORMATIONAL: 1,
 };
 
-function pickHigherSeverity(current: Severity | null, incoming: Severity | null): Severity | null {
+function pickHigherSeverity(
+  current: Severity | null,
+  incoming: Severity | null
+): Severity | null {
   if (!incoming) {
     return current;
   }
@@ -22,10 +25,21 @@ function pickHigherSeverity(current: Severity | null, incoming: Severity | null)
 }
 
 export class ThreatIntelQueryService {
-  constructor(private readonly repository: ThreatIntelRepository = new ThreatIntelRepository()) {}
+  constructor(
+    private readonly repository: ThreatIntelRepository = new ThreatIntelRepository()
+  ) {}
 
   async getOverview(organizationId: string) {
-    const [feeds, indicators, activeCount, criticalCount, matches, actors, campaigns, runs] = await Promise.all([
+    const [
+      feeds,
+      indicators,
+      activeCount,
+      criticalCount,
+      matches,
+      actors,
+      campaigns,
+      runs,
+    ] = await Promise.all([
       this.repository.listFeeds(organizationId),
       this.repository.listIndicators(organizationId),
       this.repository.countActiveIndicators(organizationId),
@@ -60,7 +74,10 @@ export class ThreatIntelQueryService {
       this.repository.getTechniqueIndicatorSignals(organizationId),
     ]);
 
-    const vulnByTechniqueId = new Map<string, { count: number; maxSeverity: Severity | null; lastSeen: Date | null }>();
+    const vulnByTechniqueId = new Map<
+      string,
+      { count: number; maxSeverity: Severity | null; lastSeen: Date | null }
+    >();
     for (const signal of vulnerabilitySignals) {
       const existing = vulnByTechniqueId.get(signal.techniqueId) ?? {
         count: 0,
@@ -69,16 +86,25 @@ export class ThreatIntelQueryService {
       };
 
       existing.count += 1;
-      existing.maxSeverity = pickHigherSeverity(existing.maxSeverity, signal.vulnerability.severity);
-      existing.lastSeen = !existing.lastSeen || signal.vulnerability.updatedAt > existing.lastSeen
-        ? signal.vulnerability.updatedAt
-        : existing.lastSeen;
+      existing.maxSeverity = pickHigherSeverity(
+        existing.maxSeverity,
+        signal.vulnerability.severity
+      );
+      existing.lastSeen =
+        !existing.lastSeen || signal.vulnerability.updatedAt > existing.lastSeen
+          ? signal.vulnerability.updatedAt
+          : existing.lastSeen;
       vulnByTechniqueId.set(signal.techniqueId, existing);
     }
 
-    const iocByTechniqueExternalId = new Map<string, { count: number; maxSeverity: Severity | null; lastSeen: Date | null }>();
+    const iocByTechniqueExternalId = new Map<
+      string,
+      { count: number; maxSeverity: Severity | null; lastSeen: Date | null }
+    >();
     for (const signal of indicatorSignals) {
-      if (!signal.techniqueId) continue;
+      if (!signal.techniqueId) {
+        continue;
+      }
 
       const existing = iocByTechniqueExternalId.get(signal.techniqueId) ?? {
         count: 0,
@@ -86,10 +112,14 @@ export class ThreatIntelQueryService {
         lastSeen: null,
       };
       existing.count += 1;
-      existing.maxSeverity = pickHigherSeverity(existing.maxSeverity, signal.severity);
-      existing.lastSeen = !existing.lastSeen || signal.lastSeen > existing.lastSeen
-        ? signal.lastSeen
-        : existing.lastSeen;
+      existing.maxSeverity = pickHigherSeverity(
+        existing.maxSeverity,
+        signal.severity
+      );
+      existing.lastSeen =
+        !existing.lastSeen || signal.lastSeen > existing.lastSeen
+          ? signal.lastSeen
+          : existing.lastSeen;
       iocByTechniqueExternalId.set(signal.techniqueId, existing);
     }
 
@@ -119,16 +149,22 @@ export class ThreatIntelQueryService {
         lastSeen: null,
       };
 
-      const indicatorStats = iocByTechniqueExternalId.get(link.technique.externalId) ?? {
+      const indicatorStats = iocByTechniqueExternalId.get(
+        link.technique.externalId
+      ) ?? {
         count: 0,
         maxSeverity: null,
         lastSeen: null,
       };
 
-      const maxSeverity = pickHigherSeverity(vulnerabilityStats.maxSeverity, indicatorStats.maxSeverity);
-      const lastSeenDate = [vulnerabilityStats.lastSeen, indicatorStats.lastSeen]
-        .filter((value): value is Date => Boolean(value))
-        .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+      const maxSeverity = pickHigherSeverity(
+        vulnerabilityStats.maxSeverity,
+        indicatorStats.maxSeverity
+      );
+      const lastSeenDate =
+        [vulnerabilityStats.lastSeen, indicatorStats.lastSeen]
+          .filter((value): value is Date => Boolean(value))
+          .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
 
       const tacticKey = link.tactic.externalId;
       const existingTactic = tactics.get(tacticKey) ?? {
@@ -155,7 +191,9 @@ export class ThreatIntelQueryService {
     return {
       tactics: [...tactics.values()].map((tactic) => ({
         ...tactic,
-        techniques: tactic.techniques.sort((a, b) => a.techniqueExternalId.localeCompare(b.techniqueExternalId)),
+        techniques: tactic.techniques.sort((a, b) =>
+          a.techniqueExternalId.localeCompare(b.techniqueExternalId)
+        ),
       })),
       summary: {
         tacticCount: tactics.size,

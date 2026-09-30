@@ -1,22 +1,24 @@
-type RuntimeModuleApi = {
+interface RuntimeModuleApi {
   createRequire: (filename: string) => (specifier: string) => unknown;
-};
+}
 
-type SentrySdk = {
-  init: (options: Record<string, unknown>) => void;
-  consoleLoggingIntegration: (options: { levels: string[] }) => unknown;
+interface SentrySdk {
   captureRequestError: (
     error: unknown,
     request: unknown,
-    context: unknown,
+    context: unknown
   ) => unknown;
-};
+  consoleLoggingIntegration: (options: { levels: string[] }) => unknown;
+  init: (options: Record<string, unknown>) => void;
+}
 
 function loadSentry(): SentrySdk {
   const moduleApi = process.getBuiltinModule?.("module") as
     | RuntimeModuleApi
     | undefined;
-  if (!moduleApi) throw new Error("The Node.js module loader is unavailable");
+  if (!moduleApi) {
+    throw new Error("The Node.js module loader is unavailable");
+  }
 
   const require = moduleApi.createRequire(`${process.cwd()}/package.json`);
   const packageName = ["@", "sentry", "nextjs"].join("/");
@@ -40,7 +42,7 @@ export function initializeNodeSentry(dsn: string) {
 export function captureNodeRequestError(
   error: unknown,
   request: unknown,
-  context: unknown,
+  context: unknown
 ) {
   return loadSentry().captureRequestError(error, request, context);
 }

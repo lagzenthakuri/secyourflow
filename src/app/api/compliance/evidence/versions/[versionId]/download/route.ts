@@ -1,15 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { readEvidenceContent } from "@/lib/compliance-evidence-storage";
+import { type NextRequest, NextResponse } from "next/server";
 import { requireSessionWithOrg } from "@/lib/api-auth";
+import { readEvidenceContent } from "@/lib/compliance-evidence-storage";
 import { logActivity } from "@/lib/logger";
+import { prisma } from "@/lib/prisma";
 import { extractRequestContext } from "@/lib/request-utils";
 
 export const runtime = "nodejs";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ versionId: string }> },
+  { params }: { params: Promise<{ versionId: string }> }
 ) {
   const authResult = await requireSessionWithOrg(request);
   if (!authResult.ok) {
@@ -34,7 +34,10 @@ export async function GET(
     });
 
     if (!version) {
-      return NextResponse.json({ error: "Evidence version not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Evidence version not found" },
+        { status: 404 }
+      );
     }
 
     const fileBuffer = await readEvidenceContent(version);
@@ -52,7 +55,7 @@ export async function GET(
       `Downloaded compliance evidence file ${version.fileName}`,
       authResult.context.userId,
       requestContext,
-      authResult.context.organizationId,
+      authResult.context.organizationId
     );
 
     return new NextResponse(Uint8Array.from(fileBuffer), {
@@ -66,6 +69,9 @@ export async function GET(
     });
   } catch (error) {
     console.error("Evidence download failed:", error);
-    return NextResponse.json({ error: "Failed to download evidence" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to download evidence" },
+      { status: 500 }
+    );
   }
 }

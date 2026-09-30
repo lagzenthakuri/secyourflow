@@ -2,7 +2,10 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { RenderedReport, TabularReportData } from "@/lib/reporting/types";
 
-export function renderPdfReport(data: TabularReportData, fileNameBase: string): RenderedReport {
+export function renderPdfReport(
+  data: TabularReportData,
+  fileNameBase: string
+): RenderedReport {
   const doc = new jsPDF();
 
   doc.setFontSize(18);
@@ -10,7 +13,11 @@ export function renderPdfReport(data: TabularReportData, fileNameBase: string): 
 
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
-  doc.text(`Generated at: ${new Date(data.generatedAt).toLocaleString()}`, 14, 25);
+  doc.text(
+    `Generated at: ${new Date(data.generatedAt).toLocaleString()}`,
+    14,
+    25
+  );
 
   autoTable(doc, {
     startY: 32,

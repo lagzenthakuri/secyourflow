@@ -1,32 +1,41 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { requireSessionWithOrg } from "@/lib/api-auth";
 import {
   decommissionAsset,
   logAssetLifecycleEvent,
   transferAssetEnvironment,
 } from "@/lib/assets/lifecycle";
+import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
-  action: z.enum(["transfer", "decommission", "ownership_change", "reactivate"]),
-  toEnvironment: z.enum(["PRODUCTION", "STAGING", "DEVELOPMENT", "TESTING", "DR"]).optional(),
+  action: z.enum([
+    "transfer",
+    "decommission",
+    "ownership_change",
+    "reactivate",
+  ]),
+  toEnvironment: z
+    .enum(["PRODUCTION", "STAGING", "DEVELOPMENT", "TESTING", "DR"])
+    .optional(),
   toOwner: z.string().optional(),
   notes: z.string().max(2000).optional(),
 });
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid lifecycle payload", details: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -36,7 +45,10 @@ export async function POST(
 
   if (payload.action === "transfer") {
     if (!payload.toEnvironment) {
-      return NextResponse.json({ error: "toEnvironment is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "toEnvironment is required" },
+        { status: 400 }
+      );
     }
 
     const updated = await transferAssetEnvironment({

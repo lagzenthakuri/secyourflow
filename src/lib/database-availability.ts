@@ -31,8 +31,13 @@ const dbUnavailablePatterns = [
 ];
 
 function getCooldownWindowMs(): number {
-  const parsed = Number.parseInt(process.env.DATABASE_UNAVAILABLE_COOLDOWN_MS ?? "", 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_DB_COOLDOWN_MS;
+  const parsed = Number.parseInt(
+    process.env.DATABASE_UNAVAILABLE_COOLDOWN_MS ?? "",
+    10
+  );
+  return Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : DEFAULT_DB_COOLDOWN_MS;
 }
 
 function extractErrorText(error: unknown): string {
@@ -65,7 +70,10 @@ function extractErrorText(error: unknown): string {
         fragments.push(value.message.toLowerCase());
       }
 
-      const errorWithCode = value as Error & { code?: unknown; cause?: unknown };
+      const errorWithCode = value as Error & {
+        code?: unknown;
+        cause?: unknown;
+      };
       if (typeof errorWithCode.code === "string") {
         fragments.push(errorWithCode.code.toLowerCase());
       }
@@ -78,7 +86,14 @@ function extractErrorText(error: unknown): string {
     }
 
     const candidate = value as Record<string, unknown>;
-    for (const key of ["message", "detail", "hint", "code", "severity", "routine"]) {
+    for (const key of [
+      "message",
+      "detail",
+      "hint",
+      "code",
+      "severity",
+      "routine",
+    ]) {
       const fieldValue = candidate[key];
       if (typeof fieldValue === "string") {
         fragments.push(fieldValue.toLowerCase());

@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
 import type { Prisma, RemediationPlanStatus } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export class RemediationPlanError extends Error {
   status: number;
@@ -12,23 +12,33 @@ export class RemediationPlanError extends Error {
 }
 
 function dedupeIds(values: string[]): string[] {
-  return [...new Set(values.map((value) => value.trim()).filter((value) => value.length > 0))];
+  return [
+    ...new Set(
+      values.map((value) => value.trim()).filter((value) => value.length > 0)
+    ),
+  ];
 }
 
-async function assertOwnerInOrganization(ownerId: string, organizationId: string) {
+async function assertOwnerInOrganization(
+  ownerId: string,
+  organizationId: string
+) {
   const owner = await prisma.user.findFirst({
     where: { id: ownerId, organizationId },
     select: { id: true },
   });
 
   if (!owner) {
-    throw new RemediationPlanError("ownerId is invalid for this organization", 400);
+    throw new RemediationPlanError(
+      "ownerId is invalid for this organization",
+      400
+    );
   }
 }
 
 async function assertVulnerabilitiesInOrganization(
   vulnerabilityIds: string[],
-  organizationId: string,
+  organizationId: string
 ) {
   if (vulnerabilityIds.length === 0) {
     return;
@@ -43,17 +53,20 @@ async function assertVulnerabilitiesInOrganization(
   });
 
   if (found.length !== vulnerabilityIds.length) {
-    throw new RemediationPlanError("One or more vulnerabilityIds are invalid for this organization", 400);
+    throw new RemediationPlanError(
+      "One or more vulnerabilityIds are invalid for this organization",
+      400
+    );
   }
 }
 
 export interface CreateRemediationPlanInput {
+  description?: string;
+  dueDate?: Date | null;
+  name: string;
   organizationId: string;
   ownerId?: string | null;
-  name: string;
-  description?: string;
   status?: RemediationPlanStatus;
-  dueDate?: Date | null;
   vulnerabilityIds?: string[];
 }
 
@@ -65,7 +78,10 @@ export async function createRemediationPlan(input: CreateRemediationPlanInput) {
     await assertOwnerInOrganization(ownerId, input.organizationId);
   }
 
-  await assertVulnerabilitiesInOrganization(normalizedVulnerabilityIds, input.organizationId);
+  await assertVulnerabilitiesInOrganization(
+    normalizedVulnerabilityIds,
+    input.organizationId
+  );
 
   return prisma.remediationPlan.create({
     data: {
@@ -96,7 +112,7 @@ export async function createRemediationPlan(input: CreateRemediationPlanInput) {
 
 export async function getRemediationPlans(
   organizationId: string,
-  where: Prisma.RemediationPlanWhereInput = {},
+  where: Prisma.RemediationPlanWhereInput = {}
 ) {
   return prisma.remediationPlan.findMany({
     where: {
@@ -133,7 +149,10 @@ export async function getRemediationPlans(
   });
 }
 
-export async function getRemediationPlanById(id: string, organizationId: string) {
+export async function getRemediationPlanById(
+  id: string,
+  organizationId: string
+) {
   return prisma.remediationPlan.findFirst({
     where: {
       id,
@@ -169,7 +188,7 @@ export async function getRemediationPlanById(id: string, organizationId: string)
 export async function updateRemediationPlan(
   id: string,
   organizationId: string,
-  data: Prisma.RemediationPlanUncheckedUpdateInput,
+  data: Prisma.RemediationPlanUncheckedUpdateInput
 ) {
   const existing = await prisma.remediationPlan.findFirst({
     where: { id, organizationId },
@@ -190,7 +209,10 @@ export async function updateRemediationPlan(
   });
 }
 
-export async function deleteRemediationPlan(id: string, organizationId: string) {
+export async function deleteRemediationPlan(
+  id: string,
+  organizationId: string
+) {
   const existing = await prisma.remediationPlan.findFirst({
     where: { id, organizationId },
     select: { id: true },
@@ -208,7 +230,7 @@ export async function deleteRemediationPlan(id: string, organizationId: string) 
 export async function syncPlanVulnerabilities(
   id: string,
   organizationId: string,
-  vulnerabilityIds: string[],
+  vulnerabilityIds: string[]
 ) {
   const plan = await prisma.remediationPlan.findFirst({
     where: { id, organizationId },
@@ -220,7 +242,10 @@ export async function syncPlanVulnerabilities(
   }
 
   const normalizedVulnerabilityIds = dedupeIds(vulnerabilityIds);
-  await assertVulnerabilitiesInOrganization(normalizedVulnerabilityIds, organizationId);
+  await assertVulnerabilitiesInOrganization(
+    normalizedVulnerabilityIds,
+    organizationId
+  );
 
   await prisma.remediationPlanVulnerability.deleteMany({
     where: {
@@ -282,7 +307,10 @@ export async function addRemediationEvidence(params: {
     });
 
     if (!uploader) {
-      throw new RemediationPlanError("uploadedById is invalid for this organization", 400);
+      throw new RemediationPlanError(
+        "uploadedById is invalid for this organization",
+        400
+      );
     }
   }
 
@@ -310,7 +338,10 @@ export async function addRemediationEvidence(params: {
     });
 
     if (!vulnerability) {
-      throw new RemediationPlanError("vulnerabilityId is invalid for this organization", 400);
+      throw new RemediationPlanError(
+        "vulnerabilityId is invalid for this organization",
+        400
+      );
     }
 
     if (params.planId) {
@@ -326,7 +357,10 @@ export async function addRemediationEvidence(params: {
       });
 
       if (!linked) {
-        throw new RemediationPlanError("vulnerabilityId is not linked to the selected plan", 400);
+        throw new RemediationPlanError(
+          "vulnerabilityId is not linked to the selected plan",
+          400
+        );
       }
     }
   }
@@ -337,7 +371,9 @@ export async function addRemediationEvidence(params: {
 }
 
 export function calculatePlanProgress(progressValues: number[]) {
-  if (progressValues.length === 0) return 0;
+  if (progressValues.length === 0) {
+    return 0;
+  }
 
   const sum = progressValues.reduce((acc, value) => acc + value, 0);
   return Math.round(sum / progressValues.length);

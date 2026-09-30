@@ -1,20 +1,19 @@
 "use client";
 import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
 
-
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 
 interface PromptDialogProps {
-  isOpen: boolean;
-  title: string;
-  message: string;
-  placeholder: string;
-  confirmLabel: string;
   cancelLabel: string;
-  validate?: (value: string) => string | null;
-  onSubmit: (value: string) => void;
+  confirmLabel: string;
+  isOpen: boolean;
+  message: string;
   onCancel: () => void;
+  onSubmit: (value: string) => void;
+  placeholder: string;
+  title: string;
+  validate?: (value: string) => string | null;
 }
 
 export function PromptDialog({
@@ -53,32 +52,42 @@ export function PromptDialog({
 
   return (
     <Modal
-      isOpen={isOpen}
-      onClose={handleCancel}
-      title={title}
-      maxWidth="sm"
-      closeButtonLabel="Close input dialog"
       ariaDescribedBy="prompt-dialog-description"
-      initialFocusSelector='[data-dialog-input="prompt"]'
+      closeButtonLabel="Close input dialog"
       footer={
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={handleCancel} className="btn btn-secondary px-3 py-1.5 text-sm">
+          <button
+            className="btn btn-secondary px-3 py-1.5 text-sm"
+            onClick={handleCancel}
+            type="button"
+          >
             {cancelLabel}
           </button>
-          <button type="button" onClick={handleSubmit} className="btn btn-primary px-3 py-1.5 text-sm">
+          <button
+            className="btn btn-primary px-3 py-1.5 text-sm"
+            onClick={handleSubmit}
+            type="button"
+          >
             {confirmLabel}
           </button>
         </div>
       }
+      initialFocusSelector='[data-dialog-input="prompt"]'
+      isOpen={isOpen}
+      maxWidth="sm"
+      onClose={handleCancel}
+      title={title}
     >
       <div className="space-y-3">
-        <p id="prompt-dialog-description" className="text-sm text-[var(--text-secondary)]">
+        <p
+          className="text-[var(--text-secondary)] text-sm"
+          id="prompt-dialog-description"
+        >
           {message}
         </p>
         <BoilerplateInput
+          className=""
           data-dialog-input="prompt"
-          type="text"
-          value={value}
           onChange={(event) => setValue(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
@@ -87,9 +96,12 @@ export function PromptDialog({
             }
           }}
           placeholder={placeholder}
-          className=""
+          type="text"
+          value={value}
         />
-        {error ? <p className="text-xs text-red-600 dark:text-red-300">{error}</p> : null}
+        {error ? (
+          <p className="text-red-600 text-xs dark:text-red-300">{error}</p>
+        ) : null}
       </div>
     </Modal>
   );

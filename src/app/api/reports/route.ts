@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-import { prisma } from "@/lib/prisma";
-import { requireSessionWithOrg } from "@/lib/api-auth";
-import { generateRenderedReport } from "@/lib/reporting/engine";
-import { persistReportRun } from "@/lib/reporting/archive";
 import type { ReportOutputFormat, ReportTemplateKey } from "@repo/database";
+import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { requireSessionWithOrg } from "@/lib/api-auth";
+import { prisma } from "@/lib/prisma";
+import { persistReportRun } from "@/lib/reporting/archive";
+import { generateRenderedReport } from "@/lib/reporting/engine";
 
 const templateAliasMap: Record<string, ReportTemplateKey> = {
   executive: "EXECUTIVE_POSTURE",
@@ -22,7 +22,9 @@ const templateAliasMap: Record<string, ReportTemplateKey> = {
 };
 
 function normalizeTemplateKey(input?: string | null): ReportTemplateKey {
-  if (!input) return "EXECUTIVE_POSTURE";
+  if (!input) {
+    return "EXECUTIVE_POSTURE";
+  }
 
   if (
     input === "EXECUTIVE_POSTURE" ||
@@ -115,7 +117,7 @@ export async function POST(request: NextRequest) {
         error: "Invalid report request payload",
         details: parsed.error.flatten(),
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -123,7 +125,9 @@ export async function POST(request: NextRequest) {
   const payload = parsed.data;
 
   const templateKey = normalizeTemplateKey(payload.templateKey || payload.type);
-  const outputFormat = (payload.outputFormat || payload.format || "PDF") as ReportOutputFormat;
+  const outputFormat = (payload.outputFormat ||
+    payload.format ||
+    "PDF") as ReportOutputFormat;
 
   try {
     const { data, artifact } = await generateRenderedReport({
@@ -159,7 +163,7 @@ export async function POST(request: NextRequest) {
         size: persisted.report.size,
         createdAt: persisted.report.createdAt,
       },
-      { status: 201 },
+      { status: 201 }
     );
   } catch (error) {
     return NextResponse.json(
@@ -167,7 +171,7 @@ export async function POST(request: NextRequest) {
         error: "Failed to generate report",
         details: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

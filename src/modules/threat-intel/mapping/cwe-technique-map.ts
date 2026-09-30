@@ -22,7 +22,9 @@ export const CWE_TO_ATTACK_TECHNIQUES: Record<string, string[]> = {
   "CWE-125": ["T1005"],
 };
 
-export function lookupTechniquesByCwe(cwe: string | null | undefined): string[] {
+export function lookupTechniquesByCwe(
+  cwe: string | null | undefined
+): string[] {
   if (!cwe) {
     return [];
   }

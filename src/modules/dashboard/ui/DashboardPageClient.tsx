@@ -1,114 +1,122 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSession } from "next-auth/react";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { cn, getTimeAgo } from "@/lib/utils";
 import { Button } from "@repo/design-system/components/ui/button";
 import { Card, CardContent } from "@repo/design-system/components/ui/card";
 import {
   Activity,
+  AlertCircle,
   AlertTriangle,
   ArrowRight,
-  FileCheck2,
-  Gauge,
-  RefreshCw,
-  Server,
-  ShieldAlert,
-  LogIn,
-  UserPlus,
-  Settings,
   Bell,
   Calculator,
-  FileText,
   CheckCircle2,
-  XCircle,
-  Edit,
-  Trash2,
-  Upload,
   Download,
+  Edit,
+  FileCheck2,
+  FileText,
+  Gauge,
   Lock,
+  LogIn,
+  RefreshCw,
+  Server,
+  Settings,
+  ShieldAlert,
+  Trash2,
   Unlock,
+  Upload,
   UserCheck,
-  AlertCircle,
+  UserPlus,
+  XCircle,
 } from "lucide-react";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { cn, getTimeAgo } from "@/lib/utils";
 
 const RiskTrendChart = dynamic(
   () =>
-    import("@/components/charts/DashboardCharts").then((mod) => mod.RiskTrendChart),
+    import("@/components/charts/DashboardCharts").then(
+      (mod) => mod.RiskTrendChart
+    ),
   {
     ssr: false,
-    loading: () => <div className="h-[280px] animate-pulse rounded-xl bg-[var(--bg-tertiary)]" />,
-  },
+    loading: () => (
+      <div className="h-[280px] animate-pulse rounded-xl bg-[var(--bg-tertiary)]" />
+    ),
+  }
 );
 
 const VulnStatusChart = dynamic(
   () =>
-    import("@/components/charts/DashboardCharts").then((mod) => mod.VulnStatusChart),
+    import("@/components/charts/DashboardCharts").then(
+      (mod) => mod.VulnStatusChart
+    ),
   {
     ssr: false,
-    loading: () => <div className="h-[240px] animate-pulse rounded-xl bg-[var(--bg-tertiary)]" />,
-  },
+    loading: () => (
+      <div className="h-[240px] animate-pulse rounded-xl bg-[var(--bg-tertiary)]" />
+    ),
+  }
 );
 
 type Severity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFORMATIONAL";
 
 interface DashboardStats {
-  totalAssets: number;
-  criticalAssets: number;
-  totalVulnerabilities: number;
-  criticalVulnerabilities: number;
-  highVulnerabilities: number;
-  mediumVulnerabilities: number;
-  lowVulnerabilities: number;
-  exploitedVulnerabilities: number;
   cisaKevCount: number;
-  threatIndicatorCount: number;
-  overallRiskScore: number;
   complianceScore: number;
-  openVulnerabilities: number;
+  criticalAssets: number;
+  criticalVulnerabilities: number;
+  exploitedVulnerabilities: number;
   fixedThisMonth: number;
+  highVulnerabilities: number;
+  lowVulnerabilities: number;
   meanTimeToRemediate: number;
+  mediumVulnerabilities: number;
+  openVulnerabilities: number;
+  overallRiskScore: number;
+  threatIndicatorCount: number;
+  totalAssets: number;
+  totalVulnerabilities: number;
 }
 
 interface RiskTrendPoint {
-  date: string;
-  riskScore: number;
   criticalVulns: number;
+  date: string;
   highVulns: number;
+  riskScore: number;
 }
 
 interface SeverityPoint {
-  severity: Severity;
   count: number;
   percentage: number;
+  severity: Severity;
 }
 
 interface RiskAsset {
+  criticalVulnCount: number;
   id: string;
   name: string;
+  riskScore: number;
   type: string;
   vulnerabilityCount: number;
-  criticalVulnCount: number;
-  riskScore: number;
 }
 
 interface ComplianceOverviewItem {
+  compliancePercentage: number;
+  compliant: number;
   frameworkId: string;
   frameworkName: string;
-  compliant: number;
   nonCompliant: number;
-  compliancePercentage: number;
 }
 
 interface ActivityItem {
-  id: string;
   action: string;
-  entityType: string;
   entityName: string;
+  entityType: string;
+  id: string;
   timestamp: string;
 }
 
@@ -123,32 +131,32 @@ interface ActivityLogResponse {
 }
 
 interface ExploitedVulnerability {
-  id: string;
-  cveId?: string | null;
-  title: string;
-  severity: Severity;
-  epssScore?: number | null;
   affectedAssets?: number | null;
   cisaKev?: boolean;
+  cveId?: string | null;
+  epssScore?: number | null;
+  id: string;
+  severity: Severity;
+  title: string;
 }
 
 interface RemediationPoint {
+  closed: number;
   month: string;
   opened: number;
-  closed: number;
 }
 
 interface DashboardResponse {
-  stats: DashboardStats;
+  complianceOverview: ComplianceOverviewItem[];
+  degraded?: boolean;
+  exploitedVulnerabilities: ExploitedVulnerability[];
+  lastUpdated: string;
+  recentActivities: ActivityItem[];
+  remediationTrends: RemediationPoint[];
   riskTrends: RiskTrendPoint[];
   severityDistribution: SeverityPoint[];
+  stats: DashboardStats;
   topRiskyAssets: RiskAsset[];
-  complianceOverview: ComplianceOverviewItem[];
-  recentActivities: ActivityItem[];
-  exploitedVulnerabilities: ExploitedVulnerability[];
-  remediationTrends: RemediationPoint[];
-  degraded?: boolean;
-  lastUpdated: string;
 }
 
 const defaultStats: DashboardStats = {
@@ -171,7 +179,7 @@ const defaultStats: DashboardStats = {
 
 const severityOrder: Severity[] = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
 
-const numberFormatter = new Intl.NumberFormat("en-US");
+const _numberFormatter = new Intl.NumberFormat("en-US");
 
 function buildFallbackDashboardResponse(): DashboardResponse {
   const now = new Date();
@@ -180,7 +188,10 @@ function buildFallbackDashboardResponse(): DashboardResponse {
     pointDate.setDate(pointDate.getDate() - (5 - index) * 7);
 
     return {
-      date: pointDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      date: pointDate.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      }),
       riskScore: 0,
       criticalVulns: 0,
       highVulns: 0,
@@ -209,31 +220,73 @@ function buildFallbackDashboardResponse(): DashboardResponse {
 }
 
 function getRiskBand(score: number) {
-  if (score >= 80) return { label: "Critical", color: "text-red-600 dark:text-red-300", rail: "bg-red-400" };
-  if (score >= 60) return { label: "High", color: "text-orange-600 dark:text-orange-300", rail: "bg-orange-400" };
-  if (score >= 40) return { label: "Medium", color: "text-yellow-600 dark:text-yellow-300", rail: "bg-yellow-400" };
-  return { label: "Low", color: "text-emerald-600 dark:text-emerald-300", rail: "bg-emerald-400" };
+  if (score >= 80) {
+    return {
+      label: "Critical",
+      color: "text-red-600 dark:text-red-300",
+      rail: "bg-red-400",
+    };
+  }
+  if (score >= 60) {
+    return {
+      label: "High",
+      color: "text-orange-600 dark:text-orange-300",
+      rail: "bg-orange-400",
+    };
+  }
+  if (score >= 40) {
+    return {
+      label: "Medium",
+      color: "text-yellow-600 dark:text-yellow-300",
+      rail: "bg-yellow-400",
+    };
+  }
+  return {
+    label: "Low",
+    color: "text-emerald-600 dark:text-emerald-300",
+    rail: "bg-emerald-400",
+  };
 }
 
 function getComplianceTone(value: number) {
-  if (value >= 80) return "bg-emerald-400";
-  if (value >= 60) return "bg-yellow-400";
+  if (value >= 80) {
+    return "bg-emerald-400";
+  }
+  if (value >= 60) {
+    return "bg-yellow-400";
+  }
   return "bg-red-400";
 }
 
 function getSeverityBadgeTone(severity: Severity) {
-  if (severity === "CRITICAL") return "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200";
-  if (severity === "HIGH") return "border-orange-400/35 bg-orange-500/10 text-orange-700 dark:text-orange-200";
-  if (severity === "MEDIUM") return "border-yellow-400/35 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200";
-  if (severity === "LOW") return "border-emerald-400/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200";
+  if (severity === "CRITICAL") {
+    return "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200";
+  }
+  if (severity === "HIGH") {
+    return "border-orange-400/35 bg-orange-500/10 text-orange-700 dark:text-orange-200";
+  }
+  if (severity === "MEDIUM") {
+    return "border-yellow-400/35 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200";
+  }
+  if (severity === "LOW") {
+    return "border-emerald-400/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200";
+  }
   return "border-[var(--border-hover)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]";
 }
 
-function getSeverityRailTone(severity: Severity) {
-  if (severity === "CRITICAL") return "bg-red-400";
-  if (severity === "HIGH") return "bg-orange-400";
-  if (severity === "MEDIUM") return "bg-yellow-400";
-  if (severity === "LOW") return "bg-emerald-400";
+function _getSeverityRailTone(severity: Severity) {
+  if (severity === "CRITICAL") {
+    return "bg-red-400";
+  }
+  if (severity === "HIGH") {
+    return "bg-orange-400";
+  }
+  if (severity === "MEDIUM") {
+    return "bg-yellow-400";
+  }
+  if (severity === "LOW") {
+    return "bg-emerald-400";
+  }
   return "bg-[var(--text-muted)]";
 }
 
@@ -247,7 +300,10 @@ function getActivityTone(entityType: string, action: string) {
     };
   }
 
-  if (action === "VULNERABILITY_CREATED" || action.toLowerCase().includes("vulnerability created")) {
+  if (
+    action === "VULNERABILITY_CREATED" ||
+    action.toLowerCase().includes("vulnerability created")
+  ) {
     return {
       icon: ShieldAlert,
       iconColor: "text-red-600 dark:text-red-300",
@@ -255,7 +311,10 @@ function getActivityTone(entityType: string, action: string) {
     };
   }
 
-  if (action === "RISK_ASSESSMENT_COMPLETED" || action.toLowerCase().includes("risk")) {
+  if (
+    action === "RISK_ASSESSMENT_COMPLETED" ||
+    action.toLowerCase().includes("risk")
+  ) {
     return {
       icon: Calculator,
       iconColor: "text-orange-600 dark:text-orange-300",
@@ -263,7 +322,10 @@ function getActivityTone(entityType: string, action: string) {
     };
   }
 
-  if (action.toLowerCase().includes("user created") || action.toLowerCase().includes("user added")) {
+  if (
+    action.toLowerCase().includes("user created") ||
+    action.toLowerCase().includes("user added")
+  ) {
     return {
       icon: UserPlus,
       iconColor: "text-blue-600 dark:text-blue-300",
@@ -271,7 +333,10 @@ function getActivityTone(entityType: string, action: string) {
     };
   }
 
-  if (action.toLowerCase().includes("role updated") || action.toLowerCase().includes("permission")) {
+  if (
+    action.toLowerCase().includes("role updated") ||
+    action.toLowerCase().includes("permission")
+  ) {
     return {
       icon: UserCheck,
       iconColor: "text-purple-600 dark:text-purple-300",
@@ -279,7 +344,10 @@ function getActivityTone(entityType: string, action: string) {
     };
   }
 
-  if (action.toLowerCase().includes("settings") || action.toLowerCase().includes("config")) {
+  if (
+    action.toLowerCase().includes("settings") ||
+    action.toLowerCase().includes("config")
+  ) {
     return {
       icon: Settings,
       iconColor: "text-[var(--text-secondary)]",
@@ -295,7 +363,10 @@ function getActivityTone(entityType: string, action: string) {
     };
   }
 
-  if (action.toLowerCase().includes("scan") || action.toLowerCase().includes("scanner")) {
+  if (
+    action.toLowerCase().includes("scan") ||
+    action.toLowerCase().includes("scanner")
+  ) {
     return {
       icon: Activity,
       iconColor: "text-indigo-600 dark:text-indigo-300",
@@ -303,7 +374,10 @@ function getActivityTone(entityType: string, action: string) {
     };
   }
 
-  if (action.toLowerCase().includes("report") || action.toLowerCase().includes("export")) {
+  if (
+    action.toLowerCase().includes("report") ||
+    action.toLowerCase().includes("export")
+  ) {
     return {
       icon: FileText,
       iconColor: "text-amber-600 dark:text-amber-300",
@@ -311,7 +385,10 @@ function getActivityTone(entityType: string, action: string) {
     };
   }
 
-  if (action.toLowerCase().includes("deleted") || action.toLowerCase().includes("removed")) {
+  if (
+    action.toLowerCase().includes("deleted") ||
+    action.toLowerCase().includes("removed")
+  ) {
     return {
       icon: Trash2,
       iconColor: "text-red-600 dark:text-red-300",
@@ -319,7 +396,11 @@ function getActivityTone(entityType: string, action: string) {
     };
   }
 
-  if (action.toLowerCase().includes("updated") || action.toLowerCase().includes("modified") || action.toLowerCase().includes("edited")) {
+  if (
+    action.toLowerCase().includes("updated") ||
+    action.toLowerCase().includes("modified") ||
+    action.toLowerCase().includes("edited")
+  ) {
     return {
       icon: Edit,
       iconColor: "text-yellow-600 dark:text-yellow-300",
@@ -327,7 +408,11 @@ function getActivityTone(entityType: string, action: string) {
     };
   }
 
-  if (action.toLowerCase().includes("approved") || action.toLowerCase().includes("completed") || action.toLowerCase().includes("resolved")) {
+  if (
+    action.toLowerCase().includes("approved") ||
+    action.toLowerCase().includes("completed") ||
+    action.toLowerCase().includes("resolved")
+  ) {
     return {
       icon: CheckCircle2,
       iconColor: "text-green-600 dark:text-green-300",
@@ -335,7 +420,10 @@ function getActivityTone(entityType: string, action: string) {
     };
   }
 
-  if (action.toLowerCase().includes("rejected") || action.toLowerCase().includes("failed")) {
+  if (
+    action.toLowerCase().includes("rejected") ||
+    action.toLowerCase().includes("failed")
+  ) {
     return {
       icon: XCircle,
       iconColor: "text-red-600 dark:text-red-300",
@@ -343,7 +431,10 @@ function getActivityTone(entityType: string, action: string) {
     };
   }
 
-  if (action.toLowerCase().includes("upload") || action.toLowerCase().includes("import")) {
+  if (
+    action.toLowerCase().includes("upload") ||
+    action.toLowerCase().includes("import")
+  ) {
     return {
       icon: Upload,
       iconColor: "text-teal-600 dark:text-teal-300",
@@ -359,7 +450,10 @@ function getActivityTone(entityType: string, action: string) {
     };
   }
 
-  if (action.toLowerCase().includes("locked") || action.toLowerCase().includes("disabled")) {
+  if (
+    action.toLowerCase().includes("locked") ||
+    action.toLowerCase().includes("disabled")
+  ) {
     return {
       icon: Lock,
       iconColor: "text-gray-600 dark:text-gray-300",
@@ -367,7 +461,10 @@ function getActivityTone(entityType: string, action: string) {
     };
   }
 
-  if (action.toLowerCase().includes("unlocked") || action.toLowerCase().includes("enabled")) {
+  if (
+    action.toLowerCase().includes("unlocked") ||
+    action.toLowerCase().includes("enabled")
+  ) {
     return {
       icon: Unlock,
       iconColor: "text-green-600 dark:text-green-300",
@@ -375,7 +472,10 @@ function getActivityTone(entityType: string, action: string) {
     };
   }
 
-  if (action.toLowerCase().includes("alert") || action.toLowerCase().includes("warning")) {
+  if (
+    action.toLowerCase().includes("alert") ||
+    action.toLowerCase().includes("warning")
+  ) {
     return {
       icon: AlertCircle,
       iconColor: "text-orange-600 dark:text-orange-300",
@@ -441,7 +541,9 @@ function formatAssetType(type: string) {
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardResponse | null>(null);
-  const [recentActivityLogs, setRecentActivityLogs] = useState<ActivityItem[] | null>(null);
+  const [recentActivityLogs, setRecentActivityLogs] = useState<
+    ActivityItem[] | null
+  >(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -449,7 +551,13 @@ export default function DashboardPage() {
   const isMainOfficer = session?.user?.role === "MAIN_OFFICER";
 
   const fetchDashboardData = useCallback(
-    async ({ signal, silent }: { signal?: AbortSignal; silent?: boolean } = {}) => {
+    async ({
+      signal,
+      silent,
+    }: {
+      signal?: AbortSignal;
+      silent?: boolean;
+    } = {}) => {
       if (silent) {
         setIsRefreshing(true);
       } else {
@@ -458,14 +566,19 @@ export default function DashboardPage() {
 
       try {
         setError(null);
-        const response = await fetch("/api/dashboard", { signal, cache: "no-store" });
+        const response = await fetch("/api/dashboard", {
+          signal,
+          cache: "no-store",
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch dashboard data");
         }
         const payload = (await response.json()) as DashboardResponse;
         setData(payload);
       } catch (err) {
-        if (err instanceof Error && err.name === "AbortError") return;
+        if (err instanceof Error && err.name === "AbortError") {
+          return;
+        }
         setData((previous) => previous ?? buildFallbackDashboardResponse());
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
@@ -476,7 +589,7 @@ export default function DashboardPage() {
         }
       }
     },
-    [],
+    []
   );
 
   const fetchRecentActivity = useCallback(async (signal?: AbortSignal) => {
@@ -500,7 +613,9 @@ export default function DashboardPage() {
 
       setRecentActivityLogs(mappedLogs);
     } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") return;
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
       setRecentActivityLogs((previous) => previous ?? []);
     }
   }, []);
@@ -516,7 +631,7 @@ export default function DashboardPage() {
       if (isMainOfficer) {
         void fetchRecentActivity();
       }
-    }, 30000);
+    }, 30_000);
 
     return () => {
       controller.abort();
@@ -525,20 +640,29 @@ export default function DashboardPage() {
   }, [fetchDashboardData, fetchRecentActivity, isMainOfficer]);
 
   const stats = data?.stats ?? defaultStats;
-  const riskBand = useMemo(() => getRiskBand(stats.overallRiskScore), [stats.overallRiskScore]);
-  const lastUpdatedLabel = data?.lastUpdated
+  const riskBand = useMemo(
+    () => getRiskBand(stats.overallRiskScore),
+    [stats.overallRiskScore]
+  );
+  const _lastUpdatedLabel = data?.lastUpdated
     ? getTimeAgo(new Date(data.lastUpdated))
     : "just now";
-  const activeThreats = stats.exploitedVulnerabilities + stats.threatIndicatorCount;
+  const activeThreats =
+    stats.exploitedVulnerabilities + stats.threatIndicatorCount;
 
   const severityRows = useMemo(() => {
     const distributionMap = new Map(
-      (data?.severityDistribution ?? []).map((item) => [item.severity, item.count]),
+      (data?.severityDistribution ?? []).map((item) => [
+        item.severity,
+        item.count,
+      ])
     );
     return severityOrder.map((severity) => {
       const count = distributionMap.get(severity) ?? 0;
       const percentage =
-        stats.totalVulnerabilities > 0 ? (count / stats.totalVulnerabilities) * 100 : 0;
+        stats.totalVulnerabilities > 0
+          ? (count / stats.totalVulnerabilities) * 100
+          : 0;
 
       return {
         severity,
@@ -550,22 +674,22 @@ export default function DashboardPage() {
 
   const priorityQueue = useMemo(
     () => (data?.exploitedVulnerabilities ?? []).slice(0, 6),
-    [data?.exploitedVulnerabilities],
+    [data?.exploitedVulnerabilities]
   );
 
   const riskyAssets = useMemo(
     () => (data?.topRiskyAssets ?? []).slice(0, 5),
-    [data?.topRiskyAssets],
+    [data?.topRiskyAssets]
   );
 
   const complianceRows = useMemo(
     () => (data?.complianceOverview ?? []).slice(0, 4),
-    [data?.complianceOverview],
+    [data?.complianceOverview]
   );
 
   const activityRows = useMemo(
     () => (recentActivityLogs ?? data?.recentActivities ?? []).slice(0, 6),
-    [data?.recentActivities, recentActivityLogs],
+    [data?.recentActivities, recentActivityLogs]
   );
 
   const remediationTrends = data?.remediationTrends ?? [];
@@ -574,18 +698,31 @@ export default function DashboardPage() {
   if (isLoading && !data) {
     return (
       <DashboardLayout>
-      <div className="mx-auto w-full max-w-[1600px] space-y-6" aria-label="Loading dashboard">
-        <div className="space-y-3 border-b border-border pb-6">
-          <div className="h-7 w-56 animate-pulse rounded-md bg-muted" />
-          <div className="h-4 w-full max-w-xl animate-pulse rounded-md bg-muted" />
+        <div
+          aria-label="Loading dashboard"
+          className="mx-auto w-full max-w-[1600px] space-y-6"
+        >
+          <div className="space-y-3 border-border border-b pb-6">
+            <div className="h-7 w-56 animate-pulse rounded-md bg-muted" />
+            <div className="h-4 w-full max-w-xl animate-pulse rounded-md bg-muted" />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {[0, 1, 2].map((item) => (
+              <div
+                className="h-32 animate-pulse rounded-lg border border-border bg-card"
+                key={item}
+              />
+            ))}
+          </div>
+          <div className="grid gap-4 xl:grid-cols-3">
+            {[0, 1, 2].map((item) => (
+              <div
+                className="h-72 animate-pulse rounded-lg border border-border bg-card"
+                key={item}
+              />
+            ))}
+          </div>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {[0, 1, 2].map((item) => <div key={item} className="h-32 animate-pulse rounded-lg border border-border bg-card" />)}
-        </div>
-        <div className="grid gap-4 xl:grid-cols-3">
-          {[0, 1, 2].map((item) => <div key={item} className="h-72 animate-pulse rounded-lg border border-border bg-card" />)}
-        </div>
-      </div>
       </DashboardLayout>
     );
   }
@@ -596,40 +733,43 @@ export default function DashboardPage() {
     <DashboardLayout>
       <div className="mx-auto max-w-[1600px] space-y-6">
         <PageHeader
-          title="Security overview"
-          description="A current view of vulnerabilities, business risk, and compliance across your organization."
-          badge={
-            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-              <Activity size={13} aria-hidden="true" />
-              Live intelligence
-            </div>
-          }
           actions={
             <div className="flex items-center gap-3">
               <Button
-                type="button"
-                variant="outline"
                 onClick={() => {
                   void fetchDashboardData({ silent: true });
                   void fetchRecentActivity();
                 }}
+                type="button"
+                variant="outline"
               >
-                <RefreshCw size={16} aria-hidden="true" className={cn(isRefreshing && "animate-spin")} />
+                <RefreshCw
+                  aria-hidden="true"
+                  className={cn(isRefreshing && "animate-spin")}
+                  size={16}
+                />
                 Sync
               </Button>
               <Button asChild>
                 <Link href="/threats">
                   Review vulnerabilities
-                  <ArrowRight size={16} aria-hidden="true" />
+                  <ArrowRight aria-hidden="true" size={16} />
                 </Link>
               </Button>
             </div>
           }
+          badge={
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-2.5 py-1 font-medium text-muted-foreground text-xs">
+              <Activity aria-hidden="true" size={13} />
+              Live intelligence
+            </div>
+          }
+          description="A current view of vulnerabilities, business risk, and compliance across your organization."
           stats={[
             {
               label: "Assets",
               value: stats.totalAssets,
-              icon: Server
+              icon: Server,
             },
             {
               label: "Remediated this month",
@@ -640,37 +780,74 @@ export default function DashboardPage() {
               label: "CISA KEV",
               value: stats.cisaKevCount,
               icon: ShieldAlert,
-            }
+            },
           ]}
+          title="Security overview"
         />
 
         {error ? (
-          <section role="alert" className="flex flex-col gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <section
+            className="flex flex-col gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm sm:flex-row sm:items-center sm:justify-between"
+            role="alert"
+          >
             <div className="flex items-start gap-3">
-              <AlertCircle size={18} className="mt-0.5 shrink-0 text-destructive" aria-hidden="true" />
+              <AlertCircle
+                aria-hidden="true"
+                className="mt-0.5 shrink-0 text-destructive"
+                size={18}
+              />
               <div>
-                <p className="font-medium text-foreground">Dashboard data is temporarily unavailable</p>
+                <p className="font-medium text-foreground">
+                  Dashboard data is temporarily unavailable
+                </p>
                 <p className="mt-1 text-muted-foreground">{error}</p>
               </div>
             </div>
-            <Button type="button" variant="outline" size="sm" onClick={() => void fetchDashboardData({ silent: true })}>
-              <RefreshCw size={14} aria-hidden="true" />
+            <Button
+              onClick={() => void fetchDashboardData({ silent: true })}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              <RefreshCw aria-hidden="true" size={14} />
               Try again
             </Button>
           </section>
         ) : null}
 
         {data?.degraded && !error ? (
-          <section role="status" className="flex flex-col gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <section
+            className="flex flex-col gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm sm:flex-row sm:items-center sm:justify-between"
+            role="status"
+          >
             <div className="flex items-start gap-3">
-              <AlertCircle size={18} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
+              <AlertCircle
+                aria-hidden="true"
+                className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400"
+                size={18}
+              />
               <div>
-                <p className="font-medium text-foreground">Live workspace data is temporarily unavailable</p>
-                <p className="mt-1 text-muted-foreground">The zero values below are placeholders until your database connection recovers.</p>
+                <p className="font-medium text-foreground">
+                  Live workspace data is temporarily unavailable
+                </p>
+                <p className="mt-1 text-muted-foreground">
+                  The zero values below are placeholders until your database
+                  connection recovers.
+                </p>
               </div>
             </div>
-            <Button type="button" variant="outline" size="sm" disabled={isRefreshing} onClick={() => void fetchDashboardData({ silent: true })}>
-              <RefreshCw size={14} aria-hidden="true" className={cn(isRefreshing && "animate-spin")} />
+            <Button
+              disabled={isRefreshing}
+              onClick={() => void fetchDashboardData({ silent: true })}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              <RefreshCw
+                aria-hidden="true"
+                className={cn(isRefreshing && "animate-spin")}
+                size={14}
+              />
               Retry connection
             </Button>
           </section>
@@ -678,26 +855,34 @@ export default function DashboardPage() {
 
         {/* HIGH PRIORITY SECTION */}
         {activeThreats > 0 ? (
-          <section className="rounded-2xl border border-red-400/25 bg-red-50/80 p-4 animate-slide-in-up transition-all duration-300 hover:border-red-400/35 hover:bg-red-50/95 dark:border-red-400/20 dark:bg-red-500/5 dark:hover:border-red-400/30 dark:hover:bg-red-500/10">
+          <section className="animate-slide-in-up rounded-2xl border border-red-400/25 bg-red-50/80 p-4 transition-all duration-300 hover:border-red-400/35 hover:bg-red-50/95 dark:border-red-400/20 dark:bg-red-500/5 dark:hover:border-red-400/30 dark:hover:bg-red-500/10">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 rounded-lg border border-red-400/30 bg-red-100/90 p-2 animate-pulse-subtle dark:border-red-400/25 dark:bg-red-500/10">
-                  <AlertTriangle size={16} className="text-red-700 dark:text-red-300" />
+                <div className="mt-0.5 animate-pulse-subtle rounded-lg border border-red-400/30 bg-red-100/90 p-2 dark:border-red-400/25 dark:bg-red-500/10">
+                  <AlertTriangle
+                    className="text-red-700 dark:text-red-300"
+                    size={16}
+                  />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-semibold text-[var(--text-primary)]">Active Exploitation Signals</h2>
-                    <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white dark:bg-red-500">HIGH PRIORITY</span>
+                    <h2 className="font-semibold text-[var(--text-primary)] text-sm">
+                      Active Exploitation Signals
+                    </h2>
+                    <span className="rounded-full bg-red-600 px-2 py-0.5 font-bold text-[10px] text-white dark:bg-red-500">
+                      HIGH PRIORITY
+                    </span>
                   </div>
-                  <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                    {stats.exploitedVulnerabilities} exploited vulnerabilities and{" "}
-                    {stats.cisaKevCount} KEV-listed issues require attention.
+                  <p className="mt-1 text-[var(--text-secondary)] text-sm">
+                    {stats.exploitedVulnerabilities} exploited vulnerabilities
+                    and {stats.cisaKevCount} KEV-listed issues require
+                    attention.
                   </p>
                 </div>
               </div>
               <Link
+                className="inline-flex items-center gap-2 self-start rounded-lg border border-red-200 bg-white px-3 py-1.5 font-semibold text-red-700 text-sm shadow-sm transition-all duration-200 hover:scale-105 hover:border-red-300 hover:bg-red-50 sm:self-auto dark:border-red-300/35 dark:bg-red-400/10 dark:text-red-100 dark:hover:bg-red-400/20"
                 href="/vulnerabilities?filter=exploited"
-                className="inline-flex items-center gap-2 self-start rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-semibold text-red-700 shadow-sm transition-all duration-200 hover:bg-red-50 hover:border-red-300 hover:scale-105 dark:border-red-300/35 dark:bg-red-400/10 dark:text-red-100 dark:hover:bg-red-400/20 sm:self-auto"
               >
                 Review now
                 <ArrowRight size={14} />
@@ -714,330 +899,430 @@ export default function DashboardPage() {
               value: stats.openVulnerabilities,
               hint: `${stats.criticalVulnerabilities} Critical Issues`,
               icon: ShieldAlert,
-              percent: stats.totalVulnerabilities ? (stats.openVulnerabilities / stats.totalVulnerabilities) * 100 : 0
+              percent: stats.totalVulnerabilities
+                ? (stats.openVulnerabilities / stats.totalVulnerabilities) * 100
+                : 0,
             },
             {
               label: "Risk Posture",
               value: stats.overallRiskScore.toFixed(1),
               hint: `${riskBand.label} Exposure`,
               icon: Gauge,
-              percent: stats.overallRiskScore
+              percent: stats.overallRiskScore,
             },
             {
               label: "Compliance Delta",
               value: `${stats.complianceScore.toFixed(0)}%`,
               hint: "Framework Coverage",
               icon: CheckCircle2,
-              percent: stats.complianceScore
+              percent: stats.complianceScore,
             },
           ].map((metric, idx) => {
             const Icon = metric.icon;
 
             return (
               <Card
-                key={metric.label}
                 className="group rounded-lg border-border p-0 shadow-none transition-colors hover:bg-accent/30"
+                key={metric.label}
                 style={{ animationDelay: `${idx * 100}ms` }}
               >
                 <CardContent className="p-5">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm text-[var(--text-secondary)]">{metric.label}</p>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="text-[var(--text-secondary)] text-sm">
+                        {metric.label}
+                      </p>
+                    </div>
+                    <div className="rounded-md border border-border bg-muted p-2 text-muted-foreground">
+                      <Icon aria-hidden="true" size={16} />
+                    </div>
                   </div>
-                  <div className="rounded-md border border-border bg-muted p-2 text-muted-foreground">
-                    <Icon size={16} aria-hidden="true" />
+                  <p className="mt-4 font-semibold text-3xl text-foreground tabular-nums">
+                    {metric.value}
+                  </p>
+                  <p className="mt-1 text-[var(--text-muted)] text-sm">
+                    {metric.hint}
+                  </p>
+                  <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all duration-700 ease-out"
+                      style={{
+                        width: `${Math.min(Math.max(metric.percent, 0), 100)}%`,
+                      }}
+                    />
                   </div>
-                </div>
-                <p className="mt-4 text-3xl font-semibold tabular-nums text-foreground">{metric.value}</p>
-                <p className="mt-1 text-sm text-[var(--text-muted)]">{metric.hint}</p>
-                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all duration-700 ease-out"
-                    style={{ width: `${Math.min(Math.max(metric.percent, 0), 100)}%` }}
-                  />
-                </div>
                 </CardContent>
               </Card>
             );
           })}
-    </div>
+        </div>
 
-  <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
-  {/* PRIORITY QUEUE */}
-  <Card className="flex h-full flex-col rounded-lg border-border p-0 shadow-none xl:col-span-2">
-    <CardContent className="flex h-full flex-col p-5">
-    <div className="flex items-center justify-between mb-4">
-      <div className="flex items-center gap-2">
-        <h2 className="text-base font-semibold text-foreground">Priority queue</h2>
-        <span className="rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
-          Active
-        </span>
-      </div>
-      <Link
-        href="/vulnerabilities?filter=exploited"
-        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-      >
-        View Queue
-      </Link>
-    </div>
-
-    <div className="flex-1 space-y-3 overflow-y-auto max-h-[300px] custom-scrollbar">
-      {priorityQueue.length > 0 ? (
-        priorityQueue.map((vuln) => (
-          <div
-            key={vuln.id}
-            className="group rounded-md border border-border bg-background p-3 transition-colors hover:bg-accent/50"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-[var(--text-primary)]">{vuln.title}</p>
-                <div className="mt-1 flex items-center gap-2">
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded border ${getSeverityBadgeTone(vuln.severity)}`}>
-                    {vuln.severity}
+        <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
+          {/* PRIORITY QUEUE */}
+          <Card className="flex h-full flex-col rounded-lg border-border p-0 shadow-none xl:col-span-2">
+            <CardContent className="flex h-full flex-col p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-semibold text-base text-foreground">
+                    Priority queue
+                  </h2>
+                  <span className="rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 font-medium text-destructive text-xs">
+                    Active
                   </span>
-                  {vuln.cisaKev && (
-                    <span className="text-[10px] font-bold text-red-500">KEV</span>
-                  )}
-                  <span className="text-[10px] text-[var(--text-muted)] font-mono">{vuln.cveId}</span>
+                </div>
+                <Link
+                  className="text-muted-foreground text-sm transition-colors hover:text-foreground"
+                  href="/vulnerabilities?filter=exploited"
+                >
+                  View Queue
+                </Link>
+              </div>
+
+              <div className="custom-scrollbar max-h-[300px] flex-1 space-y-3 overflow-y-auto">
+                {priorityQueue.length > 0 ? (
+                  priorityQueue.map((vuln) => (
+                    <div
+                      className="group rounded-md border border-border bg-background p-3 transition-colors hover:bg-accent/50"
+                      key={vuln.id}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-[var(--text-primary)] text-sm">
+                            {vuln.title}
+                          </p>
+                          <div className="mt-1 flex items-center gap-2">
+                            <span
+                              className={`rounded border px-1.5 py-0.5 text-[10px] ${getSeverityBadgeTone(vuln.severity)}`}
+                            >
+                              {vuln.severity}
+                            </span>
+                            {vuln.cisaKev && (
+                              <span className="font-bold text-[10px] text-red-500">
+                                KEV
+                              </span>
+                            )}
+                            <span className="font-mono text-[10px] text-[var(--text-muted)]">
+                              {vuln.cveId}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <div className="font-bold text-orange-500 text-sm">
+                            {((vuln.epssScore || 0) * 100).toFixed(1)}%
+                          </div>
+                          <div className="text-[9px] text-[var(--text-muted)] uppercase">
+                            EPSS
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex h-full items-center justify-center p-4 text-center text-[var(--text-muted)] text-sm">
+                    No priority issues to review.
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* RISK SNAPSHOT */}
+          <Card className="flex flex-col items-center justify-center rounded-lg p-0 text-center shadow-none">
+            <CardContent className="flex w-full flex-col items-center p-5 sm:p-6">
+              <div className="relative mb-5">
+                <svg
+                  aria-label={`Overall risk score ${stats.overallRiskScore.toFixed(1)} out of 100`}
+                  className="size-40 -rotate-90"
+                  role="img"
+                  viewBox="0 0 192 192"
+                >
+                  <circle
+                    className="text-muted"
+                    cx="96"
+                    cy="96"
+                    fill="none"
+                    r="88"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                  />
+                  <circle
+                    className="text-primary transition-all duration-700 ease-out"
+                    cx="96"
+                    cy="96"
+                    fill="none"
+                    r="88"
+                    stroke="currentColor"
+                    strokeDasharray={2 * Math.PI * 88}
+                    strokeDashoffset={2 * Math.PI * 88 * (1 - riskMeter / 100)}
+                    strokeLinecap="round"
+                    strokeWidth="8"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="font-semibold text-4xl text-foreground tabular-nums tracking-tight">
+                    {stats.overallRiskScore.toFixed(1)}
+                  </span>
+                  <span className="mt-1 text-muted-foreground text-xs">
+                    Risk score
+                  </span>
                 </div>
               </div>
-              <div className="text-right shrink-0">
-                <div className="text-sm font-bold text-orange-500">{((vuln.epssScore || 0) * 100).toFixed(1)}%</div>
-                <div className="text-[9px] text-[var(--text-muted)] uppercase">EPSS</div>
+              <div className="mx-auto grid w-full max-w-md grid-cols-2 gap-x-8 gap-y-4">
+                {severityRows.map((entry) => (
+                  <div className="group text-left" key={entry.severity}>
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="font-medium text-muted-foreground text-xs">
+                        {entry.severity}
+                      </span>
+                      <span className="font-medium text-foreground text-sm tabular-nums">
+                        {entry.count}
+                      </span>
+                    </div>
+                    <div className="h-1 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
+                      <div
+                        className={cn(
+                          "h-full transition-all duration-1000",
+                          entry.severity === "CRITICAL"
+                            ? "bg-red-500"
+                            : entry.severity === "HIGH"
+                              ? "bg-orange-500"
+                              : entry.severity === "MEDIUM"
+                                ? "bg-yellow-500"
+                                : "bg-blue-500"
+                        )}
+                        style={{ width: `${entry.percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          </div>
-        ))
-      ) : (
-        <div className="h-full flex items-center justify-center p-4 text-center text-[var(--text-muted)] text-sm">
-          No priority issues to review.
+            </CardContent>
+          </Card>
         </div>
-      )}
-    </div>
-    </CardContent>
-  </Card>
 
-  {/* RISK SNAPSHOT */ }
-  <Card className="flex flex-col items-center justify-center rounded-lg p-0 text-center shadow-none">
-    <CardContent className="flex w-full flex-col items-center p-5 sm:p-6">
-    <div className="relative mb-5">
-      <svg className="size-40 -rotate-90" viewBox="0 0 192 192" role="img" aria-label={`Overall risk score ${stats.overallRiskScore.toFixed(1)} out of 100`}>
-        <circle cx="96" cy="96" r="88" fill="none" stroke="currentColor" strokeWidth="8" className="text-muted" />
-        <circle
-          cx="96" cy="96" r="88" fill="none" stroke="currentColor" strokeWidth="8"
-          strokeDasharray={2 * Math.PI * 88}
-          strokeDashoffset={2 * Math.PI * 88 * (1 - riskMeter / 100)}
-          strokeLinecap="round"
-          className="text-primary transition-all duration-700 ease-out"
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-4xl font-semibold tabular-nums tracking-tight text-foreground">{stats.overallRiskScore.toFixed(1)}</span>
-        <span className="mt-1 text-xs text-muted-foreground">Risk score</span>
-      </div>
-    </div>
-    <div className="grid grid-cols-2 gap-x-8 gap-y-4 w-full max-w-md mx-auto">
-      {severityRows.map((entry) => (
-        <div key={entry.severity} className="text-left group">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-xs font-medium text-muted-foreground">{entry.severity}</span>
-            <span className="text-sm font-medium tabular-nums text-foreground">{entry.count}</span>
-          </div>
-          <div className="h-1 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
-            <div
-              className={cn(
-                "h-full transition-all duration-1000",
-                entry.severity === "CRITICAL" ? "bg-red-500" :
-                  entry.severity === "HIGH" ? "bg-orange-500" :
-                    entry.severity === "MEDIUM" ? "bg-yellow-500" : "bg-blue-500"
-              )}
-              style={{ width: `${entry.percentage}%` }}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-    </CardContent>
-  </Card>
-  </div>
-
-    {/* THIRD ROW - ANALYTICS & ACTIVITY */ }
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      {/* ANALYTICS */ }
-      <div className="lg:col-span-2 card">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Compliance Overview</h2>
-                <span className="rounded-full bg-[var(--bg-tertiary)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">
-                  MONITOR
-                </span>
+        {/* THIRD ROW - ANALYTICS & ACTIVITY */}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+          {/* ANALYTICS */}
+          <div className="card lg:col-span-2">
+            <div className="mb-8 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                    Compliance Overview
+                  </h2>
+                  <span className="rounded-full bg-[var(--bg-tertiary)] px-2 py-0.5 font-semibold text-[10px] text-[var(--text-secondary)]">
+                    MONITOR
+                  </span>
+                </div>
+                <p className="mt-1 text-[var(--text-secondary)] text-sm">
+                  Framework posture by control status.
+                </p>
               </div>
-              <p className="mt-1 text-sm text-[var(--text-secondary)]">Framework posture by control status.</p>
+              <Link
+                className="text-sky-700 text-sm transition-all duration-200 hover:scale-105 hover:text-sky-600 dark:text-sky-300 dark:hover:text-sky-200"
+                href="/compliance"
+              >
+                Open module
+              </Link>
             </div>
-            <Link
-              href="/compliance"
-              className="text-sm text-sky-700 dark:text-sky-300 transition-all duration-200 hover:text-sky-600 dark:hover:text-sky-200 hover:scale-105"
-            >
-              Open module
-            </Link>
-          </div>
 
-          <div className="mt-5 space-y-4">
-            {complianceRows.length > 0 ? (
-              complianceRows.map((framework) => (
-                <div key={framework.frameworkId}>
-                  <div className="mb-1.5 flex items-center justify-between">
-                    <p className="text-sm text-[var(--text-secondary)]">{framework.frameworkName}</p>
-                    <p className="text-sm font-medium text-[var(--text-primary)]">
-                      {framework.compliancePercentage.toFixed(0)}%
+            <div className="mt-5 space-y-4">
+              {complianceRows.length > 0 ? (
+                complianceRows.map((framework) => (
+                  <div key={framework.frameworkId}>
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <p className="text-[var(--text-secondary)] text-sm">
+                        {framework.frameworkName}
+                      </p>
+                      <p className="font-medium text-[var(--text-primary)] text-sm">
+                        {framework.compliancePercentage.toFixed(0)}%
+                      </p>
+                    </div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
+                      <div
+                        className={`h-full rounded-full ${getComplianceTone(framework.compliancePercentage)}`}
+                        style={{
+                          width: `${Math.min(Math.max(framework.compliancePercentage, 0), 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="mt-1.5 text-[var(--text-secondary)] text-xs">
+                      {framework.compliant} compliant · {framework.nonCompliant}{" "}
+                      non-compliant
                     </p>
                   </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
-                    <div
-                      className={`h-full rounded-full ${getComplianceTone(framework.compliancePercentage)}`}
-                      style={{
-                        width: `${Math.min(Math.max(framework.compliancePercentage, 0), 100)}%`,
-                      }}
-                    />
+                ))
+              ) : (
+                <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-[var(--text-muted)] text-sm">
+                  Compliance frameworks are not configured yet.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <article
+            className="animate-fade-in rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:border-sky-300/30"
+            style={{ animationDelay: "300ms" }}
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                    Top Risky Assets
+                  </h2>
+                  <span className="rounded-full border border-amber-300/60 bg-amber-100/85 px-2 py-0.5 font-semibold text-[10px] text-amber-800 dark:border-amber-400/35 dark:bg-amber-500/15 dark:text-amber-200">
+                    REVIEW
+                  </span>
+                </div>
+              </div>
+              <Link
+                className="text-sky-700 text-sm transition-all duration-200 hover:scale-105 hover:text-sky-600 dark:text-sky-300 dark:hover:text-sky-200"
+                href="/assets"
+              >
+                View assets
+              </Link>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {riskyAssets.length > 0 ? (
+                riskyAssets.map((asset, idx) => (
+                  <div
+                    className="group animate-fade-in rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 transition-all duration-300 hover:-translate-y-0.5 hover:border-sky-300/30 hover:bg-[var(--bg-elevated)]"
+                    key={asset.id}
+                    style={{ animationDelay: `${idx * 50}ms` }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-[var(--text-secondary)] text-sm transition-colors duration-200 group-hover:text-[var(--text-primary)]">
+                          {asset.name}
+                        </p>
+                        <p className="mt-0.5 text-[var(--text-muted)] text-xs">
+                          {formatAssetType(asset.type)}
+                        </p>
+                      </div>
+                      <p className="font-medium text-[var(--text-primary)] text-sm transition-all duration-200 group-hover:text-sky-500 dark:group-hover:text-sky-300">
+                        {asset.riskScore.toFixed(1)}
+                      </p>
+                    </div>
+                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]/50">
+                      <div
+                        className={`h-full rounded-full transition-all duration-700 ease-out ${getRiskBand(asset.riskScore).rail}`}
+                        style={{
+                          width: `${Math.min(Math.max(asset.riskScore, 0), 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="mt-1.5 text-[var(--text-muted)] text-xs">
+                      {asset.vulnerabilityCount} vulnerabilities ·{" "}
+                      {asset.criticalVulnCount} critical
+                    </p>
                   </div>
-                  <p className="mt-1.5 text-xs text-[var(--text-secondary)]">
-                    {framework.compliant} compliant · {framework.nonCompliant} non-compliant
+                ))
+              ) : (
+                <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-[var(--text-muted)] text-sm">
+                  No asset risk data is available yet.
+                </p>
+              )}
+            </div>
+          </article>
+        </div>
+
+        <section
+          className={`grid gap-4 ${isMainOfficer ? "xl:grid-cols-[1.15fr_0.85fr]" : "xl:grid-cols-1"}`}
+        >
+          <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+            <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+              Risk and Remediation Trends
+            </h2>
+            <p className="mt-1 text-[var(--text-secondary)] text-sm">
+              Weekly risk evolution and monthly fix velocity.
+            </p>
+
+            <div className="mt-5">
+              <p className="font-semibold text-[var(--text-muted)] text-xs uppercase tracking-[0.18em]">
+                Risk Trend
+              </p>
+              <div className="mt-2">
+                <RiskTrendChart data={riskTrends} />
+              </div>
+            </div>
+
+            <div className="mt-6 border-[var(--border-color)] border-t pt-6">
+              <p className="font-semibold text-[var(--text-muted)] text-xs uppercase tracking-[0.18em]">
+                Remediation Velocity
+              </p>
+              <div className="mt-2">
+                <VulnStatusChart data={remediationTrends} />
+              </div>
+            </div>
+          </article>
+
+          {isMainOfficer && (
+            <article className="flex h-[600px] flex-col rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                    Recent Activity
+                  </h2>
+                  <p className="mt-1 text-[var(--text-secondary)] text-sm">
+                    Latest high-signal events.
                   </p>
                 </div>
-              ))
-            ) : (
-              <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
-                Compliance frameworks are not configured yet.
-              </p>
-            )}
-          </div>
-        </div>
-
-    <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:border-sky-300/30 animate-fade-in" style={{ animationDelay: "300ms" }}>
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Top Risky Assets</h2>
-            <span className="rounded-full border border-amber-300/60 bg-amber-100/85 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:border-amber-400/35 dark:bg-amber-500/15 dark:text-amber-200">
-              REVIEW
-            </span>
-          </div>
-        </div>
-        <Link href="/assets" className="text-sm text-sky-700 dark:text-sky-300 transition-all duration-200 hover:text-sky-600 dark:hover:text-sky-200 hover:scale-105">
-          View assets
-        </Link>
-      </div>
-
-      <div className="mt-5 space-y-3">
-        {riskyAssets.length > 0 ? (
-          riskyAssets.map((asset, idx) => (
-            <div
-              key={asset.id}
-              className="group rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 transition-all duration-300 hover:border-sky-300/30 hover:bg-[var(--bg-elevated)] hover:-translate-y-0.5 animate-fade-in"
-              style={{ animationDelay: `${idx * 50}ms` }}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-[var(--text-secondary)] transition-colors duration-200 group-hover:text-[var(--text-primary)]">{asset.name}</p>
-                  <p className="mt-0.5 text-xs text-[var(--text-muted)]">{formatAssetType(asset.type)}</p>
-                </div>
-                <p className="text-sm font-medium text-[var(--text-primary)] transition-all duration-200 group-hover:text-sky-500 dark:group-hover:text-sky-300">{asset.riskScore.toFixed(1)}</p>
+                <Link
+                  className="text-sky-700 text-sm transition hover:text-sky-600 dark:text-sky-300 dark:hover:text-sky-200"
+                  href="/reports/activity"
+                >
+                  Full log
+                </Link>
               </div>
-              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]/50">
-                <div
-                  className={`h-full rounded-full transition-all duration-700 ease-out ${getRiskBand(asset.riskScore).rail}`}
-                  style={{ width: `${Math.min(Math.max(asset.riskScore, 0), 100)}%` }}
-                />
-              </div>
-              <p className="mt-1.5 text-xs text-[var(--text-muted)]">
-                {asset.vulnerabilityCount} vulnerabilities · {asset.criticalVulnCount} critical
-              </p>
-            </div>
-          ))
-        ) : (
-          <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
-            No asset risk data is available yet.
-          </p>
-        )}
-      </div>
-    </article>
-      </div>
 
-    <section className={`grid gap-4 ${isMainOfficer ? 'xl:grid-cols-[1.15fr_0.85fr]' : 'xl:grid-cols-1'}`}>
-      <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Risk and Remediation Trends</h2>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">
-          Weekly risk evolution and monthly fix velocity.
-        </p>
-
-        <div className="mt-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-            Risk Trend
-          </p>
-          <div className="mt-2">
-            <RiskTrendChart data={riskTrends} />
-          </div>
-        </div>
-
-        <div className="mt-6 border-t border-[var(--border-color)] pt-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-            Remediation Velocity
-          </p>
-          <div className="mt-2">
-            <VulnStatusChart data={remediationTrends} />
-          </div>
-        </div>
-      </article>
-
-      {isMainOfficer && (
-        <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 flex flex-col h-[600px]">
-          <div className="flex items-center justify-between gap-4 mb-4">
-            <div>
-              <h2 className="text-lg font-semibold text-[var(--text-primary)]">Recent Activity</h2>
-              <p className="mt-1 text-sm text-[var(--text-secondary)]">Latest high-signal events.</p>
-            </div>
-            <Link
-              href="/reports/activity"
-              className="text-sm text-sky-700 dark:text-sky-300 transition hover:text-sky-600 dark:hover:text-sky-200"
-            >
-              Full log
-            </Link>
-          </div>
-
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-1 space-y-2">
-            {activityRows.length > 0 ? (
-              activityRows.map((activity) => {
-                const activityTone = getActivityTone(activity.entityType, activity.action);
-                const Icon = activityTone.icon;
-                return (
-                  <div key={activity.id} className="flex items-start gap-4 p-4 rounded-xl hover:bg-white/[0.02] transition-all group border border-transparent hover:border-white/5">
-                    <div className={cn(
-                      "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-white/5 transition-transform group-hover:scale-110 shadow-lg",
-                      activityTone.shell
-                    )}>
-                      <Icon size={16} className={activityTone.iconColor} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex justify-between items-start gap-2 mb-1">
-                        <p className="text-sm font-bold text-white leading-tight">{activity.action}</p>
-                        <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase shrink-0">
-                          {getTimeAgo(activity.timestamp)}
-                        </span>
+              <div className="custom-scrollbar flex-1 space-y-2 overflow-y-auto p-1">
+                {activityRows.length > 0 ? (
+                  activityRows.map((activity) => {
+                    const activityTone = getActivityTone(
+                      activity.entityType,
+                      activity.action
+                    );
+                    const Icon = activityTone.icon;
+                    return (
+                      <div
+                        className="group flex items-start gap-4 rounded-xl border border-transparent p-4 transition-all hover:border-white/5 hover:bg-white/[0.02]"
+                        key={activity.id}
+                      >
+                        <div
+                          className={cn(
+                            "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/5 shadow-lg transition-transform group-hover:scale-110",
+                            activityTone.shell
+                          )}
+                        >
+                          <Icon className={activityTone.iconColor} size={16} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-1 flex items-start justify-between gap-2">
+                            <p className="font-bold text-sm text-white leading-tight">
+                              {activity.action}
+                            </p>
+                            <span className="shrink-0 font-bold text-[10px] text-[var(--text-muted)] uppercase">
+                              {getTimeAgo(activity.timestamp)}
+                            </span>
+                          </div>
+                          <p className="truncate font-mono text-[var(--text-muted)] text-xs">
+                            {activity.entityName}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs text-[var(--text-muted)] truncate font-mono">{activity.entityName}</p>
-                    </div>
+                    );
+                  })
+                ) : (
+                  <div className="flex h-full items-center justify-center text-center font-medium text-[var(--text-muted)] text-sm">
+                    No recent signals detected.
                   </div>
-                );
-              })
-            ) : (
-              <div className="h-full flex items-center justify-center text-center text-[var(--text-muted)] text-sm font-medium">No recent signals detected.</div>
-            )}
-          </div>
-        </article>
-      )}
-    </section>
-    </div>
-  </DashboardLayout>
+                )}
+              </div>
+            </article>
+          )}
+        </section>
+      </div>
+    </DashboardLayout>
   );
 }

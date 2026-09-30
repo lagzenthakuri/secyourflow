@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
+import { requireAutomationContext } from "@/lib/api-auth";
 import {
   runContinuousComplianceAudit,
   runContinuousComplianceAuditForAllOrganizations,
 } from "@/lib/evidence-engine";
-import { requireAutomationContext } from "@/lib/api-auth";
 
 export async function POST(request: Request) {
-  const body = (await request.json().catch(() => ({}))) as { organizationId?: string };
+  const body = (await request.json().catch(() => ({}))) as {
+    organizationId?: string;
+  };
 
-  const authResult = await requireAutomationContext(request, body.organizationId);
+  const authResult = await requireAutomationContext(
+    request,
+    body.organizationId
+  );
   if (!authResult.ok) {
     return authResult.response;
   }
@@ -23,12 +28,18 @@ export async function POST(request: Request) {
       ? await runContinuousComplianceAudit({ organizationId })
       : await runContinuousComplianceAuditForAllOrganizations();
 
-    return NextResponse.json({ message: "Compliance monitoring completed.", summary });
+    return NextResponse.json({
+      message: "Compliance monitoring completed.",
+      summary,
+    });
   } catch (error) {
     console.error("Compliance Monitor Error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to run monitoring" },
-      { status: 500 },
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to run monitoring",
+      },
+      { status: 500 }
     );
   }
 }

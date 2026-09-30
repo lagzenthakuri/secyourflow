@@ -1,30 +1,30 @@
 export interface RawNotification {
-  id: string;
-  title: string;
-  message: string;
   createdAt: string;
+  id: string;
   isRead?: boolean | null;
-  read?: boolean | null;
   link?: string | null;
+  message: string;
+  read?: boolean | null;
+  title: string;
 }
 
 export interface NotificationItem {
-  id: string;
-  title: string;
-  message: string;
   createdAt: string;
+  id: string;
   isRead: boolean;
   link?: string | null;
+  message: string;
+  title: string;
 }
 
 export interface NotificationsResponse {
-  unreadCount?: number;
   notifications?: RawNotification[];
+  unreadCount?: number;
 }
 
 export interface NormalizedNotificationsResponse {
-  unreadCount: number;
   notifications: NotificationItem[];
+  unreadCount: number;
 }
 
 export interface MarkNotificationReadResult {
@@ -32,7 +32,9 @@ export interface MarkNotificationReadResult {
   unreadDelta: number;
 }
 
-export function normalizeNotification(notification: RawNotification): NotificationItem {
+export function normalizeNotification(
+  notification: RawNotification
+): NotificationItem {
   return {
     id: notification.id,
     title: notification.title,
@@ -44,28 +46,35 @@ export function normalizeNotification(notification: RawNotification): Notificati
 }
 
 export function normalizeNotificationsResponse(
-  response: NotificationsResponse,
+  response: NotificationsResponse
 ): NormalizedNotificationsResponse {
-  const notifications = (response.notifications ?? []).map(normalizeNotification);
-  const derivedUnread = notifications.filter((notification) => !notification.isRead).length;
+  const notifications = (response.notifications ?? []).map(
+    normalizeNotification
+  );
+  const derivedUnread = notifications.filter(
+    (notification) => !notification.isRead
+  ).length;
 
   return {
     notifications,
-    unreadCount: typeof response.unreadCount === "number" ? response.unreadCount : derivedUnread,
+    unreadCount:
+      typeof response.unreadCount === "number"
+        ? response.unreadCount
+        : derivedUnread,
   };
 }
 
 export function markAllNotificationsRead(
-  notifications: NotificationItem[],
+  notifications: NotificationItem[]
 ): NotificationItem[] {
   return notifications.map((notification) =>
-    notification.isRead ? notification : { ...notification, isRead: true },
+    notification.isRead ? notification : { ...notification, isRead: true }
   );
 }
 
 export function markNotificationRead(
   notifications: NotificationItem[],
-  notificationId: string,
+  notificationId: string
 ): MarkNotificationReadResult {
   let unreadDelta = 0;
 

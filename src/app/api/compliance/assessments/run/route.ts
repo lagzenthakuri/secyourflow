@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
+import { requireAutomationContext } from "@/lib/api-auth";
 import {
   runAutomatedFrameworkAssessment,
   runScheduledComplianceAssessments,
 } from "@/lib/compliance-engine";
 import { prisma } from "@/lib/prisma";
-import { requireAutomationContext } from "@/lib/api-auth";
 
 export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => ({}))) as {
@@ -13,7 +13,10 @@ export async function POST(request: NextRequest) {
     organizationId?: string;
   };
 
-  const authResult = await requireAutomationContext(request, body.organizationId);
+  const authResult = await requireAutomationContext(
+    request,
+    body.organizationId
+  );
   if (!authResult.ok) {
     return authResult.response;
   }
@@ -33,7 +36,10 @@ export async function POST(request: NextRequest) {
       });
 
       if (!framework) {
-        return NextResponse.json({ error: "Framework not found" }, { status: 404 });
+        return NextResponse.json(
+          { error: "Framework not found" },
+          { status: 404 }
+        );
       }
 
       const result = await runAutomatedFrameworkAssessment(framework.id, {
@@ -45,16 +51,27 @@ export async function POST(request: NextRequest) {
     }
 
     if (organizationId) {
-      const result = await runScheduledComplianceAssessments({ organizationId });
+      const result = await runScheduledComplianceAssessments({
+        organizationId,
+      });
       return NextResponse.json({ mode: "scheduled", ...result });
     }
 
     // Admin token, no organization: an explicit every-tenant sweep.
-    const organizations = await prisma.organization.findMany({ select: { id: true } });
-    const totals = { scannedControls: 0, assessedControls: 0, failedControls: 0, snapshotsCreated: 0 };
+    const organizations = await prisma.organization.findMany({
+      select: { id: true },
+    });
+    const totals = {
+      scannedControls: 0,
+      assessedControls: 0,
+      failedControls: 0,
+      snapshotsCreated: 0,
+    };
 
     for (const organization of organizations) {
-      const result = await runScheduledComplianceAssessments({ organizationId: organization.id });
+      const result = await runScheduledComplianceAssessments({
+        organizationId: organization.id,
+      });
       totals.scannedControls += result.scannedControls;
       totals.assessedControls += result.assessedControls;
       totals.failedControls += result.failedControls;
@@ -69,8 +86,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Compliance assessment run failed:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to run assessments" },
-      { status: 500 },
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to run assessments",
+      },
+      { status: 500 }
     );
   }
 }

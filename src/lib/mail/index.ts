@@ -13,10 +13,10 @@ import nodemailer, { type Transporter } from "nodemailer";
  */
 
 export interface MailMessage {
-  to: string | string[];
+  html?: string;
   subject: string;
   text: string;
-  html?: string;
+  to: string | string[];
 }
 
 export type MailResult =
@@ -31,7 +31,9 @@ function currentConfig() {
   const port = Number(process.env.SMTP_PORT ?? 587);
   const user = process.env.SMTP_USER?.trim();
   // SendGrid's SMTP relay uses the API key as the password with user "apikey".
-  const pass = (process.env.SMTP_PASSWORD ?? process.env.SENDGRID_API_KEY)?.trim();
+  const pass = (
+    process.env.SMTP_PASSWORD ?? process.env.SENDGRID_API_KEY
+  )?.trim();
   const from = process.env.SMTP_FROM?.trim();
   return { host, port, user, pass, from };
 }
@@ -43,7 +45,9 @@ export function isMailConfigured(): boolean {
 
 function getTransporter(): Transporter | null {
   const { host, port, user, pass } = currentConfig();
-  if (!host) return null;
+  if (!host) {
+    return null;
+  }
 
   const key = `${host}:${port}:${user ?? ""}`;
   if (transporter && transporterKey === key) {
@@ -69,8 +73,11 @@ export async function sendMail(message: MailMessage): Promise<MailResult> {
   const { from } = currentConfig();
   const transport = getTransporter();
 
-  if (!transport || !from) {
-    return { sent: false, reason: "Email is not configured (set SMTP_HOST and SMTP_FROM)" };
+  if (!(transport && from)) {
+    return {
+      sent: false,
+      reason: "Email is not configured (set SMTP_HOST and SMTP_FROM)",
+    };
   }
 
   try {
@@ -105,14 +112,16 @@ export function buildInvitationEmail(params: {
   role: string;
 }): Pick<MailMessage, "subject" | "text" | "html"> {
   const link = `${appBaseUrl()}/auth/accept-invite?token=${encodeURIComponent(params.token)}`;
-  const inviter = params.inviterName ? `${params.inviterName} has` : "You have been";
+  const inviter = params.inviterName
+    ? `${params.inviterName} has`
+    : "You have been";
 
   return {
     subject: `Invitation to join ${params.organizationName} on SecYourFlow`,
     text:
       `${inviter} invited you to join ${params.organizationName} on SecYourFlow as ${params.role}.\n\n` +
       `Accept the invitation:\n${link}\n\n` +
-      `If you were not expecting this, you can ignore this message.`,
+      "If you were not expecting this, you can ignore this message.",
     html:
       `<p>${inviter} invited you to join <strong>${params.organizationName}</strong> on SecYourFlow as ${params.role}.</p>` +
       `<p><a href="${link}">Accept the invitation</a></p>` +

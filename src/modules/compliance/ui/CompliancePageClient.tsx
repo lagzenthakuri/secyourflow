@@ -1,16 +1,14 @@
 "use client";
 import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/design-system/components/ui/select";
 import { Textarea as BoilerplateTextarea } from "@repo/design-system/components/ui/textarea";
-
-
-
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { ComplianceBarChart } from "@/components/charts/DashboardCharts";
-import { cn } from "@/lib/utils";
-import { Modal } from "@/components/ui/Modal";
 import {
   Activity,
   AlertTriangle,
@@ -20,7 +18,6 @@ import {
   Download,
   Eye,
   FileCheck,
-  Filter,
   HelpCircle,
   Layers,
   Plus,
@@ -32,66 +29,72 @@ import {
   Wrench,
   XCircle,
 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ComplianceBarChart } from "@/components/charts/DashboardCharts";
 import { AddControlModal } from "@/components/compliance/AddControlModal";
 import { AssessControlModal } from "@/components/compliance/AssessControlModal";
-import { ControlActions } from "@/components/compliance/ControlActions";
-import { FrameworkActions } from "@/components/compliance/FrameworkActions";
-import { EvidenceUploadModal } from "@/components/compliance/EvidenceUploadModal";
-import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import { ComplianceEngine } from "@/components/compliance/ComplianceEngine";
+import { ControlActions } from "@/components/compliance/ControlActions";
+import { EvidenceUploadModal } from "@/components/compliance/EvidenceUploadModal";
+import { FrameworkActions } from "@/components/compliance/FrameworkActions";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Modal } from "@/components/ui/Modal";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
+import { cn } from "@/lib/utils";
 
 interface FrameworkControl {
-  id: string;
+  category?: string | null;
   controlId: string;
-  title: string;
+  controlType?: "PREVENTIVE" | "DETECTIVE" | "CORRECTIVE" | null;
   description?: string | null;
-  objective?: string | null;
-  status:
-  | "COMPLIANT"
-  | "NON_COMPLIANT"
-  | "PARTIALLY_COMPLIANT"
-  | "NOT_ASSESSED"
-  | "NOT_APPLICABLE";
+  evidence?: string | null;
+  frequency?: string | null;
+  id: string;
   implementationStatus?: string | null;
   maturityLevel?: number | null;
   nistCsfFunction?:
-  | "GOVERN"
-  | "IDENTIFY"
-  | "PROTECT"
-  | "DETECT"
-  | "RESPOND"
-  | "RECOVER"
-  | null;
-  controlType?: "PREVENTIVE" | "DETECTIVE" | "CORRECTIVE" | null;
-  ownerRole?: string | null;
-  category?: string | null;
-  frequency?: string | null;
-  evidence?: string | null;
+    | "GOVERN"
+    | "IDENTIFY"
+    | "PROTECT"
+    | "DETECT"
+    | "RESPOND"
+    | "RECOVER"
+    | null;
   notes?: string | null;
+  objective?: string | null;
+  ownerRole?: string | null;
+  status:
+    | "COMPLIANT"
+    | "NON_COMPLIANT"
+    | "PARTIALLY_COMPLIANT"
+    | "NOT_ASSESSED"
+    | "NOT_APPLICABLE";
+  title: string;
   updatedAt?: string;
 }
 
 interface ComplianceFramework {
+  avgMaturityLevel: number;
+  compliancePercentage: number;
+  compliant: number;
+  controls: FrameworkControl[];
+  description?: string | null;
   frameworkId: string;
   frameworkName: string;
-  description?: string | null;
-  totalControls: number;
-  compliant: number;
-  nonCompliant: number;
-  partiallyCompliant: number;
-  notAssessed: number;
-  compliancePercentage: number;
-  avgMaturityLevel: number;
   nistCsfBreakdown: Record<string, number>;
-  controls: FrameworkControl[];
+  nonCompliant: number;
+  notAssessed: number;
+  partiallyCompliant: number;
+  totalControls: number;
 }
 
 interface ComplianceTemplateOption {
+  controlCount: number;
+  description: string;
   id: string;
   name: string;
   version: string;
-  description: string;
-  controlCount: number;
 }
 
 const statusConfig = {
@@ -178,35 +181,52 @@ const controlTypeConfig = {
 const numberFormatter = new Intl.NumberFormat("en-US");
 
 function getComplianceTone(value: number) {
-  if (value >= 80) return "text-emerald-700 dark:text-emerald-200";
-  if (value >= 60) return "text-yellow-700 dark:text-yellow-200";
+  if (value >= 80) {
+    return "text-emerald-700 dark:text-emerald-200";
+  }
+  if (value >= 60) {
+    return "text-yellow-700 dark:text-yellow-200";
+  }
   return "text-red-700 dark:text-red-200";
 }
 
 function getComplianceBarTone(value: number) {
-  if (value >= 80) return "bg-emerald-400";
-  if (value >= 60) return "bg-yellow-400";
+  if (value >= 80) {
+    return "bg-emerald-400";
+  }
+  if (value >= 60) {
+    return "bg-yellow-400";
+  }
   return "bg-red-400";
 }
 
 function escapeCsv(value: unknown): string {
   const str = String(value ?? "");
   const normalized = /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
-  if (!normalized.includes(",") && !normalized.includes("\"") && !normalized.includes("\n")) {
+  if (
+    !(
+      normalized.includes(",") ||
+      normalized.includes('"') ||
+      normalized.includes("\n")
+    )
+  ) {
     return normalized;
   }
   return `"${normalized.replace(/"/g, '""')}"`;
 }
 
 function getMaturityTone(level?: number | null) {
-  if (typeof level !== "number" || Number.isNaN(level)) return maturityLabels[0];
+  if (typeof level !== "number" || Number.isNaN(level)) {
+    return maturityLabels[0];
+  }
   const rounded = Math.min(Math.max(Math.round(level), 0), 5);
   return maturityLabels[rounded];
 }
 
 export default function CompliancePage() {
   const [frameworks, setFrameworks] = useState<ComplianceFramework[]>([]);
-  const [selectedFramework, setSelectedFramework] = useState<ComplianceFramework | null>(null);
+  const [selectedFramework, setSelectedFramework] =
+    useState<ComplianceFramework | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
@@ -215,23 +235,35 @@ export default function CompliancePage() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState<"ALL" | FrameworkControl["status"]>("ALL");
+  const [selectedStatus, setSelectedStatus] = useState<
+    "ALL" | FrameworkControl["status"]
+  >("ALL");
   const [selectedNistFunction, setSelectedNistFunction] = useState<
     "ALL" | keyof typeof nistCsfConfig
   >("ALL");
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditFrameworkModalOpen, setIsEditFrameworkModalOpen] = useState(false);
+  const [isEditFrameworkModalOpen, setIsEditFrameworkModalOpen] =
+    useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newFramework, setNewFramework] = useState({ name: "", description: "" });
-  const [deletingFrameworkId, setDeletingFrameworkId] = useState<string | null>(null);
-  const [deletingControlId, setDeletingControlId] = useState<string | null>(null);
+  const [newFramework, setNewFramework] = useState({
+    name: "",
+    description: "",
+  });
+  const [deletingFrameworkId, setDeletingFrameworkId] = useState<string | null>(
+    null
+  );
+  const [deletingControlId, setDeletingControlId] = useState<string | null>(
+    null
+  );
 
   const [isAddControlModalOpen, setIsAddControlModalOpen] = useState(false);
   const [isAssessModalOpen, setIsAssessModalOpen] = useState(false);
-  const [selectedControl, setSelectedControl] = useState<FrameworkControl | null>(null);
+  const [selectedControl, setSelectedControl] =
+    useState<FrameworkControl | null>(null);
   const [isEvidenceModalOpen, setIsEvidenceModalOpen] = useState(false);
-  const [selectedEvidenceControl, setSelectedEvidenceControl] = useState<FrameworkControl | null>(null);
+  const [selectedEvidenceControl, setSelectedEvidenceControl] =
+    useState<FrameworkControl | null>(null);
 
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isTemplateLoading, setIsTemplateLoading] = useState(false);
@@ -254,21 +286,28 @@ export default function CompliancePage() {
           throw new Error("Failed to fetch compliance data");
         }
 
-        const result = (await response.json()) as { data?: ComplianceFramework[] };
+        const result = (await response.json()) as {
+          data?: ComplianceFramework[];
+        };
         const nextFrameworks = Array.isArray(result.data) ? result.data : [];
         setFrameworks(nextFrameworks);
 
         setSelectedFramework((prev) => {
-          if (nextFrameworks.length === 0) return null;
-          if (!prev) return nextFrameworks[0];
+          if (nextFrameworks.length === 0) {
+            return null;
+          }
+          if (!prev) {
+            return nextFrameworks[0];
+          }
           return (
-            nextFrameworks.find((item) => item.frameworkId === prev.frameworkId) ??
-            nextFrameworks[0]
+            nextFrameworks.find(
+              (item) => item.frameworkId === prev.frameworkId
+            ) ?? nextFrameworks[0]
           );
         });
       } catch (err) {
         setPageError(
-          err instanceof Error ? err.message : "Failed to load compliance data",
+          err instanceof Error ? err.message : "Failed to load compliance data"
         );
         setFrameworks([]);
         setSelectedFramework(null);
@@ -280,7 +319,7 @@ export default function CompliancePage() {
         }
       }
     },
-    [],
+    []
   );
 
   useEffect(() => {
@@ -307,7 +346,7 @@ export default function CompliancePage() {
       await fetchCompliance({ silent: true });
     } catch (err) {
       setActionError(
-        err instanceof Error ? err.message : "Failed to create framework",
+        err instanceof Error ? err.message : "Failed to create framework"
       );
     } finally {
       setIsSubmitting(false);
@@ -316,19 +355,24 @@ export default function CompliancePage() {
 
   const handleUpdateFramework = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!selectedFramework) return;
+    if (!selectedFramework) {
+      return;
+    }
 
     try {
       setActionError(null);
       setIsSubmitting(true);
-      const response = await fetch(`/api/compliance/${selectedFramework.frameworkId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: selectedFramework.frameworkName,
-          description: selectedFramework.description || "",
-        }),
-      });
+      const response = await fetch(
+        `/api/compliance/${selectedFramework.frameworkId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: selectedFramework.frameworkName,
+            description: selectedFramework.description || "",
+          }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to update framework");
@@ -338,7 +382,7 @@ export default function CompliancePage() {
       await fetchCompliance({ silent: true });
     } catch (err) {
       setActionError(
-        err instanceof Error ? err.message : "Failed to update framework",
+        err instanceof Error ? err.message : "Failed to update framework"
       );
     } finally {
       setIsSubmitting(false);
@@ -361,13 +405,13 @@ export default function CompliancePage() {
         await fetchCompliance({ silent: true });
       } catch (err) {
         setActionError(
-          err instanceof Error ? err.message : "Failed to delete framework",
+          err instanceof Error ? err.message : "Failed to delete framework"
         );
       } finally {
         setDeletingFrameworkId(null);
       }
     },
-    [fetchCompliance],
+    [fetchCompliance]
   );
 
   const handleDeleteControl = useCallback(
@@ -385,18 +429,22 @@ export default function CompliancePage() {
 
         await fetchCompliance({ silent: true });
       } catch (err) {
-        setActionError(err instanceof Error ? err.message : "Failed to delete control");
+        setActionError(
+          err instanceof Error ? err.message : "Failed to delete control"
+        );
       } finally {
         setDeletingControlId(null);
       }
     },
-    [fetchCompliance],
+    [fetchCompliance]
   );
 
   const startMonitoring = useCallback(async () => {
     try {
       setActionError(null);
-      const response = await fetch("/api/compliance/monitor", { method: "POST" });
+      const response = await fetch("/api/compliance/monitor", {
+        method: "POST",
+      });
       if (!response.ok) {
         throw new Error("Failed to start compliance monitoring");
       }
@@ -404,13 +452,17 @@ export default function CompliancePage() {
       await fetchCompliance({ silent: true });
     } catch (err) {
       setActionError(
-        err instanceof Error ? err.message : "Failed to start compliance monitoring",
+        err instanceof Error
+          ? err.message
+          : "Failed to start compliance monitoring"
       );
     }
   }, [fetchCompliance]);
 
   const runAutomatedAssessment = useCallback(async () => {
-    if (!selectedFramework) return;
+    if (!selectedFramework) {
+      return;
+    }
 
     try {
       setActionError(null);
@@ -433,7 +485,9 @@ export default function CompliancePage() {
       await fetchCompliance({ silent: true });
     } catch (err) {
       setActionError(
-        err instanceof Error ? err.message : "Failed to run automated assessments",
+        err instanceof Error
+          ? err.message
+          : "Failed to run automated assessments"
       );
     } finally {
       setIsRunningAssessment(false);
@@ -451,14 +505,18 @@ export default function CompliancePage() {
         throw new Error("Failed to fetch templates");
       }
 
-      const payload = (await response.json()) as { data?: ComplianceTemplateOption[] };
+      const payload = (await response.json()) as {
+        data?: ComplianceTemplateOption[];
+      };
       const nextTemplates = Array.isArray(payload.data) ? payload.data : [];
       setTemplates(nextTemplates);
       if (nextTemplates.length > 0) {
         setSelectedTemplateId((prev) => prev || nextTemplates[0].id);
       }
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to fetch templates");
+      setActionError(
+        err instanceof Error ? err.message : "Failed to fetch templates"
+      );
     } finally {
       setIsTemplateLoading(false);
     }
@@ -472,7 +530,9 @@ export default function CompliancePage() {
   }, [loadTemplates, templates.length]);
 
   const importTemplate = useCallback(async () => {
-    if (!selectedTemplateId) return;
+    if (!selectedTemplateId) {
+      return;
+    }
 
     try {
       setActionError(null);
@@ -494,14 +554,18 @@ export default function CompliancePage() {
       setIsTemplateModalOpen(false);
       await fetchCompliance({ silent: true });
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to import template");
+      setActionError(
+        err instanceof Error ? err.message : "Failed to import template"
+      );
     } finally {
       setIsTemplateImporting(false);
     }
   }, [fetchCompliance, selectedTemplateId]);
 
   const exportToCsv = useCallback(() => {
-    if (!selectedFramework) return;
+    if (!selectedFramework) {
+      return;
+    }
 
     const headers = [
       "Control ID",
@@ -527,7 +591,9 @@ export default function CompliancePage() {
       escapeCsv(control.category || ""),
     ]);
 
-    const csv = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
+    const csv = [headers.join(","), ...rows.map((row) => row.join(","))].join(
+      "\n"
+    );
     const blob = new Blob([csv], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
 
@@ -539,7 +605,9 @@ export default function CompliancePage() {
   }, [selectedFramework]);
 
   const exportToPDF = useCallback(async () => {
-    if (!selectedFramework) return;
+    if (!selectedFramework) {
+      return;
+    }
 
     try {
       setActionError(null);
@@ -547,7 +615,7 @@ export default function CompliancePage() {
 
       const response = await fetch(
         `/api/compliance/reports/${selectedFramework.frameworkId}/pdf`,
-        { cache: "no-store" },
+        { cache: "no-store" }
       );
 
       if (!response.ok) {
@@ -564,7 +632,7 @@ export default function CompliancePage() {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       setActionError(
-        err instanceof Error ? err.message : "Failed to export compliance PDF",
+        err instanceof Error ? err.message : "Failed to export compliance PDF"
       );
     } finally {
       setIsExportingPdf(false);
@@ -572,7 +640,9 @@ export default function CompliancePage() {
   }, [selectedFramework]);
 
   const filteredControls = useMemo(() => {
-    if (!selectedFramework) return [];
+    if (!selectedFramework) {
+      return [];
+    }
     const search = searchQuery.trim().toLowerCase();
 
     return selectedFramework.controls.filter((control) => {
@@ -583,9 +653,11 @@ export default function CompliancePage() {
         (control.category || "").toLowerCase().includes(search) ||
         (control.ownerRole || "").toLowerCase().includes(search);
 
-      const matchesStatus = selectedStatus === "ALL" || control.status === selectedStatus;
+      const matchesStatus =
+        selectedStatus === "ALL" || control.status === selectedStatus;
       const matchesNist =
-        selectedNistFunction === "ALL" || control.nistCsfFunction === selectedNistFunction;
+        selectedNistFunction === "ALL" ||
+        control.nistCsfFunction === selectedNistFunction;
 
       return matchesSearch && matchesStatus && matchesNist;
     });
@@ -593,13 +665,22 @@ export default function CompliancePage() {
 
   const frameworkStats = useMemo(() => {
     const totalFrameworks = frameworks.length;
-    const totalControls = frameworks.reduce((sum, item) => sum + item.totalControls, 0);
-    const totalCompliant = frameworks.reduce((sum, item) => sum + item.compliant, 0);
-    const totalNonCompliant = frameworks.reduce((sum, item) => sum + item.nonCompliant, 0);
+    const totalControls = frameworks.reduce(
+      (sum, item) => sum + item.totalControls,
+      0
+    );
+    const totalCompliant = frameworks.reduce(
+      (sum, item) => sum + item.compliant,
+      0
+    );
+    const totalNonCompliant = frameworks.reduce(
+      (sum, item) => sum + item.nonCompliant,
+      0
+    );
     const averageCompliance =
       totalFrameworks > 0
         ? frameworks.reduce((sum, item) => sum + item.compliancePercentage, 0) /
-        totalFrameworks
+          totalFrameworks
         : 0;
 
     return {
@@ -632,9 +713,11 @@ export default function CompliancePage() {
   }, [selectedFramework]);
 
   const topFrameworkName = useMemo(() => {
-    if (!frameworks.length) return "N/A";
+    if (!frameworks.length) {
+      return "N/A";
+    }
     const sorted = [...frameworks].sort(
-      (a, b) => b.compliancePercentage - a.compliancePercentage,
+      (a, b) => b.compliancePercentage - a.compliancePercentage
     );
     return sorted[0]?.frameworkName || "N/A";
   }, [frameworks]);
@@ -653,77 +736,82 @@ export default function CompliancePage() {
     <DashboardLayout>
       <div className="space-y-5">
         <PageHeader
-          title="Compliance"
-          description="Track frameworks, controls, and evidence in one unified workspace."
-          badge={
-            <>
-              <FileCheck size={13} className="mr-2" />
-              Compliance Operations
-            </>
-          }
           actions={
             <div className="flex w-full flex-wrap items-center gap-2 sm:gap-3 xl:w-auto xl:justify-end">
               <button
-                type="button"
+                className="inline-flex flex-none items-center gap-2 whitespace-nowrap rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 font-medium text-[var(--text-primary)] text-sm transition-all duration-200 hover:-translate-y-px hover:bg-[var(--bg-elevated)] active:translate-y-0"
                 onClick={() => void fetchCompliance({ silent: true })}
-                className="inline-flex flex-none items-center gap-2 whitespace-nowrap rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:-translate-y-px hover:bg-[var(--bg-elevated)] active:translate-y-0"
+                type="button"
               >
-                <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
+                <RefreshCw
+                  className={isRefreshing ? "animate-spin" : ""}
+                  size={14}
+                />
                 Refresh
               </button>
               <button
-                type="button"
+                className="inline-flex flex-none items-center gap-2 whitespace-nowrap rounded-xl border border-[var(--compliance-info-border)] bg-[var(--compliance-info-bg)] px-4 py-2 font-medium text-[var(--compliance-info-text)] text-sm transition-all duration-200 hover:-translate-y-px hover:bg-[var(--compliance-info-hover-bg)] active:translate-y-0"
                 onClick={() => void startMonitoring()}
-                className="inline-flex flex-none items-center gap-2 whitespace-nowrap rounded-xl border border-[var(--compliance-info-border)] bg-[var(--compliance-info-bg)] px-4 py-2 text-sm font-medium text-[var(--compliance-info-text)] transition-all duration-200 hover:-translate-y-px hover:bg-[var(--compliance-info-hover-bg)] active:translate-y-0"
+                type="button"
               >
                 <Activity size={14} />
                 Monitor Evidence
               </button>
               <button
-                type="button"
-                onClick={() => void runAutomatedAssessment()}
+                className="inline-flex flex-none items-center gap-2 whitespace-nowrap rounded-xl border border-[var(--compliance-success-border)] bg-[var(--compliance-success-bg)] px-4 py-2 font-medium text-[var(--compliance-success-text)] text-sm transition-all duration-200 hover:-translate-y-px hover:bg-[var(--compliance-success-hover-bg)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-65 disabled:hover:translate-y-0"
                 disabled={!selectedFramework || isRunningAssessment}
-                className="inline-flex flex-none items-center gap-2 whitespace-nowrap rounded-xl border border-[var(--compliance-success-border)] bg-[var(--compliance-success-bg)] px-4 py-2 text-sm font-medium text-[var(--compliance-success-text)] transition-all duration-200 hover:-translate-y-px hover:bg-[var(--compliance-success-hover-bg)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-65 disabled:hover:translate-y-0"
+                onClick={() => void runAutomatedAssessment()}
+                type="button"
               >
-                <Shield size={14} className={isRunningAssessment ? "animate-pulse" : ""} />
+                <Shield
+                  className={isRunningAssessment ? "animate-pulse" : ""}
+                  size={14}
+                />
                 {isRunningAssessment ? "Assessing..." : "Auto Assess"}
               </button>
               <button
-                type="button"
+                className="inline-flex flex-none items-center gap-2 whitespace-nowrap rounded-xl border border-[var(--compliance-cyan-border)] bg-[var(--compliance-cyan-bg)] px-4 py-2 font-medium text-[var(--compliance-cyan-text)] text-sm transition-all duration-200 hover:-translate-y-px hover:bg-[var(--compliance-cyan-hover-bg)] active:translate-y-0"
                 onClick={openTemplateModal}
-                className="inline-flex flex-none items-center gap-2 whitespace-nowrap rounded-xl border border-[var(--compliance-cyan-border)] bg-[var(--compliance-cyan-bg)] px-4 py-2 text-sm font-medium text-[var(--compliance-cyan-text)] transition-all duration-200 hover:-translate-y-px hover:bg-[var(--compliance-cyan-hover-bg)] active:translate-y-0"
+                type="button"
               >
                 <Layers size={14} />
                 Import Template
               </button>
               <button
-                type="button"
-                onClick={exportToCsv}
+                className="inline-flex flex-none items-center gap-2 whitespace-nowrap rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 font-medium text-[var(--text-primary)] text-sm transition-all duration-200 hover:-translate-y-px hover:bg-[var(--bg-elevated)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-65 disabled:hover:translate-y-0"
                 disabled={!selectedFramework}
-                className="inline-flex flex-none items-center gap-2 whitespace-nowrap rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:-translate-y-px hover:bg-[var(--bg-elevated)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-65 disabled:hover:translate-y-0"
+                onClick={exportToCsv}
+                type="button"
               >
                 <Download size={14} />
                 Export CSV
               </button>
               <button
-                type="button"
-                onClick={() => void exportToPDF()}
+                className="inline-flex flex-none items-center gap-2 whitespace-nowrap rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 font-medium text-[var(--text-primary)] text-sm transition-all duration-200 hover:-translate-y-px hover:bg-[var(--bg-elevated)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-65 disabled:hover:translate-y-0"
                 disabled={!selectedFramework || isExportingPdf}
-                className="inline-flex flex-none items-center gap-2 whitespace-nowrap rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:-translate-y-px hover:bg-[var(--bg-elevated)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-65 disabled:hover:translate-y-0"
+                onClick={() => void exportToPDF()}
+                type="button"
               >
                 <FileCheck size={14} />
                 {isExportingPdf ? "Generating PDF..." : "Board PDF"}
               </button>
               <button
-                type="button"
+                className="btn btn-primary inline-flex flex-none items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2 font-semibold text-sm transition-all duration-200 hover:-translate-y-px active:translate-y-0"
                 onClick={() => setIsAddModalOpen(true)}
-                className="btn btn-primary inline-flex flex-none items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 hover:-translate-y-px active:translate-y-0"
+                type="button"
               >
                 <Plus size={14} />
                 Add Framework
               </button>
             </div>
           }
+          badge={
+            <>
+              <FileCheck className="mr-2" size={13} />
+              Compliance Operations
+            </>
+          }
+          description="Track frameworks, controls, and evidence in one unified workspace."
           stats={[
             {
               label: "Total Frameworks",
@@ -739,18 +827,19 @@ export default function CompliancePage() {
               label: "Total Controls",
               value: numberFormatter.format(frameworkStats.totalControls),
               icon: Target,
-            }
+            },
           ]}
+          title="Compliance"
         />
 
         {pageError ? (
-          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-sm text-red-700 dark:text-red-200">
+          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-red-700 text-sm dark:text-red-200">
             {pageError}
           </section>
         ) : null}
 
         {actionError ? (
-          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-sm text-red-700 dark:text-red-200">
+          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-red-700 text-sm dark:text-red-200">
             {actionError}
           </section>
         ) : null}
@@ -791,18 +880,27 @@ export default function CompliancePage() {
             const Icon = metric.icon;
             return (
               <article
+                className="fade-in slide-in-from-bottom-4 animate-in rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-400/50 hover:shadow-lg hover:shadow-sky-300/10 dark:hover:border-sky-300/35"
                 key={metric.label}
-                className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-400/50 hover:shadow-lg hover:shadow-sky-300/10 dark:hover:border-sky-300/35 animate-in fade-in slide-in-from-bottom-4"
-                style={{ animationDelay: `${index * 90}ms`, animationFillMode: "backwards" }}
+                style={{
+                  animationDelay: `${index * 90}ms`,
+                  animationFillMode: "backwards",
+                }}
               >
                 <div className="flex items-start justify-between">
-                  <p className="text-sm text-[var(--text-muted)]">{metric.label}</p>
+                  <p className="text-[var(--text-muted)] text-sm">
+                    {metric.label}
+                  </p>
                   <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2 transition-transform duration-200 hover:scale-110">
-                    <Icon size={15} className="text-[var(--text-secondary)]" />
+                    <Icon className="text-[var(--text-secondary)]" size={15} />
                   </div>
                 </div>
-                <p className="mt-4 text-2xl font-semibold text-[var(--text-primary)] break-words">{metric.value}</p>
-                <p className="mt-1 text-sm text-[var(--text-secondary)]">{metric.hint}</p>
+                <p className="mt-4 break-words font-semibold text-2xl text-[var(--text-primary)]">
+                  {metric.value}
+                </p>
+                <p className="mt-1 text-[var(--text-secondary)] text-sm">
+                  {metric.hint}
+                </p>
               </article>
             );
           })}
@@ -810,15 +908,17 @@ export default function CompliancePage() {
 
         <ComplianceEngine />
 
-        <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4 sm:p-5 animate-in fade-in slide-in-from-bottom-3 duration-500">
+        <section className="fade-in slide-in-from-bottom-3 animate-in rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4 duration-500 sm:p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-[var(--text-primary)]">Framework Selector</h2>
-              <p className="text-sm text-[var(--text-secondary)]">
+              <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                Framework Selector
+              </h2>
+              <p className="text-[var(--text-secondary)] text-sm">
                 Choose a framework to inspect controls and assessments.
               </p>
             </div>
-            <span className="text-xs text-[var(--text-muted)]">
+            <span className="text-[var(--text-muted)] text-xs">
               {frameworks.length === 0
                 ? "No frameworks configured"
                 : `${frameworks.length} frameworks loaded`}
@@ -826,16 +926,19 @@ export default function CompliancePage() {
           </div>
 
           {frameworks.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-[var(--border-color)] bg-[var(--bg-tertiary)] p-10 text-center">
+            <div className="rounded-xl border border-[var(--border-color)] border-dashed bg-[var(--bg-tertiary)] p-10 text-center">
               <FileCheck className="mx-auto h-12 w-12 text-[var(--text-muted)]" />
-              <p className="mt-4 text-base font-medium text-[var(--text-primary)]">No Frameworks Yet</p>
-              <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                Add your first framework to start tracking controls and evidence.
+              <p className="mt-4 font-medium text-[var(--text-primary)] text-base">
+                No Frameworks Yet
+              </p>
+              <p className="mt-2 text-[var(--text-secondary)] text-sm">
+                Add your first framework to start tracking controls and
+                evidence.
               </p>
               <button
-                type="button"
+                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 font-semibold text-slate-950 text-sm transition-all duration-200 hover:scale-105 hover:bg-sky-200 active:scale-95"
                 onClick={() => setIsAddModalOpen(true)}
-                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-200 hover:scale-105 active:scale-95"
+                type="button"
               >
                 <Plus size={14} />
                 Add Framework
@@ -844,45 +947,68 @@ export default function CompliancePage() {
           ) : (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {frameworks.map((framework, index) => {
-                const isSelected = selectedFramework?.frameworkId === framework.frameworkId;
-                const maturityTone = getMaturityTone(framework.avgMaturityLevel);
+                const isSelected =
+                  selectedFramework?.frameworkId === framework.frameworkId;
+                const maturityTone = getMaturityTone(
+                  framework.avgMaturityLevel
+                );
                 return (
                   <article
-                    key={framework.frameworkId}
-                    onClick={() => setSelectedFramework(framework)}
                     className={cn(
-                      "group relative cursor-pointer rounded-xl border p-4 transition-all duration-300 animate-in fade-in zoom-in-95",
+                      "group fade-in zoom-in-95 relative animate-in cursor-pointer rounded-xl border p-4 transition-all duration-300",
                       isSelected
                         ? "border-sky-300/35 bg-sky-400/10 shadow-lg shadow-sky-400/10"
-                        : "border-[var(--border-color)] bg-[var(--bg-tertiary)] hover:border-sky-400/40 hover:bg-sky-50/50 dark:hover:border-sky-300/30 dark:hover:bg-[var(--bg-tertiary)] hover:scale-[1.02]",
+                        : "border-[var(--border-color)] bg-[var(--bg-tertiary)] hover:scale-[1.02] hover:border-sky-400/40 hover:bg-sky-50/50 dark:hover:border-sky-300/30 dark:hover:bg-[var(--bg-tertiary)]"
                     )}
-                    style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}
+                    key={framework.frameworkId}
+                    onClick={() => setSelectedFramework(framework)}
+                    style={{
+                      animationDelay: `${index * 50}ms`,
+                      animationFillMode: "backwards",
+                    }}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <h3 className="truncate text-sm font-semibold text-[var(--text-primary)]">
+                        <h3 className="truncate font-semibold text-[var(--text-primary)] text-sm">
                           {framework.frameworkName}
                         </h3>
-                        <p className="mt-1 text-xs text-[var(--text-muted)]">
-                          {numberFormatter.format(framework.totalControls)} controls
+                        <p className="mt-1 text-[var(--text-muted)] text-xs">
+                          {numberFormatter.format(framework.totalControls)}{" "}
+                          controls
                         </p>
                       </div>
                       <FrameworkActions
-                        framework={framework as unknown as Record<string, unknown>}
+                        framework={
+                          framework as unknown as Record<string, unknown>
+                        }
+                        isDeleting={
+                          deletingFrameworkId === framework.frameworkId
+                        }
+                        onDelete={() =>
+                          void handleDeleteFramework(framework.frameworkId)
+                        }
                         onEdit={() => {
                           setSelectedFramework(framework);
                           setIsEditFrameworkModalOpen(true);
                         }}
-                        onDelete={() => void handleDeleteFramework(framework.frameworkId)}
-                        isDeleting={deletingFrameworkId === framework.frameworkId}
                       />
                     </div>
 
                     <div className="mt-4 flex items-center justify-between text-xs">
-                      <span className={cn("font-semibold", getComplianceTone(framework.compliancePercentage))}>
+                      <span
+                        className={cn(
+                          "font-semibold",
+                          getComplianceTone(framework.compliancePercentage)
+                        )}
+                      >
                         {framework.compliancePercentage.toFixed(0)}% compliant
                       </span>
-                      <span className={cn("rounded-md border px-2 py-1 font-medium", maturityTone.tone)}>
+                      <span
+                        className={cn(
+                          "rounded-md border px-2 py-1 font-medium",
+                          maturityTone.tone
+                        )}
+                      >
                         L{framework.avgMaturityLevel.toFixed(1)}
                       </span>
                     </div>
@@ -891,7 +1017,7 @@ export default function CompliancePage() {
                       <div
                         className={cn(
                           "h-full rounded-full transition-all duration-700 ease-out",
-                          getComplianceBarTone(framework.compliancePercentage),
+                          getComplianceBarTone(framework.compliancePercentage)
                         )}
                         style={{
                           width: `${Math.min(Math.max(framework.compliancePercentage, 0), 100)}%`,
@@ -900,14 +1026,20 @@ export default function CompliancePage() {
                     </div>
 
                     <div className="mt-3 flex items-center justify-between text-[11px] text-[var(--text-secondary)]">
-                      <span className="text-emerald-700 dark:text-emerald-200">{framework.compliant} passing</span>
-                      <span className="text-red-700 dark:text-red-200">{framework.nonCompliant} failing</span>
+                      <span className="text-emerald-700 dark:text-emerald-200">
+                        {framework.compliant} passing
+                      </span>
+                      <span className="text-red-700 dark:text-red-200">
+                        {framework.nonCompliant} failing
+                      </span>
                       <ChevronRight
-                        size={13}
                         className={cn(
                           "transition-transform duration-300",
-                          isSelected ? "translate-x-0 text-sky-800 dark:text-sky-200" : "text-[var(--text-muted)] group-hover:translate-x-0.5",
+                          isSelected
+                            ? "translate-x-0 text-sky-800 dark:text-sky-200"
+                            : "text-[var(--text-muted)] group-hover:translate-x-0.5"
                         )}
+                        size={13}
                       />
                     </div>
                   </article>
@@ -918,23 +1050,24 @@ export default function CompliancePage() {
         </section>
 
         <section className="grid gap-5 xl:grid-cols-12">
-          <div className="xl:col-span-8 space-y-4">
+          <div className="space-y-4 xl:col-span-8">
             <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
               {selectedFramework ? (
                 <>
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div>
-                      <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                      <h2 className="font-semibold text-[var(--text-primary)] text-lg">
                         {selectedFramework.frameworkName} Controls
                       </h2>
-                      <p className="mt-1 text-sm text-[var(--text-muted)]">
-                        Review status, ownership, and NIST alignment across all mapped controls.
+                      <p className="mt-1 text-[var(--text-muted)] text-sm">
+                        Review status, ownership, and NIST alignment across all
+                        mapped controls.
                       </p>
                     </div>
                     <button
-                      type="button"
+                      className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 font-semibold text-slate-950 text-sm transition-all duration-200 hover:scale-105 hover:bg-sky-200 active:scale-95"
                       onClick={() => setIsAddControlModalOpen(true)}
-                      className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-200 hover:scale-105 active:scale-95"
+                      type="button"
                     >
                       <Plus size={14} />
                       Add Control
@@ -944,63 +1077,85 @@ export default function CompliancePage() {
                   <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr),180px,180px,auto]">
                     <label className="relative block">
                       <Search
+                        className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[var(--text-muted)]"
                         size={16}
-                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
                       />
                       <BoilerplateInput
-                        type="text"
-                        placeholder="Search control ID, title, owner, category..."
-                        value={searchQuery}
+                        className="h-11 w-full rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] pr-3 pl-10 text-[var(--text-primary)] text-sm outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus:border-sky-300/45"
                         onChange={(event) => setSearchQuery(event.target.value)}
-                        className="h-11 w-full rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] pl-10 pr-3 text-sm text-[var(--text-primary)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus:border-sky-300/45"
+                        placeholder="Search control ID, title, owner, category..."
+                        type="text"
+                        value={searchQuery}
                       />
                     </label>
 
                     <div className="min-w-0">
-                      <Select value={selectedStatus} onValueChange={(event) =>
-                          setSelectedStatus(event as "ALL" | FrameworkControl["status"])}>
-                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                      <Select
+                        onValueChange={(event) =>
+                          setSelectedStatus(
+                            event as "ALL" | FrameworkControl["status"]
+                          )
+                        }
+                        value={selectedStatus}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
-                        <SelectItem value="ALL">All Statuses</SelectItem>
-                        <SelectItem value="COMPLIANT">Compliant</SelectItem>
-                        <SelectItem value="NON_COMPLIANT">Non-Compliant</SelectItem>
-                        <SelectItem value="PARTIALLY_COMPLIANT">Partial</SelectItem>
-                        <SelectItem value="NOT_ASSESSED">Not Assessed</SelectItem>
-
+                            <SelectItem value="ALL">All Statuses</SelectItem>
+                            <SelectItem value="COMPLIANT">Compliant</SelectItem>
+                            <SelectItem value="NON_COMPLIANT">
+                              Non-Compliant
+                            </SelectItem>
+                            <SelectItem value="PARTIALLY_COMPLIANT">
+                              Partial
+                            </SelectItem>
+                            <SelectItem value="NOT_ASSESSED">
+                              Not Assessed
+                            </SelectItem>
                           </SelectGroup>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div className="min-w-0">
-                      <Select value={selectedNistFunction} onValueChange={(event) =>
+                      <Select
+                        onValueChange={(event) =>
                           setSelectedNistFunction(
-                            event as "ALL" | keyof typeof nistCsfConfig,
-                          )}>
-                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                            event as "ALL" | keyof typeof nistCsfConfig
+                          )
+                        }
+                        value={selectedNistFunction}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
-                        <SelectItem value="ALL">All NIST Functions</SelectItem>
-                        {Object.entries(nistCsfConfig).map(([key, item]) => (
-                          <SelectItem key={key} value={key}>
-                            {item.label}
-                          </SelectItem>
-                        ))}
-
+                            <SelectItem value="ALL">
+                              All NIST Functions
+                            </SelectItem>
+                            {Object.entries(nistCsfConfig).map(
+                              ([key, item]) => (
+                                <SelectItem key={key} value={key}>
+                                  {item.label}
+                                </SelectItem>
+                              )
+                            )}
                           </SelectGroup>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <button
-                      type="button"
+                      className="h-11 rounded-xl border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-4 font-medium text-[var(--text-secondary)] text-sm transition-all duration-200 hover:bg-[var(--bg-elevated)]"
                       onClick={() => {
                         setSearchQuery("");
                         setSelectedStatus("ALL");
                         setSelectedNistFunction("ALL");
                       }}
-                      className="h-11 rounded-xl border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-4 text-sm font-medium text-[var(--text-secondary)] transition-all duration-200 hover:bg-[var(--bg-elevated)]"
+                      type="button"
                     >
                       Clear
                     </button>
@@ -1035,17 +1190,19 @@ export default function CompliancePage() {
                       },
                     ].map((chip) => (
                       <button
-                        key={chip.key}
-                        type="button"
-                        onClick={() =>
-                          setSelectedStatus(chip.key as "ALL" | FrameworkControl["status"])
-                        }
                         className={cn(
                           "rounded-full border px-3 py-1 font-medium transition-all duration-200",
                           selectedStatus === chip.key
                             ? chip.tone
-                            : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                            : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                         )}
+                        key={chip.key}
+                        onClick={() =>
+                          setSelectedStatus(
+                            chip.key as "ALL" | FrameworkControl["status"]
+                          )
+                        }
+                        type="button"
                       >
                         {chip.label}
                       </button>
@@ -1053,10 +1210,12 @@ export default function CompliancePage() {
                   </div>
                 </>
               ) : (
-                <div className="rounded-xl border border-dashed border-[var(--border-hover)] bg-[var(--bg-tertiary)] p-10 text-center">
+                <div className="rounded-xl border border-[var(--border-hover)] border-dashed bg-[var(--bg-tertiary)] p-10 text-center">
                   <FileCheck className="mx-auto h-10 w-10 text-[var(--text-muted)]" />
-                  <p className="mt-4 text-base font-medium text-[var(--text-primary)]">No Framework Selected</p>
-                  <p className="mt-2 text-sm text-[var(--text-muted)]">
+                  <p className="mt-4 font-medium text-[var(--text-primary)] text-base">
+                    No Framework Selected
+                  </p>
+                  <p className="mt-2 text-[var(--text-muted)] text-sm">
                     Select a framework to review and assess controls.
                   </p>
                 </div>
@@ -1068,17 +1227,23 @@ export default function CompliancePage() {
                 {filteredControls.length === 0 ? (
                   <div className="p-14 text-center">
                     <FileCheck className="mx-auto h-12 w-12 text-[var(--text-muted)]" />
-                    <p className="mt-4 text-base font-medium text-[var(--text-primary)]">No Controls Found</p>
-                    <p className="mt-2 text-sm text-[var(--text-muted)]">
+                    <p className="mt-4 font-medium text-[var(--text-primary)] text-base">
+                      No Controls Found
+                    </p>
+                    <p className="mt-2 text-[var(--text-muted)] text-sm">
                       Adjust filters or add controls to this framework.
                     </p>
                   </div>
                 ) : (
                   <div className="divide-y divide-[var(--border-color)]">
                     {filteredControls.map((control) => {
-                      const status = statusConfig[control.status] || statusConfig.NOT_ASSESSED;
+                      const status =
+                        statusConfig[control.status] ||
+                        statusConfig.NOT_ASSESSED;
                       const StatusIcon = status.icon;
-                      const maturityTone = getMaturityTone(control.maturityLevel);
+                      const maturityTone = getMaturityTone(
+                        control.maturityLevel
+                      );
                       const nistInfo = control.nistCsfFunction
                         ? nistCsfConfig[control.nistCsfFunction]
                         : null;
@@ -1088,18 +1253,18 @@ export default function CompliancePage() {
 
                       return (
                         <article
+                          className="group cursor-pointer p-4 transition-colors duration-200 hover:bg-[var(--bg-tertiary)] sm:p-5"
                           key={control.id}
                           onClick={() => {
                             setSelectedControl(control);
                             setIsAssessModalOpen(true);
                           }}
-                          className="group cursor-pointer p-4 transition-colors duration-200 hover:bg-[var(--bg-tertiary)] sm:p-5"
                         >
                           <div className="flex items-start gap-4">
                             <div
                               className={cn(
                                 "mt-0.5 rounded-lg border p-2",
-                                status.tone,
+                                status.tone
                               )}
                             >
                               <StatusIcon size={15} />
@@ -1107,28 +1272,28 @@ export default function CompliancePage() {
 
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="rounded-md border border-sky-400/50 bg-sky-100/90 px-2 py-0.5 font-mono text-[11px] font-semibold text-sky-900 dark:border-sky-300/35 dark:bg-sky-300/10 dark:text-sky-200">
+                                <span className="rounded-md border border-sky-400/50 bg-sky-100/90 px-2 py-0.5 font-mono font-semibold text-[11px] text-sky-900 dark:border-sky-300/35 dark:bg-sky-300/10 dark:text-sky-200">
                                   {control.controlId}
                                 </span>
                                 <span
                                   className={cn(
-                                    "rounded-md px-2 py-0.5 text-[11px] font-semibold",
-                                    status.softTone,
+                                    "rounded-md px-2 py-0.5 font-semibold text-[11px]",
+                                    status.softTone
                                   )}
                                 >
                                   {status.label}
                                 </span>
                                 <span
                                   className={cn(
-                                    "rounded-md border px-2 py-0.5 text-[11px] font-semibold",
-                                    maturityTone.tone,
+                                    "rounded-md border px-2 py-0.5 font-semibold text-[11px]",
+                                    maturityTone.tone
                                   )}
                                 >
                                   L{control.maturityLevel ?? 0}
                                 </span>
                                 {nistInfo ? (
                                   <span
-                                    className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium"
+                                    className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-medium text-[11px]"
                                     style={{
                                       backgroundColor: `${nistInfo.color}24`,
                                       color: nistInfo.color,
@@ -1140,11 +1305,11 @@ export default function CompliancePage() {
                                 ) : null}
                               </div>
 
-                              <h3 className="mt-2 text-sm font-semibold text-[var(--text-primary)] transition-colors duration-200 group-hover:text-sky-900 dark:group-hover:text-sky-100 sm:text-base">
+                              <h3 className="mt-2 font-semibold text-[var(--text-primary)] text-sm transition-colors duration-200 group-hover:text-sky-900 sm:text-base dark:group-hover:text-sky-100">
                                 {control.title}
                               </h3>
 
-                              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
+                              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[var(--text-muted)] text-xs">
                                 {control.category ? (
                                   <span className="rounded-md border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-0.5">
                                     {control.category}
@@ -1170,24 +1335,31 @@ export default function CompliancePage() {
                                 {control.updatedAt ? (
                                   <span className="inline-flex items-center gap-1">
                                     <Calendar size={12} />
-                                    Updated {new Date(control.updatedAt).toLocaleDateString()}
+                                    Updated{" "}
+                                    {new Date(
+                                      control.updatedAt
+                                    ).toLocaleDateString()}
                                   </span>
                                 ) : null}
                               </div>
                             </div>
 
                             <ControlActions
-                              control={control as unknown as Record<string, unknown>}
+                              control={
+                                control as unknown as Record<string, unknown>
+                              }
+                              isDeleting={deletingControlId === control.id}
                               onAssess={() => {
                                 setSelectedControl(control);
                                 setIsAssessModalOpen(true);
                               }}
+                              onDelete={() =>
+                                void handleDeleteControl(control.id)
+                              }
                               onEvidence={() => {
                                 setSelectedEvidenceControl(control);
                                 setIsEvidenceModalOpen(true);
                               }}
-                              onDelete={() => void handleDeleteControl(control.id)}
-                              isDeleting={deletingControlId === control.id}
                             />
                           </div>
                         </article>
@@ -1199,15 +1371,19 @@ export default function CompliancePage() {
             ) : null}
           </div>
 
-          <aside className="xl:col-span-4 space-y-4">
+          <aside className="space-y-4 xl:col-span-4">
             <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
-              <h3 className="text-base font-semibold text-[var(--text-primary)]">Framework Benchmark</h3>
-              <p className="mt-1 text-sm text-[var(--text-muted)]">Coverage score by framework</p>
+              <h3 className="font-semibold text-[var(--text-primary)] text-base">
+                Framework Benchmark
+              </h3>
+              <p className="mt-1 text-[var(--text-muted)] text-sm">
+                Coverage score by framework
+              </p>
               <div className="mt-4">
                 {frameworks.length > 0 ? (
                   <ComplianceBarChart data={frameworks} />
                 ) : (
-                  <p className="rounded-xl border border-dashed border-[var(--border-hover)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
+                  <p className="rounded-xl border border-[var(--border-hover)] border-dashed bg-[var(--bg-tertiary)] p-4 text-[var(--text-muted)] text-sm">
                     Add frameworks to see comparison trends.
                   </p>
                 )}
@@ -1216,15 +1392,21 @@ export default function CompliancePage() {
 
             {selectedFramework ? (
               <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
-                <h3 className="text-base font-semibold text-[var(--text-primary)]">Current Framework</h3>
-                <p className="mt-1 text-sm text-[var(--text-muted)]">{selectedFramework.frameworkName}</p>
+                <h3 className="font-semibold text-[var(--text-primary)] text-base">
+                  Current Framework
+                </h3>
+                <p className="mt-1 text-[var(--text-muted)] text-sm">
+                  {selectedFramework.frameworkName}
+                </p>
 
                 <div className="mt-4 grid grid-cols-2 gap-3">
                   {[
                     {
                       label: "Coverage",
                       value: `${selectedFramework.compliancePercentage.toFixed(0)}%`,
-                      color: getComplianceTone(selectedFramework.compliancePercentage),
+                      color: getComplianceTone(
+                        selectedFramework.compliancePercentage
+                      ),
                     },
                     {
                       label: "Maturity",
@@ -1243,13 +1425,17 @@ export default function CompliancePage() {
                     },
                   ].map((item) => (
                     <div
-                      key={item.label}
                       className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3"
+                      key={item.label}
                     >
-                      <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
+                      <p className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">
                         {item.label}
                       </p>
-                      <p className={cn("mt-2 text-xl font-semibold", item.color)}>{item.value}</p>
+                      <p
+                        className={cn("mt-2 font-semibold text-xl", item.color)}
+                      >
+                        {item.value}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -1258,8 +1444,12 @@ export default function CompliancePage() {
 
             {selectedFramework ? (
               <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
-                <h3 className="text-base font-semibold text-[var(--text-primary)]">NIST Coverage</h3>
-                <p className="mt-1 text-sm text-[var(--text-muted)]">Controls per CSF function</p>
+                <h3 className="font-semibold text-[var(--text-primary)] text-base">
+                  NIST Coverage
+                </h3>
+                <p className="mt-1 text-[var(--text-muted)] text-sm">
+                  Controls per CSF function
+                </p>
                 <div className="mt-4 space-y-3">
                   {Object.entries(nistCsfConfig).map(([key, config]) => {
                     const total = selectedFramework.totalControls || 1;
@@ -1273,7 +1463,9 @@ export default function CompliancePage() {
                             <Icon size={12} style={{ color: config.color }} />
                             {config.label}
                           </span>
-                          <span className="text-[var(--text-muted)]">{value}</span>
+                          <span className="text-[var(--text-muted)]">
+                            {value}
+                          </span>
                         </div>
                         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
                           <div
@@ -1292,20 +1484,26 @@ export default function CompliancePage() {
             ) : null}
 
             <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
-              <h3 className="text-base font-semibold text-[var(--text-primary)]">Maturity Scale</h3>
-              <p className="mt-1 text-sm text-[var(--text-muted)]">Reference for levels 0 to 5</p>
+              <h3 className="font-semibold text-[var(--text-primary)] text-base">
+                Maturity Scale
+              </h3>
+              <p className="mt-1 text-[var(--text-muted)] text-sm">
+                Reference for levels 0 to 5
+              </p>
               <div className="mt-4 space-y-2">
                 {maturityLabels.map((item) => (
-                  <div key={item.level} className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" key={item.level}>
                     <span
                       className={cn(
-                        "inline-flex h-6 w-6 items-center justify-center rounded-md border text-xs font-semibold",
-                        item.tone,
+                        "inline-flex h-6 w-6 items-center justify-center rounded-md border font-semibold text-xs",
+                        item.tone
                       )}
                     >
                       {item.level}
                     </span>
-                    <span className="text-sm text-[var(--text-secondary)]">{item.label}</span>
+                    <span className="text-[var(--text-secondary)] text-sm">
+                      {item.label}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -1314,53 +1512,63 @@ export default function CompliancePage() {
         </section>
       </div>
 
-      <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Add Compliance Framework">
+      <Modal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title="Add Compliance Framework"
+      >
         <form className="space-y-4" onSubmit={handleAddFramework}>
           <div>
-            <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
+            <label className="mb-2 block font-medium text-[var(--text-secondary)] text-sm">
               Framework Name *
             </label>
             <BoilerplateInput
-              type="text"
-              required
-              placeholder="e.g. NIST CSF 2.0 or ISO 27001"
               className="w-full"
-              value={newFramework.name}
               onChange={(event) =>
-                setNewFramework((prev) => ({ ...prev, name: event.target.value }))
+                setNewFramework((prev) => ({
+                  ...prev,
+                  name: event.target.value,
+                }))
               }
+              placeholder="e.g. NIST CSF 2.0 or ISO 27001"
+              required
+              type="text"
+              value={newFramework.name}
             />
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
+            <label className="mb-2 block font-medium text-[var(--text-secondary)] text-sm">
               Description
             </label>
             <BoilerplateTextarea
-              placeholder="Brief description of the framework..."
               className="min-h-[100px] w-full py-2"
-              value={newFramework.description}
               onChange={(event) =>
-                setNewFramework((prev) => ({ ...prev, description: event.target.value }))
+                setNewFramework((prev) => ({
+                  ...prev,
+                  description: event.target.value,
+                }))
               }
+              placeholder="Brief description of the framework..."
+              value={newFramework.description}
             />
           </div>
           <div className="mt-6 flex justify-end gap-3">
             <button
-              type="button"
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 font-medium text-[var(--text-primary)] text-sm transition hover:bg-[var(--bg-elevated)]"
               onClick={() => setIsAddModalOpen(false)}
+              type="button"
             >
               Cancel
             </button>
             <button
-              type="submit"
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-600 bg-blue-600 px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-blue-700"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-600 bg-blue-600 px-4 py-2 font-medium text-[var(--text-primary)] text-sm transition hover:bg-blue-700"
               disabled={isSubmitting || !newFramework.name}
+              type="submit"
             >
               {isSubmitting ? (
-                <ShieldLoader size="sm" variant="cyber" className="mr-2" />
+                <ShieldLoader className="mr-2" size="sm" variant="cyber" />
               ) : (
-                <Plus size={16} className="mr-2" />
+                <Plus className="mr-2" size={16} />
               )}
               {isSubmitting ? "Adding..." : "Add Framework"}
             </button>
@@ -1375,60 +1583,60 @@ export default function CompliancePage() {
       >
         <form className="space-y-4" onSubmit={handleUpdateFramework}>
           <div>
-            <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
+            <label className="mb-2 block font-medium text-[var(--text-secondary)] text-sm">
               Framework Name
             </label>
             <BoilerplateInput
-              type="text"
-              required
               className="w-full"
-              value={selectedFramework?.frameworkName || ""}
               onChange={(event) =>
                 setSelectedFramework((prev) =>
                   prev
                     ? {
-                      ...prev,
-                      frameworkName: event.target.value,
-                    }
-                    : prev,
+                        ...prev,
+                        frameworkName: event.target.value,
+                      }
+                    : prev
                 )
               }
+              required
+              type="text"
+              value={selectedFramework?.frameworkName || ""}
             />
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
+            <label className="mb-2 block font-medium text-[var(--text-secondary)] text-sm">
               Description
             </label>
             <BoilerplateTextarea
               className="min-h-[100px] w-full py-2"
-              value={selectedFramework?.description || ""}
               onChange={(event) =>
                 setSelectedFramework((prev) =>
                   prev
                     ? {
-                      ...prev,
-                      description: event.target.value,
-                    }
-                    : prev,
+                        ...prev,
+                        description: event.target.value,
+                      }
+                    : prev
                 )
               }
+              value={selectedFramework?.description || ""}
             />
           </div>
           <div className="mt-6 flex justify-end gap-3">
             <button
-              type="button"
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 font-medium text-[var(--text-primary)] text-sm transition hover:bg-[var(--bg-elevated)]"
               onClick={() => setIsEditFrameworkModalOpen(false)}
+              type="button"
             >
               Cancel
             </button>
             <button
-              type="submit"
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-600 bg-blue-600 px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-blue-700"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-600 bg-blue-600 px-4 py-2 font-medium text-[var(--text-primary)] text-sm transition hover:bg-blue-700"
               disabled={isSubmitting}
+              type="submit"
             >
               {isSubmitting ? (
-                <ShieldLoader size="sm" variant="cyber" className="mr-2" />
+                <ShieldLoader className="mr-2" size="sm" variant="cyber" />
               ) : null}
               {isSubmitting ? "Saving..." : "Save Changes"}
             </button>
@@ -1443,56 +1651,69 @@ export default function CompliancePage() {
       >
         <div className="space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
+            <label className="mb-2 block font-medium text-[var(--text-secondary)] text-sm">
               Template
             </label>
-            <Select value={selectedTemplateId || "__select_none__"} onValueChange={(event) => setSelectedTemplateId((event === "__select_none__" ? "" : event))} disabled={isTemplateLoading}>
-              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+            <Select
+              disabled={isTemplateLoading}
+              onValueChange={(event) =>
+                setSelectedTemplateId(event === "__select_none__" ? "" : event)
+              }
+              value={selectedTemplateId || "__select_none__"}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-              {templates.length === 0 ? (
-                <SelectItem value="__select_none__">No templates loaded</SelectItem>
-              ) : (
-                templates.map((template) => (
-                  <SelectItem key={template.id} value={template.id}>
-                    {template.name} {template.version} ({template.controlCount} controls)
-                  </SelectItem>
-                ))
-              )}
-
+                  {templates.length === 0 ? (
+                    <SelectItem value="__select_none__">
+                      No templates loaded
+                    </SelectItem>
+                  ) : (
+                    templates.map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.name} {template.version} (
+                        {template.controlCount} controls)
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectGroup>
               </SelectContent>
             </Select>
           </div>
 
           {selectedTemplateId ? (
-            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 text-sm text-[var(--text-secondary)]">
-              {templates.find((template) => template.id === selectedTemplateId)?.description}
+            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 text-[var(--text-secondary)] text-sm">
+              {
+                templates.find((template) => template.id === selectedTemplateId)
+                  ?.description
+              }
             </div>
           ) : null}
 
           <div className="flex justify-between gap-2">
             <button
-              type="button"
-              onClick={() => void loadTemplates()}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 font-medium text-[var(--text-primary)] text-sm transition hover:bg-[var(--bg-elevated)]"
               disabled={isTemplateLoading}
+              onClick={() => void loadTemplates()}
+              type="button"
             >
               {isTemplateLoading ? "Loading..." : "Refresh Templates"}
             </button>
             <div className="flex gap-2">
               <button
-                type="button"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 font-medium text-[var(--text-primary)] text-sm transition hover:bg-[var(--bg-elevated)]"
                 onClick={() => setIsTemplateModalOpen(false)}
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
+                type="button"
               >
                 Cancel
               </button>
               <button
-                type="button"
-                onClick={() => void importTemplate()}
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-600 bg-blue-600 px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-blue-700"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-600 bg-blue-600 px-4 py-2 font-medium text-[var(--text-primary)] text-sm transition hover:bg-blue-700"
                 disabled={!selectedTemplateId || isTemplateImporting}
+                onClick={() => void importTemplate()}
+                type="button"
               >
                 {isTemplateImporting ? "Importing..." : "Import"}
               </button>
@@ -1503,46 +1724,48 @@ export default function CompliancePage() {
 
       {selectedEvidenceControl ? (
         <EvidenceUploadModal
+          controlId={selectedEvidenceControl.id}
+          controlLabel={selectedEvidenceControl.controlId}
           isOpen={isEvidenceModalOpen}
           onClose={() => {
             setIsEvidenceModalOpen(false);
             setSelectedEvidenceControl(null);
           }}
           onSuccess={() => void fetchCompliance({ silent: true })}
-          controlId={selectedEvidenceControl.id}
-          controlLabel={selectedEvidenceControl.controlId}
         />
       ) : null}
 
       {selectedFramework ? (
         <AddControlModal
+          frameworkId={selectedFramework.frameworkId}
           isOpen={isAddControlModalOpen}
           onClose={() => setIsAddControlModalOpen(false)}
           onSuccess={() => void fetchCompliance({ silent: true })}
-          frameworkId={selectedFramework.frameworkId}
         />
       ) : null}
 
       {selectedControl ? (
         <AssessControlModal
+          control={
+            selectedControl as unknown as {
+              id: string;
+              controlId: string;
+              title: string;
+              description?: string;
+              status?: string;
+              implementationStatus?: string;
+              maturityLevel?: number;
+              evidence?: string;
+              notes?: string;
+              [key: string]: unknown;
+            }
+          }
           isOpen={isAssessModalOpen}
           onClose={() => {
             setIsAssessModalOpen(false);
             setSelectedControl(null);
           }}
           onSuccess={() => void fetchCompliance({ silent: true })}
-          control={selectedControl as unknown as {
-            id: string;
-            controlId: string;
-            title: string;
-            description?: string;
-            status?: string;
-            implementationStatus?: string;
-            maturityLevel?: number;
-            evidence?: string;
-            notes?: string;
-            [key: string]: unknown;
-          }}
         />
       ) : null}
     </DashboardLayout>

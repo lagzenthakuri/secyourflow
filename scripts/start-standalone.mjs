@@ -15,7 +15,9 @@ loadEnv({
 try {
   await access(standaloneServer);
 } catch {
-  console.error("Standalone server not found. Run `bun run build` before starting the app.");
+  console.error(
+    "Standalone server not found. Run `bun run build` before starting the app."
+  );
   process.exit(1);
 }
 
@@ -23,7 +25,10 @@ try {
 // Copy them beside server.js so `bun run start` serves the same client bundle
 // and public files as the Docker image.
 const copies = [
-  [resolve(projectRoot, ".next/static"), resolve(standaloneDirectory, ".next/static")],
+  [
+    resolve(projectRoot, ".next/static"),
+    resolve(standaloneDirectory, ".next/static"),
+  ],
   [resolve(projectRoot, "public"), resolve(standaloneDirectory, "public")],
 ];
 

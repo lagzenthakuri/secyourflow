@@ -1,17 +1,19 @@
 import { NextResponse } from "next/server";
+import { requireSessionWithOrg } from "@/lib/api-auth";
 import {
   buildComplianceFrameworkReport,
   generateComplianceReportPdf,
 } from "@/lib/compliance-reporting";
-import { requireSessionWithOrg } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ frameworkId: string }> },
+  { params }: { params: Promise<{ frameworkId: string }> }
 ) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   try {
     const { frameworkId } = await params;
@@ -24,26 +26,37 @@ export async function GET(
     });
 
     if (!framework) {
-      return NextResponse.json({ error: "Framework not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Framework not found" },
+        { status: 404 }
+      );
     }
 
     const report = await buildComplianceFrameworkReport(frameworkId);
     const pdf = generateComplianceReportPdf(report);
 
-    const fileNameSafeFramework = report.frameworkName.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const fileNameSafeFramework = report.frameworkName.replace(
+      /[^a-zA-Z0-9_-]/g,
+      "_"
+    );
     const datePart = new Date().toISOString().split("T")[0];
 
     return new NextResponse(pdf, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename=\"${fileNameSafeFramework}_Compliance_${datePart}.pdf\"`,
+        "Content-Disposition": `attachment; filename="${fileNameSafeFramework}_Compliance_${datePart}.pdf"`,
       },
     });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to generate compliance PDF" },
-      { status: 500 },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to generate compliance PDF",
+      },
+      { status: 500 }
     );
   }
 }

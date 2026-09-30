@@ -1,9 +1,12 @@
-import crypto from "crypto";
-import { NextRequest, NextResponse } from "next/server";
+import crypto from "node:crypto";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { requireSessionWithOrg } from "@/lib/api-auth";
-import { addRemediationEvidence, RemediationPlanError } from "@/lib/remediation/plans";
+import { prisma } from "@/lib/prisma";
+import {
+  addRemediationEvidence,
+  RemediationPlanError,
+} from "@/lib/remediation/plans";
 
 const createEvidenceSchema = z.object({
   title: z.string().min(2).max(180),
@@ -16,10 +19,12 @@ const createEvidenceSchema = z.object({
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const { id } = await params;
 
@@ -42,16 +47,18 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const parsed = createEvidenceSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid evidence payload", details: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -67,7 +74,9 @@ export async function POST(
     return NextResponse.json({ error: "Plan not found" }, { status: 404 });
   }
 
-  const content = payload.contentBase64 ? Buffer.from(payload.contentBase64, "base64") : Buffer.from("");
+  const content = payload.contentBase64
+    ? Buffer.from(payload.contentBase64, "base64")
+    : Buffer.from("");
   const checksum = crypto.createHash("sha256").update(content).digest("hex");
 
   try {
@@ -88,9 +97,15 @@ export async function POST(
     return NextResponse.json(created, { status: 201 });
   } catch (error) {
     if (error instanceof RemediationPlanError) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
     }
 
-    return NextResponse.json({ error: "Failed to add remediation evidence" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to add remediation evidence" },
+      { status: 500 }
+    );
   }
 }

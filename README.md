@@ -177,6 +177,14 @@ Open your browser and navigate to `http://localhost:3000`
 | `AUTH_GOOGLE_SECRET` | Google OAuth client secret | - |
 | `ALLOW_PUBLIC_REGISTRATION` | Enable public account creation with password or OAuth | `false` |
 | `REAL_API_TESTS` | Enable real API testing | `false` |
+| `SMTP_HOST` | SMTP server hostname (e.g., `smtp.gmail.com`, `smtp.sendgrid.net`) | - |
+| `SMTP_PORT` | SMTP server port (`587` for STARTTLS, `465` for implicit TLS) | `587` |
+| `SMTP_USER` | SMTP username (for SendGrid, use `apikey`) | - |
+| `SMTP_PASSWORD` | SMTP password or API key (for SendGrid, use the API key) | - |
+| `SMTP_FROM` | Sender "From" address shown to recipients | - |
+| `SENDGRID_API_KEY` | SendGrid API key (alternative to `SMTP_PASSWORD`) | - |
+| `RESEND_TOKEN` | Resend API key (alternative email provider) | - |
+| `RESEND_FROM` | Resend sender "From" address | - |
 
 ### Example Configuration
 
@@ -250,7 +258,9 @@ REAL_API_TESTS=true bun run test
 
 Vercel functions cannot access a database running on your laptop, inside Docker,
 or on a private network. Configure a Vercel-accessible PostgreSQL provider and
-use its **pooled** connection string for `DATABASE_URL`.
+use its **pooled** connection string for the runtime `DATABASE_URL`. When the
+provider requires a direct connection for DDL, run migrations with its direct
+(non-pooled) URL instead.
 
 Required production environment variables:
 
@@ -260,6 +270,8 @@ AUTH_SECRET=<long-random-secret>
 NEXTAUTH_URL=https://secyourflow.vercel.app
 AUTH_GOOGLE_ID=<google-client-id>
 AUTH_GOOGLE_SECRET=<google-client-secret>
+# Optional: set to true only when public email/password registration is intended.
+ALLOW_PUBLIC_REGISTRATION=true
 DB_POOL_MAX=1
 DB_CONNECT_TIMEOUT_MS=5000
 ```
@@ -275,7 +287,8 @@ Also configure these trusted URLs in Google Cloud Console:
 https://secyourflow.vercel.app/api/auth/callback/google
 ```
 
-Apply migrations to the hosted database before enabling the Vercel deployment:
+Apply migrations to the hosted database before enabling the Vercel deployment.
+`prisma generate` only generates the client; it does not create database tables.
 
 ```bash
 DATABASE_URL='<hosted-pooled-database-url>' bun run db:migrate

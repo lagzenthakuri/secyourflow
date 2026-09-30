@@ -1,21 +1,5 @@
 "use client";
 import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
-
-
-import dynamic from "next/dynamic";
-import Link from "next/link";
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { FilterSelect } from "@/components/ui/FilterSelect";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { AddVulnerabilityModal } from "@/components/vulnerabilities/AddVulnerabilityModal";
-import { EditVulnerabilityModal } from "@/components/vulnerabilities/EditVulnerabilityModal";
-import { VulnerabilityActions } from "@/components/vulnerabilities/VulnerabilityActions";
-import { ShieldLoader } from "@/components/ui/ShieldLoader";
-import { cn, formatLabel } from "@/lib/utils";
-import { allowedWorkflowTransitions } from "@/lib/workflow/state-machine";
-import { Vulnerability } from "@/types";
 import {
   AlertTriangle,
   ChevronDown,
@@ -31,62 +15,78 @@ import {
   TrendingUp,
   Zap,
 } from "lucide-react";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { FilterSelect } from "@/components/ui/FilterSelect";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
+import { AddVulnerabilityModal } from "@/components/vulnerabilities/AddVulnerabilityModal";
+import { EditVulnerabilityModal } from "@/components/vulnerabilities/EditVulnerabilityModal";
+import { VulnerabilityActions } from "@/components/vulnerabilities/VulnerabilityActions";
+import { cn, formatLabel } from "@/lib/utils";
+import { allowedWorkflowTransitions } from "@/lib/workflow/state-machine";
+import type { Vulnerability } from "@/types";
 
 const SeverityDistributionChart = dynamic(
   () =>
     import("@/components/charts/DashboardCharts").then(
-      (mod) => mod.SeverityDistributionChart,
+      (mod) => mod.SeverityDistributionChart
     ),
   {
     ssr: false,
-    loading: () => <div className="h-[220px] animate-pulse rounded-xl bg-[var(--bg-tertiary)]" />,
-  },
+    loading: () => (
+      <div className="h-[220px] animate-pulse rounded-xl bg-[var(--bg-tertiary)]" />
+    ),
+  }
 );
 
 const RiskAssessmentView = dynamic(
   () =>
     import("@/components/vulnerabilities/RiskAssessmentView").then(
-      (mod) => mod.RiskAssessmentView,
+      (mod) => mod.RiskAssessmentView
     ),
   {
     ssr: false,
     loading: () => (
-      <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
+      <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-[var(--text-muted)] text-sm">
         Loading risk assessment...
       </div>
     ),
-  },
+  }
 );
 
 interface PaginationState {
-  page: number;
   limit: number;
+  page: number;
   total: number;
   totalPages: number;
 }
 
 interface SeverityDistributionItem {
-  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFORMATIONAL";
   count: number;
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFORMATIONAL";
 }
 
 interface SourceDistributionItem {
-  source: string;
   count: number;
+  source: string;
 }
 
 interface EPSSDistribution {
   high: number;
-  medium: number;
   low: number;
+  medium: number;
   minimal: number;
 }
 
 interface VulnerabilitiesSummary {
-  severityDistribution: SeverityDistributionItem[];
-  sourceDistribution: SourceDistributionItem[];
   epssDistribution: EPSSDistribution;
   exploitedCount?: number;
+  severityDistribution: SeverityDistributionItem[];
+  sourceDistribution: SourceDistributionItem[];
 }
 
 interface VulnerabilitiesResponse {
@@ -106,27 +106,38 @@ const statusOptions = [
   "FALSE_POSITIVE",
 ] as const;
 
-const workflowOptions = ["NEW", "TRIAGED", "IN_PROGRESS", "RESOLVED", "CLOSED"] as const;
+const workflowOptions = [
+  "NEW",
+  "TRIAGED",
+  "IN_PROGRESS",
+  "RESOLVED",
+  "CLOSED",
+] as const;
 
 const numberFormatter = new Intl.NumberFormat("en-US");
 
 const severityColor: Record<string, string> = {
   CRITICAL: "text-red-700 dark:text-red-200 border-red-400/35 bg-red-500/10",
   HIGH: "text-orange-700 dark:text-orange-200 border-orange-400/35 bg-orange-500/10",
-  MEDIUM: "text-yellow-800 dark:text-yellow-200 border-yellow-400 bg-yellow-100 dark:bg-yellow-500/10 dark:border-yellow-400/35",
+  MEDIUM:
+    "text-yellow-800 dark:text-yellow-200 border-yellow-400 bg-yellow-100 dark:bg-yellow-500/10 dark:border-yellow-400/35",
   LOW: "text-emerald-700 dark:text-emerald-200 border-emerald-400/35 bg-emerald-500/10",
-  INFORMATIONAL: "text-[var(--text-secondary)] border-[var(--border-hover)] bg-[var(--bg-tertiary)]",
+  INFORMATIONAL:
+    "text-[var(--text-secondary)] border-[var(--border-hover)] bg-[var(--bg-tertiary)]",
 };
 
 const statusColor: Record<string, string> = {
   OPEN: "text-red-700 dark:text-red-200 border-red-400/35 bg-red-500/10",
   IN_PROGRESS: "text-sky-700 dark:text-sky-200 border-sky-400/35 bg-sky-500/10",
-  MITIGATED: "text-violet-700 dark:text-violet-200 border-violet-400/35 bg-violet-500/10",
-  FIXED: "text-emerald-800 dark:text-emerald-200 border-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-400/35",
-  ACCEPTED: "text-[var(--text-secondary)] border-[var(--border-hover)] bg-[var(--bg-tertiary)]",
-  FALSE_POSITIVE: "text-[var(--text-secondary)] border-[var(--border-hover)] bg-[var(--bg-tertiary)]",
+  MITIGATED:
+    "text-violet-700 dark:text-violet-200 border-violet-400/35 bg-violet-500/10",
+  FIXED:
+    "text-emerald-800 dark:text-emerald-200 border-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-400/35",
+  ACCEPTED:
+    "text-[var(--text-secondary)] border-[var(--border-hover)] bg-[var(--bg-tertiary)]",
+  FALSE_POSITIVE:
+    "text-[var(--text-secondary)] border-[var(--border-hover)] bg-[var(--bg-tertiary)]",
 };
-
 
 function toChartSeverityData(data: SeverityDistributionItem[]) {
   const total = data.reduce((sum, item) => sum + item.count, 0);
@@ -197,7 +208,9 @@ function VulnerabilitiesContent() {
   const [summary, setSummary] = useState<VulnerabilitiesSummary | null>(null);
   const [activeVulnId, setActiveVulnId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [workflowUpdatingId, setWorkflowUpdatingId] = useState<string | null>(null);
+  const [workflowUpdatingId, setWorkflowUpdatingId] = useState<string | null>(
+    null
+  );
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingVuln, setEditingVuln] = useState<Vulnerability | null>(null);
@@ -218,16 +231,7 @@ function VulnerabilitiesContent() {
   // page 3 showed an empty queue.
   useEffect(() => {
     goToFirstPage();
-  }, [
-    searchQuery,
-    selectedSeverity,
-    selectedStatus,
-    selectedWorkflow,
-    selectedSource,
-    showExploited,
-    showKevOnly,
-    goToFirstPage,
-  ]);
+  }, [goToFirstPage]);
 
   const fetchVulnerabilities = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
@@ -245,17 +249,34 @@ function VulnerabilitiesContent() {
           limit: String(pagination.limit),
         });
 
-        if (searchQuery.trim()) params.set("search", searchQuery.trim());
-        if (selectedSeverity !== "ALL") params.set("severity", selectedSeverity);
-        if (selectedStatus !== "ALL") params.set("status", selectedStatus);
-        if (selectedWorkflow !== "ALL") params.set("workflowState", selectedWorkflow);
-        if (selectedSource !== "ALL") params.set("source", selectedSource);
-        if (showExploited) params.set("exploited", "true");
-        if (showKevOnly) params.set("kev", "true");
+        if (searchQuery.trim()) {
+          params.set("search", searchQuery.trim());
+        }
+        if (selectedSeverity !== "ALL") {
+          params.set("severity", selectedSeverity);
+        }
+        if (selectedStatus !== "ALL") {
+          params.set("status", selectedStatus);
+        }
+        if (selectedWorkflow !== "ALL") {
+          params.set("workflowState", selectedWorkflow);
+        }
+        if (selectedSource !== "ALL") {
+          params.set("source", selectedSource);
+        }
+        if (showExploited) {
+          params.set("exploited", "true");
+        }
+        if (showKevOnly) {
+          params.set("kev", "true");
+        }
 
-        const response = await fetch(`/api/vulnerabilities?${params.toString()}`, {
-          cache: "no-store",
-        });
+        const response = await fetch(
+          `/api/vulnerabilities?${params.toString()}`,
+          {
+            cache: "no-store",
+          }
+        );
 
         if (!response.ok) {
           throw new Error("Failed to fetch vulnerabilities");
@@ -272,7 +293,9 @@ function VulnerabilitiesContent() {
           totalPages: result.pagination?.totalPages ?? prev.totalPages,
         }));
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch vulnerabilities");
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch vulnerabilities"
+        );
         setVulns([]);
       } finally {
         if (silent) {
@@ -292,7 +315,7 @@ function VulnerabilitiesContent() {
       selectedSource,
       showExploited,
       showKevOnly,
-    ],
+    ]
   );
 
   useEffect(() => {
@@ -321,18 +344,21 @@ function VulnerabilitiesContent() {
 
         await fetchVulnerabilities({ silent: true });
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to delete vulnerability";
+        const message =
+          err instanceof Error ? err.message : "Failed to delete vulnerability";
         setActionError(message);
       } finally {
         setDeletingId(null);
       }
     },
-    [fetchVulnerabilities],
+    [fetchVulnerabilities]
   );
 
   const exportData = async (format: "csv" | "xlsx") => {
     try {
-      const response = await fetch(`/api/exports/vulnerabilities?format=${format}`);
+      const response = await fetch(
+        `/api/exports/vulnerabilities?format=${format}`
+      );
       if (!response.ok) {
         throw new Error("Failed to export vulnerabilities");
       }
@@ -355,15 +381,18 @@ function VulnerabilitiesContent() {
         setActionError(null);
         setWorkflowUpdatingId(vuln.id);
 
-        const response = await fetch(`/api/vulnerabilities/${vuln.id}/workflow`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            toState,
-            assignedUserId: vuln.assignedUserId ?? undefined,
-            assignedTeam: vuln.assignedTeam ?? undefined,
-          }),
-        });
+        const response = await fetch(
+          `/api/vulnerabilities/${vuln.id}/workflow`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              toState,
+              assignedUserId: vuln.assignedUserId ?? undefined,
+              assignedTeam: vuln.assignedTeam ?? undefined,
+            }),
+          }
+        );
 
         const result = (await response.json()) as { error?: string };
         if (!response.ok) {
@@ -372,12 +401,14 @@ function VulnerabilitiesContent() {
 
         await fetchVulnerabilities({ silent: true });
       } catch (err) {
-        setActionError(err instanceof Error ? err.message : "Failed to update workflow");
+        setActionError(
+          err instanceof Error ? err.message : "Failed to update workflow"
+        );
       } finally {
         setWorkflowUpdatingId(null);
       }
     },
-    [fetchVulnerabilities],
+    [fetchVulnerabilities]
   );
 
   const resetFilters = () => {
@@ -393,12 +424,12 @@ function VulnerabilitiesContent() {
 
   const severityDistribution = useMemo(
     () => summary?.severityDistribution ?? [],
-    [summary?.severityDistribution],
+    [summary?.severityDistribution]
   );
 
   const sourceDistribution = useMemo(
     () => summary?.sourceDistribution ?? [],
-    [summary?.sourceDistribution],
+    [summary?.sourceDistribution]
   );
 
   const epssDistribution = useMemo(
@@ -409,23 +440,24 @@ function VulnerabilitiesContent() {
         low: 0,
         minimal: 0,
       },
-    [summary?.epssDistribution],
+    [summary?.epssDistribution]
   );
 
   const sourceOptions = useMemo(
     () => Array.from(new Set(sourceDistribution.map((item) => item.source))),
-    [sourceDistribution],
+    [sourceDistribution]
   );
 
   const criticalCount = useMemo(
     () =>
-      severityDistribution.find((entry) => entry.severity === "CRITICAL")?.count || 0,
-    [severityDistribution],
+      severityDistribution.find((entry) => entry.severity === "CRITICAL")
+        ?.count || 0,
+    [severityDistribution]
   );
 
   const severityChartData = useMemo(
     () => toChartSeverityData(severityDistribution),
-    [severityDistribution],
+    [severityDistribution]
   );
 
   const exploitedCount = useMemo(() => {
@@ -437,14 +469,15 @@ function VulnerabilitiesContent() {
 
   const openOnPage = useMemo(
     () =>
-      vulns.filter((item) => item.status === "OPEN" || item.status === "IN_PROGRESS")
-        .length,
-    [vulns],
+      vulns.filter(
+        (item) => item.status === "OPEN" || item.status === "IN_PROGRESS"
+      ).length,
+    [vulns]
   );
 
   const highestSourceCount = useMemo(
     () => Math.max(1, ...sourceDistribution.map((item) => item.count)),
-    [sourceDistribution],
+    [sourceDistribution]
   );
 
   if (isLoading && vulns.length === 0) {
@@ -461,163 +494,185 @@ function VulnerabilitiesContent() {
     <DashboardLayout>
       <div className="space-y-5">
         <PageHeader
-          title="Vulnerabilities"
-          description="Prioritize and remediate the highest-impact findings with clearer operational context for SOC and engineering teams."
-          badge={
-            <>
-              <Sparkles size={13} className="mr-2" />
-              Vulnerability Triage Workspace
-            </>
-          }
           actions={
             <div className="flex flex-wrap gap-2 sm:gap-3">
               <button
-                type="button"
-                onClick={() => void exportData("csv")}
                 className="btn btn-secondary !px-4 !py-2.5"
+                onClick={() => void exportData("csv")}
+                type="button"
               >
-                <Download size={14} className="mr-2" />
+                <Download className="mr-2" size={14} />
                 CSV
               </button>
               <button
-                type="button"
-                onClick={() => void exportData("xlsx")}
                 className="btn btn-secondary !px-4 !py-2.5"
+                onClick={() => void exportData("xlsx")}
+                type="button"
               >
-                <Download size={14} className="mr-2" />
+                <Download className="mr-2" size={14} />
                 XLSX
               </button>
               <Link
-                href="/scanners"
                 className="btn btn-secondary !px-4 !py-2.5"
+                href="/scanners"
               >
-                <TrendingUp size={14} className="mr-2" />
+                <TrendingUp className="mr-2" size={14} />
                 Run a scan
               </Link>
               <Link
-                href="/vulnerabilities/remediation"
                 className="btn btn-secondary !px-4 !py-2.5"
+                href="/vulnerabilities/remediation"
               >
-                <TrendingUp size={14} className="mr-2" />
+                <TrendingUp className="mr-2" size={14} />
                 Remediation
               </Link>
               <button
-                type="button"
-                onClick={() => setIsAddModalOpen(true)}
                 className="btn btn-primary !px-5 !py-2.5"
+                onClick={() => setIsAddModalOpen(true)}
+                type="button"
               >
-                <Plus size={14} className="mr-2" />
+                <Plus className="mr-2" size={14} />
                 Add Vulnerability
               </button>
             </div>
           }
+          badge={
+            <>
+              <Sparkles className="mr-2" size={13} />
+              Vulnerability Triage Workspace
+            </>
+          }
+          description="Prioritize and remediate the highest-impact findings with clearer operational context for SOC and engineering teams."
           stats={[
             {
               label: "Total tracked",
               value: numberFormatter.format(pagination.total),
               icon: Shield,
-              trend: { value: `${pagination.totalPages} pages`, neutral: true }
+              trend: { value: `${pagination.totalPages} pages`, neutral: true },
             },
             {
               label: "Critical Findings",
               value: numberFormatter.format(criticalCount),
               icon: AlertTriangle,
-              trend: { value: "Priority", isUp: false }
+              trend: { value: "Priority", isUp: false },
             },
             {
               label: "Exploited Risks",
               value: numberFormatter.format(exploitedCount),
               icon: Zap,
-              trend: { value: "Live threats", isUp: false }
+              trend: { value: "Live threats", isUp: false },
             },
             {
               label: "Open on Page",
               value: numberFormatter.format(openOnPage),
               icon: Filter,
-              trend: { value: "Active triage", neutral: true }
-            }
+              trend: { value: "Active triage", neutral: true },
+            },
           ]}
+          title="Vulnerabilities"
         />
 
         {actionError ? (
-          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-3 text-sm text-red-700 dark:text-red-200">
+          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-3 text-red-700 text-sm dark:text-red-200">
             {actionError}
           </section>
         ) : null}
-
-
 
         <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4">
           <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr_0.8fr_auto]">
             <label className="relative block">
               <Search
+                className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[var(--text-muted)]"
                 size={15}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
               />
               <BoilerplateInput
-                type="text"
-                value={searchQuery}
+                className="!pl-9 h-10 w-full border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)] text-sm placeholder-[var(--text-muted)]"
                 onChange={(event) => {
                   setSearchQuery(event.target.value);
                   setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
                 placeholder="Search by CVE ID, title, or description"
-                className="h-10 w-full !pl-9 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] border-[var(--border-color)] bg-[var(--bg-secondary)]"
+                type="text"
+                value={searchQuery}
               />
             </label>
 
             <FilterSelect
               label="Filter by severity"
-              value={selectedSeverity}
               onValueChange={(value) => {
                 setSelectedSeverity(value);
                 setPagination((prev) => ({ ...prev, page: 1 }));
               }}
-              options={[{ value: "ALL", label: "All Severities" }, ...severityOptions.map((severity) => ({ value: severity, label: formatLabel(severity) }))]}
+              options={[
+                { value: "ALL", label: "All Severities" },
+                ...severityOptions.map((severity) => ({
+                  value: severity,
+                  label: formatLabel(severity),
+                })),
+              ]}
+              value={selectedSeverity}
             />
 
             <FilterSelect
               label="Filter by status"
-              value={selectedStatus}
               onValueChange={(value) => {
                 setSelectedStatus(value);
                 setPagination((prev) => ({ ...prev, page: 1 }));
               }}
-              options={[{ value: "ALL", label: "All Statuses" }, ...statusOptions.map((status) => ({ value: status, label: formatLabel(status) }))]}
+              options={[
+                { value: "ALL", label: "All Statuses" },
+                ...statusOptions.map((status) => ({
+                  value: status,
+                  label: formatLabel(status),
+                })),
+              ]}
+              value={selectedStatus}
             />
 
             <FilterSelect
               label="Filter by source"
-              value={selectedSource}
               onValueChange={(value) => {
                 setSelectedSource(value);
                 setPagination((prev) => ({ ...prev, page: 1 }));
               }}
-              options={[{ value: "ALL", label: "All Sources" }, ...sourceOptions.map((source) => ({ value: source, label: source }))]}
+              options={[
+                { value: "ALL", label: "All Sources" },
+                ...sourceOptions.map((source) => ({
+                  value: source,
+                  label: source,
+                })),
+              ]}
+              value={selectedSource}
             />
 
             <FilterSelect
               label="Filter by workflow"
-              value={selectedWorkflow}
               onValueChange={(value) => {
                 setSelectedWorkflow(value);
                 setPagination((prev) => ({ ...prev, page: 1 }));
               }}
-              options={[{ value: "ALL", label: "All Workflow" }, ...workflowOptions.map((workflow) => ({ value: workflow, label: formatLabel(workflow) }))]}
+              options={[
+                { value: "ALL", label: "All Workflow" },
+                ...workflowOptions.map((workflow) => ({
+                  value: workflow,
+                  label: formatLabel(workflow),
+                })),
+              ]}
+              value={selectedWorkflow}
             />
 
             <div className="flex gap-2">
               <button
-                type="button"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 text-[var(--text-secondary)] text-sm transition hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
                 onClick={resetFilters}
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 text-sm text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
+                type="button"
               >
                 Reset
               </button>
               <button
-                type="button"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 text-[var(--text-secondary)] text-sm transition hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
                 onClick={() => void fetchVulnerabilities({ silent: true })}
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 text-sm text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
+                type="button"
               >
                 {isRefreshing ? "Refreshing" : "Refresh"}
               </button>
@@ -626,33 +681,33 @@ function VulnerabilitiesContent() {
 
           <div className="mt-3 flex flex-wrap gap-2">
             <button
-              type="button"
-              onClick={() => {
-                setShowExploited((prev) => !prev);
-                setPagination((prev) => ({ ...prev, page: 1 }));
-              }}
               className={cn(
                 "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition",
                 showExploited
                   ? "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200"
-                  : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]",
+                  : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
               )}
+              onClick={() => {
+                setShowExploited((prev) => !prev);
+                setPagination((prev) => ({ ...prev, page: 1 }));
+              }}
+              type="button"
             >
               <Zap size={13} />
               Exploited Only
             </button>
             <button
-              type="button"
-              onClick={() => {
-                setShowKevOnly((prev) => !prev);
-                setPagination((prev) => ({ ...prev, page: 1 }));
-              }}
               className={cn(
                 "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition",
                 showKevOnly
                   ? "border-orange-400/35 bg-orange-500/10 text-orange-700 dark:text-orange-200"
-                  : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]",
+                  : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
               )}
+              onClick={() => {
+                setShowKevOnly((prev) => !prev);
+                setPagination((prev) => ({ ...prev, page: 1 }));
+              }}
+              type="button"
             >
               CISA KEV Only
             </button>
@@ -660,82 +715,111 @@ function VulnerabilitiesContent() {
         </section>
 
         {error ? (
-          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-sm text-red-700 dark:text-red-200">
+          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-red-700 text-sm dark:text-red-200">
             {error}
           </section>
         ) : null}
 
         <section className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
           <article className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
-            <header className="flex flex-col gap-3 border-b border-[var(--border-color)] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <header className="flex flex-col gap-3 border-[var(--border-color)] border-b p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Vulnerability Queue</h2>
-                <p className="text-sm text-[var(--text-secondary)]">
-                  Showing {vulns.length} of {numberFormatter.format(pagination.total)} vulnerabilities
+                <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                  Vulnerability Queue
+                </h2>
+                <p className="text-[var(--text-secondary)] text-sm">
+                  Showing {vulns.length} of{" "}
+                  {numberFormatter.format(pagination.total)} vulnerabilities
                 </p>
               </div>
-              <div className="text-xs text-[var(--text-muted)]">Page {pagination.page}</div>
+              <div className="text-[var(--text-muted)] text-xs">
+                Page {pagination.page}
+              </div>
             </header>
 
             {vulns.length === 0 ? (
               <div className="p-16 text-center">
                 <Shield className="mx-auto h-12 w-12 text-[var(--text-muted)]" />
-                <p className="mt-4 text-sm text-[var(--text-secondary)]">No vulnerabilities match current filters.</p>
+                <p className="mt-4 text-[var(--text-secondary)] text-sm">
+                  No vulnerabilities match current filters.
+                </p>
               </div>
             ) : (
               <div className="divide-y divide-[var(--border-color)]">
                 {vulns.map((vuln) => {
                   const severityTone =
                     severityColor[vuln.severity] || severityColor.INFORMATIONAL;
-                  const statusTone = statusColor[vuln.status] || statusColor.OPEN;
-                  const isExpanded = activeVulnId === vuln.id || (vuln.cveId && activeVulnId === vuln.cveId);
-                  const workflowState = (vuln.workflowState || "NEW") as (typeof workflowOptions)[number];
-                  const nextWorkflowStates = allowedWorkflowTransitions(workflowState);
+                  const statusTone =
+                    statusColor[vuln.status] || statusColor.OPEN;
+                  const isExpanded =
+                    activeVulnId === vuln.id ||
+                    (vuln.cveId && activeVulnId === vuln.cveId);
+                  const workflowState = (vuln.workflowState ||
+                    "NEW") as (typeof workflowOptions)[number];
+                  const nextWorkflowStates =
+                    allowedWorkflowTransitions(workflowState);
                   const slaBadge = getSlaBadge(vuln.slaDueAt);
 
                   return (
                     <div
-                      key={vuln.id}
                       className={cn(
                         "group p-4 transition hover:bg-[var(--bg-elevated)]",
-                        isExpanded && "bg-[var(--bg-elevated)]",
+                        isExpanded && "bg-[var(--bg-elevated)]"
                       )}
+                      key={vuln.id}
                     >
                       <div
                         className="flex cursor-pointer items-start gap-3"
-                        onClick={() => setActiveVulnId(isExpanded ? null : vuln.id)}
+                        onClick={() =>
+                          setActiveVulnId(isExpanded ? null : vuln.id)
+                        }
                       >
                         <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2.5">
-                          <Shield size={18} className="text-sky-700 dark:text-sky-300" />
+                          <Shield
+                            className="text-sky-700 dark:text-sky-300"
+                            size={18}
+                          />
                         </div>
 
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             {vuln.cveId ? (
                               <a
+                                className="inline-flex items-center gap-1 font-mono text-sky-800 text-xs hover:text-sky-900 dark:text-sky-300 dark:hover:text-sky-200"
                                 href={`https://nvd.nist.gov/vuln/detail/${vuln.cveId}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 font-mono text-xs text-sky-800 dark:text-sky-300 hover:text-sky-900 dark:hover:text-sky-200"
                                 onClick={(event) => event.stopPropagation()}
+                                rel="noopener noreferrer"
+                                target="_blank"
                               >
                                 {vuln.cveId}
                                 <ExternalLink size={11} />
                               </a>
                             ) : (
-                              <span className="font-mono text-xs text-[var(--text-muted)]">No CVE ID</span>
+                              <span className="font-mono text-[var(--text-muted)] text-xs">
+                                No CVE ID
+                              </span>
                             )}
 
-                            <span className={cn("rounded-full border px-2 py-0.5 text-[11px]", severityTone)}>
+                            <span
+                              className={cn(
+                                "rounded-full border px-2 py-0.5 text-[11px]",
+                                severityTone
+                              )}
+                            >
                               {vuln.severity}
                             </span>
 
-                            <span className={cn("rounded-full border px-2 py-0.5 text-[11px]", statusTone)}>
+                            <span
+                              className={cn(
+                                "rounded-full border px-2 py-0.5 text-[11px]",
+                                statusTone
+                              )}
+                            >
                               {formatLabel(vuln.status)}
                             </span>
 
                             {vuln.workflowState ? (
-                              <span className="rounded-full border border-sky-300 bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-800 dark:border-sky-400/35 dark:bg-sky-500/10 dark:text-sky-200">
+                              <span className="rounded-full border border-sky-300 bg-sky-100 px-2 py-0.5 font-medium text-[11px] text-sky-800 dark:border-sky-400/35 dark:bg-sky-500/10 dark:text-sky-200">
                                 {formatLabel(vuln.workflowState)}
                               </span>
                             ) : null}
@@ -753,94 +837,121 @@ function VulnerabilitiesContent() {
                             ) : null}
                           </div>
 
-                          <h3 className="mt-2 truncate text-sm font-medium text-[var(--text-primary)]">{vuln.title}</h3>
-                          <p className="mt-1 line-clamp-2 text-sm text-[var(--text-secondary)]">
+                          <h3 className="mt-2 truncate font-medium text-[var(--text-primary)] text-sm">
+                            {vuln.title}
+                          </h3>
+                          <p className="mt-1 line-clamp-2 text-[var(--text-secondary)] text-sm">
                             {vuln.description || "No description available."}
                           </p>
 
-                          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
+                          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[var(--text-muted)] text-xs">
                             <span>
-                              CVSS {typeof vuln.cvssScore === "number" ? vuln.cvssScore.toFixed(1) : "N/A"}
+                              CVSS{" "}
+                              {typeof vuln.cvssScore === "number"
+                                ? vuln.cvssScore.toFixed(1)
+                                : "N/A"}
                             </span>
                             <span>
-                              EPSS {typeof vuln.epssScore === "number" ? `${(vuln.epssScore * 100).toFixed(1)}%` : "N/A"}
+                              EPSS{" "}
+                              {typeof vuln.epssScore === "number"
+                                ? `${(vuln.epssScore * 100).toFixed(1)}%`
+                                : "N/A"}
                             </span>
                             <span>Source {vuln.source}</span>
-                            {vuln.assignedUser?.name || vuln.assignedUser?.email ? (
+                            {vuln.assignedUser?.name ||
+                            vuln.assignedUser?.email ? (
                               <span>
-                                Assignee {vuln.assignedUser?.name || vuln.assignedUser?.email}
+                                Assignee{" "}
+                                {vuln.assignedUser?.name ||
+                                  vuln.assignedUser?.email}
                               </span>
                             ) : null}
-                            {vuln.assignedTeam ? <span>Team {vuln.assignedTeam}</span> : null}
+                            {vuln.assignedTeam ? (
+                              <span>Team {vuln.assignedTeam}</span>
+                            ) : null}
                             <span
                               className={cn(
                                 "rounded-full border px-2 py-0.5 text-[11px]",
-                                slaBadge.tone,
+                                slaBadge.tone
                               )}
                             >
                               {slaBadge.label}
                             </span>
                           </div>
-
                         </div>
 
                         <div className="hidden text-right md:block">
-                          <p className="text-sm font-semibold text-orange-700 dark:text-orange-300">
+                          <p className="font-semibold text-orange-700 text-sm dark:text-orange-300">
                             {vuln.affectedAssets || 0}
                           </p>
-                          <p className="text-xs text-[var(--text-muted)]">Affected Assets</p>
+                          <p className="text-[var(--text-muted)] text-xs">
+                            Affected Assets
+                          </p>
                         </div>
 
                         <div className="flex items-start gap-2">
                           <button
-                            type="button"
-                            onClick={() => setActiveVulnId(isExpanded ? null : vuln.id)}
                             className="mt-1 inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-muted)] transition hover:bg-[var(--bg-elevated)] hover:text-[var(--text-secondary)]"
+                            onClick={() =>
+                              setActiveVulnId(isExpanded ? null : vuln.id)
+                            }
+                            type="button"
                           >
                             <ChevronDown
+                              className={cn(
+                                "transition-transform",
+                                isExpanded && "rotate-180"
+                              )}
                               size={14}
-                              className={cn("transition-transform", isExpanded && "rotate-180")}
                             />
                           </button>
                           <VulnerabilityActions
-                            vulnerability={vuln}
-                            onEdit={() => setEditingVuln(vuln)}
-                            onRefresh={() => fetchVulnerabilities({ silent: true })}
+                            isDeleting={deletingId === vuln.id}
                             onDelete={() => {
                               void handleDelete(vuln.id);
                             }}
-                            isDeleting={deletingId === vuln.id}
+                            onEdit={() => setEditingVuln(vuln)}
+                            onRefresh={() =>
+                              fetchVulnerabilities({ silent: true })
+                            }
+                            vulnerability={vuln}
                           />
                         </div>
                       </div>
 
                       {isExpanded ? (
-                        <div className="mt-4 border-t border-[var(--border-color)] pt-4 pl-14">
+                        <div className="mt-4 border-[var(--border-color)] border-t pt-4 pl-14">
                           <div className="mb-4 flex flex-wrap items-center gap-2">
-                            <span className="text-xs text-[var(--text-muted)]">
+                            <span className="text-[var(--text-muted)] text-xs">
                               Workflow: {formatLabel(workflowState)}
                             </span>
                             {nextWorkflowStates.map((state) => (
                               <button
-                                key={`${vuln.id}-${state}`}
-                                type="button"
+                                className="inline-flex items-center gap-1 rounded-md border border-sky-400/50 bg-sky-100/80 px-2.5 py-1 text-[11px] text-sky-900 transition hover:bg-sky-200/80 disabled:cursor-not-allowed disabled:opacity-50 dark:border-sky-400/35 dark:bg-sky-500/10 dark:text-sky-200 dark:hover:bg-sky-500/20"
                                 disabled={workflowUpdatingId === vuln.id}
-                                onClick={() => void transitionWorkflow(vuln, state)}
-                                className="inline-flex items-center gap-1 rounded-md border border-sky-400/50 bg-sky-100/80 px-2.5 py-1 text-[11px] text-sky-900 dark:border-sky-400/35 dark:bg-sky-500/10 dark:text-sky-200 transition hover:bg-sky-200/80 dark:hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                                key={`${vuln.id}-${state}`}
+                                onClick={() =>
+                                  void transitionWorkflow(vuln, state)
+                                }
+                                type="button"
                               >
-                                {workflowUpdatingId === vuln.id ? "Updating..." : `Move to ${formatLabel(state)}`}
+                                {workflowUpdatingId === vuln.id
+                                  ? "Updating..."
+                                  : `Move to ${formatLabel(state)}`}
                               </button>
                             ))}
-                            {!nextWorkflowStates.length ? (
-                              <span className="text-xs text-[var(--text-muted)]">No further transitions.</span>
-                            ) : null}
+                            {nextWorkflowStates.length ? null : (
+                              <span className="text-[var(--text-muted)] text-xs">
+                                No further transitions.
+                              </span>
+                            )}
                           </div>
                           <RiskAssessmentView
-                            riskEntry={vuln.riskEntries?.[0]}
-                            vulnerabilityId={vuln.id}
                             onRefresh={() => {
                               void fetchVulnerabilities({ silent: true });
                             }}
+                            riskEntry={vuln.riskEntries?.[0]}
+                            vulnerabilityId={vuln.id}
                           />
                         </div>
                       ) : null}
@@ -850,32 +961,37 @@ function VulnerabilitiesContent() {
               </div>
             )}
 
-            <footer className="flex items-center justify-between border-t border-[var(--border-color)] p-4">
-              <p className="text-xs text-[var(--text-muted)]">
+            <footer className="flex items-center justify-between border-[var(--border-color)] border-t p-4">
+              <p className="text-[var(--text-muted)] text-xs">
                 Page {pagination.page} of {pagination.totalPages}
               </p>
               <div className="flex items-center gap-2">
                 <button
-                  type="button"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-[var(--text-secondary)] text-sm transition hover:bg-[var(--bg-elevated)] disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={pagination.page <= 1 || isLoading}
                   onClick={() =>
-                    setPagination((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))
+                    setPagination((prev) => ({
+                      ...prev,
+                      page: Math.max(1, prev.page - 1),
+                    }))
                   }
-                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-sm text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)] disabled:cursor-not-allowed disabled:opacity-50"
+                  type="button"
                 >
                   <ChevronLeft size={14} />
                   Prev
                 </button>
                 <button
-                  type="button"
-                  disabled={pagination.page >= pagination.totalPages || isLoading}
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-[var(--text-secondary)] text-sm transition hover:bg-[var(--bg-elevated)] disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={
+                    pagination.page >= pagination.totalPages || isLoading
+                  }
                   onClick={() =>
                     setPagination((prev) => ({
                       ...prev,
                       page: Math.min(prev.totalPages, prev.page + 1),
                     }))
                   }
-                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-sm text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)] disabled:cursor-not-allowed disabled:opacity-50"
+                  type="button"
                 >
                   Next
                   <ChevronRight size={14} />
@@ -886,22 +1002,31 @@ function VulnerabilitiesContent() {
 
           <div className="space-y-4">
             <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
-              <h2 className="text-lg font-semibold text-[var(--text-primary)]">Severity Distribution</h2>
+              <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                Severity Distribution
+              </h2>
               <div className="mt-4">
                 {severityDistribution.length > 0 ? (
                   <>
                     <SeverityDistributionChart data={severityChartData} />
                     <div className="mt-4 space-y-2">
                       {severityDistribution.map((item) => (
-                        <div key={item.severity} className="flex items-center justify-between text-sm">
-                          <span className="text-[var(--text-secondary)]">{item.severity}</span>
-                          <span className="text-[var(--text-primary)]">{item.count}</span>
+                        <div
+                          className="flex items-center justify-between text-sm"
+                          key={item.severity}
+                        >
+                          <span className="text-[var(--text-secondary)]">
+                            {item.severity}
+                          </span>
+                          <span className="text-[var(--text-primary)]">
+                            {item.count}
+                          </span>
                         </div>
                       ))}
                     </div>
                   </>
                 ) : (
-                  <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
+                  <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-[var(--text-muted)] text-sm">
                     No severity distribution data available.
                   </div>
                 )}
@@ -909,14 +1034,20 @@ function VulnerabilitiesContent() {
             </article>
 
             <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
-              <h2 className="text-lg font-semibold text-[var(--text-primary)]">Source Distribution</h2>
+              <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                Source Distribution
+              </h2>
               <div className="mt-4 space-y-3">
                 {sourceDistribution.length > 0 ? (
                   sourceDistribution.map((item) => (
                     <div key={item.source}>
                       <div className="mb-1.5 flex items-center justify-between text-xs">
-                        <span className="text-[var(--text-secondary)] font-mono">{item.source}</span>
-                        <span className="text-[var(--text-muted)]">{item.count}</span>
+                        <span className="font-mono text-[var(--text-secondary)]">
+                          {item.source}
+                        </span>
+                        <span className="text-[var(--text-muted)]">
+                          {item.count}
+                        </span>
                       </div>
                       <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
                         <div
@@ -929,7 +1060,7 @@ function VulnerabilitiesContent() {
                     </div>
                   ))
                 ) : (
-                  <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
+                  <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-[var(--text-muted)] text-sm">
                     No source distribution data available.
                   </p>
                 )}
@@ -937,7 +1068,9 @@ function VulnerabilitiesContent() {
             </article>
 
             <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
-              <h2 className="text-lg font-semibold text-[var(--text-primary)]">EPSS Ranges</h2>
+              <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                EPSS Ranges
+              </h2>
               <div className="mt-4 space-y-2">
                 {[
                   {
@@ -962,11 +1095,11 @@ function VulnerabilitiesContent() {
                   },
                 ].map((item) => (
                   <div
-                    key={item.label}
                     className={cn(
                       "flex items-center justify-between rounded-lg border px-3 py-2 text-sm",
-                      item.tone,
+                      item.tone
                     )}
+                    key={item.label}
                   >
                     <span>{item.label}</span>
                     <span className="font-medium">{item.value}</span>
@@ -989,11 +1122,11 @@ function VulnerabilitiesContent() {
       {editingVuln ? (
         <EditVulnerabilityModal
           isOpen={Boolean(editingVuln)}
-          vulnerability={editingVuln}
           onClose={() => setEditingVuln(null)}
           onSuccess={() => {
             void fetchVulnerabilities({ silent: true });
           }}
+          vulnerability={editingVuln}
         />
       ) : null}
     </DashboardLayout>
@@ -1002,13 +1135,15 @@ function VulnerabilitiesContent() {
 
 export default function VulnerabilitiesPage() {
   return (
-    <Suspense fallback={
-      <DashboardLayout>
-        <div className="flex min-h-[60vh] items-center justify-center">
-          <ShieldLoader size="lg" variant="cyber" />
-        </div>
-      </DashboardLayout>
-    }>
+    <Suspense
+      fallback={
+        <DashboardLayout>
+          <div className="flex min-h-[60vh] items-center justify-center">
+            <ShieldLoader size="lg" variant="cyber" />
+          </div>
+        </DashboardLayout>
+      }
+    >
       <VulnerabilitiesContent />
     </Suspense>
   );

@@ -1,22 +1,38 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { Prisma, VulnStatus, WorkflowState } from "@prisma/client";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import {
-  requireSessionWithOrg,
   ROLE_VULNERABILITY_DELETE,
   ROLE_VULNERABILITY_WRITE,
+  requireSessionWithOrg,
 } from "@/lib/api-auth";
+import {
+  createNotification,
+  notifyMainOfficers,
+} from "@/lib/notifications/service";
+import { prisma } from "@/lib/prisma";
 import { calculateSlaDueAt } from "@/lib/workflow/sla";
 import { applyWorkflowStateTimestamps } from "@/lib/workflow/state-machine";
-import type { Prisma, VulnStatus, WorkflowState } from "@prisma/client";
-import { createNotification, notifyMainOfficers } from "@/lib/notifications/service";
 
 const updateSchema = z.object({
   title: z.string().min(3).max(300).optional(),
   description: z.string().optional().nullable(),
-  severity: z.enum(["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"]).optional(),
-  status: z.enum(["OPEN", "IN_PROGRESS", "MITIGATED", "FIXED", "ACCEPTED", "FALSE_POSITIVE"]).optional(),
-  workflowState: z.enum(["NEW", "TRIAGED", "IN_PROGRESS", "RESOLVED", "CLOSED"]).optional(),
+  severity: z
+    .enum(["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"])
+    .optional(),
+  status: z
+    .enum([
+      "OPEN",
+      "IN_PROGRESS",
+      "MITIGATED",
+      "FIXED",
+      "ACCEPTED",
+      "FALSE_POSITIVE",
+    ])
+    .optional(),
+  workflowState: z
+    .enum(["NEW", "TRIAGED", "IN_PROGRESS", "RESOLVED", "CLOSED"])
+    .optional(),
   assignedUserId: z.string().optional().nullable(),
   assignedTeam: z.string().optional().nullable(),
   slaDueAt: z.string().datetime().optional().nullable(),
@@ -34,7 +50,10 @@ const updateSchema = z.object({
  * Keeps `status` in step with `workflowState`, leaving an existing status alone
  * when it is already consistent with the new workflow state.
  */
-function statusForWorkflowState(next: WorkflowState, current: VulnStatus): VulnStatus {
+function statusForWorkflowState(
+  next: WorkflowState,
+  current: VulnStatus
+): VulnStatus {
   switch (next) {
     case "NEW":
       return current === "OPEN" ? current : "OPEN";
@@ -45,7 +64,9 @@ function statusForWorkflowState(next: WorkflowState, current: VulnStatus): VulnS
     case "RESOLVED":
       return current === "FIXED" || current === "MITIGATED" ? current : "FIXED";
     case "CLOSED":
-      return current === "ACCEPTED" || current === "FALSE_POSITIVE" ? current : "ACCEPTED";
+      return current === "ACCEPTED" || current === "FALSE_POSITIVE"
+        ? current
+        : "ACCEPTED";
     default:
       return current;
   }
@@ -53,18 +74,20 @@ function statusForWorkflowState(next: WorkflowState, current: VulnStatus): VulnS
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireSessionWithOrg(request, {
     allowedRoles: ROLE_VULNERABILITY_WRITE,
   });
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const parsed = updateSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid payload", details: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -79,13 +102,17 @@ export async function PATCH(
   });
 
   if (!existing) {
-    return NextResponse.json({ error: "Vulnerability not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Vulnerability not found" },
+      { status: 404 }
+    );
   }
 
   const assignedUserId =
     payload.assignedUserId === null
       ? null
-      : typeof payload.assignedUserId === "string" && payload.assignedUserId.trim().length > 0
+      : typeof payload.assignedUserId === "string" &&
+          payload.assignedUserId.trim().length > 0
         ? payload.assignedUserId.trim()
         : undefined;
 
@@ -99,7 +126,10 @@ export async function PATCH(
     });
 
     if (!assignee) {
-      return NextResponse.json({ error: "assignedUserId is invalid for your organization" }, { status: 400 });
+      return NextResponse.json(
+        { error: "assignedUserId is invalid for your organization" },
+        { status: 400 }
+      );
     }
   }
 
@@ -117,7 +147,10 @@ export async function PATCH(
     });
 
     if (!asset) {
-      return NextResponse.json({ error: "assetId is invalid for your organization" }, { status: 400 });
+      return NextResponse.json(
+        { error: "assetId is invalid for your organization" },
+        { status: 400 }
+      );
     }
   }
 
@@ -126,18 +159,36 @@ export async function PATCH(
   // `Unknown argument` in a handler with no error handling.
   const data: Prisma.VulnerabilityUpdateInput = { lastSeen: new Date() };
 
-  if (payload.title !== undefined) data.title = payload.title;
-  if (payload.severity !== undefined) data.severity = payload.severity;
-  if (payload.status !== undefined) data.status = payload.status;
-  if (payload.workflowState !== undefined) data.workflowState = payload.workflowState;
+  if (payload.title !== undefined) {
+    data.title = payload.title;
+  }
+  if (payload.severity !== undefined) {
+    data.severity = payload.severity;
+  }
+  if (payload.status !== undefined) {
+    data.status = payload.status;
+  }
+  if (payload.workflowState !== undefined) {
+    data.workflowState = payload.workflowState;
+  }
 
   // `?? undefined` collapses an explicit null into "no change", so clearing a
   // field was impossible. These fields are nullable; honour null.
-  if (payload.description !== undefined) data.description = payload.description;
-  if (payload.assignedTeam !== undefined) data.assignedTeam = payload.assignedTeam;
-  if (payload.solution !== undefined) data.solution = payload.solution;
-  if (payload.cvssScore !== undefined) data.cvssScore = payload.cvssScore;
-  if (payload.cvssVector !== undefined) data.cvssVector = payload.cvssVector;
+  if (payload.description !== undefined) {
+    data.description = payload.description;
+  }
+  if (payload.assignedTeam !== undefined) {
+    data.assignedTeam = payload.assignedTeam;
+  }
+  if (payload.solution !== undefined) {
+    data.solution = payload.solution;
+  }
+  if (payload.cvssScore !== undefined) {
+    data.cvssScore = payload.cvssScore;
+  }
+  if (payload.cvssVector !== undefined) {
+    data.cvssVector = payload.cvssVector;
+  }
   if (payload.slaDueAt !== undefined) {
     data.slaDueAt = payload.slaDueAt ? new Date(payload.slaDueAt) : null;
   }
@@ -156,13 +207,19 @@ export async function PATCH(
   // `workflowState`, which is how a row ended up rendering "Open" and
   // "Resolved" side by side.
   if (payload.workflowState !== undefined && payload.status === undefined) {
-    data.status = statusForWorkflowState(payload.workflowState, existing.status);
+    data.status = statusForWorkflowState(
+      payload.workflowState,
+      existing.status
+    );
   }
 
-  Object.assign(data, applyWorkflowStateTimestamps(
-    (payload.workflowState ?? existing.workflowState),
-    new Date(),
-  ));
+  Object.assign(
+    data,
+    applyWorkflowStateTimestamps(
+      payload.workflowState ?? existing.workflowState,
+      new Date()
+    )
+  );
 
   let updated;
   try {
@@ -177,15 +234,24 @@ export async function PATCH(
       // this a finding created without an asset could never be given one, and
       // risk analysis requires an asset.
       if (assetId !== undefined) {
-        await tx.assetVulnerability.deleteMany({ where: { vulnerabilityId: existing.id } });
+        await tx.assetVulnerability.deleteMany({
+          where: { vulnerabilityId: existing.id },
+        });
         if (assetId) {
           await tx.assetVulnerability.create({
-            data: { assetId, vulnerabilityId: existing.id, status: result.status },
+            data: {
+              assetId,
+              vulnerabilityId: existing.id,
+              status: result.status,
+            },
           });
         }
       }
 
-      if (payload.workflowState !== undefined && payload.workflowState !== existing.workflowState) {
+      if (
+        payload.workflowState !== undefined &&
+        payload.workflowState !== existing.workflowState
+      ) {
         await tx.vulnerabilityWorkflowTransition.create({
           data: {
             vulnerabilityId: existing.id,
@@ -201,21 +267,29 @@ export async function PATCH(
     });
   } catch (error) {
     console.error("Update Vulnerability Error:", error);
-    return NextResponse.json({ error: "Failed to update vulnerability" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update vulnerability" },
+      { status: 500 }
+    );
   }
 
   // Handle Notifications
-  const promises: Array<Promise<unknown>> = [];
+  const promises: Promise<unknown>[] = [];
 
   // 1. If assignedUserId changed and is set, notify the new assignee
-  if (typeof assignedUserId === "string" && assignedUserId !== existing.assignedUserId) {
-    promises.push(createNotification({
-      userId: assignedUserId,
-      title: "Vulnerability Assigned",
-      message: `You have been assigned to vulnerability: ${updated.title}`,
-      type: "INFO",
-      link: `/vulnerabilities?search=${updated.id}`
-    }));
+  if (
+    typeof assignedUserId === "string" &&
+    assignedUserId !== existing.assignedUserId
+  ) {
+    promises.push(
+      createNotification({
+        userId: assignedUserId,
+        title: "Vulnerability Assigned",
+        message: `You have been assigned to vulnerability: ${updated.title}`,
+        type: "INFO",
+        link: `/vulnerabilities?search=${updated.id}`,
+      })
+    );
   }
 
   // 2. If status changed to FIXED
@@ -225,20 +299,32 @@ export async function PATCH(
 
     // Notify the assigner (creator of the vulnerability)
     // In this schema, we don't track creator directly on Vulnerability, but we can notify the current main officers
-    // Or if there was a previous assignee who isn't the one who fixed it? 
+    // Or if there was a previous assignee who isn't the one who fixed it?
     // Usually "assigner" means the person who gave the task.
 
-    promises.push(notifyMainOfficers(authResult.context.organizationId, "Vulnerability Fixed", message, link));
+    promises.push(
+      notifyMainOfficers(
+        authResult.context.organizationId,
+        "Vulnerability Fixed",
+        message,
+        link
+      )
+    );
 
     // If the vulnerability was assigned to someone else, notify them too
-    if (updated.assignedUserId && updated.assignedUserId !== authResult.context.userId) {
-      promises.push(createNotification({
-        userId: updated.assignedUserId,
-        title: "Vulnerability Fixed",
-        message,
-        type: "SUCCESS",
-        link
-      }));
+    if (
+      updated.assignedUserId &&
+      updated.assignedUserId !== authResult.context.userId
+    ) {
+      promises.push(
+        createNotification({
+          userId: updated.assignedUserId,
+          title: "Vulnerability Fixed",
+          message,
+          type: "SUCCESS",
+          link,
+        })
+      );
     }
   }
 
@@ -249,12 +335,14 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireSessionWithOrg(request, {
     allowedRoles: ROLE_VULNERABILITY_DELETE,
   });
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const { id } = await params;
 
@@ -267,7 +355,10 @@ export async function DELETE(
   });
 
   if (!existing) {
-    return NextResponse.json({ error: "Vulnerability not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Vulnerability not found" },
+      { status: 404 }
+    );
   }
 
   await prisma.vulnerability.delete({ where: { id } });

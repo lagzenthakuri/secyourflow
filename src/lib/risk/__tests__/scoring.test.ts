@@ -6,7 +6,12 @@ import { deterministicAnalysis } from "@/lib/risk/scoring";
  * on the critical path far more often than the name suggests.
  */
 
-const asset = { name: "web-01", type: "SERVER", criticality: "HIGH", environment: "PRODUCTION" };
+const asset = {
+  name: "web-01",
+  type: "SERVER",
+  criticality: "HIGH",
+  environment: "PRODUCTION",
+};
 
 describe("deterministicAnalysis", () => {
   it("invents no controls, treatment or owner", () => {
@@ -15,7 +20,7 @@ describe("deterministicAnalysis", () => {
     // control IDs were fed to the compliance engine to fail real controls.
     const analysis = deterministicAnalysis(
       { title: "SQL injection", severity: "CRITICAL" },
-      asset,
+      asset
     );
 
     expect(analysis.current_controls).toEqual([]);
@@ -27,12 +32,18 @@ describe("deterministicAnalysis", () => {
   });
 
   it("reports zero confidence rather than a plausible-looking score", () => {
-    const analysis = deterministicAnalysis({ title: "x", severity: "HIGH" }, asset);
+    const analysis = deterministicAnalysis(
+      { title: "x", severity: "HIGH" },
+      asset
+    );
     expect(analysis.confidence).toBe(0);
   });
 
   it("says so when it had no CVSS vector to work from", () => {
-    const analysis = deterministicAnalysis({ title: "x", severity: "HIGH" }, asset);
+    const analysis = deterministicAnalysis(
+      { title: "x", severity: "HIGH" },
+      asset
+    );
     expect(analysis.rationale_for_risk_rating).toMatch(/no CVSS vector/i);
     // Impacts fall back to the middle of the scale.
     expect(analysis.confidentiality_impact).toBe(3);
@@ -40,8 +51,12 @@ describe("deterministicAnalysis", () => {
 
   it("derives CIA impacts from the CVSS vector", () => {
     const analysis = deterministicAnalysis(
-      { title: "x", severity: "HIGH", cvssVector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:L/A:N" },
-      asset,
+      {
+        title: "x",
+        severity: "HIGH",
+        cvssVector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:L/A:N",
+      },
+      asset
     );
 
     expect(analysis.confidentiality_impact).toBe(5); // H
@@ -51,10 +66,13 @@ describe("deterministicAnalysis", () => {
   });
 
   it("raises likelihood on evidence of real-world exploitation", () => {
-    const base = deterministicAnalysis({ title: "x", severity: "MEDIUM" }, { ...asset, criticality: "LOW" });
+    const base = deterministicAnalysis(
+      { title: "x", severity: "MEDIUM" },
+      { ...asset, criticality: "LOW" }
+    );
     const kev = deterministicAnalysis(
       { title: "x", severity: "MEDIUM", cisaKev: true },
-      { ...asset, criticality: "LOW" },
+      { ...asset, criticality: "LOW" }
     );
 
     expect(kev.likelihood_score).toBeGreaterThan(base.likelihood_score);
@@ -62,8 +80,14 @@ describe("deterministicAnalysis", () => {
 
   it("keeps likelihood inside the 1-5 scale however many signals stack up", () => {
     const analysis = deterministicAnalysis(
-      { title: "x", severity: "CRITICAL", cisaKev: true, isExploited: true, epssScore: 0.99 },
-      { ...asset, criticality: "CRITICAL" },
+      {
+        title: "x",
+        severity: "CRITICAL",
+        cisaKev: true,
+        isExploited: true,
+        epssScore: 0.99,
+      },
+      { ...asset, criticality: "CRITICAL" }
     );
 
     expect(analysis.likelihood_score).toBeLessThanOrEqual(5);
@@ -71,9 +95,19 @@ describe("deterministicAnalysis", () => {
   });
 
   it("produces a score inside the documented 1-25 range", () => {
-    for (const severity of ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"] as const) {
+    for (const severity of [
+      "CRITICAL",
+      "HIGH",
+      "MEDIUM",
+      "LOW",
+      "INFORMATIONAL",
+    ] as const) {
       const a = deterministicAnalysis({ title: "x", severity }, asset);
-      const impact = (a.confidentiality_impact + a.integrity_impact + a.availability_impact) / 3;
+      const impact =
+        (a.confidentiality_impact +
+          a.integrity_impact +
+          a.availability_impact) /
+        3;
       const score = impact * a.likelihood_score;
       expect(score).toBeGreaterThanOrEqual(1);
       expect(score).toBeLessThanOrEqual(25);
@@ -83,7 +117,7 @@ describe("deterministicAnalysis", () => {
   it("ignores a malformed CVSS vector instead of throwing", () => {
     const analysis = deterministicAnalysis(
       { title: "x", severity: "HIGH", cvssVector: "not-a-vector" },
-      asset,
+      asset
     );
     expect(analysis.confidentiality_impact).toBe(3);
   });

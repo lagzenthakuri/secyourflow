@@ -1,132 +1,137 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Settings, Edit2, Trash2, Loader2 } from "lucide-react";
+import { Edit2, Loader2, Settings, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface FrameworkActionsProps {
-    framework: Record<string, unknown>;
-    onEdit: () => void;
-    onDelete: () => void;
-    isDeleting?: boolean;
+  framework: Record<string, unknown>;
+  isDeleting?: boolean;
+  onDelete: () => void;
+  onEdit: () => void;
 }
 
 export function FrameworkActions({
-    framework,
-    onEdit,
-    onDelete,
-    isDeleting = false
+  framework,
+  onEdit,
+  onDelete,
+  isDeleting = false,
 }: FrameworkActionsProps) {
-    void framework;
-    const [isOpen, setIsOpen] = useState(false);
-    const [isConfirming, setIsConfirming] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
+  void framework;
+  const [isOpen, setIsOpen] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-                setIsConfirming(false);
-            }
-        };
-
-        if (isOpen) {
-            document.addEventListener("mousedown", handleClickOutside);
-        }
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [isOpen]);
-
-    const handleToggle = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsOpen(!isOpen);
-        if (isOpen) setIsConfirming(false);
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+        setIsConfirming(false);
+      }
     };
 
-    return (
-        <div className="relative" ref={dropdownRef}>
-            <button
-                type="button"
-                onClick={handleToggle}
-                className={cn(
-                    "p-1.5 rounded-lg transition-all duration-300 ease-in-out border bg-[var(--bg-tertiary)] border-[var(--border-color)]",
-                    isOpen
-                        ? "text-[var(--text-primary)] border-blue-500/50"
-                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-                )}
-                disabled={isDeleting}
-            >
-                {isDeleting ? (
-                    <Loader2 size={14} className="animate-spin text-intent-accent" />
-                ) : (
-                    <Settings size={14} />
-                )}
-            </button>
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
 
-            {isOpen && (
-                <div
-                    className="absolute right-0 mt-2 w-48 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-color)] shadow-2xl z-[50] overflow-hidden"
+  const handleToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsOpen(!isOpen);
+    if (isOpen) {
+      setIsConfirming(false);
+    }
+  };
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        className={cn(
+          "rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-1.5 transition-all duration-300 ease-in-out",
+          isOpen
+            ? "border-blue-500/50 text-[var(--text-primary)]"
+            : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+        )}
+        disabled={isDeleting}
+        onClick={handleToggle}
+        type="button"
+      >
+        {isDeleting ? (
+          <Loader2 className="animate-spin text-intent-accent" size={14} />
+        ) : (
+          <Settings size={14} />
+        )}
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 z-[50] mt-2 w-48 overflow-hidden rounded-xl border border-[var(--border-color)] bg-[var(--bg-elevated)] shadow-2xl">
+          {isConfirming ? (
+            <div className="bg-red-500/5 p-3">
+              <p className="mb-2 font-bold text-[var(--text-primary)] text-xs">
+                Delete Framework?
+              </p>
+              <div className="flex gap-2">
+                <button
+                  className="flex-1 rounded-lg bg-red-500 py-1.5 font-bold text-[10px] text-white"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onDelete();
+                    setIsOpen(false);
+                  }}
+                  type="button"
                 >
-                    {!isConfirming ? (
-                        <div className="p-1">
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    onEdit();
-                                    setIsOpen(false);
-                                }}
-                                className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] rounded-lg transition-all duration-300 ease-in-out text-left"
-                            >
-                                <Edit2 size={12} />
-                                Edit Basic Info
-                            </button>
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setIsConfirming(true);
-                                }}
-                                className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-500/10 rounded-lg transition-all duration-300 ease-in-out text-left"
-                            >
-                                <Trash2 size={12} />
-                                Delete Framework
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="p-3 bg-red-500/5">
-                            <p className="text-xs font-bold text-[var(--text-primary)] mb-2">Delete Framework?</p>
-                            <div className="flex gap-2">
-                                <button
-                                    type="button"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        onDelete();
-                                        setIsOpen(false);
-                                    }}
-                                    className="flex-1 py-1.5 bg-red-500 text-white rounded-lg text-[10px] font-bold"
-                                >
-                                    Delete
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        setIsConfirming(false);
-                                    }}
-                                    className="flex-1 py-1.5 bg-[var(--bg-tertiary)] text-[var(--text-primary)] rounded-lg text-[10px]"
-                                >
-                                    No
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
+                  Delete
+                </button>
+                <button
+                  className="flex-1 rounded-lg bg-[var(--bg-tertiary)] py-1.5 text-[10px] text-[var(--text-primary)]"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsConfirming(false);
+                  }}
+                  type="button"
+                >
+                  No
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="p-1">
+              <button
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left font-medium text-[var(--text-secondary)] text-sm transition-all duration-300 ease-in-out hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onEdit();
+                  setIsOpen(false);
+                }}
+                type="button"
+              >
+                <Edit2 size={12} />
+                Edit Basic Info
+              </button>
+              <button
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left font-medium text-red-500 text-sm transition-all duration-300 ease-in-out hover:bg-red-500/10"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsConfirming(true);
+                }}
+                type="button"
+              >
+                <Trash2 size={12} />
+                Delete Framework
+              </button>
+            </div>
+          )}
         </div>
-    );
+      )}
+    </div>
+  );
 }

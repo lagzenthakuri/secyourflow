@@ -1,20 +1,14 @@
 "use client";
 import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/design-system/components/ui/select";
 import { Textarea as BoilerplateTextarea } from "@repo/design-system/components/ui/textarea";
-
-
-
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
-import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
-import { ErrorBanner } from "@/components/ui/ErrorBanner";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { ShieldLoader } from "@/components/ui/ShieldLoader";
-import { FilterSelect } from "@/components/ui/FilterSelect";
-import { Vulnerability } from "@/types";
-import { cn, getTimeAgo } from "@/lib/utils";
-import { useUiFeedback } from "@/hooks/useUiFeedback";
 import {
   Activity,
   AlertTriangle,
@@ -32,83 +26,105 @@ import {
   Users,
   Zap,
 } from "lucide-react";
+import Link from "next/link";
+import {
+  type ComponentType,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { ErrorBanner } from "@/components/ui/ErrorBanner";
+import { FilterSelect } from "@/components/ui/FilterSelect";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
+import { useUiFeedback } from "@/hooks/useUiFeedback";
+import { cn, getTimeAgo } from "@/lib/utils";
+import type { Vulnerability } from "@/types";
 
-type SeverityTone = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFORMATIONAL" | null;
+type SeverityTone =
+  | "CRITICAL"
+  | "HIGH"
+  | "MEDIUM"
+  | "LOW"
+  | "INFORMATIONAL"
+  | null;
 
 type TabKey = "overview" | "matrix" | "ioc" | "actors";
 
 interface ThreatIndicator {
+  confidence?: number | null;
+  description?: string | null;
+  expiresAt?: string | null;
+  feedId: string;
+  firstSeen: string;
   id: string;
+  lastSeen: string;
+  normalizedValue: string;
+  severity?: SeverityTone;
+  source?: string | null;
+  tags: string[];
+  techniqueId?: string | null;
   type: string;
   value: string;
-  normalizedValue: string;
-  confidence?: number | null;
-  severity?: SeverityTone;
-  firstSeen: string;
-  lastSeen: string;
-  expiresAt?: string | null;
-  source?: string | null;
-  description?: string | null;
-  tags: string[];
-  feedId: string;
-  techniqueId?: string | null;
 }
 
 interface ThreatFeed {
-  id: string;
-  name: string;
-  source: string;
-  type: string;
   format: string;
-  url?: string | null;
+  id: string;
   isActive: boolean;
   lastSync?: string | null;
+  name: string;
+  source: string;
   syncInterval: number;
+  type: string;
+  url?: string | null;
 }
 
 interface ThreatMatch {
-  id: string;
-  matchField: string;
-  matchValue: string;
-  confidence?: number | null;
-  status: string;
-  indicator: {
-    value: string;
-    type: string;
-    severity?: SeverityTone;
-  };
   asset: {
     id: string;
     name: string;
     ipAddress?: string | null;
     hostname?: string | null;
   };
+  confidence?: number | null;
+  id: string;
+  indicator: {
+    value: string;
+    type: string;
+    severity?: SeverityTone;
+  };
   lastMatchedAt: string;
+  matchField: string;
+  matchValue: string;
+  status: string;
 }
 
 interface ThreatRun {
-  id: string;
-  status: string;
-  startedAt: string;
-  finishedAt?: string | null;
-  recordsFetched: number;
-  recordsCreated: number;
-  recordsUpdated: number;
   errors?: unknown;
   feed: {
     name: string;
     source: string;
   };
+  finishedAt?: string | null;
+  id: string;
+  recordsCreated: number;
+  recordsFetched: number;
+  recordsUpdated: number;
+  startedAt: string;
+  status: string;
 }
 
 interface ThreatStats {
   activeFeeds: number;
-  totalIndicators: number;
   activeIndicators: number;
-  criticalIndicators: number;
-  matchedAssets: number;
   actorCount: number;
   campaignCount: number;
+  criticalIndicators: number;
+  matchedAssets: number;
+  totalIndicators: number;
 }
 
 interface ThreatOverviewResponse {
@@ -120,43 +136,38 @@ interface ThreatOverviewResponse {
 }
 
 interface AttackTechniqueCell {
-  techniqueId: string;
+  indicatorCount: number;
+  lastSeen: string | null;
+  maxSeverity: SeverityTone;
   techniqueExternalId: string;
+  techniqueId: string;
   techniqueName: string;
   vulnerabilityCount: number;
-  indicatorCount: number;
-  maxSeverity: SeverityTone;
-  lastSeen: string | null;
 }
 
 interface AttackTacticRow {
-  tacticId: string;
-  tacticExternalId: string;
-  tacticName: string;
   shortName: string | null;
+  tacticExternalId: string;
+  tacticId: string;
+  tacticName: string;
   techniques: AttackTechniqueCell[];
 }
 
 interface AttackMatrixResponse {
-  tactics: AttackTacticRow[];
+  generatedAt: string;
   summary: {
     tacticCount: number;
     techniqueCount: number;
   };
-  generatedAt: string;
+  tactics: AttackTacticRow[];
 }
 
 interface ThreatActorRecord {
-  id: string;
-  externalId?: string | null;
-  name: string;
-  description?: string | null;
   aliases: string[];
-  techniques: Array<{
-    externalId: string;
-    name: string;
-  }>;
   campaignCount: number;
+  description?: string | null;
+  externalId?: string | null;
+  id: string;
   linkedVulnerabilities: Array<{
     id: string;
     cveId?: string | null;
@@ -164,24 +175,29 @@ interface ThreatActorRecord {
     severity: SeverityTone;
     source: string;
   }>;
+  name: string;
+  techniques: Array<{
+    externalId: string;
+    name: string;
+  }>;
 }
 
 interface ThreatCampaignRecord {
-  id: string;
-  externalId?: string | null;
-  name: string;
-  description?: string | null;
   actor?: {
     id: string;
     name: string;
     externalId?: string | null;
   } | null;
+  description?: string | null;
+  externalId?: string | null;
+  firstSeen?: string | null;
+  id: string;
+  lastSeen?: string | null;
+  name: string;
   techniques: Array<{
     externalId: string;
     name: string;
   }>;
-  firstSeen?: string | null;
-  lastSeen?: string | null;
 }
 
 interface ThreatActorResponse {
@@ -207,7 +223,11 @@ interface VulnerabilityResponse {
   data: Vulnerability[];
 }
 
-const tabItems: Array<{ key: TabKey; label: string; icon: ComponentType<{ size?: number }> }> = [
+const tabItems: Array<{
+  key: TabKey;
+  label: string;
+  icon: ComponentType<{ size?: number }>;
+}> = [
   { key: "overview", label: "Overview", icon: Shield },
   { key: "matrix", label: "ATT&CK Matrix", icon: Network },
   { key: "ioc", label: "IOC Workbench", icon: Target },
@@ -221,19 +241,38 @@ type SeverityFilter = (typeof severityOptions)[number];
 const numberFormatter = new Intl.NumberFormat("en-US");
 
 function getSeverityTone(severity?: SeverityTone) {
-  if (severity === "CRITICAL") return "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200";
-  if (severity === "HIGH") return "border-orange-400/35 bg-orange-500/10 text-orange-700 dark:text-orange-200";
-  if (severity === "MEDIUM") return "border-yellow-400/35 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200";
-  if (severity === "LOW") return "border-emerald-400/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200";
+  if (severity === "CRITICAL") {
+    return "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200";
+  }
+  if (severity === "HIGH") {
+    return "border-orange-400/35 bg-orange-500/10 text-orange-700 dark:text-orange-200";
+  }
+  if (severity === "MEDIUM") {
+    return "border-yellow-400/35 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200";
+  }
+  if (severity === "LOW") {
+    return "border-emerald-400/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200";
+  }
   return "border-[var(--border-hover)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]";
 }
 
-function scoreIntensity(vulnerabilityCount: number, indicatorCount: number): string {
+function scoreIntensity(
+  vulnerabilityCount: number,
+  indicatorCount: number
+): string {
   const score = vulnerabilityCount + indicatorCount;
-  if (score >= 10) return "bg-red-500/25 border-red-400/50";
-  if (score >= 5) return "bg-orange-500/20 border-orange-400/45";
-  if (score >= 2) return "bg-yellow-500/15 border-yellow-400/40";
-  if (score >= 1) return "bg-emerald-500/15 border-emerald-400/35";
+  if (score >= 10) {
+    return "bg-red-500/25 border-red-400/50";
+  }
+  if (score >= 5) {
+    return "bg-orange-500/20 border-orange-400/45";
+  }
+  if (score >= 2) {
+    return "bg-yellow-500/15 border-yellow-400/40";
+  }
+  if (score >= 1) {
+    return "bg-emerald-500/15 border-emerald-400/35";
+  }
   return "bg-[var(--bg-tertiary)] border-[var(--border-color)]";
 }
 
@@ -253,7 +292,8 @@ export default function ThreatsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [indicatorSearch, setIndicatorSearch] = useState("");
-  const [indicatorSeverity, setIndicatorSeverity] = useState<SeverityFilter>("ALL");
+  const [indicatorSeverity, setIndicatorSeverity] =
+    useState<SeverityFilter>("ALL");
   const [importFormat, setImportFormat] = useState<"JSON" | "CSV">("JSON");
   const [importPayload, setImportPayload] = useState("");
   const [newIocValue, setNewIocValue] = useState("");
@@ -269,24 +309,45 @@ export default function ThreatsPage() {
       try {
         setError(null);
 
-        const [exploitedRes, kevRes, overviewRes, matrixRes, actorsRes, campaignsRes] = await Promise.all([
-          fetch("/api/vulnerabilities?exploited=true&limit=25", { cache: "no-store" }),
-          fetch("/api/vulnerabilities?kev=true&limit=25", { cache: "no-store" }),
+        const [
+          exploitedRes,
+          kevRes,
+          overviewRes,
+          matrixRes,
+          actorsRes,
+          campaignsRes,
+        ] = await Promise.all([
+          fetch("/api/vulnerabilities?exploited=true&limit=25", {
+            cache: "no-store",
+          }),
+          fetch("/api/vulnerabilities?kev=true&limit=25", {
+            cache: "no-store",
+          }),
           fetch("/api/threats", { cache: "no-store" }),
           fetch("/api/threats/attack-matrix", { cache: "no-store" }),
           fetch("/api/threats/actors", { cache: "no-store" }),
           fetch("/api/threats/campaigns", { cache: "no-store" }),
         ]);
 
-        if (!exploitedRes.ok || !kevRes.ok || !overviewRes.ok || !actorsRes.ok || !campaignsRes.ok) {
+        if (
+          !(
+            exploitedRes.ok &&
+            kevRes.ok &&
+            overviewRes.ok &&
+            actorsRes.ok &&
+            campaignsRes.ok
+          )
+        ) {
           throw new Error("Failed to fetch threat intelligence data");
         }
 
         const exploited = (await exploitedRes.json()) as VulnerabilityResponse;
         const kev = (await kevRes.json()) as VulnerabilityResponse;
-        const overviewPayload = (await overviewRes.json()) as ThreatOverviewResponse;
+        const overviewPayload =
+          (await overviewRes.json()) as ThreatOverviewResponse;
         const actorsPayload = (await actorsRes.json()) as ThreatActorResponse;
-        const campaignsPayload = (await campaignsRes.json()) as ThreatCampaignResponse;
+        const campaignsPayload =
+          (await campaignsRes.json()) as ThreatCampaignResponse;
 
         setExploitedVulns(exploited.data ?? []);
         setKevVulns(kev.data ?? []);
@@ -295,13 +356,18 @@ export default function ThreatsPage() {
         setCampaigns(campaignsPayload.data ?? []);
 
         if (matrixRes.ok) {
-          const matrixPayload = (await matrixRes.json()) as AttackMatrixResponse;
+          const matrixPayload =
+            (await matrixRes.json()) as AttackMatrixResponse;
           setMatrix(matrixPayload);
         } else {
           setMatrix(null);
         }
       } catch (requestError) {
-        setError(requestError instanceof Error ? requestError.message : "Failed to fetch threats");
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "Failed to fetch threats"
+        );
       } finally {
         if (silent) {
           setIsRefreshing(false);
@@ -310,7 +376,7 @@ export default function ThreatsPage() {
         }
       }
     },
-    [],
+    []
   );
 
   useEffect(() => {
@@ -330,7 +396,8 @@ export default function ThreatsPage() {
         (indicator.description || "").toLowerCase().includes(search) ||
         (indicator.source || "").toLowerCase().includes(search);
 
-      const matchesSeverity = indicatorSeverity === "ALL" || indicator.severity === indicatorSeverity;
+      const matchesSeverity =
+        indicatorSeverity === "ALL" || indicator.severity === indicatorSeverity;
 
       return matchesSearch && matchesSeverity;
     });
@@ -358,7 +425,10 @@ export default function ThreatsPage() {
     } catch (requestError) {
       showToast({
         title: "Correlation failed",
-        description: requestError instanceof Error ? requestError.message : "Correlation failed",
+        description:
+          requestError instanceof Error
+            ? requestError.message
+            : "Correlation failed",
         intent: "error",
       });
     } finally {
@@ -367,20 +437,22 @@ export default function ThreatsPage() {
   };
 
   const submitImport = async () => {
-    if (!importPayload.trim()) return;
+    if (!importPayload.trim()) {
+      return;
+    }
     setIsRefreshing(true);
 
     try {
       const payload =
         importFormat === "JSON"
           ? {
-            format: "JSON",
-            data: JSON.parse(importPayload),
-          }
+              format: "JSON",
+              data: JSON.parse(importPayload),
+            }
           : {
-            format: "CSV",
-            data: importPayload,
-          };
+              format: "CSV",
+              data: importPayload,
+            };
 
       const response = await fetch("/api/threats/iocs/import", {
         method: "POST",
@@ -390,7 +462,10 @@ export default function ThreatsPage() {
         body: JSON.stringify(payload),
       });
 
-      const data = (await response.json()) as { error?: string; summary?: { created: number; updated: number; skipped: number } };
+      const data = (await response.json()) as {
+        error?: string;
+        summary?: { created: number; updated: number; skipped: number };
+      };
       if (!response.ok) {
         throw new Error(data.error || "IOC import failed");
       }
@@ -405,7 +480,10 @@ export default function ThreatsPage() {
     } catch (requestError) {
       showToast({
         title: "IOC import failed",
-        description: requestError instanceof Error ? requestError.message : "IOC import failed",
+        description:
+          requestError instanceof Error
+            ? requestError.message
+            : "IOC import failed",
         intent: "error",
       });
     } finally {
@@ -414,7 +492,9 @@ export default function ThreatsPage() {
   };
 
   const addManualIoc = async () => {
-    if (!newIocValue.trim()) return;
+    if (!newIocValue.trim()) {
+      return;
+    }
     setIsRefreshing(true);
 
     try {
@@ -438,7 +518,10 @@ export default function ThreatsPage() {
     } catch (requestError) {
       showToast({
         title: "Failed to add IOC",
-        description: requestError instanceof Error ? requestError.message : "Failed to add IOC",
+        description:
+          requestError instanceof Error
+            ? requestError.message
+            : "Failed to add IOC",
         intent: "error",
       });
     } finally {
@@ -447,7 +530,11 @@ export default function ThreatsPage() {
   };
 
   const exportIocs = (format: "csv" | "json") => {
-    window.open(`/api/threats/iocs/export?format=${format}`, "_blank", "noopener,noreferrer");
+    window.open(
+      `/api/threats/iocs/export?format=${format}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
   if (isLoading && !overview) {
@@ -464,37 +551,43 @@ export default function ThreatsPage() {
 
   return (
     <DashboardLayout>
-      <ErrorBanner message={error} onDismiss={() => setError(null)} className="mb-4" />
+      <ErrorBanner
+        className="mb-4"
+        message={error}
+        onDismiss={() => setError(null)}
+      />
       <div className="space-y-5">
         <PageHeader
-          title="Live Threats"
-          description="ATT&CK context, IOC correlation, and actor intelligence in one response surface."
-          badge={
-            <>
-              <CircleDot size={12} />
-              Threat Intelligence Console
-            </>
-          }
           actions={
             <>
               <button
-                type="button"
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 font-medium text-[var(--text-primary)] text-sm transition hover:bg-[var(--bg-elevated)]"
                 onClick={() => void fetchThreats({ silent: true })}
-                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
+                type="button"
               >
-                <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
+                <RefreshCw
+                  className={isRefreshing ? "animate-spin" : ""}
+                  size={14}
+                />
                 Refresh
               </button>
               <button
-                type="button"
+                className="inline-flex items-center gap-2 rounded-xl border border-red-300 bg-red-100 px-4 py-2 font-semibold text-red-900 text-sm transition hover:border-red-400 hover:bg-red-200 dark:border-red-300/35 dark:bg-red-400/10 dark:text-red-100 dark:hover:bg-red-400/20"
                 onClick={runCorrelation}
-                className="inline-flex items-center gap-2 rounded-xl border border-red-300 bg-red-100 px-4 py-2 text-sm font-semibold text-red-900 transition hover:bg-red-200 hover:border-red-400 dark:border-red-300/35 dark:bg-red-400/10 dark:text-red-100 dark:hover:bg-red-400/20"
+                type="button"
               >
                 <Target size={14} />
                 Run Correlation
               </button>
             </>
           }
+          badge={
+            <>
+              <CircleDot size={12} />
+              Threat Intelligence Console
+            </>
+          }
+          description="ATT&CK context, IOC correlation, and actor intelligence in one response surface."
           stats={[
             {
               label: "Exploited Vulns",
@@ -533,6 +626,7 @@ export default function ThreatsPage() {
               icon: Users,
             },
           ]}
+          title="Live Threats"
         />
 
         <section className="flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-3">
@@ -541,15 +635,15 @@ export default function ThreatsPage() {
             const active = activeTab === tab.key;
             return (
               <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveTab(tab.key)}
                 className={cn(
-                  "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition",
+                  "inline-flex items-center gap-2 rounded-xl border px-3 py-2 font-medium text-sm transition",
                   active
-                    ? "border-sky-600/55 bg-sky-100/90 text-sky-900 font-semibold dark:border-sky-300/45 dark:bg-sky-400/15 dark:text-sky-400"
-                    : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]",
+                    ? "border-sky-600/55 bg-sky-100/90 font-semibold text-sky-900 dark:border-sky-300/45 dark:bg-sky-400/15 dark:text-sky-400"
+                    : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
                 )}
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                type="button"
               >
                 <Icon size={14} />
                 {tab.label}
@@ -561,27 +655,36 @@ export default function ThreatsPage() {
         {activeTab === "overview" ? (
           <section className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
             <article className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
-              <header className="border-b border-[var(--border-color)] p-4">
-                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Exploited Vulnerability Queue</h2>
-                <p className="text-sm text-[var(--text-secondary)]">High-priority findings with active exploitation signals.</p>
+              <header className="border-[var(--border-color)] border-b p-4">
+                <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                  Exploited Vulnerability Queue
+                </h2>
+                <p className="text-[var(--text-secondary)] text-sm">
+                  High-priority findings with active exploitation signals.
+                </p>
               </header>
               <div className="divide-y divide-[var(--border-color)]">
                 {exploitedVulns.length > 0 ? (
                   exploitedVulns.slice(0, 20).map((vulnerability) => (
-                    <div key={vulnerability.id} className="p-4">
+                    <div className="p-4" key={vulnerability.id}>
                       <div className="flex items-center gap-2">
                         {vulnerability.cveId ? (
                           <a
+                            className="inline-flex items-center gap-1 font-mono text-sky-800 text-xs hover:text-sky-900 dark:text-sky-300 dark:hover:text-sky-200"
                             href={`https://nvd.nist.gov/vuln/detail/${vulnerability.cveId}`}
-                            target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 font-mono text-xs text-sky-800 hover:text-sky-900 dark:text-sky-300 dark:hover:text-sky-200"
+                            target="_blank"
                           >
                             {vulnerability.cveId}
                             <ExternalLink size={11} />
                           </a>
                         ) : null}
-                        <span className={cn("rounded-full border px-2 py-0.5 text-[11px]", getSeverityTone(vulnerability.severity))}>
+                        <span
+                          className={cn(
+                            "rounded-full border px-2 py-0.5 text-[11px]",
+                            getSeverityTone(vulnerability.severity)
+                          )}
+                        >
                           {vulnerability.severity}
                         </span>
                         {vulnerability.cisaKev ? (
@@ -590,34 +693,50 @@ export default function ThreatsPage() {
                           </span>
                         ) : null}
                       </div>
-                      <h3 className="mt-2 text-sm font-medium text-[var(--text-primary)]">{vulnerability.title}</h3>
-                      <div className="mt-2 flex flex-wrap gap-3 text-xs text-[var(--text-muted)]">
-                        <span>EPSS: {((vulnerability.epssScore ?? 0) * 100).toFixed(1)}%</span>
+                      <h3 className="mt-2 font-medium text-[var(--text-primary)] text-sm">
+                        {vulnerability.title}
+                      </h3>
+                      <div className="mt-2 flex flex-wrap gap-3 text-[var(--text-muted)] text-xs">
+                        <span>
+                          EPSS:{" "}
+                          {((vulnerability.epssScore ?? 0) * 100).toFixed(1)}%
+                        </span>
                         <span>Assets: {vulnerability.affectedAssets ?? 0}</span>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="p-6 text-sm text-[var(--text-muted)]">No exploited vulnerabilities found.</div>
+                  <div className="p-6 text-[var(--text-muted)] text-sm">
+                    No exploited vulnerabilities found.
+                  </div>
                 )}
               </div>
-              <div className="border-t border-[var(--border-color)] p-4">
-                <Link href="/vulnerabilities?filter=exploited" className="inline-flex items-center gap-2 text-sm text-sky-800 hover:text-sky-900 dark:text-sky-300 dark:hover:text-sky-200">
+              <div className="border-[var(--border-color)] border-t p-4">
+                <Link
+                  className="inline-flex items-center gap-2 text-sky-800 text-sm hover:text-sky-900 dark:text-sky-300 dark:hover:text-sky-200"
+                  href="/vulnerabilities?filter=exploited"
+                >
                   Open vulnerability queue <ArrowRight size={14} />
                 </Link>
               </div>
             </article>
 
             <article className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
-              <header className="border-b border-[var(--border-color)] p-4">
-                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Feed Activity</h2>
-                <p className="text-sm text-[var(--text-secondary)]">Latest ingestion runs and sync outcomes.</p>
+              <header className="border-[var(--border-color)] border-b p-4">
+                <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                  Feed Activity
+                </h2>
+                <p className="text-[var(--text-secondary)] text-sm">
+                  Latest ingestion runs and sync outcomes.
+                </p>
               </header>
               <div className="divide-y divide-[var(--border-color)]">
                 {(overview?.runs ?? []).slice(0, 12).map((run) => (
-                  <div key={run.id} className="p-4">
+                  <div className="p-4" key={run.id}>
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm text-[var(--text-primary)]">{run.feed.name}</p>
+                      <p className="text-[var(--text-primary)] text-sm">
+                        {run.feed.name}
+                      </p>
                       <span
                         className={cn(
                           "rounded-full border px-2 py-0.5 text-[11px]",
@@ -625,19 +744,26 @@ export default function ThreatsPage() {
                             ? "border-emerald-400/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200"
                             : run.status === "PARTIAL"
                               ? "border-yellow-400/35 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200"
-                              : "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200",
+                              : "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200"
                         )}
                       >
                         {run.status}
                       </span>
                     </div>
-                    <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                      {run.feed.source} • fetched {run.recordsFetched} • created {run.recordsCreated} • updated {run.recordsUpdated}
+                    <p className="mt-1 text-[var(--text-secondary)] text-xs">
+                      {run.feed.source} • fetched {run.recordsFetched} • created{" "}
+                      {run.recordsCreated} • updated {run.recordsUpdated}
                     </p>
-                    <p className="mt-1 text-xs text-[var(--text-muted)]">{getTimeAgo(new Date(run.startedAt))}</p>
+                    <p className="mt-1 text-[var(--text-muted)] text-xs">
+                      {getTimeAgo(new Date(run.startedAt))}
+                    </p>
                   </div>
                 ))}
-                {(overview?.runs ?? []).length === 0 ? <div className="p-6 text-sm text-[var(--text-muted)]">No feed runs yet.</div> : null}
+                {(overview?.runs ?? []).length === 0 ? (
+                  <div className="p-6 text-[var(--text-muted)] text-sm">
+                    No feed runs yet.
+                  </div>
+                ) : null}
               </div>
             </article>
           </section>
@@ -646,11 +772,14 @@ export default function ThreatsPage() {
         {activeTab === "matrix" ? (
           <section className="space-y-4">
             <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4">
-              <h2 className="text-lg font-semibold text-[var(--text-primary)]">MITRE ATT&CK Matrix</h2>
-              <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                Technique heat shows combined vulnerability mappings and active IOC signals.
+              <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                MITRE ATT&CK Matrix
+              </h2>
+              <p className="mt-1 text-[var(--text-secondary)] text-sm">
+                Technique heat shows combined vulnerability mappings and active
+                IOC signals.
               </p>
-              <p className="mt-2 text-xs text-[var(--text-muted)]">
+              <p className="mt-2 text-[var(--text-muted)] text-xs">
                 {matrix
                   ? `Generated ${getTimeAgo(new Date(matrix.generatedAt))} • ${matrix.summary.tacticCount} tactics • ${matrix.summary.techniqueCount} technique mappings`
                   : "Matrix not available. Run threat intel sync first."}
@@ -660,36 +789,63 @@ export default function ThreatsPage() {
             {matrix ? (
               <div className="grid gap-4 xl:grid-cols-3">
                 {matrix.tactics.map((tactic) => (
-                  <article key={tactic.tacticId} className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4">
+                  <article
+                    className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4"
+                    key={tactic.tacticId}
+                  >
                     <div className="mb-3">
-                      <p className="text-xs text-sky-700 dark:text-sky-300">{tactic.tacticExternalId}</p>
-                      <h3 className="text-base font-semibold text-[var(--text-primary)]">{tactic.tacticName}</h3>
-                      {tactic.shortName ? <p className="text-xs text-[var(--text-muted)]">{tactic.shortName}</p> : null}
+                      <p className="text-sky-700 text-xs dark:text-sky-300">
+                        {tactic.tacticExternalId}
+                      </p>
+                      <h3 className="font-semibold text-[var(--text-primary)] text-base">
+                        {tactic.tacticName}
+                      </h3>
+                      {tactic.shortName ? (
+                        <p className="text-[var(--text-muted)] text-xs">
+                          {tactic.shortName}
+                        </p>
+                      ) : null}
                     </div>
                     <div className="space-y-2">
                       {tactic.techniques.map((technique) => (
                         <div
-                          key={technique.techniqueId}
                           className={cn(
                             "rounded-lg border p-3",
-                            scoreIntensity(technique.vulnerabilityCount, technique.indicatorCount),
+                            scoreIntensity(
+                              technique.vulnerabilityCount,
+                              technique.indicatorCount
+                            )
                           )}
+                          key={technique.techniqueId}
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div>
-                              <p className="text-xs text-sky-700 dark:text-sky-300">{technique.techniqueExternalId}</p>
-                              <p className="text-sm text-[var(--text-primary)]">{technique.techniqueName}</p>
+                              <p className="text-sky-700 text-xs dark:text-sky-300">
+                                {technique.techniqueExternalId}
+                              </p>
+                              <p className="text-[var(--text-primary)] text-sm">
+                                {technique.techniqueName}
+                              </p>
                             </div>
                             {technique.maxSeverity ? (
-                              <span className={cn("rounded-full border px-2 py-0.5 text-[11px]", getSeverityTone(technique.maxSeverity))}>
+                              <span
+                                className={cn(
+                                  "rounded-full border px-2 py-0.5 text-[11px]",
+                                  getSeverityTone(technique.maxSeverity)
+                                )}
+                              >
                                 {technique.maxSeverity}
                               </span>
                             ) : null}
                           </div>
-                          <div className="mt-2 flex flex-wrap gap-3 text-xs text-[var(--text-secondary)]">
+                          <div className="mt-2 flex flex-wrap gap-3 text-[var(--text-secondary)] text-xs">
                             <span>Vulns: {technique.vulnerabilityCount}</span>
                             <span>IOCs: {technique.indicatorCount}</span>
-                            {technique.lastSeen ? <span>Seen: {getTimeAgo(new Date(technique.lastSeen))}</span> : null}
+                            {technique.lastSeen ? (
+                              <span>
+                                Seen: {getTimeAgo(new Date(technique.lastSeen))}
+                              </span>
+                            ) : null}
                           </div>
                         </div>
                       ))}
@@ -704,45 +860,60 @@ export default function ThreatsPage() {
         {activeTab === "ioc" ? (
           <section className="space-y-4">
             <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4">
-              <h2 className="text-lg font-semibold text-[var(--text-primary)]">IOC Workbench</h2>
-              <p className="mt-1 text-sm text-[var(--text-secondary)]">Search, import/export, and enrich indicator coverage.</p>
+              <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                IOC Workbench
+              </h2>
+              <p className="mt-1 text-[var(--text-secondary)] text-sm">
+                Search, import/export, and enrich indicator coverage.
+              </p>
 
               <div className="mt-3 grid gap-2 md:grid-cols-[1.2fr_0.8fr]">
                 <label className="relative block">
-                  <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                  <Search
+                    className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[var(--text-muted)]"
+                    size={14}
+                  />
                   <BoilerplateInput
-                    type="text"
-                    value={indicatorSearch}
+                    className="!pl-9 h-9 w-full border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)] text-sm"
                     onChange={(event) => setIndicatorSearch(event.target.value)}
                     placeholder="Search indicators"
-                    className="h-9 w-full !pl-9 text-sm bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
+                    type="text"
+                    value={indicatorSearch}
                   />
                 </label>
 
                 <div className="relative">
-                  <Filter size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                  <Filter
+                    className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[var(--text-muted)]"
+                    size={14}
+                  />
                   <FilterSelect
                     label="Filter indicators by severity"
+                    onValueChange={(value) =>
+                      setIndicatorSeverity(value as SeverityFilter)
+                    }
+                    options={severityOptions.map((option) => ({
+                      value: option,
+                      label: option === "ALL" ? "All Severities" : option,
+                    }))}
                     value={indicatorSeverity}
-                    onValueChange={(value) => setIndicatorSeverity(value as SeverityFilter)}
-                    options={severityOptions.map((option) => ({ value: option, label: option === "ALL" ? "All Severities" : option }))}
                   />
                 </div>
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
-                  type="button"
+                  className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-[var(--text-primary)] text-sm transition hover:bg-[var(--bg-elevated)]"
                   onClick={() => exportIocs("csv")}
-                  className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
+                  type="button"
                 >
                   <Download size={14} />
                   Export CSV
                 </button>
                 <button
-                  type="button"
+                  className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-[var(--text-primary)] text-sm transition hover:bg-[var(--bg-elevated)]"
                   onClick={() => exportIocs("json")}
-                  className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
+                  type="button"
                 >
                   <Download size={14} />
                   Export JSON
@@ -751,19 +922,21 @@ export default function ThreatsPage() {
             </article>
 
             <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Add Manual IOC</h3>
+              <h3 className="font-semibold text-[var(--text-primary)] text-sm">
+                Add Manual IOC
+              </h3>
               <div className="mt-2 flex gap-2">
                 <BoilerplateInput
-                  type="text"
-                  value={newIocValue}
+                  className="h-9 flex-1 border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)] text-sm"
                   onChange={(event) => setNewIocValue(event.target.value)}
                   placeholder="e.g. malicious.example.com or 1.2.3.4"
-                  className="h-9 flex-1 text-sm bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
+                  type="text"
+                  value={newIocValue}
                 />
                 <button
-                  type="button"
+                  className="rounded-lg border border-sky-400/50 bg-sky-100/80 px-3 text-sky-900 text-sm transition hover:bg-sky-200/80 dark:border-sky-300/35 dark:bg-sky-400/15 dark:text-sky-100 dark:hover:bg-sky-400/20"
                   onClick={addManualIoc}
-                  className="rounded-lg border border-sky-400/50 bg-sky-100/80 px-3 text-sm text-sky-900 dark:border-sky-300/35 dark:bg-sky-400/15 dark:text-sky-100 transition hover:bg-sky-200/80 dark:hover:bg-sky-400/20"
+                  type="button"
                 >
                   Add IOC
                 </button>
@@ -771,69 +944,102 @@ export default function ThreatsPage() {
             </article>
 
             <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Import IOC Feed Data</h3>
+              <h3 className="font-semibold text-[var(--text-primary)] text-sm">
+                Import IOC Feed Data
+              </h3>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <Select value={importFormat} onValueChange={(event) => setImportFormat(event as "JSON" | "CSV")}>
-                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <Select
+                  onValueChange={(event) =>
+                    setImportFormat(event as "JSON" | "CSV")
+                  }
+                  value={importFormat}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                  <SelectItem value="JSON">JSON</SelectItem>
-                  <SelectItem value="CSV">CSV</SelectItem>
-
+                      <SelectItem value="JSON">JSON</SelectItem>
+                      <SelectItem value="CSV">CSV</SelectItem>
                     </SelectGroup>
                   </SelectContent>
                 </Select>
                 <button
-                  type="button"
+                  className="inline-flex items-center gap-2 rounded-lg border border-emerald-300/35 bg-emerald-400/15 px-3 py-1.5 text-emerald-700 text-sm transition hover:bg-emerald-400/20 dark:text-emerald-100"
                   onClick={submitImport}
-                  className="inline-flex items-center gap-2 rounded-lg border border-emerald-300/35 bg-emerald-400/15 px-3 py-1.5 text-sm text-emerald-700 dark:text-emerald-100 transition hover:bg-emerald-400/20"
+                  type="button"
                 >
                   <FileUp size={14} />
                   Import
                 </button>
               </div>
               <BoilerplateTextarea
-                value={importPayload}
+                className="mt-2 min-h-[150px] w-full border-[var(--border-color)] bg-[var(--bg-secondary)] font-mono text-[var(--text-primary)] text-xs"
                 onChange={(event) => setImportPayload(event.target.value)}
                 placeholder={
                   importFormat === "JSON"
                     ? '[{"value":"bad.example.com","type":"DOMAIN"}]'
                     : "value,type,severity\nbad.example.com,DOMAIN,HIGH"
                 }
-                className="mt-2 min-h-[150px] w-full text-xs font-mono bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
+                value={importPayload}
               />
             </article>
 
             <article className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
-              <header className="border-b border-[var(--border-color)] p-4">
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Indicators ({filteredIndicators.length})</h3>
+              <header className="border-[var(--border-color)] border-b p-4">
+                <h3 className="font-semibold text-[var(--text-primary)] text-sm">
+                  Indicators ({filteredIndicators.length})
+                </h3>
               </header>
               <div className="divide-y divide-[var(--border-color)]">
                 {filteredIndicators.slice(0, 60).map((indicator) => (
-                  <div key={indicator.id} className="p-4">
+                  <div className="p-4" key={indicator.id}>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="rounded-full border border-sky-400/35 bg-sky-500/10 px-2 py-0.5 text-[11px] text-sky-700 dark:text-sky-200">
                         {indicator.type}
                       </span>
                       {indicator.severity ? (
-                        <span className={cn("rounded-full border px-2 py-0.5 text-[11px]", getSeverityTone(indicator.severity))}>
+                        <span
+                          className={cn(
+                            "rounded-full border px-2 py-0.5 text-[11px]",
+                            getSeverityTone(indicator.severity)
+                          )}
+                        >
                           {indicator.severity}
                         </span>
                       ) : null}
                       {typeof indicator.confidence === "number" ? (
-                        <span className="text-xs text-[var(--text-muted)]">Confidence: {indicator.confidence}%</span>
+                        <span className="text-[var(--text-muted)] text-xs">
+                          Confidence: {indicator.confidence}%
+                        </span>
                       ) : null}
                     </div>
-                    <p className="mt-2 font-mono text-sm text-[var(--text-primary)]">{indicator.value}</p>
-                    {indicator.description ? <p className="mt-1 text-sm text-[var(--text-secondary)]">{indicator.description}</p> : null}
-                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)]">
-                      <span>Last seen: {getTimeAgo(new Date(indicator.lastSeen))}</span>
-                      {indicator.source ? <span>Source: {indicator.source}</span> : null}
-                      {indicator.techniqueId ? <span>Technique: {indicator.techniqueId}</span> : null}
+                    <p className="mt-2 font-mono text-[var(--text-primary)] text-sm">
+                      {indicator.value}
+                    </p>
+                    {indicator.description ? (
+                      <p className="mt-1 text-[var(--text-secondary)] text-sm">
+                        {indicator.description}
+                      </p>
+                    ) : null}
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-[var(--text-muted)] text-xs">
+                      <span>
+                        Last seen: {getTimeAgo(new Date(indicator.lastSeen))}
+                      </span>
+                      {indicator.source ? (
+                        <span>Source: {indicator.source}</span>
+                      ) : null}
+                      {indicator.techniqueId ? (
+                        <span>Technique: {indicator.techniqueId}</span>
+                      ) : null}
                     </div>
                   </div>
                 ))}
-                {filteredIndicators.length === 0 ? <div className="p-6 text-sm text-[var(--text-muted)]">No indicators found.</div> : null}
+                {filteredIndicators.length === 0 ? (
+                  <div className="p-6 text-[var(--text-muted)] text-sm">
+                    No indicators found.
+                  </div>
+                ) : null}
               </div>
             </article>
           </section>
@@ -842,60 +1048,103 @@ export default function ThreatsPage() {
         {activeTab === "actors" ? (
           <section className="grid gap-4 xl:grid-cols-2">
             <article className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
-              <header className="border-b border-[var(--border-color)] p-4">
-                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Threat Actors</h2>
-                <p className="text-sm text-[var(--text-muted)]">Profiles linked to ATT&CK TTPs and vulnerabilities.</p>
+              <header className="border-[var(--border-color)] border-b p-4">
+                <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                  Threat Actors
+                </h2>
+                <p className="text-[var(--text-muted)] text-sm">
+                  Profiles linked to ATT&CK TTPs and vulnerabilities.
+                </p>
               </header>
               <div className="divide-y divide-[var(--border-color)]">
                 {actors.map((actor) => (
-                  <div key={actor.id} className="p-4">
+                  <div className="p-4" key={actor.id}>
                     <div className="flex flex-wrap items-center gap-2">
-                      {actor.externalId ? <span className="font-mono text-xs text-sky-700 dark:text-sky-300">{actor.externalId}</span> : null}
-                      <h3 className="text-sm font-medium text-[var(--text-primary)]">{actor.name}</h3>
+                      {actor.externalId ? (
+                        <span className="font-mono text-sky-700 text-xs dark:text-sky-300">
+                          {actor.externalId}
+                        </span>
+                      ) : null}
+                      <h3 className="font-medium text-[var(--text-primary)] text-sm">
+                        {actor.name}
+                      </h3>
                     </div>
-                    {actor.description ? <p className="mt-1 text-sm text-[var(--text-secondary)]">{actor.description}</p> : null}
+                    {actor.description ? (
+                      <p className="mt-1 text-[var(--text-secondary)] text-sm">
+                        {actor.description}
+                      </p>
+                    ) : null}
                     <div className="mt-2 flex flex-wrap gap-2">
                       {actor.techniques.slice(0, 8).map((technique) => (
-                        <span key={`${actor.id}-${technique.externalId}`} className="rounded border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]">
+                        <span
+                          className="rounded border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]"
+                          key={`${actor.id}-${technique.externalId}`}
+                        >
                           {technique.externalId}
                         </span>
                       ))}
                     </div>
-                    <div className="mt-2 text-xs text-[var(--text-muted)]">
-                      Campaigns: {actor.campaignCount} • Linked vulnerabilities: {actor.linkedVulnerabilities.length}
+                    <div className="mt-2 text-[var(--text-muted)] text-xs">
+                      Campaigns: {actor.campaignCount} • Linked vulnerabilities:{" "}
+                      {actor.linkedVulnerabilities.length}
                     </div>
                   </div>
                 ))}
-                {actors.length === 0 ? <div className="p-6 text-sm text-[var(--text-muted)]">No threat actors synced yet.</div> : null}
+                {actors.length === 0 ? (
+                  <div className="p-6 text-[var(--text-muted)] text-sm">
+                    No threat actors synced yet.
+                  </div>
+                ) : null}
               </div>
             </article>
 
             <article className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
-              <header className="border-b border-[var(--border-color)] p-4">
-                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Campaigns</h2>
-                <p className="text-sm text-[var(--text-muted)]">Tracked campaigns and mapped technique coverage.</p>
+              <header className="border-[var(--border-color)] border-b p-4">
+                <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                  Campaigns
+                </h2>
+                <p className="text-[var(--text-muted)] text-sm">
+                  Tracked campaigns and mapped technique coverage.
+                </p>
               </header>
               <div className="divide-y divide-[var(--border-color)]">
                 {campaigns.map((campaign) => (
-                  <div key={campaign.id} className="p-4">
+                  <div className="p-4" key={campaign.id}>
                     <div className="flex flex-wrap items-center gap-2">
-                      {campaign.externalId ? <span className="font-mono text-xs text-sky-700 dark:text-sky-300">{campaign.externalId}</span> : null}
-                      <h3 className="text-sm font-medium text-[var(--text-primary)]">{campaign.name}</h3>
+                      {campaign.externalId ? (
+                        <span className="font-mono text-sky-700 text-xs dark:text-sky-300">
+                          {campaign.externalId}
+                        </span>
+                      ) : null}
+                      <h3 className="font-medium text-[var(--text-primary)] text-sm">
+                        {campaign.name}
+                      </h3>
                     </div>
-                    {campaign.description ? <p className="mt-1 text-sm text-[var(--text-secondary)]">{campaign.description}</p> : null}
-                    <div className="mt-2 text-xs text-[var(--text-muted)]">
+                    {campaign.description ? (
+                      <p className="mt-1 text-[var(--text-secondary)] text-sm">
+                        {campaign.description}
+                      </p>
+                    ) : null}
+                    <div className="mt-2 text-[var(--text-muted)] text-xs">
                       Actor: {campaign.actor?.name ?? "Unassigned"}
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {campaign.techniques.slice(0, 8).map((technique) => (
-                        <span key={`${campaign.id}-${technique.externalId}`} className="rounded border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]">
+                        <span
+                          className="rounded border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]"
+                          key={`${campaign.id}-${technique.externalId}`}
+                        >
                           {technique.externalId}
                         </span>
                       ))}
                     </div>
                   </div>
                 ))}
-                {campaigns.length === 0 ? <div className="p-6 text-sm text-[var(--text-muted)]">No campaigns synced yet.</div> : null}
+                {campaigns.length === 0 ? (
+                  <div className="p-6 text-[var(--text-muted)] text-sm">
+                    No campaigns synced yet.
+                  </div>
+                ) : null}
               </div>
             </article>
           </section>

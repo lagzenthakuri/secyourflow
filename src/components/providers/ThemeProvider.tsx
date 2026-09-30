@@ -1,23 +1,23 @@
 "use client";
 
+import { Moon, Sun } from "lucide-react";
+import { usePathname } from "next/navigation";
 import {
   createContext,
+  type ReactNode,
   useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
-import { Moon, Sun } from "lucide-react";
-import { usePathname } from "next/navigation";
 
 type ThemeMode = "dark" | "light";
-type ThemeContextValue = {
+interface ThemeContextValue {
   theme: ThemeMode;
   toggleTheme: () => void;
-};
+}
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 export const THEME_STORAGE_KEY = "secyourflow.theme.mode.v1";
@@ -40,6 +40,16 @@ function isAppShellPath(pathname: string): boolean {
   return APP_SHELL_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
+function resolveSystemTheme(): ThemeMode {
+  if (typeof window === "undefined") {
+    return "dark";
+  }
+
+  return window.matchMedia("(prefers-color-scheme: light)").matches
+    ? "light"
+    : "dark";
+}
+
 function resolveStoredTheme(): ThemeMode | null {
   if (typeof window === "undefined") {
     return null;
@@ -51,6 +61,10 @@ function resolveStoredTheme(): ThemeMode | null {
   }
 
   return null;
+}
+
+function resolveInitialTheme(): ThemeMode {
+  return resolveStoredTheme() ?? resolveSystemTheme();
 }
 
 function applyTheme(theme: ThemeMode) {
@@ -86,17 +100,38 @@ export function useTheme(): ThemeContextValue {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  // Dark is the product default. The early bootstrap applies any saved choice
-  // before paint; this state initialization keeps that choice from being
-  // overwritten by the operating system after hydration.
+  // Start with the same theme on the server and client; browser preferences
+  // are applied after hydration to avoid mismatched toggle markup.
   const [theme, setTheme] = useState<ThemeMode>("dark");
   const [themeInitialized, setThemeInitialized] = useState(false);
   const transitionTimeoutRef = useRef<number | null>(null);
+  const hasManualOverrideRef = useRef<boolean>(false);
 
   useEffect(() => {
     const storedTheme = resolveStoredTheme();
-    setTheme(storedTheme ?? "dark");
+    hasManualOverrideRef.current = storedTheme !== null;
+    setTheme(storedTheme ?? resolveSystemTheme());
     setThemeInitialized(true);
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: light)");
+
+    const handleSystemThemeChange = (event: MediaQueryListEvent) => {
+      if (hasManualOverrideRef.current) {
+        return;
+      }
+      setTheme(event.matches ? "light" : "dark");
+    };
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", handleSystemThemeChange);
+      return () =>
+        mediaQuery.removeEventListener("change", handleSystemThemeChange);
+    }
+
+    mediaQuery.addListener(handleSystemThemeChange);
+    return () => mediaQuery.removeListener(handleSystemThemeChange);
   }, []);
 
   useLayoutEffect(() => {
@@ -120,9 +155,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       window.clearTimeout(transitionTimeoutRef.current);
     }
     transitionTimeoutRef.current = startThemeTransition();
-    const next = theme === "dark" ? "light" : "dark";
-    window.localStorage.setItem(THEME_STORAGE_KEY, next);
-    setTheme(next);
+    setTheme((current) => {
+      const next = current === "dark" ? "light" : "dark";
+      window.localStorage.setItem(THEME_STORAGE_KEY, next);
+      hasManualOverrideRef.current = true;
+      return next;
+    });
   };
 
   const contextValue = useMemo<ThemeContextValue>(
@@ -130,7 +168,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       theme,
       toggleTheme,
     }),
-    [theme],
+    [theme, toggleTheme]
   );
 
   const showFloatingToggle = !isAppShellPath(pathname);
@@ -138,13 +176,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   return (
     <ThemeContext.Provider value={contextValue}>
       {children}
-      {showFloatingToggle && themeInitialized && (
+      {showFloatingToggle && (
         <button
-          type="button"
-          onClick={toggleTheme}
           aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+          className="fixed right-5 bottom-5 z-[120] inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border-color)] bg-[var(--bg-elevated)] text-[var(--text-primary)] shadow-[var(--shadow-md)] transition hover:scale-105 hover:border-[var(--border-hover)]"
+          onClick={toggleTheme}
           title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-          className="fixed bottom-5 right-5 z-[120] inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border-color)] bg-[var(--bg-elevated)] text-[var(--text-primary)] shadow-[var(--shadow-md)] transition hover:scale-105 hover:border-[var(--border-hover)]"
+          type="button"
         >
           {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
         </button>

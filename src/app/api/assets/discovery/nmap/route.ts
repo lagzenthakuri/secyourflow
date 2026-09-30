@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireSessionWithOrg } from "@/lib/api-auth";
 import { importDiscoveredAssets, parseNmapXml } from "@/lib/scanners/nmap";
@@ -9,13 +9,15 @@ const schema = z.object({
 
 export async function POST(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid Nmap payload", details: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400 }
     );
   }
 

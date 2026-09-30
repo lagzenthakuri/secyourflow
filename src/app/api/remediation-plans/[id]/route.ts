@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireSessionWithOrg } from "@/lib/api-auth";
 import {
@@ -14,20 +14,27 @@ const updateSchema = z.object({
   description: z.string().max(4000).optional().nullable(),
   ownerId: z.string().optional().nullable(),
   dueDate: z.string().datetime().optional().nullable(),
-  status: z.enum(["DRAFT", "ACTIVE", "BLOCKED", "COMPLETED", "ARCHIVED"]).optional(),
+  status: z
+    .enum(["DRAFT", "ACTIVE", "BLOCKED", "COMPLETED", "ARCHIVED"])
+    .optional(),
   vulnerabilityIds: z.array(z.string()).optional(),
 });
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const { id } = await params;
 
-  const plan = await getRemediationPlanById(id, authResult.context.organizationId);
+  const plan = await getRemediationPlanById(
+    id,
+    authResult.context.organizationId
+  );
   if (!plan) {
     return NextResponse.json({ error: "Plan not found" }, { status: 404 });
   }
@@ -37,16 +44,18 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const parsed = updateSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid payload", details: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -54,36 +63,58 @@ export async function PATCH(
   const { id } = await params;
 
   try {
-    const updated = await updateRemediationPlan(id, authResult.context.organizationId, {
-      ...(typeof payload.name !== "undefined" ? { name: payload.name } : {}),
-      ...(typeof payload.description !== "undefined" ? { description: payload.description } : {}),
-      ...(typeof payload.ownerId !== "undefined" ? { ownerId: payload.ownerId } : {}),
-      ...(typeof payload.dueDate !== "undefined"
-        ? { dueDate: payload.dueDate ? new Date(payload.dueDate) : null }
-        : {}),
-      ...(typeof payload.status !== "undefined" ? { status: payload.status } : {}),
-    });
+    const updated = await updateRemediationPlan(
+      id,
+      authResult.context.organizationId,
+      {
+        ...(typeof payload.name !== "undefined" ? { name: payload.name } : {}),
+        ...(typeof payload.description !== "undefined"
+          ? { description: payload.description }
+          : {}),
+        ...(typeof payload.ownerId !== "undefined"
+          ? { ownerId: payload.ownerId }
+          : {}),
+        ...(typeof payload.dueDate !== "undefined"
+          ? { dueDate: payload.dueDate ? new Date(payload.dueDate) : null }
+          : {}),
+        ...(typeof payload.status !== "undefined"
+          ? { status: payload.status }
+          : {}),
+      }
+    );
 
     if (payload.vulnerabilityIds) {
-      await syncPlanVulnerabilities(id, authResult.context.organizationId, payload.vulnerabilityIds);
+      await syncPlanVulnerabilities(
+        id,
+        authResult.context.organizationId,
+        payload.vulnerabilityIds
+      );
     }
 
     return NextResponse.json(updated);
   } catch (error) {
     if (error instanceof RemediationPlanError) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
     }
 
-    return NextResponse.json({ error: "Failed to update remediation plan" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update remediation plan" },
+      { status: 500 }
+    );
   }
 }
 
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const { id } = await params;
   try {
@@ -91,9 +122,15 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof RemediationPlanError) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
     }
 
-    return NextResponse.json({ error: "Failed to delete remediation plan" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to delete remediation plan" },
+      { status: 500 }
+    );
   }
 }

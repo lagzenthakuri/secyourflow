@@ -1,26 +1,26 @@
 import type { ReportOutputFormat, ReportTemplateKey } from "@repo/database";
 
 export interface ReportContext {
+  filters?: Record<string, unknown>;
+  name?: string;
   organizationId: string;
+  outputFormat: ReportOutputFormat;
   requestedByUserId: string;
   templateKey: ReportTemplateKey;
-  name?: string;
-  filters?: Record<string, unknown>;
-  outputFormat: ReportOutputFormat;
 }
 
 export interface TabularReportData {
-  title: string;
   generatedAt: string;
-  summary: Array<{ label: string; value: string | number }>;
   headers: string[];
   rows: string[][];
+  summary: Array<{ label: string; value: string | number }>;
+  title: string;
 }
 
 export interface RenderedReport {
+  bytes: Buffer;
   fileName: string;
   mimeType: string;
-  bytes: Buffer;
 }
 
 export function templateLabel(templateKey: ReportTemplateKey) {

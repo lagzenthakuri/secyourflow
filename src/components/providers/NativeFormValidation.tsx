@@ -1,8 +1,8 @@
 "use client";
 
+import { FieldError } from "@repo/design-system/components/ui/field";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { FieldError } from "@repo/design-system/components/ui/field";
 
 interface ValidationNotice {
   control: HTMLElement;
@@ -10,34 +10,51 @@ interface ValidationNotice {
   message: string;
 }
 
-function controlLabel(control: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement) {
-  const siblingLabel = control.parentElement?.querySelector(":scope > label")?.textContent?.trim();
-  const label = control.labels?.[0]?.textContent?.trim()
-    || siblingLabel
-    || control.closest("label")?.textContent?.trim()
-    || control.getAttribute("aria-label")
-    || control.getAttribute("name")
-    || control.getAttribute("placeholder");
+function controlLabel(
+  control: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+) {
+  const siblingLabel = control.parentElement
+    ?.querySelector(":scope > label")
+    ?.textContent?.trim();
+  const label =
+    control.labels?.[0]?.textContent?.trim() ||
+    siblingLabel ||
+    control.closest("label")?.textContent?.trim() ||
+    control.getAttribute("aria-label") ||
+    control.getAttribute("name") ||
+    control.getAttribute("placeholder");
 
   return label?.replace(/\s*\*\s*$/, "").trim();
 }
 
-function getValidationMessage(control: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement) {
+function getValidationMessage(
+  control: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+) {
   const label = controlLabel(control);
   if (control.validity.valueMissing) {
     return label ? `${label} is required.` : "Complete this required field.";
   }
-  if (control.validity.typeMismatch && control instanceof HTMLInputElement && control.type === "email") {
+  if (
+    control.validity.typeMismatch &&
+    control instanceof HTMLInputElement &&
+    control.type === "email"
+  ) {
     return "Enter a valid email address.";
   }
   if (control.validity.tooShort) {
     return label ? `${label} is too short.` : "Enter more characters.";
   }
-  if (control.validity.rangeUnderflow || control.validity.rangeOverflow || control.validity.stepMismatch) {
+  if (
+    control.validity.rangeUnderflow ||
+    control.validity.rangeOverflow ||
+    control.validity.stepMismatch
+  ) {
     return control.validationMessage;
   }
   return control.validity.typeMismatch
-    ? label ? `Enter a valid ${label.toLowerCase()}.` : "Enter a valid value."
+    ? label
+      ? `Enter a valid ${label.toLowerCase()}.`
+      : "Enter a valid value."
     : control.validationMessage;
 }
 
@@ -51,9 +68,19 @@ export function NativeFormValidation() {
   useEffect(() => {
     const handleInvalid = (event: Event) => {
       const target = event.target;
-      if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement)) return;
+      if (
+        !(
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement
+        )
+      ) {
+        return;
+      }
       event.preventDefault();
-      if (noticePending.current) return;
+      if (noticePending.current) {
+        return;
+      }
       noticePending.current = true;
       const host = target.parentElement;
       if (!host) {
@@ -61,17 +88,27 @@ export function NativeFormValidation() {
         return;
       }
 
-      setNotice({ control: target, host, message: getValidationMessage(target) });
+      setNotice({
+        control: target,
+        host,
+        message: getValidationMessage(target),
+      });
       window.requestAnimationFrame(() => target.focus());
-      window.setTimeout(() => { noticePending.current = false; }, 0);
+      window.setTimeout(() => {
+        noticePending.current = false;
+      }, 0);
     };
 
     const clearIfValid = (event: Event) => {
       const control = event.target;
-      if (!notice || control !== notice.control) return;
+      if (!notice || control !== notice.control) {
+        return;
+      }
       if (
-        (control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement || control instanceof HTMLSelectElement)
-        && control.validity.valid
+        (control instanceof HTMLInputElement ||
+          control instanceof HTMLTextAreaElement ||
+          control instanceof HTMLSelectElement) &&
+        control.validity.valid
       ) {
         noticePending.current = false;
         setNotice(null);
@@ -89,23 +126,36 @@ export function NativeFormValidation() {
   }, [notice]);
 
   useEffect(() => {
-    if (!notice) return;
+    if (!notice) {
+      return;
+    }
     const oldDescribedBy = notice.control.getAttribute("aria-describedby");
     const descriptionId = "native-validation-message";
     notice.control.setAttribute("aria-invalid", "true");
-    notice.control.setAttribute("aria-describedby", [oldDescribedBy, descriptionId].filter(Boolean).join(" "));
+    notice.control.setAttribute(
+      "aria-describedby",
+      [oldDescribedBy, descriptionId].filter(Boolean).join(" ")
+    );
     return () => {
       notice.control.removeAttribute("aria-invalid");
-      if (oldDescribedBy) notice.control.setAttribute("aria-describedby", oldDescribedBy);
-      else notice.control.removeAttribute("aria-describedby");
+      if (oldDescribedBy) {
+        notice.control.setAttribute("aria-describedby", oldDescribedBy);
+      } else {
+        notice.control.removeAttribute("aria-describedby");
+      }
     };
   }, [notice]);
 
-  if (!notice || !notice.host.isConnected) return null;
+  if (!notice?.host.isConnected) {
+    return null;
+  }
   return createPortal(
-    <FieldError id="native-validation-message" className="mt-1 text-sm font-medium dark:text-destructive-foreground">
+    <FieldError
+      className="mt-1 font-medium text-sm dark:text-destructive-foreground"
+      id="native-validation-message"
+    >
       {notice.message}
     </FieldError>,
-    notice.host,
+    notice.host
   );
 }

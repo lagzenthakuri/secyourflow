@@ -1,19 +1,30 @@
-import { NextRequest, NextResponse } from "next/server";
+import type {
+  Prisma,
+  Severity,
+  VulnSource,
+  VulnStatus,
+  WorkflowState,
+} from "@prisma/client";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
-import { Prisma, Severity, VulnSource, VulnStatus, WorkflowState } from "@prisma/client";
+import {
+  ROLE_VULNERABILITY_WRITE,
+  requireSessionWithOrg,
+} from "@/lib/api-auth";
 import { logActivity } from "@/lib/logger";
-import { requireSessionWithOrg, ROLE_VULNERABILITY_WRITE } from "@/lib/api-auth";
-import { enqueue } from "@/lib/queue";
-import { calculateSlaDueAt } from "@/lib/workflow/sla";
 import { dispatchVulnerabilityNotifications } from "@/lib/notifications/rules";
-import { extractRequestContext } from "@/lib/request-utils";
 import { createNotification } from "@/lib/notifications/service";
+import { prisma } from "@/lib/prisma";
+import { enqueue } from "@/lib/queue";
+import { extractRequestContext } from "@/lib/request-utils";
+import { calculateSlaDueAt } from "@/lib/workflow/sla";
 
 const createVulnerabilitySchema = z.object({
   title: z.string().min(3).max(300),
   description: z.string().optional(),
-  severity: z.enum(["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"]).optional(),
+  severity: z
+    .enum(["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"])
+    .optional(),
   cveId: z.string().optional(),
   cvssScore: z.number().optional().nullable(),
   cvssVector: z.string().optional().nullable(),
@@ -32,8 +43,19 @@ const createVulnerabilitySchema = z.object({
       "TENABLE",
     ])
     .optional(),
-  status: z.enum(["OPEN", "IN_PROGRESS", "MITIGATED", "FIXED", "ACCEPTED", "FALSE_POSITIVE"]).optional(),
-  workflowState: z.enum(["NEW", "TRIAGED", "IN_PROGRESS", "RESOLVED", "CLOSED"]).optional(),
+  status: z
+    .enum([
+      "OPEN",
+      "IN_PROGRESS",
+      "MITIGATED",
+      "FIXED",
+      "ACCEPTED",
+      "FALSE_POSITIVE",
+    ])
+    .optional(),
+  workflowState: z
+    .enum(["NEW", "TRIAGED", "IN_PROGRESS", "RESOLVED", "CLOSED"])
+    .optional(),
   assignedUserId: z.string().optional().nullable(),
   assignedTeam: z.string().max(120).optional().nullable(),
   slaDueAt: z.string().datetime().optional().nullable(),
@@ -44,10 +66,18 @@ const createVulnerabilitySchema = z.object({
 });
 
 function mapStatusToWorkflow(status: VulnStatus): WorkflowState {
-  if (status === "OPEN") return "NEW";
-  if (status === "IN_PROGRESS") return "IN_PROGRESS";
-  if (status === "MITIGATED" || status === "FIXED") return "RESOLVED";
-  if (status === "ACCEPTED" || status === "FALSE_POSITIVE") return "CLOSED";
+  if (status === "OPEN") {
+    return "NEW";
+  }
+  if (status === "IN_PROGRESS") {
+    return "IN_PROGRESS";
+  }
+  if (status === "MITIGATED" || status === "FIXED") {
+    return "RESOLVED";
+  }
+  if (status === "ACCEPTED" || status === "FALSE_POSITIVE") {
+    return "CLOSED";
+  }
   return "NEW";
 }
 
@@ -56,15 +86,35 @@ const listQuerySchema = z.object({
   // Capped: `limit` was parsed straight from the query string, so ?limit=999999
   // was honoured and a non-numeric value produced `take: NaN`, which throws.
   limit: z.coerce.number().int().min(1).max(200).default(20),
-  severity: z.enum(["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"]).optional(),
-  status: z
-    .enum(["OPEN", "IN_PROGRESS", "MITIGATED", "FIXED", "ACCEPTED", "FALSE_POSITIVE"])
+  severity: z
+    .enum(["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"])
     .optional(),
-  workflowState: z.enum(["NEW", "TRIAGED", "IN_PROGRESS", "RESOLVED", "CLOSED"]).optional(),
+  status: z
+    .enum([
+      "OPEN",
+      "IN_PROGRESS",
+      "MITIGATED",
+      "FIXED",
+      "ACCEPTED",
+      "FALSE_POSITIVE",
+    ])
+    .optional(),
+  workflowState: z
+    .enum(["NEW", "TRIAGED", "IN_PROGRESS", "RESOLVED", "CLOSED"])
+    .optional(),
   source: z
     .enum([
-      "NESSUS", "OPENVAS", "NMAP", "TRIVY", "QUALYS", "RAPID7",
-      "CROWDSTRIKE", "MANUAL", "API", "OTHER", "TENABLE",
+      "NESSUS",
+      "OPENVAS",
+      "NMAP",
+      "TRIVY",
+      "QUALYS",
+      "RAPID7",
+      "CROWDSTRIKE",
+      "MANUAL",
+      "API",
+      "OTHER",
+      "TENABLE",
     ])
     .optional(),
   search: z.string().max(300).optional(),
@@ -74,16 +124,21 @@ const listQuerySchema = z.object({
 
 export async function GET(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const parsedQuery = listQuerySchema.safeParse(
-    Object.fromEntries(request.nextUrl.searchParams),
+    Object.fromEntries(request.nextUrl.searchParams)
   );
 
   if (!parsedQuery.success) {
     return NextResponse.json(
-      { error: "Invalid query parameters", details: parsedQuery.error.flatten() },
-      { status: 400 },
+      {
+        error: "Invalid query parameters",
+        details: parsedQuery.error.flatten(),
+      },
+      { status: 400 }
     );
   }
 
@@ -93,12 +148,24 @@ export async function GET(request: NextRequest) {
 
   const where: Prisma.VulnerabilityWhereInput = { organizationId };
 
-  if (query.severity) where.severity = query.severity;
-  if (query.status) where.status = query.status;
-  if (query.workflowState) where.workflowState = query.workflowState;
-  if (query.source) where.source = query.source;
-  if (query.exploited === "true") where.isExploited = true;
-  if (query.kev === "true") where.cisaKev = true;
+  if (query.severity) {
+    where.severity = query.severity;
+  }
+  if (query.status) {
+    where.status = query.status;
+  }
+  if (query.workflowState) {
+    where.workflowState = query.workflowState;
+  }
+  if (query.source) {
+    where.source = query.source;
+  }
+  if (query.exploited === "true") {
+    where.isExploited = true;
+  }
+  if (query.kev === "true") {
+    where.cisaKev = true;
+  }
 
   const search = query.search?.trim();
   if (search) {
@@ -145,13 +212,29 @@ export async function GET(request: NextRequest) {
       // Aggregates honour the active filters. They were org-wide while the
       // EPSS panel beside them was filtered, so the same screen disagreed
       // with itself.
-      prisma.vulnerability.groupBy({ by: ["severity"], where, _count: { _all: true } }),
-      prisma.vulnerability.groupBy({ by: ["source"], where, _count: { _all: true } }),
+      prisma.vulnerability.groupBy({
+        by: ["severity"],
+        where,
+        _count: { _all: true },
+      }),
+      prisma.vulnerability.groupBy({
+        by: ["source"],
+        where,
+        _count: { _all: true },
+      }),
       prisma.vulnerability.count({ where: { ...where, isExploited: true } }),
-      prisma.vulnerability.count({ where: { ...where, epssScore: { gt: 0.7 } } }),
-      prisma.vulnerability.count({ where: { ...where, epssScore: { gt: 0.3, lte: 0.7 } } }),
-      prisma.vulnerability.count({ where: { ...where, epssScore: { gt: 0.1, lte: 0.3 } } }),
-      prisma.vulnerability.count({ where: { ...where, epssScore: { gt: 0, lte: 0.1 } } }),
+      prisma.vulnerability.count({
+        where: { ...where, epssScore: { gt: 0.7 } },
+      }),
+      prisma.vulnerability.count({
+        where: { ...where, epssScore: { gt: 0.3, lte: 0.7 } },
+      }),
+      prisma.vulnerability.count({
+        where: { ...where, epssScore: { gt: 0.1, lte: 0.3 } },
+      }),
+      prisma.vulnerability.count({
+        where: { ...where, epssScore: { gt: 0, lte: 0.1 } },
+      }),
       // Comparison operators exclude NULL, so unscored findings vanished from
       // the histogram entirely and the buckets never summed to the total.
       prisma.vulnerability.count({ where: { ...where, epssScore: null } }),
@@ -192,7 +275,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Vulnerabilities API Error:", error);
-    return NextResponse.json({ error: "Failed to fetch vulnerabilities" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch vulnerabilities" },
+      { status: 500 }
+    );
   }
 }
 
@@ -200,7 +286,9 @@ export async function POST(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request, {
     allowedRoles: ROLE_VULNERABILITY_WRITE,
   });
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const ctx = extractRequestContext(request);
 
@@ -208,7 +296,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid payload", details: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -217,13 +305,17 @@ export async function POST(request: NextRequest) {
 
   const status = (payload.status || "OPEN") as VulnStatus;
   const severity = (payload.severity || "MEDIUM") as Severity;
-  const workflowState = (payload.workflowState || mapStatusToWorkflow(status)) as WorkflowState;
+  const workflowState = (payload.workflowState ||
+    mapStatusToWorkflow(status)) as WorkflowState;
   const assignedUserId =
-    typeof payload.assignedUserId === "string" && payload.assignedUserId.trim().length > 0
+    typeof payload.assignedUserId === "string" &&
+    payload.assignedUserId.trim().length > 0
       ? payload.assignedUserId.trim()
       : undefined;
   const assetId =
-    typeof payload.assetId === "string" && payload.assetId.trim().length > 0 ? payload.assetId.trim() : undefined;
+    typeof payload.assetId === "string" && payload.assetId.trim().length > 0
+      ? payload.assetId.trim()
+      : undefined;
 
   try {
     if (assignedUserId) {
@@ -236,7 +328,10 @@ export async function POST(request: NextRequest) {
       });
 
       if (!assignee) {
-        return NextResponse.json({ error: "assignedUserId is invalid for your organization" }, { status: 400 });
+        return NextResponse.json(
+          { error: "assignedUserId is invalid for your organization" },
+          { status: 400 }
+        );
       }
     }
 
@@ -250,7 +345,10 @@ export async function POST(request: NextRequest) {
       });
 
       if (!targetAsset) {
-        return NextResponse.json({ error: "assetId is invalid for your organization" }, { status: 400 });
+        return NextResponse.json(
+          { error: "assetId is invalid for your organization" },
+          { status: 400 }
+        );
       }
     }
 
@@ -267,20 +365,22 @@ export async function POST(request: NextRequest) {
         workflowState,
         assignedUserId,
         assignedTeam: payload.assignedTeam || undefined,
-        slaDueAt: payload.slaDueAt ? new Date(payload.slaDueAt) : calculateSlaDueAt(severity),
+        slaDueAt: payload.slaDueAt
+          ? new Date(payload.slaDueAt)
+          : calculateSlaDueAt(severity),
         solution: payload.solution,
-        isExploited: payload.isExploited || false,
-        cisaKev: payload.cisaKev || false,
+        isExploited: payload.isExploited,
+        cisaKev: payload.cisaKev,
         organizationId,
         firstDetected: new Date(),
         lastSeen: new Date(),
         assets: assetId
           ? {
-            create: {
-              assetId,
-              status: "OPEN",
-            },
-          }
+              create: {
+                assetId,
+                status: "OPEN",
+              },
+            }
           : undefined,
       },
     });
@@ -309,7 +409,7 @@ export async function POST(request: NextRequest) {
       },
       `Vulnerability detected: ${newVuln.title}`,
       userId,
-      ctx,
+      ctx
     );
 
     // If assigned on creation, notify the assignee
@@ -319,7 +419,7 @@ export async function POST(request: NextRequest) {
         title: "New Vulnerability Assigned",
         message: `A new vulnerability has been assigned to you: ${newVuln.title}`,
         type: "INFO",
-        link: `/vulnerabilities?search=${newVuln.id}`
+        link: `/vulnerabilities?search=${newVuln.id}`,
       });
     }
 
@@ -351,13 +451,16 @@ export async function POST(request: NextRequest) {
           entityType: "Vulnerability",
           entityId: newVuln.id,
           dedupeKey: `risk.assess:${organizationId}:${assetId}:${newVuln.id}`,
-        },
+        }
       );
     }
 
     return NextResponse.json(newVuln, { status: 201 });
   } catch (error) {
     console.error("Create Vulnerability Error:", error);
-    return NextResponse.json({ error: "Failed to create vulnerability" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Failed to create vulnerability" },
+      { status: 400 }
+    );
   }
 }

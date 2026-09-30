@@ -195,10 +195,12 @@ function redactSensitive(value: unknown, depth = 0): unknown {
     );
 }
 
+const FORWARDED_FOR_PATTERN = /(?:^|;)\s*for=(?:"([^"]+)"|([^;,\s]+))/i;
+
 function extractIpFromForwardedHeader(headerValue: string): string | null {
     const forwardedEntries = headerValue.split(",");
     for (const entry of forwardedEntries) {
-        const forMatch = entry.match(/(?:^|;)\s*for=(?:"([^"]+)"|([^;,\s]+))/i);
+        const forMatch = entry.match(FORWARDED_FOR_PATTERN);
         const candidate = forMatch?.[1] ?? forMatch?.[2] ?? null;
         const normalized = normalizeIpAddress(candidate);
         if (normalized) {
@@ -460,21 +462,32 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 // organization and role on the token from the same query —
                 // `requireSessionWithOrg` used to repeat this lookup, doubling
                 // the per-request database cost for no extra freshness.
-                const sessionState = await prisma.user.findUnique({
-                    where: { id: token.id },
-                    select: { activeSessionId: true, organizationId: true, role: true },
-                });
+                try {
+                    const sessionState = await prisma.user.findUnique({
+                        where: { id: token.id },
+                        select: { activeSessionId: true, organizationId: true, role: true },
+                    });
 
-                if (
-                    !sessionState?.activeSessionId ||
-                    typeof token.activeSessionId !== "string" ||
-                    token.activeSessionId !== sessionState.activeSessionId
-                ) {
-                    return null;
+                    if (
+                        !sessionState?.activeSessionId ||
+                        typeof token.activeSessionId !== "string" ||
+                        token.activeSessionId !== sessionState.activeSessionId
+                    ) {
+                        return null;
+                    }
+
+                    token.organizationId = sessionState.organizationId ?? null;
+                    token.role = sessionState.role || "ANALYST";
+                } catch (error) {
+                    if (isDatabaseUnavailableError(error)) {
+                        if (markDatabaseUnavailable()) {
+                            console.warn("[auth] Database unavailable during session validation.");
+                        }
+                        // Invalidate the session and let the client retry after the database cooldown.
+                        return null;
+                    }
+                    throw error;
                 }
-
-                token.organizationId = sessionState.organizationId ?? null;
-                token.role = sessionState.role || "ANALYST";
             }
 
             if (typeof token.totpEnabled !== "boolean") {

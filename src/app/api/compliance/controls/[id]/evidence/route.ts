@@ -1,16 +1,21 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { assertEvidenceFileAllowed, writeEvidenceFile } from "@/lib/compliance-evidence-storage";
+import { type NextRequest, NextResponse } from "next/server";
 import { requireSessionWithOrg } from "@/lib/api-auth";
+import {
+  assertEvidenceFileAllowed,
+  writeEvidenceFile,
+} from "@/lib/compliance-evidence-storage";
+import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   try {
     const { id } = await params;
@@ -60,18 +65,23 @@ export async function GET(
     });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to load evidence" },
-      { status: 500 },
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to load evidence",
+      },
+      { status: 500 }
     );
   }
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   try {
     const { id } = await params;
@@ -111,13 +121,26 @@ export async function POST(
     const mimeType = fileValue.type || "application/octet-stream";
     assertEvidenceFileAllowed(fileValue.name, mimeType, fileBuffer.byteLength);
 
-    const title = typeof titleValue === "string" && titleValue.trim() ? titleValue.trim() : null;
+    const title =
+      typeof titleValue === "string" && titleValue.trim()
+        ? titleValue.trim()
+        : null;
     const description =
-      typeof descriptionValue === "string" && descriptionValue.trim() ? descriptionValue.trim() : null;
-    const notes = typeof notesValue === "string" && notesValue.trim() ? notesValue.trim() : null;
-    const assetId = typeof assetIdValue === "string" && assetIdValue.trim() ? assetIdValue.trim() : null;
+      typeof descriptionValue === "string" && descriptionValue.trim()
+        ? descriptionValue.trim()
+        : null;
+    const notes =
+      typeof notesValue === "string" && notesValue.trim()
+        ? notesValue.trim()
+        : null;
+    const assetId =
+      typeof assetIdValue === "string" && assetIdValue.trim()
+        ? assetIdValue.trim()
+        : null;
     const evidenceId =
-      typeof evidenceIdValue === "string" && evidenceIdValue.trim() ? evidenceIdValue.trim() : null;
+      typeof evidenceIdValue === "string" && evidenceIdValue.trim()
+        ? evidenceIdValue.trim()
+        : null;
 
     if (assetId) {
       const asset = await prisma.asset.findUnique({
@@ -133,20 +156,18 @@ export async function POST(
       if (!asset || asset.organizationId !== control.framework.organizationId) {
         return NextResponse.json(
           { error: "assetId is invalid for this control organization" },
-          { status: 400 },
+          { status: 400 }
         );
       }
     }
 
-    let evidenceRecord:
-      | {
-          id: string;
-          currentVersion: number;
-          title: string;
-          description: string | null;
-          assetId: string | null;
-        }
-      | null = null;
+    let evidenceRecord: {
+      id: string;
+      currentVersion: number;
+      title: string;
+      description: string | null;
+      assetId: string | null;
+    } | null = null;
 
     if (evidenceId) {
       const existing = await prisma.complianceEvidence.findUnique({
@@ -165,10 +186,16 @@ export async function POST(
       });
 
       if (!existing || existing.controlId !== control.id) {
-        return NextResponse.json({ error: "evidenceId does not match this control" }, { status: 400 });
+        return NextResponse.json(
+          { error: "evidenceId does not match this control" },
+          { status: 400 }
+        );
       }
       if (existing.organizationId !== control.framework.organizationId) {
-        return NextResponse.json({ error: "evidenceId organization mismatch" }, { status: 400 });
+        return NextResponse.json(
+          { error: "evidenceId organization mismatch" },
+          { status: 400 }
+        );
       }
 
       evidenceRecord = {
@@ -243,8 +270,7 @@ export async function POST(
         },
       });
 
-      const evidenceSummary =
-        `Latest evidence file: ${fileValue.name} (v${nextVersion}) uploaded at ${new Date().toISOString()}.`;
+      const evidenceSummary = `Latest evidence file: ${fileValue.name} (v${nextVersion}) uploaded at ${new Date().toISOString()}.`;
 
       await tx.complianceControl.update({
         where: {
@@ -289,8 +315,11 @@ export async function POST(
     });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to upload evidence" },
-      { status: 400 },
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to upload evidence",
+      },
+      { status: 400 }
     );
   }
 }

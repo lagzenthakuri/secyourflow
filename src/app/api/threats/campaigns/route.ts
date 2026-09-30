@@ -18,7 +18,7 @@ export async function GET(request: Request) {
         error: "Failed to fetch campaigns",
         message: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

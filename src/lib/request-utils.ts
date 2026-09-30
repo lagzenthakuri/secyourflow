@@ -7,18 +7,26 @@ export interface RequestContext {
 
 function isLikelyIpv4Address(value: string): boolean {
   const octets = value.split(".");
-  if (octets.length !== 4) return false;
+  if (octets.length !== 4) {
+    return false;
+  }
 
   return octets.every((octet) => {
-    if (!/^\d{1,3}$/.test(octet)) return false;
+    if (!/^\d{1,3}$/.test(octet)) {
+      return false;
+    }
     const numeric = Number(octet);
     return numeric >= 0 && numeric <= 255;
   });
 }
 
 function isLikelyIpv6Address(value: string): boolean {
-  if (!value.includes(":")) return false;
-  if (!/^[0-9a-f:]+$/i.test(value)) return false;
+  if (!value.includes(":")) {
+    return false;
+  }
+  if (!/^[0-9a-f:]+$/i.test(value)) {
+    return false;
+  }
 
   const compressedSegments = value.match(/::/g);
   if (compressedSegments && compressedSegments.length > 1) {
@@ -33,7 +41,9 @@ function isLikelyIpv6Address(value: string): boolean {
     return false;
   }
 
-  return segments.every((segment) => segment === "" || /^[0-9a-f]{1,4}$/i.test(segment));
+  return segments.every(
+    (segment) => segment === "" || /^[0-9a-f]{1,4}$/i.test(segment)
+  );
 }
 
 function isLikelyIpAddress(value: string): boolean {
@@ -41,18 +51,28 @@ function isLikelyIpAddress(value: string): boolean {
 }
 
 export function normalizeIpAddress(rawValue?: string | null): string | null {
-  if (!rawValue) return null;
+  if (!rawValue) {
+    return null;
+  }
 
   let value = rawValue.trim();
-  if (!value) return null;
+  if (!value) {
+    return null;
+  }
 
   value = value.replace(/^"+|"+$/g, "").trim();
-  if (!value) return null;
+  if (!value) {
+    return null;
+  }
 
-  if (value.toLowerCase() === "unknown") return null;
+  if (value.toLowerCase() === "unknown") {
+    return null;
+  }
 
   // RFC 7239 allows obfuscated identifiers (for=_hidden), which are not usable client IPs.
-  if (value.startsWith("_")) return null;
+  if (value.startsWith("_")) {
+    return null;
+  }
 
   const bracketedWithOptionalPort = value.match(/^\[([^\]]+)\](?::\d+)?$/);
   if (bracketedWithOptionalPort?.[1]) {
@@ -87,7 +107,7 @@ export function formatIpAddress(ipAddress?: string | null): string {
 
 /**
  * Extracts IP address and user agent from NextRequest headers.
- * 
+ *
  * IP extraction order (RFC 7239 compliant):
  * 1. Forwarded header (RFC 7239)
  * 2. X-Forwarded-For (de facto standard)
@@ -95,10 +115,10 @@ export function formatIpAddress(ipAddress?: string | null): string {
  * 4. CF-Connecting-IP (Cloudflare)
  * 5. True-Client-IP (Akamai, Cloudflare)
  * 6. request.ip (Next.js native)
- * 
+ *
  * Security note: These headers can be spoofed. Only trust them if your
  * infrastructure (load balancer/proxy) is configured to set them correctly.
- * 
+ *
  * @param request - NextRequest object from API route
  * @returns RequestContext with ipAddress and userAgent (null if unavailable)
  */
@@ -115,7 +135,7 @@ export function extractRequestContext(request: NextRequest): RequestContext {
 /**
  * Extracts the client IP address from request headers.
  * Handles proxy headers and multiple IP chains.
- * 
+ *
  * @param request - NextRequest object
  * @returns IP address string or null if unavailable
  */
@@ -154,19 +174,25 @@ function extractIpAddress(request: NextRequest): string | null {
   }
 
   // 4. Try CF-Connecting-IP (Cloudflare)
-  const cfConnectingIp = normalizeIpAddress(request.headers.get("cf-connecting-ip"));
+  const cfConnectingIp = normalizeIpAddress(
+    request.headers.get("cf-connecting-ip")
+  );
   if (cfConnectingIp) {
     return cfConnectingIp;
   }
 
   // 5. Try True-Client-IP (Akamai, Cloudflare Enterprise)
-  const trueClientIp = normalizeIpAddress(request.headers.get("true-client-ip"));
+  const trueClientIp = normalizeIpAddress(
+    request.headers.get("true-client-ip")
+  );
   if (trueClientIp) {
     return trueClientIp;
   }
 
   // 6. Try request.ip when available (runtime-dependent)
-  const requestIp = normalizeIpAddress((request as NextRequest & { ip?: string | null }).ip);
+  const requestIp = normalizeIpAddress(
+    (request as NextRequest & { ip?: string | null }).ip
+  );
   if (requestIp) {
     return requestIp;
   }
@@ -178,7 +204,7 @@ function extractIpAddress(request: NextRequest): string | null {
 /**
  * Parses user agent string to extract browser, OS, and device information.
  * This is a simple parser - for production use, consider using a library like ua-parser-js.
- * 
+ *
  * @param userAgent - User agent string
  * @returns Parsed user agent information
  */
@@ -196,19 +222,34 @@ export function parseUserAgent(userAgent?: string | null): {
   let device = "Desktop";
 
   // Browser detection (order matters - check specific before generic)
-  if (userAgent.includes("Edg/")) browser = "Edge";
-  else if (userAgent.includes("Chrome/")) browser = "Chrome";
-  else if (userAgent.includes("Firefox/")) browser = "Firefox";
-  else if (userAgent.includes("Safari/") && !userAgent.includes("Chrome")) browser = "Safari";
-  else if (userAgent.includes("Opera/") || userAgent.includes("OPR/")) browser = "Opera";
+  if (userAgent.includes("Edg/")) {
+    browser = "Edge";
+  } else if (userAgent.includes("Chrome/")) {
+    browser = "Chrome";
+  } else if (userAgent.includes("Firefox/")) {
+    browser = "Firefox";
+  } else if (userAgent.includes("Safari/") && !userAgent.includes("Chrome")) {
+    browser = "Safari";
+  } else if (userAgent.includes("Opera/") || userAgent.includes("OPR/")) {
+    browser = "Opera";
+  }
 
   // OS detection
-  if (userAgent.includes("Windows NT 10.0")) os = "Windows 10/11";
-  else if (userAgent.includes("Windows NT 6.3")) os = "Windows 8.1";
-  else if (userAgent.includes("Windows NT 6.2")) os = "Windows 8";
-  else if (userAgent.includes("Windows NT 6.1")) os = "Windows 7";
-  else if (userAgent.includes("Windows")) os = "Windows";
-  else if (userAgent.includes("iPhone") || userAgent.includes("iPad") || userAgent.includes("iPod")) {
+  if (userAgent.includes("Windows NT 10.0")) {
+    os = "Windows 10/11";
+  } else if (userAgent.includes("Windows NT 6.3")) {
+    os = "Windows 8.1";
+  } else if (userAgent.includes("Windows NT 6.2")) {
+    os = "Windows 8";
+  } else if (userAgent.includes("Windows NT 6.1")) {
+    os = "Windows 7";
+  } else if (userAgent.includes("Windows")) {
+    os = "Windows";
+  } else if (
+    userAgent.includes("iPhone") ||
+    userAgent.includes("iPad") ||
+    userAgent.includes("iPod")
+  ) {
     const iosMatch = userAgent.match(/OS ([\d_]+)/);
     os = iosMatch ? `iOS ${iosMatch[1].replace(/_/g, ".")}` : "iOS";
   } else if (userAgent.includes("Mac OS X")) {
@@ -217,12 +258,18 @@ export function parseUserAgent(userAgent?: string | null): {
   } else if (userAgent.includes("Android")) {
     const androidMatch = userAgent.match(/Android ([\d.]+)/);
     os = androidMatch ? `Android ${androidMatch[1]}` : "Android";
-  } else if (userAgent.includes("Linux")) os = "Linux";
+  } else if (userAgent.includes("Linux")) {
+    os = "Linux";
+  }
 
   // Device detection
   if (userAgent.includes("iPad")) {
     device = "Tablet";
-  } else if (userAgent.includes("Mobile") || userAgent.includes("Android") || userAgent.includes("iPhone")) {
+  } else if (
+    userAgent.includes("Mobile") ||
+    userAgent.includes("Android") ||
+    userAgent.includes("iPhone")
+  ) {
     device = "Mobile";
   }
 

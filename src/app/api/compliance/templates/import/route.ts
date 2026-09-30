@@ -1,10 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
-import { assertTemplateId, importComplianceTemplate } from "@/lib/compliance-template-importer";
+import { type NextRequest, NextResponse } from "next/server";
 import { requireSessionWithOrg } from "@/lib/api-auth";
+import {
+  assertTemplateId,
+  importComplianceTemplate,
+} from "@/lib/compliance-template-importer";
 
 export async function POST(request: NextRequest) {
-  const authResult = await requireSessionWithOrg(request, { allowedRoles: ["MAIN_OFFICER"] });
-  if (!authResult.ok) return authResult.response;
+  const authResult = await requireSessionWithOrg(request, {
+    allowedRoles: ["MAIN_OFFICER"],
+  });
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   try {
     const body = (await request.json()) as {
@@ -15,7 +22,10 @@ export async function POST(request: NextRequest) {
     };
 
     if (!body.templateId) {
-      return NextResponse.json({ error: "templateId is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "templateId is required" },
+        { status: 400 }
+      );
     }
 
     const templateId = assertTemplateId(body.templateId);
@@ -31,8 +41,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to import template" },
-      { status: 400 },
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to import template",
+      },
+      { status: 400 }
     );
   }
 }

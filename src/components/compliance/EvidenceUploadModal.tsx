@@ -1,47 +1,61 @@
 "use client";
 import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/design-system/components/ui/select";
 import { Textarea as BoilerplateTextarea } from "@repo/design-system/components/ui/textarea";
-
-
-
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
+import {
+  AlertCircle,
+  FileClock,
+  FileUp,
+  Loader2,
+  RefreshCw,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
-import { AlertCircle, FileClock, FileUp, Loader2, RefreshCw } from "lucide-react";
 
 interface EvidenceVersion {
-  id: string;
-  version: number;
+  checksum?: string | null;
+  createdAt: string;
   fileName: string;
+  id: string;
   mimeType: string;
+  notes?: string | null;
   sizeBytes: number;
   storagePath: string;
-  checksum?: string | null;
-  notes?: string | null;
-  createdAt: string;
+  version: number;
 }
 
 interface EvidenceRecord {
-  id: string;
-  title: string;
-  description?: string | null;
   assetId?: string | null;
   currentVersion: number;
+  description?: string | null;
+  id: string;
+  title: string;
   updatedAt: string;
   versions: EvidenceVersion[];
 }
 
 interface EvidenceUploadModalProps {
+  controlId: string;
+  controlLabel: string;
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
-  controlId: string;
-  controlLabel: string;
 }
 
 function formatBytes(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
@@ -66,8 +80,12 @@ export function EvidenceUploadModal({
   const [file, setFile] = useState<File | null>(null);
 
   const canSubmit = useMemo(() => {
-    if (!file) return false;
-    if (mode === "version") return selectedEvidenceId.length > 0;
+    if (!file) {
+      return false;
+    }
+    if (mode === "version") {
+      return selectedEvidenceId.length > 0;
+    }
     return title.trim().length > 0;
   }, [file, mode, selectedEvidenceId, title]);
 
@@ -76,9 +94,12 @@ export function EvidenceUploadModal({
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/compliance/controls/${controlId}/evidence`, {
-        cache: "no-store",
-      });
+      const response = await fetch(
+        `/api/compliance/controls/${controlId}/evidence`,
+        {
+          cache: "no-store",
+        }
+      );
 
       if (!response.ok) {
         const payload = (await response.json()) as { error?: string };
@@ -100,7 +121,9 @@ export function EvidenceUploadModal({
   }, [controlId, mode, selectedEvidenceId]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      return;
+    }
     void fetchEvidence();
   }, [fetchEvidence, isOpen]);
 
@@ -157,10 +180,13 @@ export function EvidenceUploadModal({
         formData.set("evidenceId", selectedEvidenceId);
       }
 
-      const response = await fetch(`/api/compliance/controls/${controlId}/evidence`, {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+        `/api/compliance/controls/${controlId}/evidence`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
         const payload = (await response.json()) as { error?: string };
@@ -171,7 +197,9 @@ export function EvidenceUploadModal({
       resetForm();
       onSuccess?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to upload evidence");
+      setError(
+        err instanceof Error ? err.message : "Failed to upload evidence"
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -180,13 +208,13 @@ export function EvidenceUploadModal({
   return (
     <Modal
       isOpen={isOpen}
+      maxWidth="2xl"
       onClose={handleClose}
       title={`Evidence Manager: ${controlLabel}`}
-      maxWidth="2xl"
     >
       <div className="space-y-5">
         {error ? (
-          <div className="rounded-lg border border-red-500/25 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-300">
+          <div className="rounded-lg border border-red-500/25 bg-red-500/10 p-3 text-red-600 text-sm dark:text-red-300">
             <div className="flex items-center gap-2">
               <AlertCircle size={16} />
               <span>{error}</span>
@@ -194,32 +222,35 @@ export function EvidenceUploadModal({
           </div>
         ) : null}
 
-        <form onSubmit={submitEvidence} className="space-y-4 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4">
+        <form
+          className="space-y-4 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4"
+          onSubmit={submitEvidence}
+        >
           <div className="flex flex-wrap gap-2 text-xs">
             <button
-              type="button"
-              onClick={() => setMode("new")}
               className={`rounded-md border px-3 py-1.5 ${
                 mode === "new"
                   ? "border-sky-300/35 bg-sky-300/10 text-sky-700 dark:text-sky-100"
                   : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]"
               }`}
+              onClick={() => setMode("new")}
+              type="button"
             >
               New Evidence
             </button>
             <button
-              type="button"
+              className={`rounded-md border px-3 py-1.5 ${
+                mode === "version"
+                  ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-700 dark:text-emerald-100"
+                  : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]"
+              }`}
               onClick={() => {
                 setMode("version");
                 if (!selectedEvidenceId && evidence.length > 0) {
                   setSelectedEvidenceId(evidence[0].id);
                 }
               }}
-              className={`rounded-md border px-3 py-1.5 ${
-                mode === "version"
-                  ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-700 dark:text-emerald-100"
-                  : "border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]"
-              }`}
+              type="button"
             >
               New Version
             </button>
@@ -227,18 +258,30 @@ export function EvidenceUploadModal({
 
           {mode === "version" ? (
             <div>
-              <label className="mb-1 block text-sm text-[var(--text-secondary)]">Evidence Record</label>
-              <Select value={selectedEvidenceId || "__select_none__"} onValueChange={(event) => setSelectedEvidenceId((event === "__select_none__" ? "" : event))}>
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <label className="mb-1 block text-[var(--text-secondary)] text-sm">
+                Evidence Record
+              </label>
+              <Select
+                onValueChange={(event) =>
+                  setSelectedEvidenceId(
+                    event === "__select_none__" ? "" : event
+                  )
+                }
+                value={selectedEvidenceId || "__select_none__"}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                <SelectItem value="__select_none__">Select evidence...</SelectItem>
-                {evidence.map((item) => (
-                  <SelectItem key={item.id} value={item.id}>
-                    {item.title} (v{item.currentVersion})
-                  </SelectItem>
-                ))}
-
+                    <SelectItem value="__select_none__">
+                      Select evidence...
+                    </SelectItem>
+                    {evidence.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.title} (v{item.currentVersion})
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -247,66 +290,85 @@ export function EvidenceUploadModal({
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm text-[var(--text-secondary)]">Title</label>
+              <label className="mb-1 block text-[var(--text-secondary)] text-sm">
+                Title
+              </label>
               <BoilerplateInput
                 className="w-full"
+                onChange={(event) => setTitle(event.target.value)}
                 placeholder="Evidence title"
                 value={title}
-                onChange={(event) => setTitle(event.target.value)}
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm text-[var(--text-secondary)]">Asset ID (optional)</label>
+              <label className="mb-1 block text-[var(--text-secondary)] text-sm">
+                Asset ID (optional)
+              </label>
               <BoilerplateInput
                 className="w-full"
+                onChange={(event) => setAssetId(event.target.value)}
                 placeholder="Asset ID"
                 value={assetId}
-                onChange={(event) => setAssetId(event.target.value)}
               />
             </div>
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-[var(--text-secondary)]">Description</label>
+            <label className="mb-1 block text-[var(--text-secondary)] text-sm">
+              Description
+            </label>
             <BoilerplateTextarea
-              className="w-full min-h-[70px]"
+              className="min-h-[70px] w-full"
+              onChange={(event) => setDescription(event.target.value)}
               placeholder="Describe what this evidence proves"
               value={description}
-              onChange={(event) => setDescription(event.target.value)}
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-[var(--text-secondary)]">Version Notes</label>
+            <label className="mb-1 block text-[var(--text-secondary)] text-sm">
+              Version Notes
+            </label>
             <BoilerplateTextarea
-              className="w-full min-h-[60px]"
+              className="min-h-[60px] w-full"
+              onChange={(event) => setNotes(event.target.value)}
               placeholder="What changed in this evidence version"
               value={notes}
-              onChange={(event) => setNotes(event.target.value)}
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-[var(--text-secondary)]">File</label>
+            <label className="mb-1 block text-[var(--text-secondary)] text-sm">
+              File
+            </label>
             <BoilerplateInput
-              type="file"
-              className="w-full"
               accept=".pdf,.png,.jpg,.jpeg,.txt,.log,.csv,.json"
+              className="w-full"
               onChange={(event) => setFile(event.target.files?.[0] || null)}
+              type="file"
             />
-            <p className="mt-1 text-xs text-[var(--text-muted)]">
+            <p className="mt-1 text-[var(--text-muted)] text-xs">
               Supported: PDF, images, txt/log/csv/json. Max file size: 15 MB.
             </p>
           </div>
 
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={handleClose} className="btn btn-secondary" disabled={isSubmitting}>
+            <button
+              className="btn btn-secondary"
+              disabled={isSubmitting}
+              onClick={handleClose}
+              type="button"
+            >
               Close
             </button>
-            <button type="submit" className="btn btn-primary" disabled={isSubmitting || !canSubmit}>
+            <button
+              className="btn btn-primary"
+              disabled={isSubmitting || !canSubmit}
+              type="submit"
+            >
               {isSubmitting ? (
                 <>
-                  <Loader2 size={16} className="animate-spin" />
+                  <Loader2 className="animate-spin" size={16} />
                   Uploading...
                 </>
               ) : (
@@ -321,35 +383,46 @@ export function EvidenceUploadModal({
 
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-[var(--text-primary)]">Evidence History</h4>
+            <h4 className="font-semibold text-[var(--text-primary)] text-sm">
+              Evidence History
+            </h4>
             <button
-              type="button"
-              onClick={() => void fetchEvidence()}
-              className="inline-flex items-center gap-1 rounded-md border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-2 py-1 text-xs text-[var(--text-secondary)]"
+              className="inline-flex items-center gap-1 rounded-md border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-2 py-1 text-[var(--text-secondary)] text-xs"
               disabled={isLoading}
+              onClick={() => void fetchEvidence()}
+              type="button"
             >
-              <RefreshCw size={12} className={isLoading ? "animate-spin" : ""} />
+              <RefreshCw
+                className={isLoading ? "animate-spin" : ""}
+                size={12}
+              />
               Refresh
             </button>
           </div>
 
           {isLoading ? (
-            <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
+            <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-[var(--text-muted)] text-sm">
               Loading evidence...
             </div>
           ) : evidence.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-[var(--border-hover)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
+            <div className="rounded-lg border border-[var(--border-hover)] border-dashed bg-[var(--bg-tertiary)] p-4 text-[var(--text-muted)] text-sm">
               No evidence uploaded yet.
             </div>
           ) : (
             <div className="max-h-[280px] space-y-3 overflow-y-auto pr-1">
               {evidence.map((item) => (
-                <article key={item.id} className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3">
+                <article
+                  className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3"
+                  key={item.id}
+                >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <p className="text-sm font-semibold text-[var(--text-primary)]">{item.title}</p>
-                      <p className="text-xs text-[var(--text-muted)]">
-                        Current version: v{item.currentVersion} • Updated {new Date(item.updatedAt).toLocaleString()}
+                      <p className="font-semibold text-[var(--text-primary)] text-sm">
+                        {item.title}
+                      </p>
+                      <p className="text-[var(--text-muted)] text-xs">
+                        Current version: v{item.currentVersion} • Updated{" "}
+                        {new Date(item.updatedAt).toLocaleString()}
                       </p>
                     </div>
                     <span className="inline-flex items-center gap-1 rounded-md border border-emerald-300/30 bg-emerald-400/10 px-2 py-0.5 text-[11px] text-emerald-700 dark:text-emerald-200">
@@ -360,20 +433,24 @@ export function EvidenceUploadModal({
 
                   <div className="mt-2 space-y-1 text-xs">
                     {item.versions.map((version) => (
-                      <div key={version.id} className="flex items-center justify-between gap-2 rounded bg-[var(--code-block-bg)] px-2 py-1">
+                      <div
+                        className="flex items-center justify-between gap-2 rounded bg-[var(--code-block-bg)] px-2 py-1"
+                        key={version.id}
+                      >
                         <div className="min-w-0">
                           <p className="truncate text-[var(--text-secondary)]">
                             v{version.version} • {version.fileName}
                           </p>
                           <p className="text-[var(--text-muted)]">
-                            {new Date(version.createdAt).toLocaleString()} • {formatBytes(version.sizeBytes)}
+                            {new Date(version.createdAt).toLocaleString()} •{" "}
+                            {formatBytes(version.sizeBytes)}
                           </p>
                         </div>
                         <a
-                          href={version.storagePath}
-                          target="_blank"
-                          rel="noreferrer"
                           className="rounded border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-2 py-1 text-[11px] text-[var(--text-secondary)]"
+                          href={version.storagePath}
+                          rel="noreferrer"
+                          target="_blank"
                         >
                           View
                         </a>
