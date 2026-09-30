@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Rate limiting tests.
@@ -7,8 +7,8 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
  * endpoints from brute-force attacks.
  */
 
-const mockIsRedisConfigured = vi.fn();
-const mockGetReadyRedisCommandClient = vi.fn();
+const mockIsRedisConfigured = vi.hoisted(() => vi.fn());
+const mockGetReadyRedisCommandClient = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/queue/connection", () => ({
   isRedisConfigured: mockIsRedisConfigured,
@@ -28,22 +28,22 @@ describe("consumeRateLimit", () => {
   });
 
   it("allows requests below the limit", async () => {
-    const result = await consumeRateLimit("test-key", 5, 60000);
+    const result = await consumeRateLimit("test-key", 5, 60_000);
     expect(result.allowed).toBe(true);
     expect(result.remaining).toBe(4);
   });
 
   it("tracks attempts correctly", async () => {
     const key = "test-tracking";
-    const result1 = await consumeRateLimit(key, 5, 60000);
+    const result1 = await consumeRateLimit(key, 5, 60_000);
     expect(result1.allowed).toBe(true);
     expect(result1.remaining).toBe(4);
 
-    const result2 = await consumeRateLimit(key, 5, 60000);
+    const result2 = await consumeRateLimit(key, 5, 60_000);
     expect(result2.allowed).toBe(true);
     expect(result2.remaining).toBe(3);
 
-    const result3 = await consumeRateLimit(key, 5, 60000);
+    const result3 = await consumeRateLimit(key, 5, 60_000);
     expect(result3.allowed).toBe(true);
     expect(result3.remaining).toBe(2);
   });
@@ -52,10 +52,10 @@ describe("consumeRateLimit", () => {
     const key = "test-reject";
     // Consume all allowed attempts
     for (let i = 0; i < 5; i++) {
-      await consumeRateLimit(key, 5, 60000);
+      await consumeRateLimit(key, 5, 60_000);
     }
     // Next request should be rejected
-    const result = await consumeRateLimit(key, 5, 60000);
+    const result = await consumeRateLimit(key, 5, 60_000);
     expect(result.allowed).toBe(false);
     if (!result.allowed) {
       expect(result.retryAfterSeconds).toBeGreaterThan(0);
@@ -67,16 +67,16 @@ describe("consumeRateLimit", () => {
     const key = "test-reset";
     // Consume all attempts
     for (let i = 0; i < 5; i++) {
-      await consumeRateLimit(key, 5, 60000);
+      await consumeRateLimit(key, 5, 60_000);
     }
     // Should be rejected
-    const rejected = await consumeRateLimit(key, 5, 60000);
+    const rejected = await consumeRateLimit(key, 5, 60_000);
     expect(rejected.allowed).toBe(false);
 
     // Advance time past the window
-    vi.advanceTimersByTime(61000);
+    vi.advanceTimersByTime(61_000);
     // Should be allowed again
-    const allowed = await consumeRateLimit(key, 5, 60000);
+    const allowed = await consumeRateLimit(key, 5, 60_000);
     expect(allowed.allowed).toBe(true);
   });
 
@@ -85,54 +85,54 @@ describe("consumeRateLimit", () => {
     const key2 = "test-key-2";
     // Consume all attempts for key1
     for (let i = 0; i < 5; i++) {
-      await consumeRateLimit(key1, 5, 60000);
+      await consumeRateLimit(key1, 5, 60_000);
     }
     // key1 should be rejected
-    const result1 = await consumeRateLimit(key1, 5, 60000);
+    const result1 = await consumeRateLimit(key1, 5, 60_000);
     expect(result1.allowed).toBe(false);
     // key2 should still be allowed
-    const result2 = await consumeRateLimit(key2, 5, 60000);
+    const result2 = await consumeRateLimit(key2, 5, 60_000);
     expect(result2.allowed).toBe(true);
   });
 
   it("handles zero max attempts by rejecting", async () => {
     // With maxAttempts=0, the first request creates a bucket with attempts=1
     // which is > 0, so it should be rejected
-    const result = await consumeRateLimit("test-zero", 0, 60000);
+    const result = await consumeRateLimit("test-zero", 0, 60_000);
     expect(result.allowed).toBe(false);
   });
 
   it("handles negative max attempts by rejecting", async () => {
-    const result = await consumeRateLimit("test-negative", -1, 60000);
+    const result = await consumeRateLimit("test-negative", -1, 60_000);
     expect(result.allowed).toBe(false);
   });
 
   it("handles very large max attempts", async () => {
-    const result = await consumeRateLimit("test-large", 1000000, 60000);
+    const result = await consumeRateLimit("test-large", 1_000_000, 60_000);
     expect(result.allowed).toBe(true);
-    expect(result.remaining).toBe(999999);
+    expect(result.remaining).toBe(999_999);
   });
 
   it("handles empty key", async () => {
-    const result = await consumeRateLimit("", 5, 60000);
+    const result = await consumeRateLimit("", 5, 60_000);
     expect(result.allowed).toBe(true);
   });
 
   it("handles very long key", async () => {
     const longKey = "a".repeat(1000);
-    const result = await consumeRateLimit(longKey, 5, 60000);
+    const result = await consumeRateLimit(longKey, 5, 60_000);
     expect(result.allowed).toBe(true);
   });
 
   it("handles special characters in key", async () => {
     const specialKey = "test:key/with@special#chars";
-    const result = await consumeRateLimit(specialKey, 5, 60000);
+    const result = await consumeRateLimit(specialKey, 5, 60_000);
     expect(result.allowed).toBe(true);
   });
 
   it("handles unicode in key", async () => {
     const unicodeKey = "test-key-测试-🔒";
-    const result = await consumeRateLimit(unicodeKey, 5, 60000);
+    const result = await consumeRateLimit(unicodeKey, 5, 60_000);
     expect(result.allowed).toBe(true);
   });
 });
@@ -147,27 +147,29 @@ describe("resetRateLimit", () => {
     const key = "test-reset";
     // Consume all attempts
     for (let i = 0; i < 5; i++) {
-      await consumeRateLimit(key, 5, 60000);
+      await consumeRateLimit(key, 5, 60_000);
     }
     // Should be rejected
-    const rejected = await consumeRateLimit(key, 5, 60000);
+    const rejected = await consumeRateLimit(key, 5, 60_000);
     expect(rejected.allowed).toBe(false);
 
     // Reset the limit
     await resetRateLimit(key);
     // Should be allowed again
-    const allowed = await consumeRateLimit(key, 5, 60000);
+    const allowed = await consumeRateLimit(key, 5, 60_000);
     expect(allowed.allowed).toBe(true);
   });
 
   it("does not throw when resetting non-existent key", async () => {
-    await expect(resetRateLimit("non-existent-key")).resolves.not.toThrow();
+    await expect(resetRateLimit("non-existent-key")).resolves.toBeUndefined();
   });
 
   it("does not throw when Redis is configured but unavailable", async () => {
     mockIsRedisConfigured.mockReturnValue(true);
-    mockGetReadyRedisCommandClient.mockRejectedValue(new Error("Connection failed"));
-    await expect(resetRateLimit("test-key")).resolves.not.toThrow();
+    mockGetReadyRedisCommandClient.mockRejectedValue(
+      new Error("Connection failed")
+    );
+    await expect(resetRateLimit("test-key")).resolves.toBeUndefined();
   });
 });
 
@@ -181,43 +183,50 @@ describe("rate limit with Redis", () => {
     const mockRedis = {
       incr: vi.fn().mockResolvedValue(1),
       pexpire: vi.fn().mockResolvedValue(1),
-      pttl: vi.fn().mockResolvedValue(60000),
+      pttl: vi.fn().mockResolvedValue(60_000),
       del: vi.fn().mockResolvedValue(1),
     };
     mockGetReadyRedisCommandClient.mockResolvedValue(mockRedis);
 
-    const result = await consumeRateLimit("test-key", 5, 60000);
+    const result = await consumeRateLimit("test-key", 5, 60_000);
     expect(result.allowed).toBe(true);
     expect(mockRedis.incr).toHaveBeenCalled();
     expect(mockRedis.pexpire).toHaveBeenCalled();
   });
 
   it("falls back to in-memory when Redis fails", async () => {
-    mockGetReadyRedisCommandClient.mockRejectedValue(new Error("Connection failed"));
+    mockGetReadyRedisCommandClient.mockRejectedValue(
+      new Error("Connection failed")
+    );
 
-    const result = await consumeRateLimit("test-key", 5, 60000);
+    const result = await consumeRateLimit("test-key", 5, 60_000);
     expect(result.allowed).toBe(true);
   });
 
   it("falls back to in-memory when Redis is not ready", async () => {
     mockGetReadyRedisCommandClient.mockResolvedValue(null);
 
-    const result = await consumeRateLimit("test-key", 5, 60000);
+    const result = await consumeRateLimit("test-key", 5, 60_000);
     expect(result.allowed).toBe(true);
   });
 
   it("handles Redis timeout", async () => {
     const mockRedis = {
-      incr: vi.fn().mockImplementation(
-        () => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000))
-      ),
+      incr: vi
+        .fn()
+        .mockImplementation(
+          () =>
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error("Timeout")), 2000)
+            )
+        ),
       pexpire: vi.fn().mockResolvedValue(1),
-      pttl: vi.fn().mockResolvedValue(60000),
+      pttl: vi.fn().mockResolvedValue(60_000),
       del: vi.fn().mockResolvedValue(1),
     };
     mockGetReadyRedisCommandClient.mockResolvedValue(mockRedis);
 
-    const result = await consumeRateLimit("test-key", 5, 60000);
+    const result = await consumeRateLimit("test-key", 5, 60_000);
     // Should fall back to in-memory
     expect(result.allowed).toBe(true);
   });

@@ -68,7 +68,9 @@ const anthropicConfig: AiProviderConfig = {
 describe("Anthropic adapter", () => {
   it("never sends sampling parameters", async () => {
     // Removed on the Claude 5 family; sending any of them returns HTTP 400.
-    const { fetchMock, restore } = mockFetch({ content: [{ type: "text", text: "{}" }] });
+    const { fetchMock, restore } = mockFetch({
+      content: [{ type: "text", text: "{}" }],
+    });
     currentRestore = restore;
 
     await AI_ADAPTERS.ANTHROPIC.chat(anthropicConfig, {
@@ -83,7 +85,9 @@ describe("Anthropic adapter", () => {
   });
 
   it("sends the required headers and hoists system messages", async () => {
-    const { fetchMock, restore } = mockFetch({ content: [{ type: "text", text: "ok" }] });
+    const { fetchMock, restore } = mockFetch({
+      content: [{ type: "text", text: "ok" }],
+    });
     currentRestore = restore;
 
     await AI_ADAPTERS.ANTHROPIC.chat(anthropicConfig, {
@@ -118,7 +122,7 @@ describe("Anthropic adapter", () => {
       AI_ADAPTERS.ANTHROPIC.chat(anthropicConfig, {
         messages: [{ role: "user", content: "x" }],
       })
-    ).rejects.toThrow(/declined/i);
+    ).rejects.toThrow(REFUSAL_PATTERN);
   });
 
   it("defaults to a current model id", () => {
@@ -133,7 +137,7 @@ describe("Anthropic adapter", () => {
         { ...anthropicConfig, apiKey: null },
         { messages: [{ role: "user", content: "x" }] }
       )
-    ).rejects.toThrow(/ANTHROPIC_API_KEY/);
+    ).rejects.toThrow(MISSING_API_KEY_PATTERN);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
@@ -141,7 +145,9 @@ describe("Anthropic adapter", () => {
 describe("OpenAI-compatible adapters", () => {
   it("do send temperature and JSON mode", async () => {
     // The opposite of Anthropic: these providers accept both.
-    const { fetchMock, restore } = mockFetch({ choices: [{ message: { content: "{}" } }] });
+    const { fetchMock, restore } = mockFetch({
+      choices: [{ message: { content: "{}" } }],
+    });
     currentRestore = restore;
 
     await AI_ADAPTERS.OPENAI.chat(
@@ -173,3 +179,6 @@ describe("Ollama adapter", () => {
     expect(bodyOf(fetchMock).format).toBe("json");
   });
 });
+
+const REFUSAL_PATTERN = /declined/i;
+const MISSING_API_KEY_PATTERN = /ANTHROPIC_API_KEY/;

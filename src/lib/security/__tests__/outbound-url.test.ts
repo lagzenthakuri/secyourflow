@@ -37,10 +37,10 @@ describe("validateOutboundUrl", () => {
   });
 
   it("rejects plain http unless explicitly allowed", async () => {
-    expect((await validateOutboundUrl("http://example.com/")).ok).toBe(false);
+    expect((await validateOutboundUrl("http://93.184.216.34/")).ok).toBe(false);
     expect(
       (
-        await validateOutboundUrl("http://example.com/", {
+        await validateOutboundUrl("http://93.184.216.34/", {
           allowInsecureHttp: true,
         })
       ).ok

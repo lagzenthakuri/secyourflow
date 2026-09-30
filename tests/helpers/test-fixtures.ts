@@ -5,7 +5,15 @@
  * No real credentials, API keys, or production data.
  */
 
-import type { Severity, WorkflowState, AssetType, Environment, Criticality, AssetStatus, CloudProvider, Role } from "@prisma/client";
+import type {
+  AssetStatus,
+  AssetType,
+  Criticality,
+  Environment,
+  Role,
+  Severity,
+  WorkflowState,
+} from "@prisma/client";
 
 // ─── Organizations ───────────────────────────────────────────────────────────
 
@@ -136,7 +144,8 @@ export const vulnerabilities = {
     id: "vuln-sql-001",
     cveId: "CVE-2024-1234",
     title: "SQL Injection in login form",
-    description: "A critical SQL injection vulnerability allows unauthorized database access.",
+    description:
+      "A critical SQL injection vulnerability allows unauthorized database access.",
     severity: "CRITICAL" as Severity,
     cvssScore: 9.8,
     cvssVector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",

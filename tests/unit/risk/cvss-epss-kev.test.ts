@@ -7,11 +7,7 @@ import { describe, expect, it } from "vitest";
  * Uses the actual implementation from the codebase.
  */
 
-import {
-  deterministicAnalysis,
-  parseCVSSVector,
-  scoreFromAnalysis,
-} from "@/lib/risk/scoring";
+import { deterministicAnalysis, scoreFromAnalysis } from "@/lib/risk/scoring";
 
 const baseAsset = {
   name: "web-01",
@@ -81,7 +77,9 @@ describe("CVSS influence on risk", () => {
       baseAsset
     );
     // Both should have same CIA scores (scope doesn't affect CIA in this model)
-    expect(unchanged.confidentiality_impact).toBe(changed.confidentiality_impact);
+    expect(unchanged.confidentiality_impact).toBe(
+      changed.confidentiality_impact
+    );
     expect(unchanged.integrity_impact).toBe(changed.integrity_impact);
     expect(unchanged.availability_impact).toBe(changed.availability_impact);
   });
@@ -103,7 +101,9 @@ describe("CVSS influence on risk", () => {
       },
       baseAsset
     );
-    expect(network.confidentiality_impact).toBe(physical.confidentiality_impact);
+    expect(network.confidentiality_impact).toBe(
+      physical.confidentiality_impact
+    );
     expect(network.integrity_impact).toBe(physical.integrity_impact);
     expect(network.availability_impact).toBe(physical.availability_impact);
   });
@@ -263,7 +263,9 @@ describe("CISA KEV influence on risk", () => {
     );
     expect(kevAndEpss.likelihood_score).toBeGreaterThan(base.likelihood_score);
     // Should be at least 2 higher than base (KEV +1, EPSS +1)
-    expect(kevAndEpss.likelihood_score - base.likelihood_score).toBeGreaterThanOrEqual(2);
+    expect(
+      kevAndEpss.likelihood_score - base.likelihood_score
+    ).toBeGreaterThanOrEqual(2);
   });
 
   it("KEV with critical asset stacks likelihood bonuses", () => {
@@ -283,7 +285,7 @@ describe("CISA KEV influence on risk", () => {
       { title: "test", severity: "MEDIUM", cisaKev: true },
       baseAsset
     );
-    expect(result.rationale_for_risk_rating).toMatch(/CISA KEV/);
+    expect(result.rationale_for_risk_rating).toMatch(CISA_KEV_PATTERN);
   });
 
   it("non-KEV is not mentioned in rationale", () => {
@@ -291,7 +293,7 @@ describe("CISA KEV influence on risk", () => {
       { title: "test", severity: "MEDIUM", cisaKev: false },
       baseAsset
     );
-    expect(result.rationale_for_risk_rating).not.toMatch(/CISA KEV/);
+    expect(result.rationale_for_risk_rating).not.toMatch(CISA_KEV_PATTERN);
   });
 });
 
@@ -355,3 +357,5 @@ describe("combined risk scoring", () => {
     }
   });
 });
+
+const CISA_KEV_PATTERN = /CISA KEV/;

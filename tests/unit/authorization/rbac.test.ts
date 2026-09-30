@@ -1,5 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { NextResponse } from "next/server";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * RBAC authorization tests.
@@ -8,8 +7,8 @@ import { NextResponse } from "next/server";
  * Verifies that roles are correctly enforced for different operations.
  */
 
-const mockAuth = vi.fn();
-const mockIsTwoFactorSatisfied = vi.fn();
+const mockAuth = vi.hoisted(() => vi.fn());
+const mockIsTwoFactorSatisfied = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/auth", () => ({
   auth: mockAuth,
@@ -20,12 +19,12 @@ vi.mock("@/lib/security/two-factor", () => ({
 }));
 
 import {
-  requireSessionWithOrg,
-  requireMainOfficer,
   isAdminTokenAuthorized,
   ROLE_ALL,
-  ROLE_VULNERABILITY_WRITE,
   ROLE_VULNERABILITY_DELETE,
+  ROLE_VULNERABILITY_WRITE,
+  requireMainOfficer,
+  requireSessionWithOrg,
 } from "@/lib/api-auth";
 
 describe("RBAC role definitions", () => {
@@ -93,7 +92,7 @@ describe("requireSessionWithOrg", () => {
       user: {
         id: "user-1",
         organizationId: "org-1",
-        role: "MAIN_OFFICER",
+        role: "ANALYST",
       },
     });
 
@@ -192,7 +191,7 @@ describe("isAdminTokenAuthorized", () => {
   });
 
   it("returns false when ADMIN_API_TOKEN is not set", () => {
-    delete process.env.ADMIN_API_TOKEN;
+    Reflect.deleteProperty(process.env, "ADMIN_API_TOKEN");
     const request = new Request("http://localhost:3000/api/test", {
       headers: { authorization: "Bearer some-token" },
     });

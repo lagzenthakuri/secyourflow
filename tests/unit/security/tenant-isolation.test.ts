@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Multi-tenant isolation tests.
@@ -8,8 +8,8 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
  * requirement for the SecYourFlow platform.
  */
 
-const mockAuth = vi.fn();
-const mockIsTwoFactorSatisfied = vi.fn();
+const mockAuth = vi.hoisted(() => vi.fn());
+const mockIsTwoFactorSatisfied = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/auth", () => ({
   auth: mockAuth,

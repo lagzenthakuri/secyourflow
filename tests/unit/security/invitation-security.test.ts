@@ -31,7 +31,7 @@ describe("generateInvitationToken", () => {
 
   it("only uses base64url characters", () => {
     const token = generateInvitationToken();
-    expect(token).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(token).toMatch(BASE64URL_PATTERN);
   });
 
   it("does not contain padding characters", () => {
@@ -115,13 +115,19 @@ describe("isInvitationUsed", () => {
   });
 
   it("returns true even for past usedAt dates", () => {
-    expect(isInvitationUsed(new Date(Date.now() - 365 * 24 * 60 * 60 * 1000))).toBe(true);
+    expect(
+      isInvitationUsed(new Date(Date.now() - 365 * 24 * 60 * 60 * 1000))
+    ).toBe(true);
   });
 });
 
 describe("isValidInvitationTokenFormat", () => {
   it("accepts valid base64url tokens", () => {
-    expect(isValidInvitationTokenFormat("aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890AbCd")).toBe(true);
+    expect(
+      isValidInvitationTokenFormat(
+        "aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890AbCdEfGhIj"
+      )
+    ).toBe(true);
   });
 
   it("rejects tokens that are too short", () => {
@@ -130,23 +136,37 @@ describe("isValidInvitationTokenFormat", () => {
   });
 
   it("rejects tokens with invalid characters", () => {
-    expect(isValidInvitationTokenFormat("aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890Ab!")).toBe(false);
-    expect(isValidInvitationTokenFormat("aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890Ab@")).toBe(false);
-    expect(isValidInvitationTokenFormat("aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890Ab#")).toBe(false);
+    expect(
+      isValidInvitationTokenFormat("aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890Ab!")
+    ).toBe(false);
+    expect(
+      isValidInvitationTokenFormat("aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890Ab@")
+    ).toBe(false);
+    expect(
+      isValidInvitationTokenFormat("aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890Ab#")
+    ).toBe(false);
   });
 
   it("rejects non-string inputs", () => {
     expect(isValidInvitationTokenFormat(null as unknown as string)).toBe(false);
-    expect(isValidInvitationTokenFormat(undefined as unknown as string)).toBe(false);
+    expect(isValidInvitationTokenFormat(undefined as unknown as string)).toBe(
+      false
+    );
     expect(isValidInvitationTokenFormat(123 as unknown as string)).toBe(false);
   });
 
   it("rejects tokens with padding", () => {
-    expect(isValidInvitationTokenFormat("aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890Ab=")).toBe(false);
+    expect(
+      isValidInvitationTokenFormat("aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890Ab=")
+    ).toBe(false);
   });
 
   it("accepts tokens with hyphens and underscores", () => {
-    expect(isValidInvitationTokenFormat("aBc-DeFg_HiJkLmNoPqRsTuVwXyZ1234567890Ab")).toBe(true);
+    expect(
+      isValidInvitationTokenFormat(
+        "aBc-DeFg_HiJkLmNoPqRsTuVwXyZ1234567890AbCdEfGhIj"
+      )
+    ).toBe(true);
   });
 
   it("rejects tokens at exactly 42 characters (below minimum)", () => {
@@ -159,3 +179,5 @@ describe("isValidInvitationTokenFormat", () => {
     expect(isValidInvitationTokenFormat(token)).toBe(true);
   });
 });
+
+const BASE64URL_PATTERN = /^[A-Za-z0-9_-]+$/;

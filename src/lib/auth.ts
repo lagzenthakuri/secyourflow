@@ -28,11 +28,11 @@ type RefreshableToken = Record<string, unknown> & {
   refreshToken?: string;
 };
 
-async function refreshAccessToken(
+function refreshAccessToken(
   token: RefreshableToken
 ): Promise<RefreshableToken> {
   // No refresh flow is configured for current OAuth providers.
-  return token;
+  return Promise.resolve(token);
 }
 
 const authSecret =
@@ -216,7 +216,7 @@ function redactSensitive(value: unknown, depth = 0): unknown {
 function extractIpFromForwardedHeader(headerValue: string): string | null {
   const forwardedEntries = headerValue.split(",");
   for (const entry of forwardedEntries) {
-    const forMatch = entry.match(/(?:^|;)\s*for=(?:"([^"]+)"|([^;,\s]+))/i);
+    const forMatch = entry.match(FORWARDED_FOR_PATTERN);
     const candidate = forMatch?.[1] ?? forMatch?.[2] ?? null;
     const normalized = normalizeIpAddress(candidate);
     if (normalized) {
@@ -356,6 +356,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
   ],
   callbacks: {
     ...authConfig.callbacks,
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Keep security checks together in the Auth.js token lifecycle.
     async jwt({ token, user, account, trigger, session }) {
       // Initial sign in
       if (account && user) {
@@ -403,7 +404,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
 
         token.organizationId = activatedSession.organizationId;
 
-        void import("./logger")
+        import("./logger")
           .then(({ logActivity }) => {
             return logActivity(
               "User login",
@@ -451,12 +452,12 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
             token.twoFactorVerifiedAt = updateSession.twoFactorVerifiedAt;
           }
 
-          const updatedTotpEnabled =
-            typeof updateSession.user?.totpEnabled === "boolean"
-              ? updateSession.user.totpEnabled
-              : typeof updateSession.totpEnabled === "boolean"
-                ? updateSession.totpEnabled
-                : undefined;
+          let updatedTotpEnabled: boolean | undefined;
+          if (typeof updateSession.user?.totpEnabled === "boolean") {
+            updatedTotpEnabled = updateSession.user.totpEnabled;
+          } else if (typeof updateSession.totpEnabled === "boolean") {
+            updatedTotpEnabled = updateSession.totpEnabled;
+          }
 
           if (typeof updatedTotpEnabled === "boolean") {
             token.totpEnabled = updatedTotpEnabled;
@@ -547,7 +548,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
 
       return token;
     },
-    async session({ session, token }) {
+    session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = (token.role as string) || "ANALYST";
@@ -615,3 +616,5 @@ declare module "next-auth" {
     };
   }
 }
+
+const FORWARDED_FOR_PATTERN = /(?:^|;)\s*for=(?:"([^"]+)"|([^;,\s]+))/i;

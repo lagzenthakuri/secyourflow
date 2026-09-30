@@ -5,6 +5,8 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
+import { expect, vi } from "vitest";
+import "@testing-library/jest-dom/vitest";
 
 // ─── Auth Helpers ────────────────────────────────────────────────────────────
 
@@ -42,20 +44,14 @@ export function createMockRequest(
 
 // ─── API Response Helpers ────────────────────────────────────────────────────
 
-export function createApiResponse<T>(
-  data: T,
-  status = 200
-): Response {
+export function createApiResponse<T>(data: T, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: { "Content-Type": "application/json" },
   });
 }
 
-export function createApiErrorResponse(
-  error: string,
-  status = 400
-): Response {
+export function createApiErrorResponse(error: string, status = 400): Response {
   return new Response(JSON.stringify({ error }), {
     status,
     headers: { "Content-Type": "application/json" },
@@ -75,19 +71,13 @@ export async function renderAndWait(
   return result;
 }
 
-export async function fillInput(
-  label: string,
-  value: string
-) {
+export async function fillInput(label: string, value: string) {
   const input = screen.getByLabelText(label);
   await userEvent.clear(input);
   await userEvent.type(input, value);
 }
 
-export async function selectOption(
-  label: string,
-  option: string
-) {
+export async function selectOption(label: string, option: string) {
   const select = screen.getByLabelText(label);
   await userEvent.selectOptions(select, option);
 }

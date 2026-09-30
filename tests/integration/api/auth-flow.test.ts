@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * API authentication flow integration tests.
@@ -8,8 +8,8 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
  * session validation, and API route handlers.
  */
 
-const mockAuth = vi.fn();
-const mockIsTwoFactorSatisfied = vi.fn();
+const mockAuth = vi.hoisted(() => vi.fn());
+const mockIsTwoFactorSatisfied = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/auth", () => ({
   auth: mockAuth,
@@ -207,7 +207,9 @@ describe("API authentication flow", () => {
     expect(result2.ok).toBe(true);
 
     if (result1.ok && result2.ok) {
-      expect(result1.context.organizationId).toBe(result2.context.organizationId);
+      expect(result1.context.organizationId).toBe(
+        result2.context.organizationId
+      );
     }
   });
 

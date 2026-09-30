@@ -9,12 +9,12 @@ import { describe, expect, it } from "vitest";
  */
 
 import {
-  deterministicAnalysis,
-  scoreFromAnalysis,
-  parseCVSSVector,
   clamp,
+  deterministicAnalysis,
   normalizeRiskAnalysis,
+  parseCVSSVector,
   type RiskAnalysis,
+  scoreFromAnalysis,
 } from "@/lib/risk/scoring";
 
 const defaultAsset = {
@@ -247,8 +247,12 @@ describe("deterministicAnalysis", () => {
     );
 
     expect(critical.likelihood_score).toBeGreaterThan(high.likelihood_score);
-    expect(high.likelihood_score).toBeGreaterThanOrEqual(medium.likelihood_score);
-    expect(medium.likelihood_score).toBeGreaterThanOrEqual(low.likelihood_score);
+    expect(high.likelihood_score).toBeGreaterThanOrEqual(
+      medium.likelihood_score
+    );
+    expect(medium.likelihood_score).toBeGreaterThanOrEqual(
+      low.likelihood_score
+    );
   });
 
   it("increases likelihood for CISA KEV vulnerabilities", () => {
@@ -398,10 +402,7 @@ describe("normalizeRiskAnalysis", () => {
   });
 
   it("clamps confidence to 0-1", () => {
-    const result = normalizeRiskAnalysis(
-      { confidence: 2 },
-      defaultAnalysis
-    );
+    const result = normalizeRiskAnalysis({ confidence: 2 }, defaultAnalysis);
     expect(result.confidence).toBe(1);
   });
 

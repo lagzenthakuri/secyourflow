@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { NextResponse } from "next/server";
+import { describe, expect, it } from "vitest";
 
 /**
  * Security headers tests.
@@ -34,16 +34,25 @@ describe("security headers", () => {
   });
 
   it("creates error responses with correct status codes", () => {
-    const unauthorized = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const unauthorized = NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
     expect(unauthorized.status).toBe(401);
 
-    const forbidden = NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const forbidden = NextResponse.json(
+      { error: "Forbidden" },
+      { status: 403 }
+    );
     expect(forbidden.status).toBe(403);
 
     const notFound = NextResponse.json({ error: "Not Found" }, { status: 404 });
     expect(notFound.status).toBe(404);
 
-    const serverError = NextResponse.json({ error: "Server Error" }, { status: 500 });
+    const serverError = NextResponse.json(
+      { error: "Server Error" },
+      { status: 500 }
+    );
     expect(serverError.status).toBe(500);
   });
 
@@ -60,7 +69,7 @@ describe("security headers", () => {
   it("sets cache control for API responses", () => {
     const response = NextResponse.json({ data: "test" });
     // API responses should not be cached by default
-    const cacheControl = response.headers.get("cache-control");
+    const _cacheControl = response.headers.get("cache-control");
     // The actual cache headers are set at the route level
     expect(response).toBeDefined();
   });
@@ -72,13 +81,18 @@ describe("security headers", () => {
   });
 
   it("creates redirect responses correctly", () => {
-    const response = NextResponse.redirect(new URL("/login", "http://localhost:3000"));
+    const response = NextResponse.redirect(
+      new URL("/login", "http://localhost:3000")
+    );
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toContain("/login");
   });
 
   it("creates permanent redirect responses correctly", () => {
-    const response = NextResponse.redirect(new URL("/dashboard", "http://localhost:3000"), 301);
+    const response = NextResponse.redirect(
+      new URL("/dashboard", "http://localhost:3000"),
+      301
+    );
     expect(response.status).toBe(301);
   });
 });
@@ -131,18 +145,12 @@ describe("authentication error responses", () => {
   });
 
   it("returns 403 for forbidden requests", () => {
-    const response = NextResponse.json(
-      { error: "Forbidden" },
-      { status: 403 }
-    );
+    const response = NextResponse.json({ error: "Forbidden" }, { status: 403 });
     expect(response.status).toBe(403);
   });
 
   it("returns 404 for missing resources", () => {
-    const response = NextResponse.json(
-      { error: "Not Found" },
-      { status: 404 }
-    );
+    const response = NextResponse.json({ error: "Not Found" }, { status: 404 });
     expect(response.status).toBe(404);
   });
 

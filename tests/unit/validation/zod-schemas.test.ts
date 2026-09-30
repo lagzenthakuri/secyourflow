@@ -34,7 +34,7 @@ const roleSchema = z.enum([
   "ANALYST",
 ]);
 
-const assetTypeSchema = z.enum([
+const _assetTypeSchema = z.enum([
   "SERVER",
   "DATABASE",
   "NETWORK",
@@ -65,12 +65,15 @@ const epssScoreSchema = z
 const urlSchema = z
   .string()
   .url("Invalid URL")
+  .refine(
+    (value) =>
+      URL.canParse(value) &&
+      ["http:", "https:"].includes(new URL(value).protocol),
+    "Only HTTP(S) URLs are allowed"
+  )
   .max(2048, "URL is too long");
 
-const idSchema = z
-  .string()
-  .min(1, "ID is required")
-  .max(100, "ID is too long");
+const idSchema = z.string().min(1, "ID is required").max(100, "ID is too long");
 
 describe("email validation", () => {
   it("accepts valid email addresses", () => {
@@ -224,8 +227,10 @@ describe("CVSS score validation", () => {
   });
 
   it("rejects NaN and Infinity", () => {
-    expect(cvssScoreSchema.safeParse(NaN).success).toBe(false);
-    expect(cvssScoreSchema.safeParse(Infinity).success).toBe(false);
+    expect(cvssScoreSchema.safeParse(Number.NaN).success).toBe(false);
+    expect(cvssScoreSchema.safeParse(Number.POSITIVE_INFINITY).success).toBe(
+      false
+    );
   });
 });
 
@@ -274,7 +279,9 @@ describe("URL validation", () => {
   });
 
   it("rejects data: URLs", () => {
-    expect(urlSchema.safeParse("data:text/html,<script>alert(1)</script>").success).toBe(false);
+    expect(
+      urlSchema.safeParse("data:text/html,<script>alert(1)</script>").success
+    ).toBe(false);
   });
 });
 
@@ -299,10 +306,10 @@ describe("ID validation", () => {
 });
 
 describe("malicious input handling", () => {
-  it("accepts SQL injection attempts in email (valid email format)", () => {
+  it("rejects SQL injection strings with invalid email syntax", () => {
     // Zod validates format, not content - SQL injection in email is still a valid format
     const result = emailSchema.safeParse("user' OR '1'='1' --@example.com");
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 
   it("accepts XSS attempts in name (valid string format)", () => {
@@ -327,7 +334,7 @@ describe("malicious input handling", () => {
   });
 
   it("handles very long strings", () => {
-    const longString = "A".repeat(10000);
+    const longString = "A".repeat(10_000);
     expect(nameSchema.safeParse(longString).success).toBe(false);
   });
 

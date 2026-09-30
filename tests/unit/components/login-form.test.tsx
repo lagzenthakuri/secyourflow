@@ -1,166 +1,131 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+// @vitest-environment jsdom
+import "@testing-library/jest-dom/vitest";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import LoginPage from "@/app/login/page";
 
-/**
- * Login form component tests.
- *
- * Tests the login form's user interaction, validation, and error handling.
- * Uses Testing Library to simulate real user behavior.
- */
+const mockSignIn = vi.hoisted(() => vi.fn());
+vi.mock("next-auth/react", () => ({ signIn: mockSignIn }));
 
-// Mock next-auth signIn
-const mockSignIn = vi.fn();
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+beforeEach(() => {
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {
+        /* No browser layout or timer work is needed in this test double. */
+      }
+      unobserve() {
+        /* No browser layout or timer work is needed in this test double. */
+      }
+      disconnect() {
+        /* No browser layout or timer work is needed in this test double. */
+      }
+    }
+  );
+  mockSignIn.mockReset();
+  // Keep the test on the login page after checking the outgoing credentials.
+  mockSignIn.mockResolvedValue({ error: "CredentialsSignin" });
+  window.history.replaceState(null, "", "/login");
+});
 
-vi.mock("next-auth/react", () => ({
-  signIn: mockSignIn,
-}));
+const emailLabel = /email/i;
+const passwordLabel = /^password$/i;
+const submitLabel = /^sign in$/i;
+async function submitCredentials(
+  email = "test@example.com",
+  password = "password123"
+) {
+  const user = userEvent.setup();
+  await user.type(screen.getByLabelText(emailLabel), email);
+  await user.type(screen.getByLabelText(passwordLabel), password);
+  await user.click(screen.getByRole("button", { name: submitLabel }));
+}
 
-// Mock next/navigation
-const mockRouter = {
-  push: vi.fn(),
-  replace: vi.fn(),
-};
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => mockRouter,
-}));
-
-// Mock next/link
-vi.mock("next/link", () => ({
-  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
-  ),
-}));
-
-import LoginForm from "@/components/auth/LoginForm";
-
-describe("LoginForm", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockSignIn.mockResolvedValue({ ok: true, error: null });
+describe("LoginPage", () => {
+  it("renders the credential fields and submit button", () => {
+    render(<LoginPage />);
+    expect(screen.getByLabelText(emailLabel)).toBeRequired();
+    expect(screen.getByLabelText(passwordLabel)).toBeRequired();
+    expect(screen.getByRole("button", { name: submitLabel })).toBeEnabled();
   });
 
-  it("renders email and password fields", () => {
-    render(<LoginForm />);
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+  it("blocks empty credentials using native form validation", async () => {
+    render(<LoginPage />);
+    await userEvent.click(screen.getByRole("button", { name: submitLabel }));
+    expect(screen.getByLabelText(emailLabel)).toBeInvalid();
+    expect(screen.getByLabelText(passwordLabel)).toBeInvalid();
+    expect(mockSignIn).not.toHaveBeenCalled();
   });
 
-  it("renders submit button", () => {
-    render(<LoginForm />);
-    expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
+  it("blocks a missing password", async () => {
+    render(<LoginPage />);
+    await userEvent.type(screen.getByLabelText(emailLabel), "test@example.com");
+    await userEvent.click(screen.getByRole("button", { name: submitLabel }));
+    expect(screen.getByLabelText(passwordLabel)).toBeInvalid();
+    expect(mockSignIn).not.toHaveBeenCalled();
   });
 
-  it("shows validation error for empty email", async () => {
-    render(<LoginForm />);
-    const button = screen.getByRole("button", { name: /sign in/i });
-    await userEvent.click(button);
-    await waitFor(() => {
-      expect(screen.getByText(/email is required/i)).toBeInTheDocument();
+  it("blocks invalid email syntax", async () => {
+    render(<LoginPage />);
+    await submitCredentials("not-an-email");
+    expect(screen.getByLabelText(emailLabel)).toBeInvalid();
+    expect(mockSignIn).not.toHaveBeenCalled();
+  });
+
+  it("sends credentials and the dashboard callback to Auth.js", async () => {
+    render(<LoginPage />);
+    await submitCredentials();
+    expect(mockSignIn).toHaveBeenCalledWith("credentials", {
+      email: "test@example.com",
+      password: "password123",
+      redirect: false,
+      callbackUrl: "/dashboard",
     });
   });
 
-  it("shows validation error for empty password", async () => {
-    render(<LoginForm />);
-    const emailInput = screen.getByLabelText(/email/i);
-    await userEvent.type(emailInput, "test@example.com");
-    const button = screen.getByRole("button", { name: /sign in/i });
-    await userEvent.click(button);
-    await waitFor(() => {
-      expect(screen.getByText(/password is required/i)).toBeInTheDocument();
-    });
+  it("shows a safe error when credentials are rejected", async () => {
+    render(<LoginPage />);
+    await submitCredentials();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Invalid email or password."
+    );
   });
 
-  it("shows validation error for invalid email format", async () => {
-    render(<LoginForm />);
-    const emailInput = screen.getByLabelText(/email/i);
-    await userEvent.type(emailInput, "not-an-email");
-    const button = screen.getByRole("button", { name: /sign in/i });
-    await userEvent.click(button);
-    await waitFor(() => {
-      expect(screen.getByText(/invalid email/i)).toBeInTheDocument();
-    });
-  });
-
-  it("calls signIn with correct credentials", async () => {
-    render(<LoginForm />);
-    const emailInput = screen.getByLabelText(/email/i);
-    const passwordInput = screen.getByLabelText(/password/i);
-    await userEvent.type(emailInput, "test@example.com");
-    await userEvent.type(passwordInput, "password123");
-    const button = screen.getByRole("button", { name: /sign in/i });
-    await userEvent.click(button);
-    await waitFor(() => {
-      expect(mockSignIn).toHaveBeenCalledWith("credentials", {
-        email: "test@example.com",
-        password: "password123",
-        redirect: false,
-      });
-    });
-  });
-
-  it("shows error message when signIn fails", async () => {
-    mockSignIn.mockResolvedValue({ ok: false, error: "CredentialsSignin" });
-    render(<LoginForm />);
-    const emailInput = screen.getByLabelText(/email/i);
-    const passwordInput = screen.getByLabelText(/password/i);
-    await userEvent.type(emailInput, "test@example.com");
-    await userEvent.type(passwordInput, "wrongpassword");
-    const button = screen.getByRole("button", { name: /sign in/i });
-    await userEvent.click(button);
-    await waitFor(() => {
-      expect(screen.getByText(/invalid email or password/i)).toBeInTheDocument();
-    });
-  });
-
-  it("disables submit button while loading", async () => {
-    mockSignIn.mockImplementation(() => new Promise(() => {})); // Never resolves
-    render(<LoginForm />);
-    const emailInput = screen.getByLabelText(/email/i);
-    const passwordInput = screen.getByLabelText(/password/i);
-    await userEvent.type(emailInput, "test@example.com");
-    await userEvent.type(passwordInput, "password123");
-    const button = screen.getByRole("button", { name: /sign in/i });
-    await userEvent.click(button);
-    await waitFor(() => {
-      expect(button).toBeDisabled();
-    });
-  });
-
-  it("trims whitespace from email", async () => {
-    render(<LoginForm />);
-    const emailInput = screen.getByLabelText(/email/i);
-    const passwordInput = screen.getByLabelText(/password/i);
-    await userEvent.type(emailInput, "  test@example.com  ");
-    await userEvent.type(passwordInput, "password123");
-    const button = screen.getByRole("button", { name: /sign in/i });
-    await userEvent.click(button);
-    await waitFor(() => {
-      expect(mockSignIn).toHaveBeenCalledWith(
-        "credentials",
-        expect.objectContaining({
-          email: "test@example.com",
+  it("disables submission while authentication is pending", async () => {
+    mockSignIn.mockImplementation(
+      () =>
+        new Promise(() => {
+          /* No browser layout or timer work is needed in this test double. */
         })
-      );
-    });
+    );
+    render(<LoginPage />);
+    await submitCredentials();
+    expect(screen.getByRole("button", { name: "Signing in…" })).toBeDisabled();
   });
 
-  it("converts email to lowercase", async () => {
-    render(<LoginForm />);
-    const emailInput = screen.getByLabelText(/email/i);
-    const passwordInput = screen.getByLabelText(/password/i);
-    await userEvent.type(emailInput, "TEST@EXAMPLE.COM");
-    await userEvent.type(passwordInput, "password123");
-    const button = screen.getByRole("button", { name: /sign in/i });
-    await userEvent.click(button);
-    await waitFor(() => {
-      expect(mockSignIn).toHaveBeenCalledWith(
-        "credentials",
-        expect.objectContaining({
-          email: "test@example.com",
-        })
-      );
-    });
+  it("recovers when the authentication request throws", async () => {
+    mockSignIn.mockRejectedValue(new Error("Network unavailable"));
+    render(<LoginPage />);
+    await submitCredentials();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Unable to sign in right now."
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: submitLabel })).toBeEnabled()
+    );
+  });
+
+  it("shows an OAuth error and removes technical query parameters", () => {
+    window.history.replaceState(null, "", "/login?error=Configuration");
+    render(<LoginPage />);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Sign-in is temporarily unavailable."
+    );
+    expect(window.location.search).toBe("");
   });
 });

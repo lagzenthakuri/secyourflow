@@ -1,8 +1,12 @@
+import {
+  JsonLd,
+  type SoftwareApplication,
+  type WithContext,
+} from "@repo/seo/json-ld";
 import { createMetadata } from "@repo/seo/metadata";
-import { JsonLd, type SoftwareApplication, type WithContext } from "@repo/seo/json-ld";
-import { LandingPage } from "@/modules/marketing/ui/LandingPage";
-import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { LandingPage } from "@/modules/marketing/ui/LandingPage";
 
 export const metadata = createMetadata({
   title: "Security findings to accountable response",

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const signInMock = vi.fn();
+const signInMock = vi.hoisted(() => vi.fn());
 
 vi.mock("next-auth/react", () => ({
   signIn: signInMock,
@@ -18,7 +18,8 @@ describe("openGoogleAuthPopup", () => {
   afterEach(() => {
     vi.useRealTimers();
     // Restore original window if it was stubbed
-    const originalWindow = (globalThis as Record<string, unknown>).__originalWindow;
+    const originalWindow = (globalThis as Record<string, unknown>)
+      .__originalWindow;
     if (originalWindow) {
       Object.defineProperty(globalThis, "window", {
         value: originalWindow,
@@ -44,19 +45,28 @@ describe("openGoogleAuthPopup", () => {
     });
 
     // Save original window before stubbing
-    (globalThis as Record<string, unknown>).__originalWindow = globalThis.window;
+    (globalThis as Record<string, unknown>).__originalWindow =
+      globalThis.window;
     Object.defineProperty(globalThis, "window", {
       value: {
         crypto: { randomUUID: () => "google-popup-test" },
         open: vi.fn(() => popup),
-        addEventListener: vi.fn((type: string, listener: (event: StorageEvent) => void) => {
-          listeners.set(type, listener);
-        }),
+        addEventListener: vi.fn(
+          (type: string, listener: (event: StorageEvent) => void) => {
+            listeners.set(type, listener);
+          }
+        ),
         removeEventListener: vi.fn((type: string) => listeners.delete(type)),
         setTimeout,
         clearTimeout,
-        setInterval: globalThis.setInterval ? globalThis.setInterval.bind(globalThis) : (() => 0),
-        clearInterval: globalThis.clearInterval ? globalThis.clearInterval.bind(globalThis) : (() => {}),
+        setInterval: globalThis.setInterval
+          ? globalThis.setInterval.bind(globalThis)
+          : () => 0,
+        clearInterval: globalThis.clearInterval
+          ? globalThis.clearInterval.bind(globalThis)
+          : () => {
+              /* No browser layout or timer work is needed in this test double. */
+            },
         document: globalThis.document,
         navigator: globalThis.navigator,
         location: parentLocation,
@@ -74,16 +84,24 @@ describe("openGoogleAuthPopup", () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(popup.location.assign).toHaveBeenCalledWith("https://accounts.google.com/oauth/authorize");
+    expect(popup.location.assign).toHaveBeenCalledWith(
+      "https://accounts.google.com/oauth/authorize"
+    );
 
-    await vi.advanceTimersByTime(2_500);
+    await vi.advanceTimersByTime(2500);
     await Promise.resolve();
     await Promise.resolve();
     expect(onError).not.toHaveBeenCalled();
 
     const resultKey = googleAuthPopupStorageKey("google-popup-test");
-    stored.set(resultKey, JSON.stringify({ id: "google-popup-test", status: "success" }));
-    listeners.get("storage")?.({ key: resultKey, newValue: stored.get(resultKey) } as StorageEvent);
+    stored.set(
+      resultKey,
+      JSON.stringify({ id: "google-popup-test", status: "success" })
+    );
+    listeners.get("storage")?.({
+      key: resultKey,
+      newValue: stored.get(resultKey),
+    } as StorageEvent);
 
     expect(parentLocation.assign).toHaveBeenCalledWith("/dashboard");
     expect(onError).not.toHaveBeenCalled();
