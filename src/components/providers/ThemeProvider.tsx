@@ -40,14 +40,6 @@ function isAppShellPath(pathname: string): boolean {
   return APP_SHELL_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
-function resolveSystemTheme(): ThemeMode {
-  if (typeof window === "undefined") {
-    return "dark";
-  }
-
-  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-}
-
 function resolveStoredTheme(): ThemeMode | null {
   if (typeof window === "undefined") {
     return null;
@@ -59,10 +51,6 @@ function resolveStoredTheme(): ThemeMode | null {
   }
 
   return null;
-}
-
-function resolveInitialTheme(): ThemeMode {
-  return resolveStoredTheme() ?? resolveSystemTheme();
 }
 
 function applyTheme(theme: ThemeMode) {
@@ -98,37 +86,17 @@ export function useTheme(): ThemeContextValue {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  // Start with the same theme on the server and client; browser preferences
-  // are applied after hydration to avoid mismatched toggle markup.
+  // Dark is the product default. The early bootstrap applies any saved choice
+  // before paint; this state initialization keeps that choice from being
+  // overwritten by the operating system after hydration.
   const [theme, setTheme] = useState<ThemeMode>("dark");
   const [themeInitialized, setThemeInitialized] = useState(false);
   const transitionTimeoutRef = useRef<number | null>(null);
-  const hasManualOverrideRef = useRef<boolean>(false);
 
   useEffect(() => {
     const storedTheme = resolveStoredTheme();
-    hasManualOverrideRef.current = storedTheme !== null;
-    setTheme(storedTheme ?? resolveSystemTheme());
+    setTheme(storedTheme ?? "dark");
     setThemeInitialized(true);
-  }, []);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: light)");
-
-    const handleSystemThemeChange = (event: MediaQueryListEvent) => {
-      if (hasManualOverrideRef.current) {
-        return;
-      }
-      setTheme(event.matches ? "light" : "dark");
-    };
-
-    if (typeof mediaQuery.addEventListener === "function") {
-      mediaQuery.addEventListener("change", handleSystemThemeChange);
-      return () => mediaQuery.removeEventListener("change", handleSystemThemeChange);
-    }
-
-    mediaQuery.addListener(handleSystemThemeChange);
-    return () => mediaQuery.removeListener(handleSystemThemeChange);
   }, []);
 
   useLayoutEffect(() => {
@@ -152,12 +120,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       window.clearTimeout(transitionTimeoutRef.current);
     }
     transitionTimeoutRef.current = startThemeTransition();
-    setTheme((current) => {
-      const next = current === "dark" ? "light" : "dark";
-      window.localStorage.setItem(THEME_STORAGE_KEY, next);
-      hasManualOverrideRef.current = true;
-      return next;
-    });
+    const next = theme === "dark" ? "light" : "dark";
+    window.localStorage.setItem(THEME_STORAGE_KEY, next);
+    setTheme(next);
   };
 
   const contextValue = useMemo<ThemeContextValue>(
@@ -173,7 +138,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   return (
     <ThemeContext.Provider value={contextValue}>
       {children}
-      {showFloatingToggle && (
+      {showFloatingToggle && themeInitialized && (
         <button
           type="button"
           onClick={toggleTheme}

@@ -5,6 +5,7 @@ import { Button } from "@repo/design-system/components/ui/button";
 import { marketingFeatures } from "../data/features";
 import { NebulaHeroBackground } from "./NebulaHeroBackground";
 import { MarketingSiteShell } from "./MarketingShell";
+import { getWorkspaceAccess } from "./workspace-access";
 
 const previewSections = [
   {
@@ -36,6 +37,7 @@ const previewSections = [
 const featureIcons = [Network, Bug, FileSearch, ClipboardCheck, Radio, ScanSearch];
 
 export function LandingPage() {
+  const workspaceAccess = getWorkspaceAccess();
   return (
     <MarketingSiteShell landing>
       <section id="landing-hero" className="landing-hero relative isolate flex min-h-[min(820px,calc(100svh-4rem))] items-center overflow-hidden border-b border-border bg-[#09090b] px-4 py-16 text-white sm:px-6 lg:px-8">
@@ -43,7 +45,7 @@ export function LandingPage() {
         <div aria-hidden="true" className="landing-hero-scrim pointer-events-none absolute inset-0 z-0" />
         <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center text-center">
           <div className="landing-hero-wordmark mb-8 flex items-center gap-3" aria-label="SecYourFlow">
-            <Image src="/logo1.png" alt="" width={44} height={44} priority className="size-11" />
+            <Image src="/logo1.png" alt="" width={44} height={44} priority className="h-11 w-auto" />
             <span className="text-sm font-semibold tracking-[0.2em] text-white">SECYOURFLOW</span>
           </div>
           <p className="landing-hero-eyebrow text-xs font-semibold uppercase tracking-[0.18em] text-white/70">Cyber risk operations</p>
@@ -54,9 +56,36 @@ export function LandingPage() {
             Track assets, review vulnerability and CVE records, assign remediation work, and keep risk and compliance activity connected.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Button asChild size="lg"><Link href="/signup">Create a workspace<ArrowRight className="ml-2 size-4" /></Link></Button>
+            <Button asChild size="lg"><Link href={workspaceAccess.href}>{workspaceAccess.label}<ArrowRight className="ml-2 size-4" /></Link></Button>
             <Button asChild variant="outline" size="lg" className="landing-hero-secondary border-white/25 bg-white/5 text-white hover:bg-white/10 hover:text-white"><Link href="/features">Explore the features</Link></Button>
           </div>
+        </div>
+      </section>
+
+      <section className="border-b border-border bg-muted/15 px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+        <div className="mx-auto grid max-w-7xl items-center gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-12">
+          <div>
+            <p className="text-sm font-medium text-primary">Security overview</p>
+            <h2 className="mt-2 font-serif text-3xl font-medium tracking-tight sm:text-4xl">Start with one view of exposure.</h2>
+            <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground">
+              The dashboard brings asset totals, priority findings, known-exploited records, and risk breakdown into one place. Open a finding to continue into its asset and remediation context.
+            </p>
+            <p className="mt-3 text-xs text-muted-foreground">Illustrative sample workspace and records.</p>
+            <Link className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline" href="/features">
+              Explore the workspace<ArrowRight className="size-4" />
+            </Link>
+          </div>
+          <figure className="overflow-hidden rounded-2xl border border-border bg-[#0b0d10] p-2 shadow-xl shadow-black/10 sm:p-3">
+            <Image
+              src="/screenshots/dashboard-preview.png"
+              alt="Illustrative SecYourFlow dashboard showing asset, remediation, and CISA KEV summary cards, priority findings, and a risk breakdown."
+              width={705}
+              height={829}
+              sizes="(max-width: 1024px) 100vw, 60vw"
+              className="mx-auto h-auto max-h-[680px] w-full rounded-xl object-contain"
+            />
+            <figcaption className="px-2 pt-2 text-xs text-white/60">Dashboard · illustrative sample workspace</figcaption>
+          </figure>
         </div>
       </section>
 
@@ -131,7 +160,7 @@ export function LandingPage() {
         <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">Use the product screens above to see how SecYourFlow organizes the work.</p>
           <div className="flex gap-2">
-            <Button asChild><Link href="/signup">Create workspace<ArrowRight className="ml-2 size-4" /></Link></Button>
+          <Button asChild><Link href={workspaceAccess.href}>{workspaceAccess.label}<ArrowRight className="ml-2 size-4" /></Link></Button>
             <Button asChild variant="outline"><Link href="/login">Sign in</Link></Button>
           </div>
         </div>

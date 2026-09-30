@@ -4,15 +4,17 @@ import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { Button } from "@repo/design-system/components/ui/button";
 import { marketingFeatures } from "../data/features";
 import { MarketingSiteShell } from "./MarketingShell";
+import { getWorkspaceAccess } from "./workspace-access";
 
 export function FeaturesPage() {
+  const workspaceAccess = getWorkspaceAccess();
   return (
     <MarketingSiteShell>
       <section className="border-b border-border bg-muted/20 px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <p className="text-sm font-medium text-primary">Product features</p>
           <h1 className="mt-3 max-w-3xl font-serif text-4xl font-medium leading-tight tracking-tight text-balance sm:text-5xl">Explore the work SecYourFlow supports.</h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">Each page explains a workflow and shows a focused section of the application. Create an account to use the workspace.</p>
+          <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">Each page explains a workflow and shows a focused section of the application. {workspaceAccess.description}</p>
         </div>
       </section>
 
@@ -38,8 +40,8 @@ export function FeaturesPage() {
 
       <section className="border-t border-border px-4 py-10 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div><h2 className="text-lg font-semibold">Ready to use the workspace?</h2><p className="mt-1 text-sm text-muted-foreground">Create an account to work with your organization’s records.</p></div>
-          <div className="flex gap-2"><Button asChild><Link href="/signup">Create workspace<ArrowRight className="ml-2 size-4" /></Link></Button><Button asChild variant="outline"><Link href="/login">Sign in</Link></Button></div>
+          <div><h2 className="text-lg font-semibold">Ready to use the workspace?</h2><p className="mt-1 text-sm text-muted-foreground">{workspaceAccess.description}</p></div>
+          <div className="flex gap-2"><Button asChild><Link href={workspaceAccess.href}>{workspaceAccess.label}<ArrowRight className="ml-2 size-4" /></Link></Button><Button asChild variant="outline"><Link href="/login">Sign in</Link></Button></div>
         </div>
       </section>
     </MarketingSiteShell>

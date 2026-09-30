@@ -4,6 +4,8 @@ import { ArrowRight } from "lucide-react";
 import { marketingFeatures } from "@/modules/marketing/data/features";
 import { MarketingSiteShell } from "@/modules/marketing/ui/MarketingShell";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Product guide | SecYourFlow",
   description: "Browse concise guides to SecYourFlow workflows.",

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { MarketingSiteShell } from "@/modules/marketing/ui/MarketingShell";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "About SecYourFlow",
   description: "SecYourFlow is a cyber risk operations workspace from Shyena Technologies Pvt. Ltd.",

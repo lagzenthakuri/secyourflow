@@ -21,7 +21,7 @@ export const marketingFeatures: MarketingFeature[] = [
     headline: "Know what is in scope and who owns it.",
     description: "Create records for servers, endpoints, cloud resources, and other assets. Keep type, environment, criticality, owner, location, network, and cloud details together. Use list or map views and narrow the inventory by the fields your team uses.",
     workflow: ["Record asset context and ownership.", "Filter by type, status, criticality, tags, or group.", "Connect findings to the asset they affect."],
-    screenshots: [{ src: "/screenshots/asset-inventory.png", alt: "Asset inventory search, filters, and list or map controls.", caption: "Inventory filters and list/map switch", width: 1785, height: 145 }],
+    screenshots: [{ src: "/screenshots/asset-inventory-section.png", alt: "Asset inventory workspace with summary metrics, search and filters, an asset list, and type and environment panels.", caption: "Inventory filters and asset context panels", width: 1810, height: 840 }],
     related: ["vulnerabilities", "risk-compliance"],
   },
   {
@@ -60,7 +60,7 @@ export const marketingFeatures: MarketingFeature[] = [
     headline: "Give each fix an owner and a way to verify it.",
     description: "Create remediation plans for vulnerability work, then track active, blocked, and completed plans. Search by plan, owner, or vulnerability and keep verification evidence with the work item.",
     workflow: ["Create a plan for the vulnerability work.", "Assign responsibility and track status.", "Record verification evidence when the fix is complete."],
-    screenshots: [{ src: "/screenshots/remediation-plans.png", alt: "Remediation plans heading and controls for refreshing the plan list or creating a new plan.", caption: "Remediation plan workspace", width: 1535, height: 160 }],
+    screenshots: [{ src: "/screenshots/remediation-plans-section.png", alt: "Remediation plans workspace with active, blocked, and completed counts, plan search, status filters, and the empty-state action.", caption: "Plan status and tracking workspace", width: 1600, height: 760 }],
     related: ["vulnerabilities", "assets"],
   },
   {
@@ -72,7 +72,7 @@ export const marketingFeatures: MarketingFeature[] = [
     headline: "Review external signals alongside internal findings.",
     description: "The threat workspace brings exploited-vulnerability context, feeds, indicators, matched assets, actor profiles, and an ATT&CK matrix into one view. Use it to inspect signals and correlate them with the assets and findings your team tracks.",
     workflow: ["Review exploited vulnerability and feed activity.", "Inspect indicators and ATT&CK context.", "Run correlation against tracked assets."],
-    screenshots: [{ src: "/screenshots/threat-intelligence.png", alt: "Threat intelligence workspace title, refresh and correlation actions, and overview tabs for ATT&CK, IOC, and actors.", caption: "Threat workspace navigation and correlation actions", width: 1602, height: 140 }],
+    screenshots: [{ src: "/screenshots/threat-intelligence-section.png", alt: "Threat intelligence workspace with exploited vulnerability, CISA KEV, feed, indicator, matched asset, and actor counts, plus overview panels.", caption: "Threat overview, correlation, and feed activity", width: 1628, height: 560 }],
     related: ["cve-search", "assets", "vulnerabilities"],
   },
   {
@@ -94,7 +94,7 @@ export const marketingFeatures: MarketingFeature[] = [
     summary: "Use AI for risk assessment and field suggestions with redaction and human-review controls.",
     eyebrow: "AI in SecYourFlow",
     headline: "AI assists specific steps; your team keeps the decision.",
-    description: "AI can run a risk assessment when a vulnerability is linked to an asset, suggest risk-register fields from a threat and CIA impacts, and support compliance analysis. Administrators can enable AI Assist, require human review before generated content is accepted, and set data-redaction rules.",
+    description: "AI can run a risk assessment when a vulnerability is linked to an asset and suggest risk-register fields from a threat and CIA impacts. Administrators can enable AI Assist, require human review before generated content is accepted, and set data-redaction rules. Compliance controls and evidence remain organized in their own workflow.",
     workflow: ["Enable the AI features the workspace allows.", "Use assessment or field suggestions within the relevant workflow.", "Review generated content before accepting it."],
     screenshots: [
       { src: "/screenshots/vulnerability-ai-assessment.png", alt: "Vulnerability form showing that linking an affected asset triggers an AI-powered risk assessment.", caption: "Asset-linked risk assessment", width: 455, height: 112 },

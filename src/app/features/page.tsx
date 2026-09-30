@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { FeaturesPage } from "@/modules/marketing/ui/FeaturesPage";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Product features | SecYourFlow",
   description:

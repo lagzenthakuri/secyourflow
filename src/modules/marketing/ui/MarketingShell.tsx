@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { Button } from "@repo/design-system/components/ui/button";
 import { LandingBrand } from "./LandingBrand";
+import { getWorkspaceAccess } from "./workspace-access";
 
 export function Brand() {
   return (
@@ -17,6 +18,7 @@ export function Brand() {
 }
 
 export function MarketingHeader({ homeBrandTransition = false }: { homeBrandTransition?: boolean }) {
+  const workspaceAccess = getWorkspaceAccess();
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
@@ -28,7 +30,7 @@ export function MarketingHeader({ homeBrandTransition = false }: { homeBrandTran
         </nav>
         <div className="flex items-center gap-2">
           <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex"><Link href="/login">Sign in</Link></Button>
-          <Button asChild size="sm"><Link href="/signup">Create workspace<ArrowUpRight className="ml-1 size-4" /></Link></Button>
+          <Button asChild size="sm"><Link href={workspaceAccess.href}>{workspaceAccess.label}<ArrowUpRight className="ml-1 size-4" /></Link></Button>
         </div>
       </div>
       <nav aria-label="Mobile navigation" className="flex items-center justify-center gap-6 border-t border-border px-4 py-2 md:hidden">
@@ -41,6 +43,7 @@ export function MarketingHeader({ homeBrandTransition = false }: { homeBrandTran
 }
 
 export function MarketingFooter() {
+  const workspaceAccess = getWorkspaceAccess();
   return (
     <footer className="border-t border-foreground/10 bg-background text-foreground">
       <div className="container mx-auto grid gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8 lg:py-16">
@@ -67,7 +70,7 @@ export function MarketingFooter() {
           <div className="flex flex-col items-start gap-2 text-sm">
             <h2 className="mb-1 font-medium">Account & legal</h2>
             <Link className="text-foreground/70 hover:text-foreground" href="/login">Sign in</Link>
-            <Link className="text-foreground/70 hover:text-foreground" href="/signup">Create workspace</Link>
+            <Link className="text-foreground/70 hover:text-foreground" href={workspaceAccess.href}>{workspaceAccess.label}</Link>
             <Link className="text-foreground/70 hover:text-foreground" href="/privacy-policy">Privacy</Link>
             <Link className="text-foreground/70 hover:text-foreground" href="/terms-of-service">Terms</Link>
           </div>

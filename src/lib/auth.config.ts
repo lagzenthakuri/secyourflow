@@ -2,24 +2,7 @@ import type { NextAuthConfig } from "next-auth";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
 import { hasRecentTwoFactorVerification, TWO_FACTOR_REVERIFY_INTERVAL_MS } from "@/lib/security/two-factor";
-
-const PROTECTED_PREFIXES = [
-    "/dashboard",
-    "/vulnerabilities",
-    "/assets",
-    "/threats",
-    "/compliance",
-    "/reports",
-    "/settings",
-    "/users",
-    "/scanners",
-    "/risk-register",
-    "/cves",
-];
-
-function startsWithAny(pathname: string, prefixes: string[]): boolean {
-    return prefixes.some((prefix) => pathname.startsWith(prefix));
-}
+import { isProtectedAppRoute } from "@/lib/auth/protected-routes";
 
 function pickEnv(...keys: string[]): string | undefined {
     for (const key of keys) {
@@ -121,7 +104,7 @@ export const authConfig = {
         authorized({ auth, request: { nextUrl } }) {
             const pathname = nextUrl.pathname;
             const isLoggedIn = Boolean(auth?.user);
-            const isProtectedRoute = startsWithAny(pathname, PROTECTED_PREFIXES);
+            const isProtectedRoute = isProtectedAppRoute(pathname);
             const isLoginPage = pathname.startsWith("/login");
             const isTwoFactorPage = pathname.startsWith("/auth/2fa");
 

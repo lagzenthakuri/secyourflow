@@ -4,6 +4,8 @@ import { ArrowUpRight, Mail, MapPin, Phone } from "lucide-react";
 import { MarketingSiteShell } from "@/modules/marketing/ui/MarketingShell";
 import { ContactForm } from "@/modules/marketing/ui/ContactForm";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Contact SecYourFlow",
   description: "Contact the SecYourFlow team about the product and workspaces.",
