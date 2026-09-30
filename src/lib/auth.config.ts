@@ -1,158 +1,176 @@
 import type { NextAuthConfig } from "next-auth";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
-import { hasRecentTwoFactorVerification, TWO_FACTOR_REVERIFY_INTERVAL_MS } from "@/lib/security/two-factor";
 import { isProtectedAppRoute } from "@/lib/auth/protected-routes";
+import {
+  hasRecentTwoFactorVerification,
+  TWO_FACTOR_REVERIFY_INTERVAL_MS,
+} from "@/lib/security/two-factor";
 
 function pickEnv(...keys: string[]): string | undefined {
-    for (const key of keys) {
-        const value = process.env[key];
-        if (typeof value === "string" && value.trim().length > 0) {
-            return value.trim();
-        }
+  for (const key of keys) {
+    const value = process.env[key];
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
     }
+  }
 
-    return undefined;
+  return undefined;
 }
 
 const githubClientId = pickEnv("AUTH_GITHUB_ID", "GITHUB_CLIENT_ID");
-const githubClientSecret = pickEnv("AUTH_GITHUB_SECRET", "GITHUB_CLIENT_SECRET");
+const githubClientSecret = pickEnv(
+  "AUTH_GITHUB_SECRET",
+  "GITHUB_CLIENT_SECRET"
+);
 const googleClientId = pickEnv("AUTH_GOOGLE_ID", "GOOGLE_CLIENT_ID");
-const googleClientSecret = pickEnv("AUTH_GOOGLE_SECRET", "GOOGLE_CLIENT_SECRET");
+const googleClientSecret = pickEnv(
+  "AUTH_GOOGLE_SECRET",
+  "GOOGLE_CLIENT_SECRET"
+);
 
 const oauthProviders: NextAuthConfig["providers"] = [];
 
 if (githubClientId && githubClientSecret) {
-    oauthProviders.push(
-        GitHub({
-            clientId: githubClientId,
-            clientSecret: githubClientSecret,
-        }),
-    );
+  oauthProviders.push(
+    GitHub({
+      clientId: githubClientId,
+      clientSecret: githubClientSecret,
+    })
+  );
 }
 
 if (googleClientId && googleClientSecret) {
-    oauthProviders.push(
-        Google({
-            clientId: googleClientId,
-            clientSecret: googleClientSecret,
-            // Always show Google's account chooser instead of silently
-            // reusing an existing Google browser session.
-            authorization: { params: { prompt: "select_account" } },
-            // Existing accounts predate the current OAuth client, so their
-            // provider ids no longer match. Google asserts ownership of the
-            // email it returns, so linking on a verified email address is
-            // sound here; do not copy this to a provider that does not.
-            allowDangerousEmailAccountLinking: true,
-        }),
-    );
+  oauthProviders.push(
+    Google({
+      clientId: googleClientId,
+      clientSecret: googleClientSecret,
+      // Always show Google's account chooser instead of silently
+      // reusing an existing Google browser session.
+      authorization: { params: { prompt: "select_account" } },
+      // Existing accounts predate the current OAuth client, so their
+      // provider ids no longer match. Google asserts ownership of the
+      // email it returns, so linking on a verified email address is
+      // sound here; do not copy this to a provider that does not.
+      allowDangerousEmailAccountLinking: true,
+    })
+  );
 }
 
 /** Provider ids the authentication pages should offer, resolved at build time. */
 export const enabledOAuthProviders = oauthProviders
-    .map((provider) => (typeof provider === "function" ? provider() : provider))
-    .map((provider) => ("id" in provider ? (provider.id as string) : ""))
-    .filter(Boolean);
+  .map((provider) => (typeof provider === "function" ? provider() : provider))
+  .map((provider) => ("id" in provider ? (provider.id as string) : ""))
+  .filter(Boolean);
 
 export const authConfig = {
-    providers: oauthProviders,
-    // Required for self-hosted deployments. Without it Auth.js rejects any
-    // request whose Host it does not recognise with UntrustedHost, and because
-    // this config backs the middleware gate in src/proxy.ts, that made every
-    // authenticated API call 401 behind a reverse proxy or on a bare host.
-    // `auth.ts` already sets this; the edge config was missed.
-    trustHost: true,
-    pages: {
-        signIn: "/login",
-        error: "/login",
+  providers: oauthProviders,
+  // Required for self-hosted deployments. Without it Auth.js rejects any
+  // request whose Host it does not recognise with UntrustedHost, and because
+  // this config backs the middleware gate in src/proxy.ts, that made every
+  // authenticated API call 401 behind a reverse proxy or on a bare host.
+  // `auth.ts` already sets this; the edge config was missed.
+  trustHost: true,
+  pages: {
+    signIn: "/login",
+    error: "/login",
+  },
+  callbacks: {
+    async jwt({ token }) {
+      if (typeof token.totpEnabled !== "boolean") {
+        token.totpEnabled = false;
+      }
+
+      if (typeof token.twoFactorVerified !== "boolean") {
+        token.twoFactorVerified = false;
+      }
+
+      if (
+        token.twoFactorVerified !== true ||
+        !hasRecentTwoFactorVerification(
+          true,
+          typeof token.twoFactorVerifiedAt === "number"
+            ? token.twoFactorVerifiedAt
+            : null,
+          TWO_FACTOR_REVERIFY_INTERVAL_MS
+        )
+      ) {
+        token.twoFactorVerified = false;
+        token.twoFactorVerifiedAt = null;
+      }
+
+      return token;
     },
-    callbacks: {
-        async jwt({ token }) {
-            if (typeof token.totpEnabled !== "boolean") {
-                token.totpEnabled = false;
-            }
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.totpEnabled = token.totpEnabled === true;
+      }
 
-            if (typeof token.twoFactorVerified !== "boolean") {
-                token.twoFactorVerified = false;
-            }
+      (session as { twoFactorVerified?: boolean }).twoFactorVerified =
+        token.twoFactorVerified === true;
+      (session as { twoFactorVerifiedAt?: number | null }).twoFactorVerifiedAt =
+        typeof token.twoFactorVerifiedAt === "number"
+          ? token.twoFactorVerifiedAt
+          : null;
 
-            if (
-                token.twoFactorVerified !== true ||
-                !hasRecentTwoFactorVerification(
-                    true,
-                    typeof token.twoFactorVerifiedAt === "number" ? token.twoFactorVerifiedAt : null,
-                    TWO_FACTOR_REVERIFY_INTERVAL_MS,
-                )
-            ) {
-                token.twoFactorVerified = false;
-                token.twoFactorVerifiedAt = null;
-            }
-
-            return token;
-        },
-        async session({ session, token }) {
-            if (session.user) {
-                session.user.totpEnabled = token.totpEnabled === true;
-            }
-
-            (session as { twoFactorVerified?: boolean }).twoFactorVerified = token.twoFactorVerified === true;
-            (session as { twoFactorVerifiedAt?: number | null }).twoFactorVerifiedAt =
-                typeof token.twoFactorVerifiedAt === "number" ? token.twoFactorVerifiedAt : null;
-
-            return session;
-        },
-        authorized({ auth, request: { nextUrl } }) {
-            const pathname = nextUrl.pathname;
-            const isLoggedIn = Boolean(auth?.user);
-            const isProtectedRoute = isProtectedAppRoute(pathname);
-            const isLoginPage = pathname.startsWith("/login");
-            const isTwoFactorPage = pathname.startsWith("/auth/2fa");
-
-            if (isProtectedRoute && !isLoggedIn) {
-                return false;
-            }
-
-            if (!isLoggedIn) {
-                return true;
-            }
-
-            const user = auth?.user as { totpEnabled?: boolean } | undefined;
-            const hasTotpEnabled = Boolean(user?.totpEnabled);
-            const isMainOfficer = auth?.user?.role === "MAIN_OFFICER";
-            const twoFactorState = auth as {
-                twoFactorVerified?: boolean;
-                twoFactorVerifiedAt?: number | null;
-            } | null;
-            const hasFreshTwoFactor = hasRecentTwoFactorVerification(
-                twoFactorState?.twoFactorVerified === true,
-                twoFactorState?.twoFactorVerifiedAt,
-                TWO_FACTOR_REVERIFY_INTERVAL_MS,
-            );
-
-            if (!isMainOfficer && hasTotpEnabled && !hasFreshTwoFactor) {
-                if (isTwoFactorPage) {
-                    return true;
-                }
-
-                if (isProtectedRoute || isLoginPage) {
-                    return Response.redirect(new URL("/auth/2fa", nextUrl));
-                }
-            }
-
-            if (isTwoFactorPage && hasFreshTwoFactor) {
-                return Response.redirect(new URL("/dashboard", nextUrl));
-            }
-
-            if (isLoginPage) {
-                return Response.redirect(new URL("/dashboard", nextUrl));
-            }
-
-            return true;
-        },
-        async redirect({ url, baseUrl }) {
-            if (url.startsWith("/")) return `${baseUrl}${url}`;
-            if (new URL(url).origin === baseUrl) return url;
-            return `${baseUrl}/dashboard`;
-        },
+      return session;
     },
+    authorized({ auth, request: { nextUrl } }) {
+      const pathname = nextUrl.pathname;
+      const isLoggedIn = Boolean(auth?.user);
+      const isProtectedRoute = isProtectedAppRoute(pathname);
+      const isLoginPage = pathname.startsWith("/login");
+      const isTwoFactorPage = pathname.startsWith("/auth/2fa");
+
+      if (isProtectedRoute && !isLoggedIn) {
+        return false;
+      }
+
+      if (!isLoggedIn) {
+        return true;
+      }
+
+      const user = auth?.user as { totpEnabled?: boolean } | undefined;
+      const hasTotpEnabled = Boolean(user?.totpEnabled);
+      const isMainOfficer = auth?.user?.role === "MAIN_OFFICER";
+      const twoFactorState = auth as {
+        twoFactorVerified?: boolean;
+        twoFactorVerifiedAt?: number | null;
+      } | null;
+      const hasFreshTwoFactor = hasRecentTwoFactorVerification(
+        twoFactorState?.twoFactorVerified === true,
+        twoFactorState?.twoFactorVerifiedAt,
+        TWO_FACTOR_REVERIFY_INTERVAL_MS
+      );
+
+      if (!isMainOfficer && hasTotpEnabled && !hasFreshTwoFactor) {
+        if (isTwoFactorPage) {
+          return true;
+        }
+
+        if (isProtectedRoute || isLoginPage) {
+          return Response.redirect(new URL("/auth/2fa", nextUrl));
+        }
+      }
+
+      if (isTwoFactorPage && hasFreshTwoFactor) {
+        return Response.redirect(new URL("/dashboard", nextUrl));
+      }
+
+      if (isLoginPage) {
+        return Response.redirect(new URL("/dashboard", nextUrl));
+      }
+
+      return true;
+    },
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+      if (new URL(url).origin === baseUrl) {
+        return url;
+      }
+      return `${baseUrl}/dashboard`;
+    },
+  },
 } satisfies NextAuthConfig;

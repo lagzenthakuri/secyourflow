@@ -1,43 +1,51 @@
-import NextAuth, { CredentialsSignin } from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
 import { randomUUID } from "node:crypto";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import bcrypt from "bcryptjs";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import type { Adapter } from "next-auth/adapters";
-import { prisma } from "./prisma";
-import { authConfig } from "./auth.config";
+import Credentials from "next-auth/providers/credentials";
+import {
+  canOAuthSignIn,
+  isPublicRegistrationEnabled,
+} from "@/lib/auth/registration-policy";
 import { assertTotpEncryptionKeyConfigured } from "@/lib/crypto/totpSecret";
-import { normalizeIpAddress } from "@/lib/request-utils";
-import { activateUserSession } from "@/lib/user-provisioning";
 import {
-    clearDatabaseUnavailable,
-    isDatabaseUnavailableError,
-    markDatabaseUnavailable,
+  clearDatabaseUnavailable,
+  isDatabaseUnavailableError,
+  markDatabaseUnavailable,
 } from "@/lib/database-availability";
+import { normalizeIpAddress } from "@/lib/request-utils";
 import {
-    assertTwoFactorSessionUpdateKeyConfigured,
-    isTrustedTwoFactorSessionUpdate,
+  hasRecentTwoFactorVerification,
+  TWO_FACTOR_REVERIFY_INTERVAL_MS,
+} from "@/lib/security/two-factor";
+import {
+  assertTwoFactorSessionUpdateKeyConfigured,
+  isTrustedTwoFactorSessionUpdate,
 } from "@/lib/security/two-factor-session";
-import { hasRecentTwoFactorVerification, TWO_FACTOR_REVERIFY_INTERVAL_MS } from "@/lib/security/two-factor";
-import { canOAuthSignIn, isPublicRegistrationEnabled } from "@/lib/auth/registration-policy";
+import { activateUserSession } from "@/lib/user-provisioning";
+import { authConfig } from "./auth.config";
+import { prisma } from "./prisma";
 
 type RefreshableToken = Record<string, unknown> & {
-    provider?: string;
-    refreshToken?: string;
+  provider?: string;
+  refreshToken?: string;
 };
 
-async function refreshAccessToken(token: RefreshableToken): Promise<RefreshableToken> {
-    // No refresh flow is configured for current OAuth providers.
-    return token;
+async function refreshAccessToken(
+  token: RefreshableToken
+): Promise<RefreshableToken> {
+  // No refresh flow is configured for current OAuth providers.
+  return token;
 }
 
 const authSecret =
-    process.env.AUTH_SECRET ||
-    process.env.NEXTAUTH_SECRET ||
-    (process.env.NODE_ENV !== "production" ? "local-dev-auth-secret" : undefined);
+  process.env.AUTH_SECRET ||
+  process.env.NEXTAUTH_SECRET ||
+  (process.env.NODE_ENV !== "production" ? "local-dev-auth-secret" : undefined);
 
 class OAuthOnlyCredentialsSigninError extends CredentialsSignin {
-    code = "oauth_only";
+  code = "oauth_only";
 }
 
 /**
@@ -46,7 +54,7 @@ class OAuthOnlyCredentialsSigninError extends CredentialsSignin {
  * would send them nowhere.
  */
 class NoPasswordSetError extends CredentialsSignin {
-    code = "no_password_set";
+  code = "no_password_set";
 }
 
 /**
@@ -56,7 +64,7 @@ class NoPasswordSetError extends CredentialsSignin {
  * malformed Auth.js configuration, so preserve a safe, actionable error code.
  */
 class LoginServiceUnavailableError extends CredentialsSignin {
-    code = "service_unavailable";
+  code = "service_unavailable";
 }
 
 /**
@@ -67,55 +75,64 @@ class LoginServiceUnavailableError extends CredentialsSignin {
 const authDebugEnabled = process.env.AUTH_DEBUG === "true";
 
 function getOperationalErrorCode(error: unknown): string | null {
-    const queue: unknown[] = [error];
-    const seen = new Set<unknown>();
+  const queue: unknown[] = [error];
+  const seen = new Set<unknown>();
 
-    while (queue.length > 0) {
-        const value = queue.shift();
+  while (queue.length > 0) {
+    const value = queue.shift();
 
-        if ((typeof value !== "object" && typeof value !== "function") || value === null) {
-            continue;
-        }
-
-        if (seen.has(value)) {
-            continue;
-        }
-        seen.add(value);
-
-        const candidate = value as { code?: unknown; cause?: unknown };
-        if (typeof candidate.code === "string" && candidate.code.trim()) {
-            return candidate.code.trim();
-        }
-
-        if (candidate.cause !== undefined) {
-            queue.push(candidate.cause);
-        }
+    if (
+      (typeof value !== "object" && typeof value !== "function") ||
+      value === null
+    ) {
+      continue;
     }
 
-    return null;
+    if (seen.has(value)) {
+      continue;
+    }
+    seen.add(value);
+
+    const candidate = value as { code?: unknown; cause?: unknown };
+    if (typeof candidate.code === "string" && candidate.code.trim()) {
+      return candidate.code.trim();
+    }
+
+    if (candidate.cause !== undefined) {
+      queue.push(candidate.cause);
+    }
+  }
+
+  return null;
 }
 
-async function withLoginDatabase<T>(operation: string, action: () => Promise<T>): Promise<T> {
-    try {
-        const result = await action();
-        clearDatabaseUnavailable();
-        return result;
-    } catch (error) {
-        if (!isDatabaseUnavailableError(error)) {
-            throw error;
-        }
-
-        if (markDatabaseUnavailable()) {
-            // Keep the log useful to operators without writing connection
-            // strings, submitted credentials, or user email addresses.
-            console.error(`[auth] Login temporarily unavailable during ${operation}.`, {
-                errorType: error instanceof Error ? error.name : typeof error,
-                errorCode: getOperationalErrorCode(error),
-            });
-        }
-
-        throw new LoginServiceUnavailableError();
+async function withLoginDatabase<T>(
+  operation: string,
+  action: () => Promise<T>
+): Promise<T> {
+  try {
+    const result = await action();
+    clearDatabaseUnavailable();
+    return result;
+  } catch (error) {
+    if (!isDatabaseUnavailableError(error)) {
+      throw error;
     }
+
+    if (markDatabaseUnavailable()) {
+      // Keep the log useful to operators without writing connection
+      // strings, submitted credentials, or user email addresses.
+      console.error(
+        `[auth] Login temporarily unavailable during ${operation}.`,
+        {
+          errorType: error instanceof Error ? error.name : typeof error,
+          errorCode: getOperationalErrorCode(error),
+        }
+      );
+    }
+
+    throw new LoginServiceUnavailableError();
+  }
 }
 
 /**
@@ -125,53 +142,56 @@ async function withLoginDatabase<T>(operation: string, action: () => Promise<T>)
  * same safe service-unavailable code used by credential authentication.
  */
 function withDatabaseFailureHandling(adapter: Adapter): Adapter {
-    return new Proxy(adapter, {
-        get(target, property) {
-            const method = Reflect.get(target, property, target);
-            if (typeof method !== "function") {
-                return method;
-            }
+  return new Proxy(adapter, {
+    get(target, property) {
+      const method = Reflect.get(target, property, target);
+      if (typeof method !== "function") {
+        return method;
+      }
 
-            return async (...args: unknown[]) => {
-                try {
-                    const result = await method.apply(target, args);
-                    clearDatabaseUnavailable();
-                    return result;
-                } catch (error) {
-                    if (!isDatabaseUnavailableError(error)) {
-                        throw error;
-                    }
+      return async (...args: unknown[]) => {
+        try {
+          const result = await method.apply(target, args);
+          clearDatabaseUnavailable();
+          return result;
+        } catch (error) {
+          if (!isDatabaseUnavailableError(error)) {
+            throw error;
+          }
 
-                    if (markDatabaseUnavailable()) {
-                        console.error(`[auth] Database unavailable during adapter operation ${String(property)}.`, {
-                            errorType: error instanceof Error ? error.name : typeof error,
-                            errorCode: getOperationalErrorCode(error),
-                        });
-                    }
+          if (markDatabaseUnavailable()) {
+            console.error(
+              `[auth] Database unavailable during adapter operation ${String(property)}.`,
+              {
+                errorType: error instanceof Error ? error.name : typeof error,
+                errorCode: getOperationalErrorCode(error),
+              }
+            );
+          }
 
-                    throw new LoginServiceUnavailableError();
-                }
-            };
-        },
-    });
+          throw new LoginServiceUnavailableError();
+        }
+      };
+    },
+  });
 }
 
 const authAdapter = withDatabaseFailureHandling(PrismaAdapter(prisma));
 
 const REDACTED = "[redacted]";
 const SENSITIVE_KEYS = new Set([
-    "password",
-    "newpassword",
-    "currentpassword",
-    "confirmpassword",
-    "secret",
-    "token",
-    "csrftoken",
-    "accesstoken",
-    "refreshtoken",
-    "clientsecret",
-    "totp",
-    "code",
+  "password",
+  "newpassword",
+  "currentpassword",
+  "confirmpassword",
+  "secret",
+  "token",
+  "csrftoken",
+  "accesstoken",
+  "refreshtoken",
+  "clientsecret",
+  "totp",
+  "code",
 ]);
 
 /**
@@ -179,415 +199,444 @@ const SENSITIVE_KEYS = new Set([
  * so enabling AUTH_DEBUG stays safe even on a shared machine.
  */
 function redactSensitive(value: unknown, depth = 0): unknown {
-    if (depth > 6 || value === null || typeof value !== "object") {
-        return value;
-    }
+  if (depth > 6 || value === null || typeof value !== "object") {
+    return value;
+  }
 
-    if (Array.isArray(value)) {
-        return value.map((entry) => redactSensitive(entry, depth + 1));
-    }
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactSensitive(entry, depth + 1));
+  }
 
-    return Object.fromEntries(
-        Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
-            key,
-            SENSITIVE_KEYS.has(key.toLowerCase()) ? REDACTED : redactSensitive(entry, depth + 1),
-        ]),
-    );
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+      key,
+      SENSITIVE_KEYS.has(key.toLowerCase())
+        ? REDACTED
+        : redactSensitive(entry, depth + 1),
+    ])
+  );
 }
 
 const FORWARDED_FOR_PATTERN = /(?:^|;)\s*for=(?:"([^"]+)"|([^;,\s]+))/i;
 
 function extractIpFromForwardedHeader(headerValue: string): string | null {
-    const forwardedEntries = headerValue.split(",");
-    for (const entry of forwardedEntries) {
-        const forMatch = entry.match(FORWARDED_FOR_PATTERN);
-        const candidate = forMatch?.[1] ?? forMatch?.[2] ?? null;
-        const normalized = normalizeIpAddress(candidate);
-        if (normalized) {
-            return normalized;
-        }
+  const forwardedEntries = headerValue.split(",");
+  for (const entry of forwardedEntries) {
+    const forMatch = entry.match(FORWARDED_FOR_PATTERN);
+    const candidate = forMatch?.[1] ?? forMatch?.[2] ?? null;
+    const normalized = normalizeIpAddress(candidate);
+    if (normalized) {
+      return normalized;
     }
+  }
 
-    return null;
+  return null;
 }
 
 function extractLoginIpFromRequest(request?: Request): string | null {
-    if (!request) {
-        return null;
-    }
-
-    const headers = request.headers;
-
-    const forwarded = headers.get("forwarded");
-    if (forwarded) {
-        const forwardedIp = extractIpFromForwardedHeader(forwarded);
-        if (forwardedIp) {
-            return forwardedIp;
-        }
-    }
-
-    const xForwardedFor = headers.get("x-forwarded-for");
-    if (xForwardedFor) {
-        const candidates = xForwardedFor.split(",");
-        for (const candidate of candidates) {
-            const normalized = normalizeIpAddress(candidate);
-            if (normalized) {
-                return normalized;
-            }
-        }
-    }
-
-    const directHeaderCandidates = [
-        headers.get("x-real-ip"),
-        headers.get("cf-connecting-ip"),
-        headers.get("true-client-ip"),
-    ];
-
-    for (const candidate of directHeaderCandidates) {
-        const normalized = normalizeIpAddress(candidate);
-        if (normalized) {
-            return normalized;
-        }
-    }
-
+  if (!request) {
     return null;
+  }
+
+  const headers = request.headers;
+
+  const forwarded = headers.get("forwarded");
+  if (forwarded) {
+    const forwardedIp = extractIpFromForwardedHeader(forwarded);
+    if (forwardedIp) {
+      return forwardedIp;
+    }
+  }
+
+  const xForwardedFor = headers.get("x-forwarded-for");
+  if (xForwardedFor) {
+    const candidates = xForwardedFor.split(",");
+    for (const candidate of candidates) {
+      const normalized = normalizeIpAddress(candidate);
+      if (normalized) {
+        return normalized;
+      }
+    }
+  }
+
+  const directHeaderCandidates = [
+    headers.get("x-real-ip"),
+    headers.get("cf-connecting-ip"),
+    headers.get("true-client-ip"),
+  ];
+
+  for (const candidate of directHeaderCandidates) {
+    const normalized = normalizeIpAddress(candidate);
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  return null;
 }
 
 export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
-    ...authConfig,
-    secret: authSecret,
-    adapter: authAdapter,
-    session: {
-        strategy: "jwt",
-        maxAge: 2 * 24 * 60 * 60, // 2 days
-        updateAge: 1 * 60 * 60, // 1 hour - update session every hour if active
-    },
-    providers: [
-        Credentials({
-            name: "Credentials",
-            credentials: {
-                email: { label: "Email", type: "email" },
-                password: { label: "Password", type: "password" },
+  ...authConfig,
+  secret: authSecret,
+  adapter: authAdapter,
+  session: {
+    strategy: "jwt",
+    maxAge: 2 * 24 * 60 * 60, // 2 days
+    updateAge: 1 * 60 * 60, // 1 hour - update session every hour if active
+  },
+  providers: [
+    Credentials({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials, request) {
+        const email =
+          typeof credentials?.email === "string"
+            ? credentials.email.trim().toLowerCase()
+            : "";
+        const password =
+          typeof credentials?.password === "string" ? credentials.password : "";
+
+        if (!(email && password)) {
+          return null;
+        }
+
+        const loginIp = extractLoginIpFromRequest(request);
+
+        const user = await withLoginDatabase("account lookup", () =>
+          prisma.user.findFirst({
+            where: {
+              email: {
+                equals: email,
+                mode: "insensitive",
+              },
             },
-            async authorize(credentials, request) {
-                const email = typeof credentials?.email === "string" ? credentials.email.trim().toLowerCase() : "";
-                const password = typeof credentials?.password === "string" ? credentials.password : "";
-
-                if (!email || !password) {
-                    return null;
-                }
-
-                const loginIp = extractLoginIpFromRequest(request);
-
-                const user = await withLoginDatabase("account lookup", () =>
-                    prisma.user.findFirst({
-                        where: {
-                            email: {
-                                equals: email,
-                                mode: "insensitive",
-                            },
-                        },
-                        select: {
-                            id: true,
-                            email: true,
-                            name: true,
-                            role: true,
-                            password: true,
-                            image: true,
-                            totpEnabled: true,
-                        },
-                    }),
-                );
-
-                if (!user) {
-                    return null;
-                }
-
-                if (!user.password) {
-                    // Only send the user to a provider that actually exists.
-                    throw authConfig.providers.length > 0
-                        ? new OAuthOnlyCredentialsSigninError()
-                        : new NoPasswordSetError();
-                }
-
-                let isValidPassword = false;
-                try {
-                    isValidPassword = await bcrypt.compare(password, user.password);
-                } catch {
-                    return null;
-                }
-
-                if (!isValidPassword) {
-                    return null;
-                }
-
-                return {
-                    id: user.id,
-                    email: user.email,
-                    name: user.name,
-                    image: user.image,
-                    role: user.role,
-                    totpEnabled: user.totpEnabled,
-                    loginIp,
-                };
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              role: true,
+              password: true,
+              image: true,
+              totpEnabled: true,
             },
-        }),
-        ...authConfig.providers,
-    ],
-    callbacks: {
-        ...authConfig.callbacks,
-        async signIn({ user, account }) {
-            if (account?.type !== "oauth" || isPublicRegistrationEnabled()) {
-                return true;
-            }
+          })
+        );
 
-            // The public registration switch covers OAuth-created users too.
-            // Existing users may continue using their linked or verified-email
-            // provider account while new accounts remain closed by default.
-            const email = user.email?.trim();
-            if (!email) {
-                return false;
-            }
+        if (!user) {
+          return null;
+        }
 
-            const existingUser = await prisma.user.findFirst({
-                where: { email: { equals: email, mode: "insensitive" } },
-                select: { id: true },
-            });
+        if (!user.password) {
+          // Only send the user to a provider that actually exists.
+          throw authConfig.providers.length > 0
+            ? new OAuthOnlyCredentialsSigninError()
+            : new NoPasswordSetError();
+        }
 
-            return canOAuthSignIn(false, Boolean(existingUser));
-        },
-        async jwt({ token, user, account, trigger, session }) {
-            // Initial sign in
-            if (account && user) {
-                const signInUser = user as typeof user & {
-                    role?: string;
-                    totpEnabled?: boolean;
-                    loginIp?: string | null;
-                };
+        let isValidPassword = false;
+        try {
+          isValidPassword = await bcrypt.compare(password, user.password);
+        } catch {
+          return null;
+        }
 
-                if (!user.id) {
-                    throw new LoginServiceUnavailableError();
-                }
+        if (!isValidPassword) {
+          return null;
+        }
 
-                const userId = user.id;
-                token.id = userId;
-                token.role = signInUser.role || "ANALYST";
-                token.totpEnabled = Boolean(signInUser.totpEnabled);
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+          role: user.role,
+          totpEnabled: user.totpEnabled,
+          loginIp,
+        };
+      },
+    }),
+    ...authConfig.providers,
+  ],
+  callbacks: {
+    ...authConfig.callbacks,
+    async signIn({ user, account }) {
+      if (account?.type !== "oauth" || isPublicRegistrationEnabled()) {
+        return true;
+      }
 
-                // OAuth specific tokens
-                token.accessToken = account.access_token;
-                token.refreshToken = account.refresh_token;
-                token.expiresAt = (account.expires_at ?? 0) * 1000;
-                token.provider = account.provider;
+      // The public registration switch covers OAuth-created users too.
+      // Existing users may continue using their linked or verified-email
+      // provider account while new accounts remain closed by default.
+      const email = user.email?.trim();
+      if (!email) {
+        return false;
+      }
 
-                const activeSessionId = randomUUID();
-                const activeSessionIp = normalizeIpAddress(signInUser.loginIp);
+      const existingUser = await prisma.user.findFirst({
+        where: { email: { equals: email, mode: "insensitive" } },
+        select: { id: true },
+      });
 
-                token.activeSessionId = activeSessionId;
-                // Always require a fresh 2FA flow after login.
-                token.twoFactorVerified = false;
-                token.twoFactorVerifiedAt = null;
-                token.authenticatedAt = Date.now();
-
-                const activatedSession = await withLoginDatabase("session initialization", () =>
-                    activateUserSession({
-                        userId,
-                        name: user.name,
-                        email: user.email,
-                        activeSessionId,
-                        activeSessionIp,
-                    }),
-                );
-
-                token.organizationId = activatedSession.organizationId;
-
-                void import("./logger").then(({ logActivity }) => {
-                    return logActivity("User login", "auth", user.email || "unknown", null, null, "User logged in", userId);
-                }).catch(() => undefined);
-
-                return token;
-            }
-
-            // Validate 2FA-related secrets only when this session can actually use 2FA.
-            if (process.env.NODE_ENV === "production" && token.totpEnabled === true) {
-                assertTotpEncryptionKeyConfigured();
-                assertTwoFactorSessionUpdateKeyConfigured();
-            }
-
-            if (trigger === "update" && session) {
-                const updateSession = session as {
-                    __twoFactorSessionUpdateKey?: string;
-                    twoFactorVerified?: boolean;
-                    twoFactorVerifiedAt?: number | null;
-                    authenticatedAt?: number;
-                    totpEnabled?: boolean;
-                    user?: {
-                        totpEnabled?: boolean;
-                    };
-                };
-
-                // Prevent client-controlled session updates from mutating sensitive 2FA state.
-                if (isTrustedTwoFactorSessionUpdate(updateSession)) {
-                    if (typeof updateSession.twoFactorVerified === "boolean") {
-                        token.twoFactorVerified = updateSession.twoFactorVerified;
-                    }
-
-                    if (
-                        typeof updateSession.twoFactorVerifiedAt === "number" ||
-                        updateSession.twoFactorVerifiedAt === null
-                    ) {
-                        token.twoFactorVerifiedAt = updateSession.twoFactorVerifiedAt;
-                    }
-
-                    const updatedTotpEnabled =
-                        typeof updateSession.user?.totpEnabled === "boolean"
-                            ? updateSession.user.totpEnabled
-                            : typeof updateSession.totpEnabled === "boolean"
-                                ? updateSession.totpEnabled
-                                : undefined;
-
-                    if (typeof updatedTotpEnabled === "boolean") {
-                        token.totpEnabled = updatedTotpEnabled;
-                    }
-
-                    if (typeof updateSession.authenticatedAt === "number") {
-                        token.authenticatedAt = updateSession.authenticatedAt;
-                    }
-                }
-            }
-
-            if (typeof token.id === "string") {
-                // This callback runs on every session read, so it is the one
-                // authoritative read of the user row per request. Carry the
-                // organization and role on the token from the same query —
-                // `requireSessionWithOrg` used to repeat this lookup, doubling
-                // the per-request database cost for no extra freshness.
-                try {
-                    const sessionState = await prisma.user.findUnique({
-                        where: { id: token.id },
-                        select: { activeSessionId: true, organizationId: true, role: true },
-                    });
-
-                    if (
-                        !sessionState?.activeSessionId ||
-                        typeof token.activeSessionId !== "string" ||
-                        token.activeSessionId !== sessionState.activeSessionId
-                    ) {
-                        return null;
-                    }
-
-                    token.organizationId = sessionState.organizationId ?? null;
-                    token.role = sessionState.role || "ANALYST";
-                } catch (error) {
-                    if (isDatabaseUnavailableError(error)) {
-                        if (markDatabaseUnavailable()) {
-                            console.warn("[auth] Database unavailable during session validation.");
-                        }
-                        // Invalidate the session and let the client retry after the database cooldown.
-                        return null;
-                    }
-                    throw error;
-                }
-            }
-
-            if (typeof token.totpEnabled !== "boolean") {
-                token.totpEnabled = false;
-            }
-
-            if (!token.totpEnabled) {
-                token.twoFactorVerified = false;
-                token.twoFactorVerifiedAt = null;
-            } else if (typeof token.twoFactorVerified !== "boolean") {
-                token.twoFactorVerified = false;
-                token.twoFactorVerifiedAt = null;
-            } else if (token.twoFactorVerified !== true) {
-                token.twoFactorVerifiedAt = null;
-            } else if (
-                !hasRecentTwoFactorVerification(
-                    true,
-                    typeof token.twoFactorVerifiedAt === "number" ? token.twoFactorVerifiedAt : null,
-                    TWO_FACTOR_REVERIFY_INTERVAL_MS,
-                )
-            ) {
-                // Require 2FA re-verification after the allowed interval.
-                token.twoFactorVerified = false;
-                token.twoFactorVerifiedAt = null;
-            }
-
-            if (typeof token.authenticatedAt !== "number") {
-                token.authenticatedAt = Date.now();
-            }
-
-            // Return previous token if the access token has not expired yet
-            if (token.expiresAt && Date.now() < (token.expiresAt as number)) {
-                return token;
-            }
-
-            // Access token has expired, try to update it
-            if (token.refreshToken) {
-                return refreshAccessToken(token);
-            }
-
-            return token;
-        },
-        async session({ session, token }) {
-            if (token && session.user) {
-                session.user.id = token.id as string;
-                session.user.role = (token.role as string) || "ANALYST";
-                session.user.organizationId =
-                    typeof token.organizationId === "string" ? token.organizationId : null;
-                session.user.totpEnabled = Boolean(token.totpEnabled);
-                session.twoFactorVerified = token.twoFactorVerified === true;
-                session.twoFactorVerifiedAt =
-                    typeof token.twoFactorVerifiedAt === "number" ? token.twoFactorVerifiedAt : null;
-                session.authenticatedAt = typeof token.authenticatedAt === "number" ? token.authenticatedAt : null;
-                session.accessToken = token.accessToken as string | undefined;
-                session.error = token.error as string | undefined;
-            }
-
-            return session;
-        },
+      return canOAuthSignIn(false, Boolean(existingUser));
     },
-    trustHost: true,
-    debug: authDebugEnabled,
-    logger: {
-        error(error) {
-            console.error("[auth][error]", error);
-        },
-        warn(code) {
-            console.warn("[auth][warn]", code);
-        },
-        debug(message, metadata) {
-            if (!authDebugEnabled) {
-                return;
+    async jwt({ token, user, account, trigger, session }) {
+      // Initial sign in
+      if (account && user) {
+        const signInUser = user as typeof user & {
+          role?: string;
+          totpEnabled?: boolean;
+          loginIp?: string | null;
+        };
+
+        if (!user.id) {
+          throw new LoginServiceUnavailableError();
+        }
+
+        const userId = user.id;
+        token.id = userId;
+        token.role = signInUser.role || "ANALYST";
+        token.totpEnabled = Boolean(signInUser.totpEnabled);
+
+        // OAuth specific tokens
+        token.accessToken = account.access_token;
+        token.refreshToken = account.refresh_token;
+        token.expiresAt = (account.expires_at ?? 0) * 1000;
+        token.provider = account.provider;
+
+        const activeSessionId = randomUUID();
+        const activeSessionIp = normalizeIpAddress(signInUser.loginIp);
+
+        token.activeSessionId = activeSessionId;
+        // Always require a fresh 2FA flow after login.
+        token.twoFactorVerified = false;
+        token.twoFactorVerifiedAt = null;
+        token.authenticatedAt = Date.now();
+
+        const activatedSession = await withLoginDatabase(
+          "session initialization",
+          () =>
+            activateUserSession({
+              userId,
+              name: user.name,
+              email: user.email,
+              activeSessionId,
+              activeSessionIp,
+            })
+        );
+
+        token.organizationId = activatedSession.organizationId;
+
+        void import("./logger")
+          .then(({ logActivity }) => {
+            return logActivity(
+              "User login",
+              "auth",
+              user.email || "unknown",
+              null,
+              null,
+              "User logged in",
+              userId
+            );
+          })
+          .catch(() => undefined);
+
+        return token;
+      }
+
+      // Validate 2FA-related secrets only when this session can actually use 2FA.
+      if (process.env.NODE_ENV === "production" && token.totpEnabled === true) {
+        assertTotpEncryptionKeyConfigured();
+        assertTwoFactorSessionUpdateKeyConfigured();
+      }
+
+      if (trigger === "update" && session) {
+        const updateSession = session as {
+          __twoFactorSessionUpdateKey?: string;
+          twoFactorVerified?: boolean;
+          twoFactorVerifiedAt?: number | null;
+          authenticatedAt?: number;
+          totpEnabled?: boolean;
+          user?: {
+            totpEnabled?: boolean;
+          };
+        };
+
+        // Prevent client-controlled session updates from mutating sensitive 2FA state.
+        if (isTrustedTwoFactorSessionUpdate(updateSession)) {
+          if (typeof updateSession.twoFactorVerified === "boolean") {
+            token.twoFactorVerified = updateSession.twoFactorVerified;
+          }
+
+          if (
+            typeof updateSession.twoFactorVerifiedAt === "number" ||
+            updateSession.twoFactorVerifiedAt === null
+          ) {
+            token.twoFactorVerifiedAt = updateSession.twoFactorVerifiedAt;
+          }
+
+          const updatedTotpEnabled =
+            typeof updateSession.user?.totpEnabled === "boolean"
+              ? updateSession.user.totpEnabled
+              : typeof updateSession.totpEnabled === "boolean"
+                ? updateSession.totpEnabled
+                : undefined;
+
+          if (typeof updatedTotpEnabled === "boolean") {
+            token.totpEnabled = updatedTotpEnabled;
+          }
+
+          if (typeof updateSession.authenticatedAt === "number") {
+            token.authenticatedAt = updateSession.authenticatedAt;
+          }
+        }
+      }
+
+      if (typeof token.id === "string") {
+        // This callback runs on every session read, so it is the one
+        // authoritative read of the user row per request. Carry the
+        // organization and role on the token from the same query —
+        // `requireSessionWithOrg` used to repeat this lookup, doubling
+        // the per-request database cost for no extra freshness.
+        try {
+          const sessionState = await prisma.user.findUnique({
+            where: { id: token.id },
+            select: { activeSessionId: true, organizationId: true, role: true },
+          });
+
+          if (
+            !sessionState?.activeSessionId ||
+            typeof token.activeSessionId !== "string" ||
+            token.activeSessionId !== sessionState.activeSessionId
+          ) {
+            return null;
+          }
+
+          token.organizationId = sessionState.organizationId ?? null;
+          token.role = sessionState.role || "ANALYST";
+        } catch (error) {
+          if (isDatabaseUnavailableError(error)) {
+            if (markDatabaseUnavailable()) {
+              console.warn(
+                "[auth] Database unavailable during session validation."
+              );
             }
-            console.debug("[auth][debug]", message, redactSensitive(metadata));
-        },
+            // Invalidate the session and let the client retry after the database cooldown.
+            return null;
+          }
+          throw error;
+        }
+      }
+
+      if (typeof token.totpEnabled !== "boolean") {
+        token.totpEnabled = false;
+      }
+
+      if (!token.totpEnabled) {
+        token.twoFactorVerified = false;
+        token.twoFactorVerifiedAt = null;
+      } else if (typeof token.twoFactorVerified !== "boolean") {
+        token.twoFactorVerified = false;
+        token.twoFactorVerifiedAt = null;
+      } else if (token.twoFactorVerified !== true) {
+        token.twoFactorVerifiedAt = null;
+      } else if (
+        !hasRecentTwoFactorVerification(
+          true,
+          typeof token.twoFactorVerifiedAt === "number"
+            ? token.twoFactorVerifiedAt
+            : null,
+          TWO_FACTOR_REVERIFY_INTERVAL_MS
+        )
+      ) {
+        // Require 2FA re-verification after the allowed interval.
+        token.twoFactorVerified = false;
+        token.twoFactorVerifiedAt = null;
+      }
+
+      if (typeof token.authenticatedAt !== "number") {
+        token.authenticatedAt = Date.now();
+      }
+
+      // Return previous token if the access token has not expired yet
+      if (token.expiresAt && Date.now() < (token.expiresAt as number)) {
+        return token;
+      }
+
+      // Access token has expired, try to update it
+      if (token.refreshToken) {
+        return refreshAccessToken(token);
+      }
+
+      return token;
     },
+    async session({ session, token }) {
+      if (token && session.user) {
+        session.user.id = token.id as string;
+        session.user.role = (token.role as string) || "ANALYST";
+        session.user.organizationId =
+          typeof token.organizationId === "string"
+            ? token.organizationId
+            : null;
+        session.user.totpEnabled = Boolean(token.totpEnabled);
+        session.twoFactorVerified = token.twoFactorVerified === true;
+        session.twoFactorVerifiedAt =
+          typeof token.twoFactorVerifiedAt === "number"
+            ? token.twoFactorVerifiedAt
+            : null;
+        session.authenticatedAt =
+          typeof token.authenticatedAt === "number"
+            ? token.authenticatedAt
+            : null;
+        session.accessToken = token.accessToken as string | undefined;
+        session.error = token.error as string | undefined;
+      }
+
+      return session;
+    },
+  },
+  trustHost: true,
+  debug: authDebugEnabled,
+  logger: {
+    error(error) {
+      console.error("[auth][error]", error);
+    },
+    warn(code) {
+      console.warn("[auth][warn]", code);
+    },
+    debug(message, metadata) {
+      if (!authDebugEnabled) {
+        return;
+      }
+      console.debug("[auth][debug]", message, redactSensitive(metadata));
+    },
+  },
 });
 
 declare module "next-auth" {
-    interface User {
-        role?: string;
-        totpEnabled?: boolean;
-        loginIp?: string | null;
-    }
+  interface User {
+    loginIp?: string | null;
+    role?: string;
+    totpEnabled?: boolean;
+  }
 
-    interface Session {
-        user: {
-            id: string;
-            name?: string | null;
-            email?: string | null;
-            image?: string | null;
-            role?: string;
-            totpEnabled?: boolean;
-            /** Null when the user has not been provisioned into an organization. */
-            organizationId?: string | null;
-        };
-        twoFactorVerified?: boolean;
-        twoFactorVerifiedAt?: number | null;
-        authenticatedAt?: number | null;
-        accessToken?: string;
-        error?: string;
-    }
+  interface Session {
+    accessToken?: string;
+    authenticatedAt?: number | null;
+    error?: string;
+    twoFactorVerified?: boolean;
+    twoFactorVerifiedAt?: number | null;
+    user: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      role?: string;
+      totpEnabled?: boolean;
+      /** Null when the user has not been provisioned into an organization. */
+      organizationId?: string | null;
+    };
+  }
 }

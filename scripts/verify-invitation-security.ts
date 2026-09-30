@@ -47,7 +47,7 @@ const checks: SecurityCheck[] = [
       return (
         registerRoute.includes("if (!isPublicRegistrationEnabled())") &&
         registrationPolicy.includes(
-          'value: string | undefined = process.env.ALLOW_PUBLIC_REGISTRATION'
+          "value: string | undefined = process.env.ALLOW_PUBLIC_REGISTRATION"
         ) &&
         registrationPolicy.includes('return value === "true"') &&
         registerRoute.includes('code: "REGISTRATION_DISABLED"')
