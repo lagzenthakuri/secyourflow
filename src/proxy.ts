@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import NextAuth from "next-auth";
+import { isProtectedAppRoute } from "@/lib/auth/protected-routes";
 import { authConfig } from "@/lib/auth.config";
 
 const { auth } = NextAuth(authConfig);
@@ -34,16 +35,24 @@ function isPublicApiPath(pathname: string): boolean {
 export default auth((request) => {
   const pathname = request.nextUrl.pathname;
 
-  if (
-    pathname.startsWith("/api/") &&
-    !isPublicApiPath(pathname) &&
-    request.method !== "OPTIONS" &&
-    !request.auth?.user
-  ) {
-    return NextResponse.json(
-      { error: "Unauthorized. Sign in required." },
-      { status: 401 }
+  if (pathname.startsWith("/api/")) {
+    if (
+      !isPublicApiPath(pathname) &&
+      request.method !== "OPTIONS" &&
+      !request.auth?.user
+    ) {
+      return NextResponse.json(
+        { error: "Unauthorized. Sign in required." },
+        { status: 401 }
+      );
+    }
+  } else if (isProtectedAppRoute(pathname) && !request.auth?.user) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set(
+      "callbackUrl",
+      `${pathname}${request.nextUrl.search}`
     );
+    return NextResponse.redirect(loginUrl);
   }
 
   return null;
@@ -64,8 +73,12 @@ export const config = {
     "/users/:path*",
     "/scanners/:path*",
     "/risk-register/:path*",
+    "/risk-appetite/:path*",
     "/cves/:path*",
     "/nis2/:path*",
-    "/licensing",
+    "/licensing/:path*",
+    "/policies/:path*",
+    "/vendors/:path*",
+    "/data/:path*",
   ],
 };

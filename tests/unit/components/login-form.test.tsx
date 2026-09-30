@@ -28,8 +28,8 @@ beforeEach(() => {
     }
   );
   mockSignIn.mockReset();
-  // Keep the test on the login page after checking the outgoing credentials.
-  mockSignIn.mockResolvedValue({ error: "CredentialsSignin" });
+  // Auth.js handles successful redirects; keep the mock inert during the test.
+  mockSignIn.mockResolvedValue(undefined);
   window.history.replaceState(null, "", "/login");
 });
 
@@ -77,20 +77,19 @@ describe("LoginPage", () => {
     expect(mockSignIn).not.toHaveBeenCalled();
   });
 
-  it("sends credentials and the dashboard callback to Auth.js", async () => {
+  it("sends credentials and the dashboard redirect to Auth.js", async () => {
     render(<LoginPage />);
     await submitCredentials();
     expect(mockSignIn).toHaveBeenCalledWith("credentials", {
       email: "test@example.com",
       password: "password123",
-      redirect: false,
-      callbackUrl: "/dashboard",
+      redirectTo: "/dashboard",
     });
   });
 
   it("shows a safe error when credentials are rejected", async () => {
+    window.history.replaceState(null, "", "/login?error=CredentialsSignin");
     render(<LoginPage />);
-    await submitCredentials();
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Invalid email or password."
     );

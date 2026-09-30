@@ -2,7 +2,6 @@
 
 import {
   AlertCircle,
-  Bot,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -31,10 +30,15 @@ interface EvidenceTask {
   priority: "HIGH" | "MEDIUM" | "LOW";
 }
 
-interface AIInsight {
+interface AssessmentNote {
   controlId: string;
   explanation: string;
-  sentiment: "positive" | "negative" | "neutral";
+  status:
+    | "COMPLIANT"
+    | "NON_COMPLIANT"
+    | "NEEDS_REVIEW"
+    | "NOT_APPLICABLE"
+    | "MIXED";
 }
 
 export function ComplianceEngine() {
@@ -44,7 +48,7 @@ export function ComplianceEngine() {
   const [isLoading, setIsLoading] = useState(true);
   const [checks, setChecks] = useState<ComplianceCheck[]>([]);
   const [evidenceTasks, setEvidenceTasks] = useState<EvidenceTask[]>([]);
-  const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
+  const [assessmentNotes, setAssessmentNotes] = useState<AssessmentNote[]>([]);
 
   const fetchData = async () => {
     try {
@@ -76,10 +80,10 @@ export function ComplianceEngine() {
         setEvidenceTasks([]);
       }
 
-      if (data.aiInsights && data.aiInsights.length > 0) {
-        setAiInsights(data.aiInsights);
+      if (data.assessmentNotes && data.assessmentNotes.length > 0) {
+        setAssessmentNotes(data.assessmentNotes);
       } else {
-        setAiInsights([]);
+        setAssessmentNotes([]);
       }
     } catch (error) {
       console.error("Error fetching compliance data:", error);
@@ -94,7 +98,7 @@ export function ComplianceEngine() {
     // Set up polling every 30 seconds
     const interval = setInterval(fetchData, 30_000);
     return () => clearInterval(interval);
-  }, [fetchData]);
+  }, []);
 
   const handleRefresh = () => {
     fetchData();
@@ -105,14 +109,14 @@ export function ComplianceEngine() {
       <div className="flex items-center justify-between border-[var(--border-color)] border-b p-5">
         <div className="flex items-center gap-3">
           <div className="rounded-lg bg-indigo-500/10 p-2 text-indigo-500">
-            <Bot size={20} />
+            <ShieldCheck size={20} />
           </div>
           <div>
             <h2 className="font-semibold text-[var(--text-primary)] text-lg">
               Compliance Engine
             </h2>
             <p className="text-[var(--text-secondary)] text-sm">
-              AI-driven controls monitoring & evidence automation
+              Control status and evidence follow-up
             </p>
           </div>
         </div>
@@ -210,10 +214,10 @@ export function ComplianceEngine() {
                 <>
                   {evidenceTasks.map((task) => (
                     <div
-                      className="group cursor-pointer rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 transition-colors hover:bg-[var(--bg-elevated)]"
+                      className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3"
                       key={`${task.id}-${task.controlId}`}
                     >
-                      <p className="font-medium text-[var(--text-primary)] text-sm transition-colors group-hover:text-indigo-400">
+                      <p className="font-medium text-[var(--text-primary)] text-sm">
                         {task.description}
                       </p>
                       <div className="mt-2 flex items-center justify-between">
@@ -238,18 +242,15 @@ export function ComplianceEngine() {
                       </div>
                     </div>
                   ))}
-                  <button className="w-full rounded-xl border border-indigo-500/30 border-dashed py-2 font-medium text-indigo-400 text-xs transition-colors hover:bg-indigo-500/5 hover:text-indigo-300">
-                    + Generate New Task
-                  </button>
                 </>
               )}
             </div>
           </div>
 
-          {/* Column 3: AI Insights */}
-          <div className="space-y-4 bg-gradient-to-b from-indigo-500/5 to-transparent p-5">
-            <h3 className="flex items-center gap-2 font-medium text-indigo-400 text-sm uppercase tracking-wider">
-              <Bot size={14} /> AI Auditor Insights
+          {/* Column 3: Stored assessment notes and status summaries */}
+          <div className="space-y-4 p-5">
+            <h3 className="flex items-center gap-2 font-medium text-[var(--text-muted)] text-sm uppercase tracking-wider">
+              <ShieldCheck size={14} /> Assessment notes
             </h3>
             <div className="space-y-3">
               {isLoading ? (
@@ -257,52 +258,54 @@ export function ComplianceEngine() {
                   <div className="h-24 rounded-xl bg-[var(--bg-tertiary)]" />
                   <div className="h-24 rounded-xl bg-[var(--bg-tertiary)]" />
                 </div>
-              ) : aiInsights.length === 0 ? (
-                <div className="rounded-xl border border-indigo-500/20 border-dashed p-4 text-center text-indigo-400/70 text-sm">
-                  No AI insights available yet.
+              ) : assessmentNotes.length === 0 ? (
+                <div className="rounded-xl border border-[var(--border-color)] border-dashed p-4 text-center text-[var(--text-muted)] text-sm">
+                  No assessment notes yet.
                 </div>
               ) : (
-                <>
-                  {aiInsights.map((insight, idx) => (
-                    <div
-                      className="group relative rounded-xl border border-indigo-200/20 bg-[var(--bg-card)]/80 p-3 backdrop-blur-sm"
-                      key={idx}
-                    >
-                      <div className="absolute top-4 -left-1 h-6 w-1 rounded-r-full bg-indigo-500" />
-                      <div className="ml-2">
-                        <p className="text-[var(--text-primary)] text-sm leading-relaxed">
-                          <span className="mr-1 font-semibold text-indigo-400">
-                            {insight.controlId}:
-                          </span>
-                          {insight.explanation}
-                        </p>
-                        {insight.sentiment === "positive" && (
-                          <div className="mt-2 flex items-center gap-1.5 text-emerald-500 text-xs">
-                            <CheckCircle2 size={12} />
-                            <span>Compliance verified</span>
-                          </div>
-                        )}
-                        {insight.sentiment === "neutral" && (
-                          <div className="mt-2 flex items-center gap-1.5 text-amber-500 text-xs">
-                            <ShieldAlert size={12} />
-                            <span>Attention needed</span>
-                          </div>
-                        )}
-                        {insight.sentiment === "negative" && (
-                          <div className="mt-2 flex items-center gap-1.5 text-red-500 text-xs">
-                            <ShieldAlert size={12} />
-                            <span>Critical issue</span>
-                          </div>
-                        )}
-                      </div>
+                assessmentNotes.map((insight) => (
+                  <div
+                    className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] p-3"
+                    key={insight.controlId}
+                  >
+                    <div>
+                      <p className="text-[var(--text-primary)] text-sm leading-relaxed">
+                        <span className="mr-1 font-semibold text-[var(--text-primary)]">
+                          {insight.controlId}:
+                        </span>
+                        {insight.explanation}
+                      </p>
+                      {insight.status === "COMPLIANT" && (
+                        <div className="mt-2 flex items-center gap-1.5 text-emerald-500 text-xs">
+                          <CheckCircle2 size={12} />
+                          <span>Marked compliant</span>
+                        </div>
+                      )}
+                      {insight.status === "NEEDS_REVIEW" && (
+                        <div className="mt-2 flex items-center gap-1.5 text-amber-500 text-xs">
+                          <ShieldAlert size={12} />
+                          <span>Review needed</span>
+                        </div>
+                      )}
+                      {insight.status === "NON_COMPLIANT" && (
+                        <div className="mt-2 flex items-center gap-1.5 text-red-500 text-xs">
+                          <ShieldAlert size={12} />
+                          <span>Marked non-compliant</span>
+                        </div>
+                      )}
+                      {insight.status === "NOT_APPLICABLE" && (
+                        <div className="mt-2 text-[var(--text-muted)] text-xs">
+                          Not applicable
+                        </div>
+                      )}
+                      {insight.status === "MIXED" && (
+                        <div className="mt-2 text-[var(--text-muted)] text-xs">
+                          Compliant or not applicable
+                        </div>
+                      )}
                     </div>
-                  ))}
-                  <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)]/50 p-3 text-center">
-                    <p className="text-[var(--text-muted)] text-xs">
-                      AI is continuously analyzing controls...
-                    </p>
                   </div>
-                </>
+                ))
               )}
             </div>
           </div>

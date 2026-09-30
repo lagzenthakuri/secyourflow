@@ -14,11 +14,23 @@ const files = execFileSync(
 if (files.length === 0) {
   console.log("No changed files to lint.");
 } else {
-  const result = spawnSync("bun", ["run", "check", ...files], {
-    stdio: "inherit",
-  });
-  if (result.error) {
-    throw result.error;
+  const batchSize = 40;
+  let failed = false;
+  for (let index = 0; index < files.length; index += batchSize) {
+    const batch = files.slice(index, index + batchSize);
+    const result = spawnSync(
+      "bun",
+      ["x", "biome", "check", "--no-errors-on-unmatched", ...batch],
+      { stdio: "inherit" }
+    );
+    if (result.error) {
+      throw result.error;
+    }
+    if (result.status !== 0) {
+      failed = true;
+    }
   }
-  process.exitCode = result.status ?? 1;
+  if (failed) {
+    process.exitCode = 1;
+  }
 }

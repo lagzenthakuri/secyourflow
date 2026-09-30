@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { isPublicRegistrationEnabled } from "@/lib/auth/registration-policy";
 import {
   isDatabaseUnavailableError,
   markDatabaseUnavailable,
@@ -31,10 +32,6 @@ const registerSchema = z
   })
   .strict();
 
-function isPublicRegistrationAllowed(): boolean {
-  return process.env.ALLOW_PUBLIC_REGISTRATION === "true";
-}
-
 function getErrorCode(error: unknown): string | null {
   if (typeof error !== "object" || error === null || !("code" in error)) {
     return null;
@@ -50,7 +47,7 @@ function jsonResponse(body: object, status: number): NextResponse {
 }
 
 export async function POST(request: NextRequest) {
-  if (!isPublicRegistrationAllowed()) {
+  if (!isPublicRegistrationEnabled()) {
     return jsonResponse(
       {
         error: "Public registration is disabled.",

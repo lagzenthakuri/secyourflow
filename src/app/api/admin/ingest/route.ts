@@ -8,6 +8,8 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const maxDuration = 300; // 5 minutes
 
+const SESSION_COOKIE_PATTERN = /(__Secure-)?(next-auth|authjs)\.session-token=/;
+
 function isAuthorizedByAdminToken(request: Request): boolean {
   const authHeader = request.headers.get("authorization");
   const adminToken = process.env.ADMIN_API_TOKEN;
@@ -26,8 +28,7 @@ export async function POST(request: Request) {
   const tokenAuthorized = isAuthorizedByAdminToken(request);
   if (!tokenAuthorized) {
     const cookieHeader = request.headers.get("cookie") ?? "";
-    const hasSessionCookie =
-      /(__Secure-)?(next-auth|authjs)\.session-token=/.test(cookieHeader);
+    const hasSessionCookie = SESSION_COOKIE_PATTERN.test(cookieHeader);
 
     if (!hasSessionCookie) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -89,38 +89,64 @@ export async function GET(request: NextRequest) {
       orderBy: { updatedAt: "desc" },
     });
 
-    const aiInsights = insightControls.map((control) => ({
+    const assessmentNotes = insightControls.map((control) => ({
       controlId: control.controlId,
       explanation:
         control.notes ||
-        `Analysis of ${control.controlId} indicates ${control.status.toLowerCase().replace("_", " ")} status.`,
-      sentiment:
+        `Recorded status: ${control.status.toLowerCase().replaceAll("_", " ")}.`,
+      status:
         control.status === "COMPLIANT"
-          ? "positive"
+          ? "COMPLIANT"
           : control.status === "NON_COMPLIANT"
-            ? "negative"
-            : "neutral",
+            ? "NON_COMPLIANT"
+            : control.status === "NOT_APPLICABLE"
+              ? "NOT_APPLICABLE"
+              : "NEEDS_REVIEW",
     }));
 
     // With no per-control notes, fall back to a summary of overall posture.
-    if (aiInsights.length === 0 && monitoredControls.length > 0) {
+    if (assessmentNotes.length === 0 && monitoredControls.length > 0) {
       const failingCount = monitoredControls.filter(
         (c) => c.status === "NON_COMPLIANT"
       ).length;
-      aiInsights.push({
+      const needsReviewCount = monitoredControls.filter(
+        (c) => c.status === "PARTIALLY_COMPLIANT" || c.status === "NOT_ASSESSED"
+      ).length;
+      const allCompliant = monitoredControls.every(
+        (c) => c.status === "COMPLIANT"
+      );
+      const allNotApplicable = monitoredControls.every(
+        (c) => c.status === "NOT_APPLICABLE"
+      );
+      assessmentNotes.push({
         controlId: "Summary",
         explanation:
           failingCount > 0
-            ? `${failingCount} controls are currently failing compliance checks. Focus on ${monitoredControls.find((c) => c.status === "NON_COMPLIANT")?.title || "high priority items"}.`
-            : "All monitored controls are currently passing. System posture is healthy.",
-        sentiment: failingCount > 0 ? "negative" : "positive",
+            ? `${failingCount} monitored controls are marked non-compliant${needsReviewCount > 0 ? `; ${needsReviewCount} need review` : ""}. Review ${monitoredControls.find((c) => c.status === "NON_COMPLIANT")?.title || "the affected controls"}.`
+            : needsReviewCount > 0
+              ? `No monitored controls are marked non-compliant; ${needsReviewCount} need review.`
+              : allCompliant
+                ? "All monitored controls are currently marked compliant."
+                : allNotApplicable
+                  ? "All monitored controls are marked not applicable."
+                  : "No monitored controls need review; controls are marked compliant or not applicable.",
+        status:
+          failingCount > 0
+            ? "NON_COMPLIANT"
+            : needsReviewCount > 0
+              ? "NEEDS_REVIEW"
+              : allCompliant
+                ? "COMPLIANT"
+                : allNotApplicable
+                  ? "NOT_APPLICABLE"
+                  : "MIXED",
       });
     }
 
     return NextResponse.json({
       checks: activeChecks,
       evidenceTasks,
-      aiInsights,
+      assessmentNotes,
     });
   } catch (error) {
     console.error("Compliance Engine API Error:", error);

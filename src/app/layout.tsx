@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import "./globals.css";
 import "@designcodeio/threeui/style.css";
 import { AnalyticsProvider } from "@repo/analytics/provider";
@@ -45,7 +44,7 @@ const themeBootstrapScript = `
       var stored = window.localStorage.getItem("secyourflow.theme.mode.v1");
       var preferred = stored === "light" || stored === "dark"
         ? stored
-        : (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+        : "dark";
       root.classList.remove("theme-dark", "theme-light", "dark");
       if (preferred === "light") {
         root.classList.add("theme-light");
@@ -64,16 +63,16 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      className={fonts}
+      className={`${fonts} theme-dark dark`}
       data-scroll-behavior="smooth"
       lang="en"
       suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
+      </head>
       <body className="antialiased">
         <AnalyticsProvider>
-          <Script id="theme-bootstrap" strategy="beforeInteractive">
-            {themeBootstrapScript}
-          </Script>
           <ThemeProvider>
             <UiFeedbackProvider>
               <TooltipProvider>

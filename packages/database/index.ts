@@ -67,8 +67,8 @@ if (typeof window === "undefined" && !globalForPrisma.prismaShutdownBound) {
     await prisma.$disconnect().catch(() => undefined);
     await pool.end().catch(() => undefined);
   };
-  process.once("SIGTERM", () => void disconnect());
-  process.once("SIGINT", () => void disconnect());
+  process.once("SIGTERM", disconnect);
+  process.once("SIGINT", disconnect);
 }
 
 export { prisma as database };

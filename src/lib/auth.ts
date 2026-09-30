@@ -4,6 +4,10 @@ import bcrypt from "bcryptjs";
 import NextAuth, { CredentialsSignin } from "next-auth";
 import type { Adapter } from "next-auth/adapters";
 import Credentials from "next-auth/providers/credentials";
+import {
+  canOAuthSignIn,
+  isPublicRegistrationEnabled,
+} from "@/lib/auth/registration-policy";
 import { assertTotpEncryptionKeyConfigured } from "@/lib/crypto/totpSecret";
 import {
   clearDatabaseUnavailable,
@@ -28,11 +32,11 @@ type RefreshableToken = Record<string, unknown> & {
   refreshToken?: string;
 };
 
-function refreshAccessToken(
+async function refreshAccessToken(
   token: RefreshableToken
 ): Promise<RefreshableToken> {
   // No refresh flow is configured for current OAuth providers.
-  return Promise.resolve(token);
+  return token;
 }
 
 const authSecret =
@@ -213,6 +217,8 @@ function redactSensitive(value: unknown, depth = 0): unknown {
   );
 }
 
+const FORWARDED_FOR_PATTERN = /(?:^|;)\s*for=(?:"([^"]+)"|([^;,\s]+))/i;
+
 function extractIpFromForwardedHeader(headerValue: string): string | null {
   const forwardedEntries = headerValue.split(",");
   for (const entry of forwardedEntries) {
@@ -356,7 +362,26 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
   ],
   callbacks: {
     ...authConfig.callbacks,
-    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Keep security checks together in the Auth.js token lifecycle.
+    async signIn({ user, account }) {
+      if (account?.type !== "oauth" || isPublicRegistrationEnabled()) {
+        return true;
+      }
+
+      // The public registration switch covers OAuth-created users too.
+      // Existing users may continue using their linked or verified-email
+      // provider account while new accounts remain closed by default.
+      const email = user.email?.trim();
+      if (!email) {
+        return false;
+      }
+
+      const existingUser = await prisma.user.findFirst({
+        where: { email: { equals: email, mode: "insensitive" } },
+        select: { id: true },
+      });
+
+      return canOAuthSignIn(false, Boolean(existingUser));
+    },
     async jwt({ token, user, account, trigger, session }) {
       // Initial sign in
       if (account && user) {
@@ -404,7 +429,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
 
         token.organizationId = activatedSession.organizationId;
 
-        import("./logger")
+        void import("./logger")
           .then(({ logActivity }) => {
             return logActivity(
               "User login",
@@ -452,12 +477,12 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
             token.twoFactorVerifiedAt = updateSession.twoFactorVerifiedAt;
           }
 
-          let updatedTotpEnabled: boolean | undefined;
-          if (typeof updateSession.user?.totpEnabled === "boolean") {
-            updatedTotpEnabled = updateSession.user.totpEnabled;
-          } else if (typeof updateSession.totpEnabled === "boolean") {
-            updatedTotpEnabled = updateSession.totpEnabled;
-          }
+          const updatedTotpEnabled =
+            typeof updateSession.user?.totpEnabled === "boolean"
+              ? updateSession.user.totpEnabled
+              : typeof updateSession.totpEnabled === "boolean"
+                ? updateSession.totpEnabled
+                : undefined;
 
           if (typeof updatedTotpEnabled === "boolean") {
             token.totpEnabled = updatedTotpEnabled;
@@ -498,8 +523,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                 "[auth] Database unavailable during session validation."
               );
             }
-            // Return null to trigger a 401 rather than a 500 — the client
-            // will retry and the cooldown prevents hammering the database.
+            // Invalidate the session and let the client retry after the database cooldown.
             return null;
           }
           throw error;
@@ -548,7 +572,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
 
       return token;
     },
-    session({ session, token }) {
+    async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = (token.role as string) || "ANALYST";
@@ -616,5 +640,3 @@ declare module "next-auth" {
     };
   }
 }
-
-const FORWARDED_FOR_PATTERN = /(?:^|;)\s*for=(?:"([^"]+)"|([^;,\s]+))/i;

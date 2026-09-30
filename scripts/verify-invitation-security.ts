@@ -40,11 +40,16 @@ const checks: SecurityCheck[] = [
         join(process.cwd(), "src/app/api/auth/register/route.ts"),
         "utf-8"
       );
+      const registrationPolicy = readFileSync(
+        join(process.cwd(), "src/lib/auth/registration-policy.ts"),
+        "utf-8"
+      );
       return (
-        registerRoute.includes(
-          'return process.env.ALLOW_PUBLIC_REGISTRATION === "true"'
+        registerRoute.includes("if (!isPublicRegistrationEnabled())") &&
+        registrationPolicy.includes(
+          "value: string | undefined = process.env.ALLOW_PUBLIC_REGISTRATION"
         ) &&
-        registerRoute.includes("if (!isPublicRegistrationAllowed())") &&
+        registrationPolicy.includes('return value === "true"') &&
         registerRoute.includes('code: "REGISTRATION_DISABLED"')
       );
     },

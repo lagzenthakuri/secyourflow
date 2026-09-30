@@ -8,6 +8,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { LandingPage } from "@/modules/marketing/ui/LandingPage";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = createMetadata({
   title: "Security findings to accountable response",
   description:

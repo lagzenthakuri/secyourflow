@@ -175,7 +175,7 @@ Open your browser and navigate to `http://localhost:3000`
 | `REDIS_URL` | Redis connection string for caching and distributed rate limiting | - |
 | `AUTH_GOOGLE_ID` | Google OAuth client ID | - |
 | `AUTH_GOOGLE_SECRET` | Google OAuth client secret | - |
-| `ALLOW_PUBLIC_REGISTRATION` | Enable public email/password registration | `false` |
+| `ALLOW_PUBLIC_REGISTRATION` | Enable public account creation with password or OAuth | `false` |
 | `REAL_API_TESTS` | Enable real API testing | `false` |
 | `SMTP_HOST` | SMTP server hostname (e.g., `smtp.gmail.com`, `smtp.sendgrid.net`) | - |
 | `SMTP_PORT` | SMTP server port (`587` for STARTTLS, `465` for implicit TLS) | `587` |

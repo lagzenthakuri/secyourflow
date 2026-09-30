@@ -8,11 +8,19 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import { getSafeCallbackUrl as resolveSafeCallbackUrl } from "@/lib/auth/callback-url";
 import { openGoogleAuthPopup } from "@/lib/auth/google-popup";
 import {
   GOOGLE_AUTH_POPUP_NAME_PREFIX,
   publishGoogleAuthPopupResult,
 } from "@/lib/auth/google-popup-storage";
+
+function getSafeCallbackUrl(): string {
+  const callbackUrl = new URLSearchParams(window.location.search).get(
+    "callbackUrl"
+  );
+  return resolveSafeCallbackUrl(callbackUrl, window.location.origin);
+}
 
 function getAuthErrorMessage(
   error: string | null,
@@ -42,7 +50,7 @@ function getAuthErrorMessage(
     case "Configuration":
       return "Sign-in is temporarily unavailable. Please try again in a few moments.";
     case "AccessDenied":
-      return "Access denied. You do not have permission to sign in.";
+      return "This sign-in could not create a new workspace account. If you need access, request an invitation from Shyena Technologies.";
     case "Verification":
       return "Verification failed. The link may have expired.";
     case "OAuthAccountNotLinked":
@@ -99,24 +107,14 @@ export default function LoginPage() {
     setAuthError(null);
 
     try {
-      const result = await signIn("credentials", {
+      await signIn("credentials", {
         email,
         password,
-        redirect: false,
-        callbackUrl: "/dashboard",
+        // Let Auth.js complete the full-page redirect after it has
+        // written the session cookie. A client-side session refresh
+        // can lag behind this response and leave the login form visible.
+        redirectTo: getSafeCallbackUrl(),
       });
-
-      if (!result || result.error) {
-        setAuthError(
-          getAuthErrorMessage(
-            result?.error ?? "CredentialsSignin",
-            result?.code ?? null
-          )
-        );
-        return;
-      }
-
-      window.location.href = result.url || "/dashboard";
     } catch (error) {
       console.error("Login failed:", error);
       setAuthError("Unable to sign in right now.");
@@ -276,6 +274,7 @@ export default function LoginPage() {
             onClick={() => {
               setAuthError(null);
               openGoogleAuthPopup({
+                redirectTo: getSafeCallbackUrl(),
                 onStart: () => setIsGoogleLoading(true),
                 onError: (message) => {
                   setIsGoogleLoading(false);
