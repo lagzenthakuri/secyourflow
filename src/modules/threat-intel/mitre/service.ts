@@ -1,21 +1,21 @@
-import { MitreTaxiiClient } from "./taxii-client";
-import { parseAttackObjects } from "./parser";
-import { ThreatIntelRepository } from "../persistence/repository";
 import { VulnerabilityTechniqueMapper } from "../mapping/vulnerability-mapper";
+import type { ThreatIntelRepository } from "../persistence/repository";
+import { parseAttackObjects } from "./parser";
+import type { MitreTaxiiClient } from "./taxii-client";
 
 export interface MitreSyncSummary {
-  tactics: number;
-  techniques: number;
   actors: number;
-  campaigns: number;
-  tacticTechniqueLinks: number;
   actorTechniqueLinks: number;
-  campaignTechniqueLinks: number;
   campaignActorLinks: number;
-  vulnerabilityTechniqueLinks: number;
-  vulnerabilityActorLinks: number;
-  errors: string[];
+  campaigns: number;
+  campaignTechniqueLinks: number;
   checkpoint: string;
+  errors: string[];
+  tactics: number;
+  tacticTechniqueLinks: number;
+  techniques: number;
+  vulnerabilityActorLinks: number;
+  vulnerabilityTechniqueLinks: number;
 }
 
 export class MitreAttackService {
@@ -23,12 +23,15 @@ export class MitreAttackService {
 
   constructor(
     private readonly taxiiClient: MitreTaxiiClient,
-    private readonly repository: ThreatIntelRepository,
+    private readonly repository: ThreatIntelRepository
   ) {
     this.mapper = new VulnerabilityTechniqueMapper(repository);
   }
 
-  async sync(params: { organizationId: string; checkpoint: string | null }): Promise<MitreSyncSummary> {
+  async sync(params: {
+    organizationId: string;
+    checkpoint: string | null;
+  }): Promise<MitreSyncSummary> {
     const errors: string[] = [];
 
     const objects = await this.taxiiClient.fetchCollectionObjects({
@@ -49,7 +52,9 @@ export class MitreAttackService {
         const saved = await this.repository.upsertAttackTactic(tactic);
         tacticIdByExternalId.set(saved.externalId, saved.id);
       } catch (error) {
-        errors.push(`Failed to upsert tactic ${tactic.externalId}: ${error instanceof Error ? error.message : String(error)}`);
+        errors.push(
+          `Failed to upsert tactic ${tactic.externalId}: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     }
 
@@ -65,7 +70,9 @@ export class MitreAttackService {
         });
         techniqueIdByExternalId.set(saved.externalId, saved.id);
       } catch (error) {
-        errors.push(`Failed to upsert technique ${technique.externalId}: ${error instanceof Error ? error.message : String(error)}`);
+        errors.push(
+          `Failed to upsert technique ${technique.externalId}: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     }
 
@@ -73,13 +80,17 @@ export class MitreAttackService {
     for (const link of parsed.tacticTechniqueLinks) {
       const tacticId = tacticIdByExternalId.get(link.tacticExternalId);
       const techniqueId = techniqueIdByExternalId.get(link.techniqueExternalId);
-      if (!tacticId || !techniqueId) continue;
+      if (!(tacticId && techniqueId)) {
+        continue;
+      }
 
       try {
         await this.repository.linkTechniqueToTactic(techniqueId, tacticId);
         tacticTechniqueLinks += 1;
       } catch (error) {
-        errors.push(`Failed to link tactic ${link.tacticExternalId} -> ${link.techniqueExternalId}: ${error instanceof Error ? error.message : String(error)}`);
+        errors.push(
+          `Failed to link tactic ${link.tacticExternalId} -> ${link.techniqueExternalId}: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     }
 
@@ -93,7 +104,9 @@ export class MitreAttackService {
         });
         actorIdByStixId.set(actor.stixId, saved.id);
       } catch (error) {
-        errors.push(`Failed to upsert actor ${actor.name}: ${error instanceof Error ? error.message : String(error)}`);
+        errors.push(
+          `Failed to upsert actor ${actor.name}: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     }
 
@@ -109,37 +122,55 @@ export class MitreAttackService {
         });
         campaignIdByStixId.set(campaign.stixId, saved.id);
       } catch (error) {
-        errors.push(`Failed to upsert campaign ${campaign.name}: ${error instanceof Error ? error.message : String(error)}`);
+        errors.push(
+          `Failed to upsert campaign ${campaign.name}: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     }
 
     let actorTechniqueLinks = 0;
     for (const link of parsed.actorTechniqueLinks) {
       const actorId = actorIdByStixId.get(link.actorStixId);
-      const techniqueExternalId = parsed.techniques.find((entry) => entry.stixId === link.techniqueStixId)?.externalId;
-      const techniqueId = techniqueExternalId ? techniqueIdByExternalId.get(techniqueExternalId) : null;
-      if (!actorId || !techniqueId) continue;
+      const techniqueExternalId = parsed.techniques.find(
+        (entry) => entry.stixId === link.techniqueStixId
+      )?.externalId;
+      const techniqueId = techniqueExternalId
+        ? techniqueIdByExternalId.get(techniqueExternalId)
+        : null;
+      if (!(actorId && techniqueId)) {
+        continue;
+      }
 
       try {
         await this.repository.linkActorTechnique(actorId, techniqueId);
         actorTechniqueLinks += 1;
       } catch (error) {
-        errors.push(`Failed to link actor technique ${link.actorStixId}:${link.techniqueStixId} - ${error instanceof Error ? error.message : String(error)}`);
+        errors.push(
+          `Failed to link actor technique ${link.actorStixId}:${link.techniqueStixId} - ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     }
 
     let campaignTechniqueLinks = 0;
     for (const link of parsed.campaignTechniqueLinks) {
       const campaignId = campaignIdByStixId.get(link.campaignStixId);
-      const techniqueExternalId = parsed.techniques.find((entry) => entry.stixId === link.techniqueStixId)?.externalId;
-      const techniqueId = techniqueExternalId ? techniqueIdByExternalId.get(techniqueExternalId) : null;
-      if (!campaignId || !techniqueId) continue;
+      const techniqueExternalId = parsed.techniques.find(
+        (entry) => entry.stixId === link.techniqueStixId
+      )?.externalId;
+      const techniqueId = techniqueExternalId
+        ? techniqueIdByExternalId.get(techniqueExternalId)
+        : null;
+      if (!(campaignId && techniqueId)) {
+        continue;
+      }
 
       try {
         await this.repository.linkCampaignTechnique(campaignId, techniqueId);
         campaignTechniqueLinks += 1;
       } catch (error) {
-        errors.push(`Failed to link campaign technique ${link.campaignStixId}:${link.techniqueStixId} - ${error instanceof Error ? error.message : String(error)}`);
+        errors.push(
+          `Failed to link campaign technique ${link.campaignStixId}:${link.techniqueStixId} - ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     }
 
@@ -147,20 +178,27 @@ export class MitreAttackService {
     for (const link of parsed.campaignActorLinks) {
       const campaignId = campaignIdByStixId.get(link.campaignStixId);
       const actorId = actorIdByStixId.get(link.actorStixId);
-      if (!campaignId || !actorId) continue;
+      if (!(campaignId && actorId)) {
+        continue;
+      }
 
       try {
         await this.repository.linkCampaignActor(campaignId, actorId);
         campaignActorLinks += 1;
       } catch (error) {
-        errors.push(`Failed to link campaign actor ${link.campaignStixId}:${link.actorStixId} - ${error instanceof Error ? error.message : String(error)}`);
+        errors.push(
+          `Failed to link campaign actor ${link.campaignStixId}:${link.actorStixId} - ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     }
 
-    const vulnerabilityTechnique = await this.mapper.mapOrganizationVulnerabilities(params.organizationId);
+    const vulnerabilityTechnique =
+      await this.mapper.mapOrganizationVulnerabilities(params.organizationId);
     errors.push(...vulnerabilityTechnique.errors);
 
-    const vulnerabilityActor = await this.mapper.linkVulnerabilitiesToActors(params.organizationId);
+    const vulnerabilityActor = await this.mapper.linkVulnerabilitiesToActors(
+      params.organizationId
+    );
     errors.push(...vulnerabilityActor.errors);
 
     return {
@@ -172,7 +210,8 @@ export class MitreAttackService {
       actorTechniqueLinks,
       campaignTechniqueLinks,
       campaignActorLinks,
-      vulnerabilityTechniqueLinks: vulnerabilityTechnique.direct + vulnerabilityTechnique.cwe,
+      vulnerabilityTechniqueLinks:
+        vulnerabilityTechnique.direct + vulnerabilityTechnique.cwe,
       vulnerabilityActorLinks: vulnerabilityActor.linked,
       errors,
       checkpoint: new Date().toISOString(),

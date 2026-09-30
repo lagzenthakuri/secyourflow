@@ -1,376 +1,408 @@
 "use client";
 import { Checkbox as BoilerplateCheckbox } from "@repo/design-system/components/ui/checkbox";
 import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
-
-
+import {
+  AlertTriangle,
+  Bot,
+  CheckCircle2,
+  Cloud,
+  HardDrive,
+  Loader2,
+  Save,
+  Zap,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { Bot, CheckCircle2, HardDrive, Loader2, Cloud, Save, Zap, AlertTriangle } from "lucide-react";
 
 interface ProviderOption {
-    id: string;
-    label: string;
-    selfHosted: boolean;
-    defaultModel: string;
-    defaultEndpoint?: string;
-    apiKeyEnvVar?: string;
-    configured: boolean;
+  apiKeyEnvVar?: string;
+  configured: boolean;
+  defaultEndpoint?: string;
+  defaultModel: string;
+  id: string;
+  label: string;
+  selfHosted: boolean;
 }
 
 interface ProbeResult {
-    reachable: boolean;
-    models?: string[];
-    error?: string;
-    latencyMs?: number;
+  error?: string;
+  latencyMs?: number;
+  models?: string[];
+  reachable: boolean;
 }
 
 const DISABLED_OPTION: ProviderOption = {
-    id: "DISABLED",
-    label: "Disabled (deterministic scoring only)",
-    selfHosted: true,
-    defaultModel: "",
-    configured: true,
+  id: "DISABLED",
+  label: "Disabled (deterministic scoring only)",
+  selfHosted: true,
+  defaultModel: "",
+  configured: true,
 };
 
 export function AiProviderSettingsPanel() {
-    const [providers, setProviders] = useState<ProviderOption[]>([]);
-    const [provider, setProvider] = useState("OLLAMA");
-    const [model, setModel] = useState("");
-    const [endpoint, setEndpoint] = useState("");
-    const [enabled, setEnabled] = useState(true);
-    // Empty means "unchanged". The API never returns the stored key, only
-    // whether one exists.
-    const [apiKey, setApiKey] = useState("");
-    const [hasStoredKey, setHasStoredKey] = useState(false);
-    const [clearApiKey, setClearApiKey] = useState(false);
+  const [providers, setProviders] = useState<ProviderOption[]>([]);
+  const [provider, setProvider] = useState("OLLAMA");
+  const [model, setModel] = useState("");
+  const [endpoint, setEndpoint] = useState("");
+  const [enabled, setEnabled] = useState(true);
+  // Empty means "unchanged". The API never returns the stored key, only
+  // whether one exists.
+  const [apiKey, setApiKey] = useState("");
+  const [hasStoredKey, setHasStoredKey] = useState(false);
+  const [clearApiKey, setClearApiKey] = useState(false);
 
-    const [isLoading, setIsLoading] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
-    const [isTesting, setIsTesting] = useState(false);
-    const [probe, setProbe] = useState<ProbeResult | null>(null);
-    const [notice, setNotice] = useState<string | null>(null);
-    const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+  const [probe, setProbe] = useState<ProbeResult | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-    const selected = providers.find((entry) => entry.id === provider);
+  const selected = providers.find((entry) => entry.id === provider);
 
-    const load = useCallback(async () => {
-        try {
-            const response = await fetch("/api/ai/providers", { cache: "no-store" });
-            if (!response.ok) {
-                throw new Error("Failed to load AI providers");
-            }
+  const load = useCallback(async () => {
+    try {
+      const response = await fetch("/api/ai/providers", { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error("Failed to load AI providers");
+      }
 
-            const payload = await response.json();
-            setProviders(payload.data.providers ?? []);
-            setProvider(payload.data.current?.provider ?? "OLLAMA");
-            setModel(payload.data.current?.model ?? "");
-            setEndpoint(payload.data.current?.endpoint ?? "");
-            setEnabled(payload.data.current?.enabled ?? true);
-            setHasStoredKey(Boolean(payload.data.current?.hasApiKey));
-            setApiKey("");
-            setClearApiKey(false);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to load AI providers");
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        void load();
-    }, [load]);
-
-    const testConnection = useCallback(async () => {
-        setIsTesting(true);
-        setProbe(null);
-        setError(null);
-
-        try {
-            const response = await fetch("/api/ai/test", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    provider,
-                    model: model || undefined,
-                    endpoint: endpoint || null,
-                }),
-            });
-
-            const payload = await response.json();
-            if (!response.ok) {
-                throw new Error(payload?.error ?? "Connection test failed");
-            }
-
-            setProbe(payload.data);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Connection test failed");
-        } finally {
-            setIsTesting(false);
-        }
-    }, [provider, model, endpoint]);
-
-    const save = useCallback(async () => {
-        setIsSaving(true);
-        setNotice(null);
-        setError(null);
-
-        try {
-            const response = await fetch("/api/settings", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    aiProvider: provider,
-                    aiModel: model || null,
-                    aiEndpoint: endpoint || null,
-                    aiRiskAssessmentEnabled: enabled,
-                    // Three states: omitted (leave as-is), a new value, or an
-                    // explicit null to fall back to the environment key.
-                    ...(clearApiKey
-                        ? { aiApiKey: null }
-                        : apiKey.trim().length > 0
-                          ? { aiApiKey: apiKey.trim() }
-                          : {}),
-                }),
-            });
-
-            const payload = await response.json().catch(() => null);
-            if (!response.ok) {
-                throw new Error(payload?.error ?? "Failed to save AI settings");
-            }
-
-            setNotice("AI provider settings saved.");
-            await load();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to save AI settings");
-        } finally {
-            setIsSaving(false);
-        }
-    }, [provider, model, endpoint, enabled, apiKey, clearApiKey, load]);
-
-    if (isLoading) {
-        return (
-            <div className="card p-6 flex items-center gap-3 text-sm text-[var(--text-secondary)]">
-                <Loader2 size={16} className="animate-spin" />
-                Loading AI provider settings…
-            </div>
-        );
+      const payload = await response.json();
+      setProviders(payload.data.providers ?? []);
+      setProvider(payload.data.current?.provider ?? "OLLAMA");
+      setModel(payload.data.current?.model ?? "");
+      setEndpoint(payload.data.current?.endpoint ?? "");
+      setEnabled(payload.data.current?.enabled ?? true);
+      setHasStoredKey(Boolean(payload.data.current?.hasApiKey));
+      setApiKey("");
+      setClearApiKey(false);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load AI providers"
+      );
+    } finally {
+      setIsLoading(false);
     }
+  }, []);
 
-    const options = [...providers, DISABLED_OPTION];
+  useEffect(() => {
+    void load();
+  }, [load]);
 
+  const testConnection = useCallback(async () => {
+    setIsTesting(true);
+    setProbe(null);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/ai/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider,
+          model: model || undefined,
+          endpoint: endpoint || null,
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Connection test failed");
+      }
+
+      setProbe(payload.data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Connection test failed");
+    } finally {
+      setIsTesting(false);
+    }
+  }, [provider, model, endpoint]);
+
+  const save = useCallback(async () => {
+    setIsSaving(true);
+    setNotice(null);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          aiProvider: provider,
+          aiModel: model || null,
+          aiEndpoint: endpoint || null,
+          aiRiskAssessmentEnabled: enabled,
+          // Three states: omitted (leave as-is), a new value, or an
+          // explicit null to fall back to the environment key.
+          ...(clearApiKey
+            ? { aiApiKey: null }
+            : apiKey.trim().length > 0
+              ? { aiApiKey: apiKey.trim() }
+              : {}),
+        }),
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Failed to save AI settings");
+      }
+
+      setNotice("AI provider settings saved.");
+      await load();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to save AI settings"
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }, [provider, model, endpoint, enabled, apiKey, clearApiKey, load]);
+
+  if (isLoading) {
     return (
-        <div className="card p-6 space-y-5">
-            <div className="flex items-start gap-3">
-                <div className="w-11 h-11 rounded-xl bg-violet-500/20 border border-violet-500/40 flex items-center justify-center shrink-0">
-                    <Bot className="w-6 h-6 text-violet-500 dark:text-violet-300" />
-                </div>
-                <div>
-                    <h2 className="text-lg font-semibold text-[var(--text-primary)]">AI Analysis Provider</h2>
-                    <p className="text-sm text-[var(--text-secondary)]">
-                        Used for risk assessment and remediation guidance. A self-hosted provider keeps
-                        vulnerability data inside your own perimeter.
-                    </p>
-                </div>
-            </div>
-
-            {error && (
-                <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-300">
-                    {error}
-                </div>
-            )}
-            {notice && (
-                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
-                    {notice}
-                </div>
-            )}
-
-            {/* Provider choice */}
-            <div className="grid gap-3 sm:grid-cols-2">
-                {options.map((option) => {
-                    const isActive = option.id === provider;
-                    const unavailable = !option.configured && option.id !== "DISABLED";
-
-                    return (
-                        <button
-                            key={option.id}
-                            type="button"
-                            onClick={() => {
-                                setProvider(option.id);
-                                setProbe(null);
-                                setModel(option.id === provider ? model : "");
-                                setEndpoint("");
-                            }}
-                            className={`rounded-xl border p-3 text-left transition-colors ${
-                                isActive
-                                    ? "border-violet-400/60 bg-violet-400/10"
-                                    : "border-[var(--border-color)] hover:bg-[var(--bg-tertiary)]"
-                            }`}
-                        >
-                            <div className="flex items-center justify-between gap-2">
-                                <span className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-                                    {option.selfHosted ? <HardDrive size={14} /> : <Cloud size={14} />}
-                                    {option.label}
-                                </span>
-                                {isActive && <CheckCircle2 size={15} className="text-violet-500 shrink-0" />}
-                            </div>
-
-                            {option.defaultModel && (
-                                <p className="mt-1 text-[11px] text-[var(--text-muted)]">
-                                    Default model: {option.defaultModel}
-                                </p>
-                            )}
-
-                            {unavailable && (
-                                <p className="mt-1 flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400">
-                                    <AlertTriangle size={11} />
-                                    Needs an API key
-                                </p>
-                            )}
-                            {option.selfHosted && option.id !== "DISABLED" && (
-                                <p className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400">
-                                    Data stays on your infrastructure
-                                </p>
-                            )}
-                        </button>
-                    );
-                })}
-            </div>
-
-            {provider !== "DISABLED" && (
-                <div className="grid gap-4 sm:grid-cols-2">
-                    <label className="block">
-                        <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
-                            Model
-                        </span>
-                        <BoilerplateInput
-                            value={model}
-                            onChange={(event) => setModel(event.target.value)}
-                            placeholder={selected?.defaultModel ?? ""}
-                            list="ai-model-suggestions"
-                            className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                        />
-                        <datalist id="ai-model-suggestions">
-                            {(probe?.models ?? []).map((name) => (
-                                <option key={name} value={name} />
-                            ))}
-                        </datalist>
-                        <span className="mt-1 block text-[11px] text-[var(--text-muted)]">
-                            Leave blank to use {selected?.defaultModel ?? "the provider default"}.
-                        </span>
-                    </label>
-
-                    <label className="block">
-                        <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
-                            Endpoint
-                        </span>
-                        <BoilerplateInput
-                            value={endpoint}
-                            onChange={(event) => setEndpoint(event.target.value)}
-                            placeholder={selected?.defaultEndpoint ?? ""}
-                            className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                        />
-                        <span className="mt-1 block text-[11px] text-[var(--text-muted)]">
-                            {selected?.selfHosted
-                                ? "Point this at your Ollama server if it is not on localhost."
-                                : "Leave blank unless you use a proxy or gateway."}
-                        </span>
-                    </label>
-
-                    {/* Self-hosted providers need no credential. */}
-                    {selected?.apiKeyEnvVar ? (
-                        <label className="block sm:col-span-2">
-                            <span className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
-                                API key
-                            </span>
-                            <BoilerplateInput
-                                type="password"
-                                autoComplete="off"
-                                value={apiKey}
-                                onChange={(event) => {
-                                    setApiKey(event.target.value);
-                                    setClearApiKey(false);
-                                }}
-                                disabled={clearApiKey}
-                                placeholder={
-                                    clearApiKey
-                                        ? "Key will be removed on save"
-                                        : hasStoredKey
-                                          ? "A key is stored — type to replace it"
-                                          : `Paste your ${selected.label} key`
-                                }
-                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                            />
-                            <span className="mt-1 block text-[11px] text-[var(--text-muted)]">
-                                {hasStoredKey
-                                    ? "Encrypted at rest and never shown again. Leave blank to keep it."
-                                    : `Stored encrypted for this organization. Falls back to the ${selected.apiKeyEnvVar} environment variable when blank.`}
-                            </span>
-                            {hasStoredKey ? (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setClearApiKey((previous) => !previous);
-                                        setApiKey("");
-                                    }}
-                                    className="mt-1 text-[11px] text-red-600 hover:underline dark:text-red-400"
-                                >
-                                    {clearApiKey ? "Keep stored key" : "Remove stored key"}
-                                </button>
-                            ) : null}
-                        </label>
-                    ) : null}
-                </div>
-            )}
-
-            {/* Probe result */}
-            {probe && (
-                <div
-                    className={`rounded-lg border px-3 py-2 text-sm ${
-                        probe.reachable
-                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                            : "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-300"
-                    }`}
-                >
-                    {probe.reachable ? (
-                        <>
-                            Connected in {probe.latencyMs}ms.
-                            {probe.models?.length
-                                ? ` ${probe.models.length} model${probe.models.length === 1 ? "" : "s"} available: ${probe.models.slice(0, 5).join(", ")}`
-                                : " No model list returned."}
-                        </>
-                    ) : (
-                        <>Not reachable: {probe.error}</>
-                    )}
-                </div>
-            )}
-
-            <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                <BoilerplateCheckbox
-                    checked={enabled}
-                    onCheckedChange={(checked) => setEnabled(Boolean(checked))}
-                />
-                Use AI for risk assessment (deterministic scoring is always used as a fallback)
-            </label>
-
-            <div className="flex flex-wrap gap-2">
-                <button
-                    type="button"
-                    onClick={() => void testConnection()}
-                    disabled={isTesting || provider === "DISABLED"}
-                    className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-elevated)] disabled:opacity-60"
-                >
-                    {isTesting ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
-                    Test connection
-                </button>
-                <button
-                    type="button"
-                    onClick={() => void save()}
-                    disabled={isSaving}
-                    className="btn btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-60"
-                >
-                    {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                    Save
-                </button>
-            </div>
-        </div>
+      <div className="card flex items-center gap-3 p-6 text-[var(--text-secondary)] text-sm">
+        <Loader2 className="animate-spin" size={16} />
+        Loading AI provider settings…
+      </div>
     );
+  }
+
+  const options = [...providers, DISABLED_OPTION];
+
+  return (
+    <div className="card space-y-5 p-6">
+      <div className="flex items-start gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-violet-500/40 bg-violet-500/20">
+          <Bot className="h-6 w-6 text-violet-500 dark:text-violet-300" />
+        </div>
+        <div>
+          <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+            AI Analysis Provider
+          </h2>
+          <p className="text-[var(--text-secondary)] text-sm">
+            Used for risk assessment and remediation guidance. A self-hosted
+            provider keeps vulnerability data inside your own perimeter.
+          </p>
+        </div>
+      </div>
+
+      {error && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-600 text-sm dark:text-red-300">
+          {error}
+        </div>
+      )}
+      {notice && (
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-emerald-700 text-sm dark:text-emerald-300">
+          {notice}
+        </div>
+      )}
+
+      {/* Provider choice */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        {options.map((option) => {
+          const isActive = option.id === provider;
+          const unavailable = !option.configured && option.id !== "DISABLED";
+
+          return (
+            <button
+              className={`rounded-xl border p-3 text-left transition-colors ${
+                isActive
+                  ? "border-violet-400/60 bg-violet-400/10"
+                  : "border-[var(--border-color)] hover:bg-[var(--bg-tertiary)]"
+              }`}
+              key={option.id}
+              onClick={() => {
+                setProvider(option.id);
+                setProbe(null);
+                setModel(option.id === provider ? model : "");
+                setEndpoint("");
+              }}
+              type="button"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-2 font-semibold text-[var(--text-primary)] text-sm">
+                  {option.selfHosted ? (
+                    <HardDrive size={14} />
+                  ) : (
+                    <Cloud size={14} />
+                  )}
+                  {option.label}
+                </span>
+                {isActive && (
+                  <CheckCircle2
+                    className="shrink-0 text-violet-500"
+                    size={15}
+                  />
+                )}
+              </div>
+
+              {option.defaultModel && (
+                <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+                  Default model: {option.defaultModel}
+                </p>
+              )}
+
+              {unavailable && (
+                <p className="mt-1 flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400">
+                  <AlertTriangle size={11} />
+                  Needs an API key
+                </p>
+              )}
+              {option.selfHosted && option.id !== "DISABLED" && (
+                <p className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400">
+                  Data stays on your infrastructure
+                </p>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {provider !== "DISABLED" && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-1 block font-semibold text-[var(--text-secondary)] text-xs">
+              Model
+            </span>
+            <BoilerplateInput
+              className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-[var(--text-primary)] text-sm"
+              list="ai-model-suggestions"
+              onChange={(event) => setModel(event.target.value)}
+              placeholder={selected?.defaultModel ?? ""}
+              value={model}
+            />
+            <datalist id="ai-model-suggestions">
+              {(probe?.models ?? []).map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+            <span className="mt-1 block text-[11px] text-[var(--text-muted)]">
+              Leave blank to use{" "}
+              {selected?.defaultModel ?? "the provider default"}.
+            </span>
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block font-semibold text-[var(--text-secondary)] text-xs">
+              Endpoint
+            </span>
+            <BoilerplateInput
+              className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-[var(--text-primary)] text-sm"
+              onChange={(event) => setEndpoint(event.target.value)}
+              placeholder={selected?.defaultEndpoint ?? ""}
+              value={endpoint}
+            />
+            <span className="mt-1 block text-[11px] text-[var(--text-muted)]">
+              {selected?.selfHosted
+                ? "Point this at your Ollama server if it is not on localhost."
+                : "Leave blank unless you use a proxy or gateway."}
+            </span>
+          </label>
+
+          {/* Self-hosted providers need no credential. */}
+          {selected?.apiKeyEnvVar ? (
+            <label className="block sm:col-span-2">
+              <span className="mb-1 block font-semibold text-[var(--text-secondary)] text-xs">
+                API key
+              </span>
+              <BoilerplateInput
+                autoComplete="off"
+                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-[var(--text-primary)] text-sm"
+                disabled={clearApiKey}
+                onChange={(event) => {
+                  setApiKey(event.target.value);
+                  setClearApiKey(false);
+                }}
+                placeholder={
+                  clearApiKey
+                    ? "Key will be removed on save"
+                    : hasStoredKey
+                      ? "A key is stored — type to replace it"
+                      : `Paste your ${selected.label} key`
+                }
+                type="password"
+                value={apiKey}
+              />
+              <span className="mt-1 block text-[11px] text-[var(--text-muted)]">
+                {hasStoredKey
+                  ? "Encrypted at rest and never shown again. Leave blank to keep it."
+                  : `Stored encrypted for this organization. Falls back to the ${selected.apiKeyEnvVar} environment variable when blank.`}
+              </span>
+              {hasStoredKey ? (
+                <button
+                  className="mt-1 text-[11px] text-red-600 hover:underline dark:text-red-400"
+                  onClick={() => {
+                    setClearApiKey((previous) => !previous);
+                    setApiKey("");
+                  }}
+                  type="button"
+                >
+                  {clearApiKey ? "Keep stored key" : "Remove stored key"}
+                </button>
+              ) : null}
+            </label>
+          ) : null}
+        </div>
+      )}
+
+      {/* Probe result */}
+      {probe && (
+        <div
+          className={`rounded-lg border px-3 py-2 text-sm ${
+            probe.reachable
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+              : "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-300"
+          }`}
+        >
+          {probe.reachable ? (
+            <>
+              Connected in {probe.latencyMs}ms.
+              {probe.models?.length
+                ? ` ${probe.models.length} model${probe.models.length === 1 ? "" : "s"} available: ${probe.models.slice(0, 5).join(", ")}`
+                : " No model list returned."}
+            </>
+          ) : (
+            <>Not reachable: {probe.error}</>
+          )}
+        </div>
+      )}
+
+      <label className="flex items-center gap-2 text-[var(--text-secondary)] text-sm">
+        <BoilerplateCheckbox
+          checked={enabled}
+          onCheckedChange={(checked) => setEnabled(Boolean(checked))}
+        />
+        Use AI for risk assessment (deterministic scoring is always used as a
+        fallback)
+      </label>
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 font-medium text-[var(--text-primary)] text-sm transition-colors hover:bg-[var(--bg-elevated)] disabled:opacity-60"
+          disabled={isTesting || provider === "DISABLED"}
+          onClick={() => void testConnection()}
+          type="button"
+        >
+          {isTesting ? (
+            <Loader2 className="animate-spin" size={14} />
+          ) : (
+            <Zap size={14} />
+          )}
+          Test connection
+        </button>
+        <button
+          className="btn btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 font-semibold text-sm disabled:opacity-60"
+          disabled={isSaving}
+          onClick={() => void save()}
+          type="button"
+        >
+          {isSaving ? (
+            <Loader2 className="animate-spin" size={14} />
+          ) : (
+            <Save size={14} />
+          )}
+          Save
+        </button>
+      </div>
+    </div>
+  );
 }

@@ -1,9 +1,13 @@
-import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+import { NextResponse } from "next/server";
 import { z } from "zod";
-import { isInvitationExpired, isInvitationUsed, isValidInvitationTokenFormat } from "@/lib/invitation-utils";
+import {
+  isInvitationExpired,
+  isInvitationUsed,
+  isValidInvitationTokenFormat,
+} from "@/lib/invitation-utils";
 import { logActivity } from "@/lib/logger";
+import { prisma } from "@/lib/prisma";
 
 const acceptInvitationSchema = z.object({
   token: z.string().min(1, "Token is required"),
@@ -18,7 +22,11 @@ const acceptInvitationSchema = z.object({
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { token, name: rawName, password } = acceptInvitationSchema.parse(body);
+    const {
+      token,
+      name: rawName,
+      password,
+    } = acceptInvitationSchema.parse(body);
     const name = rawName.trim();
 
     // Validate token format
@@ -143,7 +151,10 @@ export async function POST(req: Request) {
       );
     }
 
-    console.error("Accept invitation error:", error instanceof Error ? error.message : String(error));
+    console.error(
+      "Accept invitation error:",
+      error instanceof Error ? error.message : String(error)
+    );
 
     return NextResponse.json(
       { error: "Failed to accept invitation" },

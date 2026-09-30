@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { IngestionOrchestrator } from "@/modules/cve-ingestion/orchestrator";
 import { prisma } from "@/lib/prisma";
+import { IngestionOrchestrator } from "@/modules/cve-ingestion/orchestrator";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -59,12 +59,14 @@ export async function GET() {
     // CVE/KEV/EPSS ingestion is optional background data. Reaching this point
     // proves that the core database is available, so a feed outage must not
     // mark the whole application unready and take authentication offline.
-    const serviceStatus = health.overallStatus === "healthy" ? "healthy" : "degraded";
+    const serviceStatus =
+      health.overallStatus === "healthy" ? "healthy" : "degraded";
 
     return NextResponse.json(
       {
         status: serviceStatus,
-        attribution: "This product uses the NVD API but is not endorsed or certified by the NVD.",
+        attribution:
+          "This product uses the NVD API but is not endorsed or certified by the NVD.",
         sources: health.sources.map((source) => ({
           name: source.name,
           status: source.status,
@@ -79,7 +81,10 @@ export async function GET() {
   } catch (error) {
     const errorType = error instanceof Error ? error.name : typeof error;
     const errorCode =
-      typeof error === "object" && error !== null && "code" in error && typeof error.code === "string"
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      typeof error.code === "string"
         ? error.code
         : null;
 

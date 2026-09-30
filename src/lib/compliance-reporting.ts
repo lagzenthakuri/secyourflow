@@ -1,27 +1,27 @@
+import type { ComplianceStatus } from "@repo/database";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { prisma } from "@/lib/prisma";
-import type { ComplianceStatus } from "@repo/database";
 
 interface ComplianceTrendPoint {
-  date: string;
   compliancePercentage: number;
   compliant: number;
+  date: string;
   nonCompliant: number;
 }
 
 interface ComplianceControlReportRow {
-  id: string;
   controlId: string;
-  title: string;
-  status: ComplianceStatus;
-  maturityLevel: number;
-  ownerRole: string | null;
   evidenceCount: number;
-  latestEvidenceVersion: number | null;
-  latestEvidenceFile: string | null;
   hasEvidenceGap: boolean;
+  id: string;
+  latestEvidenceFile: string | null;
+  latestEvidenceVersion: number | null;
+  maturityLevel: number;
   nextAssessment: string | null;
+  ownerRole: string | null;
+  status: ComplianceStatus;
+  title: string;
 }
 
 interface ComplianceGapSummary {
@@ -31,9 +31,12 @@ interface ComplianceGapSummary {
 }
 
 export interface ComplianceFrameworkReport {
+  controls: ComplianceControlReportRow[];
+  executiveSummary: string;
   frameworkId: string;
   frameworkName: string;
   frameworkVersion: string | null;
+  gaps: ComplianceGapSummary;
   generatedAt: string;
   summary: {
     totalControls: number;
@@ -45,14 +48,13 @@ export interface ComplianceFrameworkReport {
     evidenceCoveragePercentage: number;
     compliancePercentage: number;
   };
-  gaps: ComplianceGapSummary;
   trend: ComplianceTrendPoint[];
-  controls: ComplianceControlReportRow[];
-  executiveSummary: string;
 }
 
 function toPercent(numerator: number, denominator: number) {
-  if (denominator <= 0) return 0;
+  if (denominator <= 0) {
+    return 0;
+  }
   return (numerator / denominator) * 100;
 }
 
@@ -60,7 +62,9 @@ function formatStatus(status: ComplianceStatus) {
   return status.replace(/_/g, " ");
 }
 
-function buildExecutiveSummary(report: Omit<ComplianceFrameworkReport, "executiveSummary">) {
+function buildExecutiveSummary(
+  report: Omit<ComplianceFrameworkReport, "executiveSummary">
+) {
   const complianceBand =
     report.summary.compliancePercentage >= 85
       ? "strong"
@@ -79,7 +83,7 @@ export async function buildComplianceFrameworkReport(
   frameworkId: string,
   options: {
     trendDays?: number;
-  } = {},
+  } = {}
 ): Promise<ComplianceFrameworkReport> {
   const trendDays = options.trendDays ?? 90;
   const trendStart = new Date();
@@ -122,62 +126,81 @@ export async function buildComplianceFrameworkReport(
   }
 
   const totalControls = framework.controls.length;
-  const compliant = framework.controls.filter((control) => control.status === "COMPLIANT").length;
-  const nonCompliant = framework.controls.filter((control) => control.status === "NON_COMPLIANT").length;
-  const partiallyCompliant = framework.controls.filter(
-    (control) => control.status === "PARTIALLY_COMPLIANT",
+  const compliant = framework.controls.filter(
+    (control) => control.status === "COMPLIANT"
   ).length;
-  const notAssessed = framework.controls.filter((control) => control.status === "NOT_ASSESSED").length;
-  const notApplicable = framework.controls.filter((control) => control.status === "NOT_APPLICABLE").length;
+  const nonCompliant = framework.controls.filter(
+    (control) => control.status === "NON_COMPLIANT"
+  ).length;
+  const partiallyCompliant = framework.controls.filter(
+    (control) => control.status === "PARTIALLY_COMPLIANT"
+  ).length;
+  const notAssessed = framework.controls.filter(
+    (control) => control.status === "NOT_ASSESSED"
+  ).length;
+  const notApplicable = framework.controls.filter(
+    (control) => control.status === "NOT_APPLICABLE"
+  ).length;
 
-  const controls = framework.controls.map<ComplianceControlReportRow>((control) => {
-    const latestVersion = control.evidenceFiles
-      .flatMap((evidence) => evidence.versions)
-      .sort((a, b) => b.version - a.version)[0];
+  const controls = framework.controls.map<ComplianceControlReportRow>(
+    (control) => {
+      const latestVersion = control.evidenceFiles
+        .flatMap((evidence) => evidence.versions)
+        .sort((a, b) => b.version - a.version)[0];
 
-    const hasEvidence = control.evidenceFiles.length > 0 || (control.evidence ?? "").trim().length > 0;
-    const hasEvidenceGap =
-      control.status !== "NOT_APPLICABLE" &&
-      control.status !== "NOT_ASSESSED" &&
-      !hasEvidence;
+      const hasEvidence =
+        control.evidenceFiles.length > 0 ||
+        (control.evidence ?? "").trim().length > 0;
+      const hasEvidenceGap =
+        control.status !== "NOT_APPLICABLE" &&
+        control.status !== "NOT_ASSESSED" &&
+        !hasEvidence;
 
-    return {
-      id: control.id,
-      controlId: control.controlId,
-      title: control.title,
-      status: control.status,
-      maturityLevel: control.maturityLevel,
-      ownerRole: control.ownerRole,
-      evidenceCount: control.evidenceFiles.length,
-      latestEvidenceVersion: latestVersion?.version ?? null,
-      latestEvidenceFile: latestVersion?.fileName ?? null,
-      hasEvidenceGap,
-      nextAssessment: control.nextAssessment?.toISOString() ?? null,
-    };
-  });
+      return {
+        id: control.id,
+        controlId: control.controlId,
+        title: control.title,
+        status: control.status,
+        maturityLevel: control.maturityLevel,
+        ownerRole: control.ownerRole,
+        evidenceCount: control.evidenceFiles.length,
+        latestEvidenceVersion: latestVersion?.version ?? null,
+        latestEvidenceFile: latestVersion?.fileName ?? null,
+        hasEvidenceGap,
+        nextAssessment: control.nextAssessment?.toISOString() ?? null,
+      };
+    }
+  );
 
   const now = new Date();
-  const missingEvidenceControls = controls.filter((control) => control.hasEvidenceGap).length;
+  const missingEvidenceControls = controls.filter(
+    (control) => control.hasEvidenceGap
+  ).length;
   const overdueAssessments = framework.controls.filter(
     (control) =>
       control.nextAssessment &&
       control.nextAssessment < now &&
-      control.status !== "NOT_APPLICABLE",
+      control.status !== "NOT_APPLICABLE"
   ).length;
 
   const controlsWithEvidence = controls.filter(
-    (control) => control.evidenceCount > 0 || !control.hasEvidenceGap,
+    (control) => control.evidenceCount > 0 || !control.hasEvidenceGap
   ).length;
 
   const compliancePercentage = toPercent(compliant, totalControls);
-  const evidenceCoveragePercentage = toPercent(controlsWithEvidence, totalControls);
+  const evidenceCoveragePercentage = toPercent(
+    controlsWithEvidence,
+    totalControls
+  );
 
-  const trend: ComplianceTrendPoint[] = framework.trendSnapshots.map((snapshot) => ({
-    date: snapshot.snapshotDate.toISOString(),
-    compliancePercentage: snapshot.compliancePercentage,
-    compliant: snapshot.compliant,
-    nonCompliant: snapshot.nonCompliant,
-  }));
+  const trend: ComplianceTrendPoint[] = framework.trendSnapshots.map(
+    (snapshot) => ({
+      date: snapshot.snapshotDate.toISOString(),
+      compliancePercentage: snapshot.compliancePercentage,
+      compliant: snapshot.compliant,
+      nonCompliant: snapshot.nonCompliant,
+    })
+  );
 
   if (trend.length === 0) {
     trend.push({
@@ -227,7 +250,11 @@ export function generateComplianceReportPdf(report: ComplianceFrameworkReport) {
 
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
-  doc.text(`Generated at: ${new Date(report.generatedAt).toLocaleString()}`, 14, 27);
+  doc.text(
+    `Generated at: ${new Date(report.generatedAt).toLocaleString()}`,
+    14,
+    27
+  );
 
   doc.setFontSize(13);
   doc.setTextColor(50, 50, 50);
@@ -245,8 +272,14 @@ export function generateComplianceReportPdf(report: ComplianceFrameworkReport) {
       ["Compliant", `${report.summary.compliant}`],
       ["Non-Compliant", `${report.summary.nonCompliant}`],
       ["Partially Compliant", `${report.summary.partiallyCompliant}`],
-      ["Evidence Coverage", `${report.summary.evidenceCoveragePercentage.toFixed(1)}%`],
-      ["Compliance Score", `${report.summary.compliancePercentage.toFixed(1)}%`],
+      [
+        "Evidence Coverage",
+        `${report.summary.evidenceCoveragePercentage.toFixed(1)}%`,
+      ],
+      [
+        "Compliance Score",
+        `${report.summary.compliancePercentage.toFixed(1)}%`,
+      ],
       ["Missing Evidence Gaps", `${report.gaps.missingEvidenceControls}`],
       ["Overdue Assessments", `${report.gaps.overdueAssessments}`],
     ],
@@ -266,7 +299,9 @@ export function generateComplianceReportPdf(report: ComplianceFrameworkReport) {
     `${point.nonCompliant}`,
   ]);
 
-  const lastAutoTable = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable;
+  const lastAutoTable = (
+    doc as unknown as { lastAutoTable?: { finalY: number } }
+  ).lastAutoTable;
 
   autoTable(doc, {
     startY: lastAutoTable ? lastAutoTable.finalY + 10 : 120,
@@ -293,7 +328,9 @@ export function generateComplianceReportPdf(report: ComplianceFrameworkReport) {
       `${control.controlId} ${control.title}`,
       formatStatus(control.status),
       `${control.evidenceCount} item(s)`,
-      control.latestEvidenceVersion ? `v${control.latestEvidenceVersion}` : "None",
+      control.latestEvidenceVersion
+        ? `v${control.latestEvidenceVersion}`
+        : "None",
       control.hasEvidenceGap ? "Yes" : "No",
     ]),
     headStyles: {

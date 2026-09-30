@@ -1,8 +1,8 @@
-import type { NextConfig } from "next";
-import { dirname, resolve } from "node:path";
+import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { withLogging, withSentry } from "@repo/observability/next-config";
 import { withToolbar } from "@repo/feature-flags/lib/toolbar";
+import { withLogging, withSentry } from "@repo/observability/next-config";
+import type { NextConfig } from "next";
 
 const appDirectory = dirname(fileURLToPath(import.meta.url));
 
@@ -50,14 +50,17 @@ const nextConfig: NextConfig = {
 
   // Remove console logs in production
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production' ? {
-      exclude: ['error', 'warn'],
-    } : false,
+    removeConsole:
+      process.env.NODE_ENV === "production"
+        ? {
+            exclude: ["error", "warn"],
+          }
+        : false,
   },
 
   // Optimize package imports
   experimental: {
-    optimizePackageImports: ['lucide-react', 'recharts'],
+    optimizePackageImports: ["lucide-react", "recharts"],
   },
 
   // Enable compression
@@ -76,11 +79,11 @@ const nextConfig: NextConfig = {
 
     return [
       {
-        source: '/:path*',
+        source: "/:path*",
         headers: [
           {
-            key: 'X-DNS-Prefetch-Control',
-            value: 'on'
+            key: "X-DNS-Prefetch-Control",
+            value: "on",
           },
           ...(isProd
             ? [
@@ -91,16 +94,16 @@ const nextConfig: NextConfig = {
               ]
             : []),
           {
-            key: 'X-Frame-Options',
-            value: 'SAMEORIGIN'
+            key: "X-Frame-Options",
+            value: "SAMEORIGIN",
           },
           {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff'
+            key: "X-Content-Type-Options",
+            value: "nosniff",
           },
           {
-            key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin'
+            key: "Referrer-Policy",
+            value: "origin-when-cross-origin",
           },
           {
             key: "Content-Security-Policy",
@@ -108,7 +111,8 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
+            value:
+              "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
           },
           {
             key: "Cross-Origin-Opener-Policy",
@@ -140,11 +144,15 @@ const betterStackIngestUrl =
   process.env.NEXT_PUBLIC_BETTER_STACK_INGESTING_URL ||
   process.env.LOGTAIL_URL ||
   process.env.NEXT_PUBLIC_LOGTAIL_URL;
-const betterStackConfigured = Boolean(betterStackSourceToken && betterStackIngestUrl);
+const betterStackConfigured = Boolean(
+  betterStackSourceToken && betterStackIngestUrl
+);
 
 // The Next Forge adapter logs warnings whenever it is enabled without ingest
 // credentials. Keep it optional and enable rewrites only when fully configured.
-let configuredNext = (betterStackConfigured ? withLogging(nextConfig) : nextConfig) as NextConfig;
+let configuredNext = (
+  betterStackConfigured ? withLogging(nextConfig) : nextConfig
+) as NextConfig;
 
 if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
   configuredNext = withSentry(configuredNext) as NextConfig;

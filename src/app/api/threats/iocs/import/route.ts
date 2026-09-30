@@ -1,10 +1,17 @@
-import { NextResponse } from "next/server";
 import type { IndicatorType } from "@repo/database";
+import { NextResponse } from "next/server";
 import { requireThreatIntelContext } from "@/modules/threat-intel/auth";
-import { ThreatIntelRepository } from "@/modules/threat-intel/persistence/repository";
-import { guessIndicatorType, isValidIndicatorValue, normalizeIndicatorValue } from "@/modules/threat-intel/ioc/normalizer";
-import { calculateConfidence, calculateExpirationDate } from "@/modules/threat-intel/ioc/scoring";
 import { getThreatIntelConfig } from "@/modules/threat-intel/config";
+import {
+  guessIndicatorType,
+  isValidIndicatorValue,
+  normalizeIndicatorValue,
+} from "@/modules/threat-intel/ioc/normalizer";
+import {
+  calculateConfidence,
+  calculateExpirationDate,
+} from "@/modules/threat-intel/ioc/scoring";
+import { ThreatIntelRepository } from "@/modules/threat-intel/persistence/repository";
 
 function parseCsvLine(line: string): string[] {
   const values: string[] = [];
@@ -37,7 +44,7 @@ function parseCsvLine(line: string): string[] {
   return values;
 }
 
-function parseCsv(content: string): Array<Record<string, string>> {
+function parseCsv(content: string): Record<string, string>[] {
   const lines = content
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -61,7 +68,9 @@ function parseCsv(content: string): Array<Record<string, string>> {
 }
 
 function parseIndicatorType(value: string | undefined): IndicatorType | null {
-  if (!value) return null;
+  if (!value) {
+    return null;
+  }
   const normalized = value.toUpperCase();
   const validTypes: IndicatorType[] = [
     "IP_ADDRESS",
@@ -76,16 +85,18 @@ function parseIndicatorType(value: string | undefined): IndicatorType | null {
     "USER_AGENT",
   ];
 
-  return validTypes.includes(normalized as IndicatorType) ? (normalized as IndicatorType) : null;
+  return validTypes.includes(normalized as IndicatorType)
+    ? (normalized as IndicatorType)
+    : null;
 }
 
 interface ImportRow {
-  value: string;
-  type?: string;
-  severity?: string;
   confidence?: number;
   description?: string;
+  severity?: string;
   tags?: string[];
+  type?: string;
+  value: string;
 }
 
 export async function POST(request: Request) {
@@ -102,27 +113,41 @@ export async function POST(request: Request) {
     let rows: ImportRow[] = [];
     if (format === "CSV") {
       if (typeof payload !== "string") {
-        return NextResponse.json({ error: "CSV import expects string payload" }, { status: 400 });
+        return NextResponse.json(
+          { error: "CSV import expects string payload" },
+          { status: 400 }
+        );
       }
 
       rows = parseCsv(payload).map((entry) => ({
         value: entry.value || entry.indicator || entry.ioc || "",
         type: entry.type,
         severity: entry.severity,
-        confidence: entry.confidence ? Number.parseInt(entry.confidence, 10) : undefined,
+        confidence: entry.confidence
+          ? Number.parseInt(entry.confidence, 10)
+          : undefined,
         description: entry.description,
-        tags: entry.tags ? entry.tags.split("|").map((tag) => tag.trim()).filter(Boolean) : undefined,
+        tags: entry.tags
+          ? entry.tags
+              .split("|")
+              .map((tag) => tag.trim())
+              .filter(Boolean)
+          : undefined,
       }));
     } else {
       const arrayData = Array.isArray(payload)
         ? payload
-        : payload && typeof payload === "object" && Array.isArray((payload as { data?: unknown[] }).data)
+        : payload &&
+            typeof payload === "object" &&
+            Array.isArray((payload as { data?: unknown[] }).data)
           ? (payload as { data: unknown[] }).data
           : [];
 
       rows = arrayData
         .map((entry): ImportRow | null => {
-          if (!entry || typeof entry !== "object") return null;
+          if (!entry || typeof entry !== "object") {
+            return null;
+          }
           const row = entry as Record<string, unknown>;
           const value =
             typeof row.value === "string"
@@ -130,15 +155,27 @@ export async function POST(request: Request) {
               : typeof row.indicator === "string"
                 ? row.indicator
                 : "";
-          if (!value) return null;
+          if (!value) {
+            return null;
+          }
 
           const normalized: ImportRow = { value };
-          if (typeof row.type === "string") normalized.type = row.type;
-          if (typeof row.severity === "string") normalized.severity = row.severity;
-          if (typeof row.confidence === "number") normalized.confidence = row.confidence;
-          if (typeof row.description === "string") normalized.description = row.description;
+          if (typeof row.type === "string") {
+            normalized.type = row.type;
+          }
+          if (typeof row.severity === "string") {
+            normalized.severity = row.severity;
+          }
+          if (typeof row.confidence === "number") {
+            normalized.confidence = row.confidence;
+          }
+          if (typeof row.description === "string") {
+            normalized.description = row.description;
+          }
           if (Array.isArray(row.tags)) {
-            normalized.tags = row.tags.filter((tag): tag is string => typeof tag === "string");
+            normalized.tags = row.tags.filter(
+              (tag): tag is string => typeof tag === "string"
+            );
           }
 
           return normalized;
@@ -182,16 +219,29 @@ export async function POST(request: Request) {
       try {
         const normalizedValue = normalizeIndicatorValue(type, rawValue);
         const severity = row.severity?.toUpperCase();
-        const normalizedSeverity = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"].includes(severity ?? "")
-          ? (severity as "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFORMATIONAL")
+        const normalizedSeverity = [
+          "CRITICAL",
+          "HIGH",
+          "MEDIUM",
+          "LOW",
+          "INFORMATIONAL",
+        ].includes(severity ?? "")
+          ? (severity as
+              | "CRITICAL"
+              | "HIGH"
+              | "MEDIUM"
+              | "LOW"
+              | "INFORMATIONAL")
           : "MEDIUM";
 
-        const confidence = row.confidence ?? calculateConfidence({
-          source: "CUSTOM",
-          firstSeen: now,
-          lastSeen: now,
-          severity: normalizedSeverity,
-        });
+        const confidence =
+          row.confidence ??
+          calculateConfidence({
+            source: "CUSTOM",
+            firstSeen: now,
+            lastSeen: now,
+            severity: normalizedSeverity,
+          });
 
         const upserted = await repository.upsertIndicator(orgId, feed.id, {
           type,
@@ -235,7 +285,7 @@ export async function POST(request: Request) {
         error: "Failed to import IOCs",
         message: error instanceof Error ? error.message : String(error),
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 }

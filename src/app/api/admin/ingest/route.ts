@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { IngestionOrchestrator } from "@/modules/cve-ingestion/orchestrator";
-import { logger } from "@/modules/cve-ingestion/utils/logger";
 import { auth } from "@/lib/auth";
 import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
+import { IngestionOrchestrator } from "@/modules/cve-ingestion/orchestrator";
+import { logger } from "@/modules/cve-ingestion/utils/logger";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -13,7 +13,9 @@ function isAuthorizedByAdminToken(request: Request): boolean {
   const adminToken = process.env.ADMIN_API_TOKEN;
 
   if (!adminToken) {
-    logger.warn("ADMIN_API_TOKEN not set - falling back to session-based authorization");
+    logger.warn(
+      "ADMIN_API_TOKEN not set - falling back to session-based authorization"
+    );
     return false;
   }
 
@@ -41,7 +43,9 @@ export async function POST(request: Request) {
   }
 
   if (!tokenAuthorized && process.env.ADMIN_API_TOKEN) {
-    logger.info("Admin ingest authorized via NextAuth session (MAIN_OFFICER + 2FA).");
+    logger.info(
+      "Admin ingest authorized via NextAuth session (MAIN_OFFICER + 2FA)."
+    );
   }
 
   try {
@@ -53,17 +57,18 @@ export async function POST(request: Request) {
     if (source === "nvd") {
       const result = await orchestrator.ingestNvd();
       return NextResponse.json(result);
-    } else if (source === "kev") {
+    }
+    if (source === "kev") {
       const result = await orchestrator.enrichWithKev();
       return NextResponse.json(result);
-    } else if (source === "epss") {
+    }
+    if (source === "epss") {
       const result = await orchestrator.enrichWithEpss();
       return NextResponse.json(result);
-    } else {
-      // Run full pipeline
-      const results = await orchestrator.runFullIngestion();
-      return NextResponse.json({ results });
     }
+    // Run full pipeline
+    const results = await orchestrator.runFullIngestion();
+    return NextResponse.json({ results });
   } catch (error) {
     logger.error("Ingestion API error", {
       error: error instanceof Error ? error.message : String(error),

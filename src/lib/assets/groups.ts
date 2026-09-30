@@ -1,10 +1,19 @@
 import { prisma } from "@/lib/prisma";
 
 function normalizeAssetIds(assetIds: string[]): string[] {
-  return [...new Set(assetIds.map((assetId) => assetId.trim()).filter((assetId) => assetId.length > 0))];
+  return [
+    ...new Set(
+      assetIds
+        .map((assetId) => assetId.trim())
+        .filter((assetId) => assetId.length > 0)
+    ),
+  ];
 }
 
-async function assertAssetIdsInOrganization(assetIds: string[], organizationId: string) {
+async function assertAssetIdsInOrganization(
+  assetIds: string[],
+  organizationId: string
+) {
   if (assetIds.length === 0) {
     return;
   }
@@ -102,7 +111,10 @@ export async function updateAssetGroup(params: {
 
   if (Array.isArray(assetIds)) {
     const normalizedAssetIds = normalizeAssetIds(assetIds);
-    await assertAssetIdsInOrganization(normalizedAssetIds, params.organizationId);
+    await assertAssetIdsInOrganization(
+      normalizedAssetIds,
+      params.organizationId
+    );
 
     await prisma.assetGroupMember.deleteMany({ where: { groupId: id } });
 
@@ -127,7 +139,10 @@ export async function updateAssetGroup(params: {
   });
 }
 
-export async function deleteAssetGroup(params: { organizationId: string; id: string }) {
+export async function deleteAssetGroup(params: {
+  organizationId: string;
+  id: string;
+}) {
   const existing = await prisma.assetGroup.findFirst({
     where: { id: params.id, organizationId: params.organizationId },
     select: { id: true },

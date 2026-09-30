@@ -4,7 +4,9 @@ import type { JobName, JobPayloads } from "@/lib/queue/types";
  * A job handler. Handlers are plain async functions so they can be called
  * directly by a test, by the worker, or by the inline fallback.
  */
-export type JobHandler<N extends JobName> = (payload: JobPayloads[N]) => Promise<unknown>;
+export type JobHandler<N extends JobName> = (
+  payload: JobPayloads[N]
+) => Promise<unknown>;
 
 export type JobHandlerMap = { [N in JobName]: JobHandler<N> };
 

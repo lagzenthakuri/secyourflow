@@ -1,11 +1,5 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ErrorBanner } from "@/components/ui/ErrorBanner";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { RiskRegisterTable } from "@/components/risk/RiskRegisterTable";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { ShieldLoader } from "@/components/ui/ShieldLoader";
 import {
   AlertTriangle,
   ArrowDownToLine,
@@ -15,15 +9,21 @@ import {
   Sparkles,
   Target,
 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { RiskRegisterTable } from "@/components/risk/RiskRegisterTable";
+import { ErrorBanner } from "@/components/ui/ErrorBanner";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
 
 interface RiskOverviewEntry {
   id: string;
-  threat: string;
   impactScore: number;
+  isResolved: boolean;
   likelihoodScore: number;
   riskCategory: string;
+  threat: string;
   treatmentOption: string;
-  isResolved: boolean;
 }
 
 interface RiskOverviewResponse {
@@ -33,7 +33,9 @@ interface RiskOverviewResponse {
 const numberFormatter = new Intl.NumberFormat("en-US");
 
 function scrollToTable() {
-  if (typeof document === "undefined") return;
+  if (typeof document === "undefined") {
+    return;
+  }
   const element = document.getElementById("risk-register-table");
   if (element) {
     element.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -46,32 +48,39 @@ export default function RiskRegisterPage() {
   const [isRefreshingOverview, setIsRefreshingOverview] = useState(false);
   const [overviewError, setOverviewError] = useState<string | null>(null);
 
-  const fetchOverview = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
-    if (silent) {
-      setIsRefreshingOverview(true);
-    } else {
-      setIsLoadingOverview(true);
-    }
-
-    try {
-      setOverviewError(null);
-      const response = await fetch("/api/risk-register", { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error("Failed to fetch risk overview");
-      }
-
-      const payload = (await response.json()) as RiskOverviewResponse;
-      setOverviewData(payload.data ?? []);
-    } catch (err) {
-      setOverviewError(err instanceof Error ? err.message : "Failed to load risk overview");
-    } finally {
+  const fetchOverview = useCallback(
+    async ({ silent = false }: { silent?: boolean } = {}) => {
       if (silent) {
-        setIsRefreshingOverview(false);
+        setIsRefreshingOverview(true);
       } else {
-        setIsLoadingOverview(false);
+        setIsLoadingOverview(true);
       }
-    }
-  }, []);
+
+      try {
+        setOverviewError(null);
+        const response = await fetch("/api/risk-register", {
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          throw new Error("Failed to fetch risk overview");
+        }
+
+        const payload = (await response.json()) as RiskOverviewResponse;
+        setOverviewData(payload.data ?? []);
+      } catch (err) {
+        setOverviewError(
+          err instanceof Error ? err.message : "Failed to load risk overview"
+        );
+      } finally {
+        if (silent) {
+          setIsRefreshingOverview(false);
+        } else {
+          setIsLoadingOverview(false);
+        }
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     void fetchOverview();
@@ -81,7 +90,7 @@ export default function RiskRegisterPage() {
 
   const resolvedCount = useMemo(
     () => overviewData.filter((entry) => entry.isResolved).length,
-    [overviewData],
+    [overviewData]
   );
 
   const openCount = totalRisks - resolvedCount;
@@ -91,22 +100,31 @@ export default function RiskRegisterPage() {
       overviewData.filter((entry) => {
         const score = (entry.impactScore || 0) * (entry.likelihoodScore || 0);
         const category = (entry.riskCategory || "").toLowerCase();
-        return score >= 16 || category.includes("critical") || category.includes("high");
+        return (
+          score >= 16 ||
+          category.includes("critical") ||
+          category.includes("high")
+        );
       }).length,
-    [overviewData],
+    [overviewData]
   );
 
   const averageRiskScore = useMemo(() => {
-    if (!totalRisks) return 0;
+    if (!totalRisks) {
+      return 0;
+    }
     const aggregate = overviewData.reduce(
-      (sum, entry) => sum + (entry.impactScore || 0) * (entry.likelihoodScore || 0),
-      0,
+      (sum, entry) =>
+        sum + (entry.impactScore || 0) * (entry.likelihoodScore || 0),
+      0
     );
     return aggregate / totalRisks;
   }, [overviewData, totalRisks]);
 
   const dominantCategory = useMemo(() => {
-    if (!overviewData.length) return "N/A";
+    if (!overviewData.length) {
+      return "N/A";
+    }
     const bucket = new Map<string, number>();
     for (const entry of overviewData) {
       const key = entry.riskCategory || "Unspecified";
@@ -136,37 +154,43 @@ export default function RiskRegisterPage() {
 
   return (
     <DashboardLayout>
-      <ErrorBanner message={overviewError} onDismiss={() => setOverviewError(null)} className="mb-4" />
+      <ErrorBanner
+        className="mb-4"
+        message={overviewError}
+        onDismiss={() => setOverviewError(null)}
+      />
       <div className="space-y-5">
         <PageHeader
-          title="Risk Register"
-          description="Centralized view of assessed risks, treatment choices, and accountability to keep risk decisions auditable and actionable for SOC and leadership teams."
-          badge={
-            <>
-              <Sparkles size={13} />
-              Risk Governance Workspace
-            </>
-          }
           actions={
             <>
               <button
-                type="button"
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 font-medium text-[var(--text-primary)] text-sm transition-all duration-200 hover:scale-105 hover:bg-[var(--bg-elevated)] active:scale-95"
                 onClick={() => void fetchOverview({ silent: true })}
-                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95"
+                type="button"
               >
-                <RefreshCw size={14} className={isRefreshingOverview ? "animate-spin" : ""} />
+                <RefreshCw
+                  className={isRefreshingOverview ? "animate-spin" : ""}
+                  size={14}
+                />
                 Refresh Overview
               </button>
               <button
-                type="button"
+                className="btn btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 font-semibold text-sm transition-all duration-200 hover:scale-105 active:scale-95"
                 onClick={scrollToTable}
-                className="btn btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
+                type="button"
               >
                 <ArrowDownToLine size={14} />
                 Open Register
               </button>
             </>
           }
+          badge={
+            <>
+              <Sparkles size={13} />
+              Risk Governance Workspace
+            </>
+          }
+          description="Centralized view of assessed risks, treatment choices, and accountability to keep risk decisions auditable and actionable for SOC and leadership teams."
           stats={[
             {
               label: "Total Risks",
@@ -199,23 +223,38 @@ export default function RiskRegisterPage() {
               icon: Sparkles,
             },
           ]}
+          title="Risk Register"
         />
 
-        <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '500ms', animationFillMode: 'backwards' }}>
+        <section
+          className="fade-in slide-in-from-bottom-2 animate-in rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 duration-500"
+          style={{ animationDelay: "500ms", animationFillMode: "backwards" }}
+        >
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-[var(--text-primary)]">Posture Snapshot</h2>
-              <p className="text-sm text-[var(--text-secondary)]">
-                Dominant category: <span className="text-[var(--text-primary)]">{dominantCategory}</span>
+              <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                Posture Snapshot
+              </h2>
+              <p className="text-[var(--text-secondary)] text-sm">
+                Dominant category:{" "}
+                <span className="text-[var(--text-primary)]">
+                  {dominantCategory}
+                </span>
               </p>
             </div>
-            <p className="text-xs text-[var(--text-muted)]">
-              {isLoadingOverview ? "Loading register overview..." : "Overview synced with register data"}
+            <p className="text-[var(--text-muted)] text-xs">
+              {isLoadingOverview
+                ? "Loading register overview..."
+                : "Overview synced with register data"}
             </p>
           </div>
         </section>
 
-        <section id="risk-register-table" className="animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '600ms', animationFillMode: 'backwards' }}>
+        <section
+          className="fade-in slide-in-from-bottom-4 animate-in duration-700"
+          id="risk-register-table"
+          style={{ animationDelay: "600ms", animationFillMode: "backwards" }}
+        >
           <RiskRegisterTable />
         </section>
       </div>

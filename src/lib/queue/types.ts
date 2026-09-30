@@ -19,6 +19,23 @@ export const QUEUE_NAMES = [
 export type QueueName = (typeof QUEUE_NAMES)[number];
 
 export interface JobPayloads {
+  "compliance.assess-organization": { organizationId: string };
+  "compliance.audit-organization": { organizationId: string };
+  "cve.ingest": { source?: "nvd" | "kev" | "epss" | "all" };
+  "maintenance.prune-job-runs": Record<string, never>;
+  /** Periodic housekeeping — see src/worker/index.ts. */
+  "maintenance.reap-stale-risk-entries": Record<string, never>;
+  "maintenance.run-due-report-schedules": Record<string, never>;
+  /** Renders and archives one report. Used by the scheduler. */
+  "report.render": {
+    organizationId: string;
+    requestedByUserId: string;
+    templateKey: string;
+    outputFormat: string;
+    name?: string;
+    filters?: Record<string, unknown>;
+    scheduleId?: string;
+  };
   /** Score one vulnerability on one asset. */
   "risk.assess": {
     organizationId: string;
@@ -49,29 +66,12 @@ export interface JobPayloads {
     userId?: string;
     scannerName?: string;
   };
-  "cve.ingest": { source?: "nvd" | "kev" | "epss" | "all" };
   "threat.sync": {
     organizationId: string;
     source?: string;
     includeMitre?: boolean;
     includeCorrelation?: boolean;
   };
-  "compliance.assess-organization": { organizationId: string };
-  "compliance.audit-organization": { organizationId: string };
-  /** Renders and archives one report. Used by the scheduler. */
-  "report.render": {
-    organizationId: string;
-    requestedByUserId: string;
-    templateKey: string;
-    outputFormat: string;
-    name?: string;
-    filters?: Record<string, unknown>;
-    scheduleId?: string;
-  };
-  /** Periodic housekeeping — see src/worker/index.ts. */
-  "maintenance.reap-stale-risk-entries": Record<string, never>;
-  "maintenance.run-due-report-schedules": Record<string, never>;
-  "maintenance.prune-job-runs": Record<string, never>;
 }
 
 export type JobName = keyof JobPayloads;

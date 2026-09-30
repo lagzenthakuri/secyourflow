@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { ThreatIntelOrchestrator } from "@/modules/threat-intel/orchestrator";
 import { requireThreatIntelContext } from "@/modules/threat-intel/auth";
+import { ThreatIntelOrchestrator } from "@/modules/threat-intel/orchestrator";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const maxDuration = 300;
 
 interface SyncRequestBody {
-  source?: string;
-  includeMitre?: boolean;
   includeCorrelation?: boolean;
+  includeMitre?: boolean;
+  source?: string;
 }
 
 export async function POST(request: Request) {
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
         error: "Threat intelligence sync failed",
         message: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

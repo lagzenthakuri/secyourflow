@@ -2,19 +2,15 @@
 import { Checkbox as BoilerplateCheckbox } from "@repo/design-system/components/ui/checkbox";
 import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
 
-
-
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
-import dynamic from "next/dynamic";
-import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSession } from "next-auth/react";
-import { ErrorBanner } from "@/components/ui/ErrorBanner";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { WidgetBuilder } from "@/components/dashboard/WidgetBuilder";
-import { ShieldLoader } from "@/components/ui/ShieldLoader";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { cn, formatLabel } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/design-system/components/ui/select";
+import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle,
   BarChart3,
@@ -32,53 +28,77 @@ import {
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { WidgetBuilder } from "@/components/dashboard/WidgetBuilder";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { ErrorBanner } from "@/components/ui/ErrorBanner";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
+import { cn, formatLabel } from "@/lib/utils";
 
 const RiskTrendChart = dynamic(
-  () => import("@/components/charts/DashboardCharts").then((mod) => mod.RiskTrendChart),
+  () =>
+    import("@/components/charts/DashboardCharts").then(
+      (mod) => mod.RiskTrendChart
+    ),
   {
     ssr: false,
-    loading: () => <div className="h-[280px] animate-pulse rounded-xl bg-[var(--bg-tertiary)]" />,
-  },
+    loading: () => (
+      <div className="h-[280px] animate-pulse rounded-xl bg-[var(--bg-tertiary)]" />
+    ),
+  }
 );
 
 const VulnStatusChart = dynamic(
-  () => import("@/components/charts/DashboardCharts").then((mod) => mod.VulnStatusChart),
+  () =>
+    import("@/components/charts/DashboardCharts").then(
+      (mod) => mod.VulnStatusChart
+    ),
   {
     ssr: false,
-    loading: () => <div className="h-[240px] animate-pulse rounded-xl bg-[var(--bg-tertiary)]" />,
-  },
+    loading: () => (
+      <div className="h-[240px] animate-pulse rounded-xl bg-[var(--bg-tertiary)]" />
+    ),
+  }
 );
 
 const ComplianceBarChart = dynamic(
-  () => import("@/components/charts/DashboardCharts").then((mod) => mod.ComplianceBarChart),
+  () =>
+    import("@/components/charts/DashboardCharts").then(
+      (mod) => mod.ComplianceBarChart
+    ),
   {
     ssr: false,
-    loading: () => <div className="h-[240px] animate-pulse rounded-xl bg-[var(--bg-tertiary)]" />,
-  },
+    loading: () => (
+      <div className="h-[240px] animate-pulse rounded-xl bg-[var(--bg-tertiary)]" />
+    ),
+  }
 );
 
 interface ReportTemplate {
+  cadence: string;
+  description: string;
+  format: string;
   id: string;
   name: string;
-  description: string;
   type: string;
-  cadence: string;
-  format: string;
 }
 
 interface ReportRecord {
-  id: string;
-  name: string;
-  type: string;
-  templateKey?: string | null;
+  createdAt: string;
   description?: string | null;
   format?: string | null;
+  id: string;
+  name: string;
   outputFormat?: string | null;
-  status?: string | null;
-  url?: string | null;
   size?: string | null;
-  createdAt: string;
+  status?: string | null;
+  templateKey?: string | null;
+  type: string;
+  url?: string | null;
 }
 
 interface ReportsApiResponse {
@@ -93,12 +113,12 @@ interface ReportsApiResponse {
 
 interface DashboardViewRecord {
   id: string;
-  name: string;
+  isDefault: boolean;
   layout: {
     widgets?: string[];
     [key: string]: unknown;
   };
-  isDefault: boolean;
+  name: string;
   shares?: Array<{
     id: string;
     sharedWithRole?: string | null;
@@ -108,27 +128,14 @@ interface DashboardViewRecord {
 }
 
 interface DashboardStats {
-  overallRiskScore: number;
   complianceScore: number;
   fixedThisMonth: number;
   meanTimeToRemediate: number;
   openVulnerabilities: number;
+  overallRiskScore: number;
 }
 
 interface DashboardData {
-  stats: DashboardStats;
-  riskTrends: Array<{
-    date: string;
-    riskScore: number;
-    criticalVulns: number;
-    highVulns: number;
-  }>;
-  remediationTrends: Array<{
-    month: string;
-    opened: number;
-    closed: number;
-    net?: number;
-  }>;
   complianceOverview: Array<{
     frameworkId: string;
     frameworkName: string;
@@ -136,6 +143,19 @@ interface DashboardData {
     nonCompliant: number;
     compliancePercentage: number;
   }>;
+  remediationTrends: Array<{
+    month: string;
+    opened: number;
+    closed: number;
+    net?: number;
+  }>;
+  riskTrends: Array<{
+    date: string;
+    riskScore: number;
+    criticalVulns: number;
+    highVulns: number;
+  }>;
+  stats: DashboardStats;
 }
 
 const EMPTY_COMPLIANCE_OVERVIEW: DashboardData["complianceOverview"] = [];
@@ -144,7 +164,8 @@ const reportTemplates: ReportTemplate[] = [
   {
     id: "executive-risk-summary",
     name: "Executive Risk Summary",
-    description: "Leadership-ready summary of current cyber risk, exposure trends, and priority actions.",
+    description:
+      "Leadership-ready summary of current cyber risk, exposure trends, and priority actions.",
     type: "executive",
     cadence: "Weekly",
     format: "PDF",
@@ -152,7 +173,8 @@ const reportTemplates: ReportTemplate[] = [
   {
     id: "vulnerability-status",
     name: "Vulnerability Status Report",
-    description: "Detailed severity, ownership, and remediation status for active vulnerability workloads.",
+    description:
+      "Detailed severity, ownership, and remediation status for active vulnerability workloads.",
     type: "technical",
     cadence: "Daily",
     format: "PDF / CSV",
@@ -160,7 +182,8 @@ const reportTemplates: ReportTemplate[] = [
   {
     id: "compliance-audit",
     name: "Compliance Audit Report",
-    description: "Control pass/fail visibility and maturity posture across active frameworks.",
+    description:
+      "Control pass/fail visibility and maturity posture across active frameworks.",
     type: "compliance",
     cadence: "Monthly",
     format: "PDF",
@@ -168,7 +191,8 @@ const reportTemplates: ReportTemplate[] = [
   {
     id: "asset-inventory",
     name: "Asset Inventory Report",
-    description: "Latest inventory baseline with criticality, ownership, and monitoring coverage context.",
+    description:
+      "Latest inventory baseline with criticality, ownership, and monitoring coverage context.",
     type: "inventory",
     cadence: "Weekly",
     format: "CSV / Excel",
@@ -176,7 +200,8 @@ const reportTemplates: ReportTemplate[] = [
   {
     id: "threat-intelligence-brief",
     name: "Threat Intelligence Brief",
-    description: "Consolidated view of live threats, exploitation indicators, and likely attack pressure.",
+    description:
+      "Consolidated view of live threats, exploitation indicators, and likely attack pressure.",
     type: "threat",
     cadence: "Daily",
     format: "PDF",
@@ -184,7 +209,8 @@ const reportTemplates: ReportTemplate[] = [
   {
     id: "remediation-progress",
     name: "Remediation Progress Report",
-    description: "Progress tracking of fixes, mean closure times, and unresolved high-risk findings.",
+    description:
+      "Progress tracking of fixes, mean closure times, and unresolved high-risk findings.",
     type: "tracking",
     cadence: "Weekly",
     format: "PDF / CSV",
@@ -252,7 +278,6 @@ const dashboardWidgetCatalog = [
   "recent_reports",
 ];
 
-
 function getReportStatusTone(status?: string | null) {
   const normalized = (status || "").toUpperCase();
   if (normalized === "COMPLETED") {
@@ -269,7 +294,9 @@ function getReportStatusTone(status?: string | null) {
 
 export default function ReportsPage() {
   const [reportsList, setReportsList] = useState<ReportRecord[]>([]);
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
+    null
+  );
   const { data: session } = useSession();
   const isMainOfficer = session?.user?.role === "MAIN_OFFICER";
 
@@ -280,7 +307,9 @@ export default function ReportsPage() {
   const [pageError, setPageError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const [dashboardViews, setDashboardViews] = useState<DashboardViewRecord[]>([]);
+  const [dashboardViews, setDashboardViews] = useState<DashboardViewRecord[]>(
+    []
+  );
   const [viewName, setViewName] = useState("SOC Operations View");
   const [viewWidgets, setViewWidgets] = useState<string[]>([
     "risk_trend",
@@ -301,17 +330,21 @@ export default function ReportsPage() {
 
       try {
         setPageError(null);
-        const [reportsRes, dashboardRes, dashboardViewsRes] = await Promise.all([
-          fetch("/api/reports", { cache: "no-store" }),
-          fetch("/api/dashboard", { cache: "no-store" }),
-          fetch("/api/dashboard/views", { cache: "no-store" }),
-        ]);
+        const [reportsRes, dashboardRes, dashboardViewsRes] = await Promise.all(
+          [
+            fetch("/api/reports", { cache: "no-store" }),
+            fetch("/api/dashboard", { cache: "no-store" }),
+            fetch("/api/dashboard/views", { cache: "no-store" }),
+          ]
+        );
 
-        if (!reportsRes.ok || !dashboardRes.ok || !dashboardViewsRes.ok) {
+        if (!(reportsRes.ok && dashboardRes.ok && dashboardViewsRes.ok)) {
           throw new Error("Failed to fetch reporting data");
         }
 
-        const reportsPayload = (await reportsRes.json()) as ReportsApiResponse | { error?: string };
+        const reportsPayload = (await reportsRes.json()) as
+          | ReportsApiResponse
+          | { error?: string };
         const dashboardPayload = (await dashboardRes.json()) as DashboardData;
         const viewsPayload = (await dashboardViewsRes.json()) as {
           data?: DashboardViewRecord[];
@@ -323,11 +356,15 @@ export default function ReportsPage() {
             : [];
 
         setReportsList(reportRows);
-        setDashboardViews(Array.isArray(viewsPayload.data) ? viewsPayload.data : []);
+        setDashboardViews(
+          Array.isArray(viewsPayload.data) ? viewsPayload.data : []
+        );
         setDashboardData(dashboardPayload);
       } catch (error) {
         setPageError(
-          error instanceof Error ? error.message : "Failed to fetch reporting data",
+          error instanceof Error
+            ? error.message
+            : "Failed to fetch reporting data"
         );
       } finally {
         if (silent) {
@@ -337,7 +374,7 @@ export default function ReportsPage() {
         }
       }
     },
-    [],
+    []
   );
 
   useEffect(() => {
@@ -345,13 +382,19 @@ export default function ReportsPage() {
   }, [fetchData]);
 
   useEffect(() => {
-    const defaultView = dashboardViews.find((view) => view.isDefault) || dashboardViews[0];
-    if (!defaultView) return;
+    const defaultView =
+      dashboardViews.find((view) => view.isDefault) || dashboardViews[0];
+    if (!defaultView) {
+      return;
+    }
 
     if (defaultView.name && viewName === "SOC Operations View") {
       setViewName(defaultView.name);
     }
-    if (Array.isArray(defaultView.layout?.widgets) && defaultView.layout.widgets.length > 0) {
+    if (
+      Array.isArray(defaultView.layout?.widgets) &&
+      defaultView.layout.widgets.length > 0
+    ) {
       setViewWidgets(defaultView.layout.widgets);
     }
     setViewDefault(defaultView.isDefault);
@@ -370,11 +413,11 @@ export default function ReportsPage() {
           isDefault: viewDefault,
           shares: viewShareRole
             ? [
-              {
-                sharedWithRole: viewShareRole,
-                canEdit: false,
-              },
-            ]
+                {
+                  sharedWithRole: viewShareRole,
+                  canEdit: false,
+                },
+              ]
             : [],
         }),
       });
@@ -386,7 +429,9 @@ export default function ReportsPage() {
 
       await fetchData({ silent: true });
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Failed to save dashboard view");
+      setActionError(
+        error instanceof Error ? error.message : "Failed to save dashboard view"
+      );
     } finally {
       setIsSavingView(false);
     }
@@ -406,12 +451,16 @@ export default function ReportsPage() {
         }
         await fetchData({ silent: true });
       } catch (error) {
-        setActionError(error instanceof Error ? error.message : "Failed to delete dashboard view");
+        setActionError(
+          error instanceof Error
+            ? error.message
+            : "Failed to delete dashboard view"
+        );
       } finally {
         setIsSavingView(false);
       }
     },
-    [fetchData],
+    [fetchData]
   );
 
   const handleGenerate = useCallback(
@@ -442,13 +491,13 @@ export default function ReportsPage() {
         await fetchData({ silent: true });
       } catch (error) {
         setActionError(
-          error instanceof Error ? error.message : "Failed to generate report",
+          error instanceof Error ? error.message : "Failed to generate report"
         );
       } finally {
         setIsGenerating(null);
       }
     },
-    [fetchData],
+    [fetchData]
   );
 
   const stats = dashboardData?.stats || {
@@ -461,26 +510,29 @@ export default function ReportsPage() {
 
   const riskTrends = dashboardData?.riskTrends || [];
   const remediationTrends = dashboardData?.remediationTrends || [];
-  const complianceOverview = dashboardData?.complianceOverview ?? EMPTY_COMPLIANCE_OVERVIEW;
+  const complianceOverview =
+    dashboardData?.complianceOverview ?? EMPTY_COMPLIANCE_OVERVIEW;
 
   const queueStats = useMemo(() => {
     const completed = reportsList.filter(
-      (report) => (report.status || "").toUpperCase() === "COMPLETED",
+      (report) => (report.status || "").toUpperCase() === "COMPLETED"
     ).length;
     const pending = reportsList.filter(
-      (report) => (report.status || "").toUpperCase() === "PENDING",
+      (report) => (report.status || "").toUpperCase() === "PENDING"
     ).length;
     const failed = reportsList.filter(
-      (report) => (report.status || "").toUpperCase() === "FAILED",
+      (report) => (report.status || "").toUpperCase() === "FAILED"
     ).length;
 
     return { completed, pending, failed };
   }, [reportsList]);
 
-  const topComplianceName = useMemo(() => {
-    if (!complianceOverview.length) return "N/A";
+  const _topComplianceName = useMemo(() => {
+    if (!complianceOverview.length) {
+      return "N/A";
+    }
     const sorted = [...complianceOverview].sort(
-      (a, b) => b.compliancePercentage - a.compliancePercentage,
+      (a, b) => b.compliancePercentage - a.compliancePercentage
     );
     return sorted[0]?.frameworkName || "N/A";
   }, [complianceOverview]);
@@ -497,51 +549,58 @@ export default function ReportsPage() {
 
   return (
     <DashboardLayout>
-      <ErrorBanner message={pageError} onDismiss={() => setPageError(null)} className="mb-4" />
-      <ErrorBanner message={actionError} onDismiss={() => setActionError(null)} className="mb-4" />
+      <ErrorBanner
+        className="mb-4"
+        message={pageError}
+        onDismiss={() => setPageError(null)}
+      />
+      <ErrorBanner
+        className="mb-4"
+        message={actionError}
+        onDismiss={() => setActionError(null)}
+      />
       <div className="space-y-5">
         <PageHeader
-          title="Reports"
-          description="Generate decision-ready reporting for SOC leadership, auditors, and operational teams with clear trends, compliance posture, and remediation outcomes."
-          badge={
-            <>
-              <FileText size={13} />
-              Reporting Workspace
-            </>
-          }
           actions={
             <>
               <button
-                type="button"
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 font-medium text-[var(--text-primary)] text-sm transition-all duration-200 hover:scale-105 hover:bg-[var(--bg-elevated)] active:scale-95"
                 onClick={() => void fetchData({ silent: true })}
-                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95"
+                type="button"
               >
                 <RefreshCw
-                  size={14}
                   className={isRefreshing || isLoading ? "animate-spin" : ""}
+                  size={14}
                 />
                 Refresh
               </button>
               {isMainOfficer && (
                 <Link
+                  className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 font-medium text-[var(--text-primary)] text-sm transition-all duration-200 hover:scale-105 hover:bg-[var(--bg-elevated)] active:scale-95"
                   href="/reports/activity"
-                  className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95"
                 >
                   <Clock3 size={14} />
                   Activity
                 </Link>
               )}
               <button
-                type="button"
-                onClick={() => void handleGenerate(reportTemplates[0])}
+                className="btn btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 font-semibold text-sm transition-all duration-200 hover:scale-105 active:scale-95"
                 disabled={isGenerating !== null}
-                className="btn btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
+                onClick={() => void handleGenerate(reportTemplates[0])}
+                type="button"
               >
                 <Plus size={14} />
                 Generate Snapshot
               </button>
             </>
           }
+          badge={
+            <>
+              <FileText size={13} />
+              Reporting Workspace
+            </>
+          }
+          description="Generate decision-ready reporting for SOC leadership, auditors, and operational teams with clear trends, compliance posture, and remediation outcomes."
           stats={[
             {
               label: "Risk Score",
@@ -574,17 +633,22 @@ export default function ReportsPage() {
               icon: Sparkles,
             },
           ]}
+          title="Reports"
         />
 
         <section
-          className="grid gap-4 xl:grid-cols-2 animate-in fade-in slide-in-from-bottom-3 duration-500"
+          className="fade-in slide-in-from-bottom-3 grid animate-in gap-4 duration-500 xl:grid-cols-2"
           style={{ animationDelay: "450ms", animationFillMode: "backwards" }}
         >
           <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-base font-semibold text-[var(--text-primary)]">Risk Trend</h2>
-                <p className="text-sm text-[var(--text-secondary)]">Last six snapshots</p>
+                <h2 className="font-semibold text-[var(--text-primary)] text-base">
+                  Risk Trend
+                </h2>
+                <p className="text-[var(--text-secondary)] text-sm">
+                  Last six snapshots
+                </p>
               </div>
               <span className="rounded-full border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-1 text-[11px] text-[var(--text-muted)]">
                 Governance signal
@@ -596,8 +660,12 @@ export default function ReportsPage() {
           <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-base font-semibold text-[var(--text-primary)]">Remediation Activity</h2>
-                <p className="text-sm text-[var(--text-secondary)]">Opened vs closed findings</p>
+                <h2 className="font-semibold text-[var(--text-primary)] text-base">
+                  Remediation Activity
+                </h2>
+                <p className="text-[var(--text-secondary)] text-sm">
+                  Opened vs closed findings
+                </p>
               </div>
               <span className="rounded-full border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-1 text-[11px] text-[var(--text-muted)]">
                 Operational throughput
@@ -608,61 +676,75 @@ export default function ReportsPage() {
         </section>
 
         <section className="grid gap-5 xl:grid-cols-12">
-          <div className="xl:col-span-8 space-y-4">
+          <div className="space-y-4 xl:col-span-8">
             <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-base font-semibold text-[var(--text-primary)]">Report Templates</h2>
-                  <p className="text-sm text-[var(--text-secondary)]">Generate on-demand outputs for current posture.</p>
+                  <h2 className="font-semibold text-[var(--text-primary)] text-base">
+                    Report Templates
+                  </h2>
+                  <p className="text-[var(--text-secondary)] text-sm">
+                    Generate on-demand outputs for current posture.
+                  </p>
                 </div>
-                <span className="text-xs text-[var(--text-muted)]">
+                <span className="text-[var(--text-muted)] text-xs">
                   {reportTemplates.length} templates available
                 </span>
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">
                 {reportTemplates.map((template, index) => {
-                  const meta = reportTypeMeta[template.type] || reportTypeMeta.tracking;
+                  const meta =
+                    reportTypeMeta[template.type] || reportTypeMeta.tracking;
                   const Icon = meta.icon;
                   return (
                     <article
-                      key={template.id}
                       className={cn(
-                        "rounded-xl border bg-[var(--bg-tertiary)] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:bg-[var(--bg-elevated)] hover:scale-[1.02] animate-in fade-in slide-in-from-bottom-2",
-                        meta.border,
+                        "fade-in slide-in-from-bottom-2 animate-in rounded-xl border bg-[var(--bg-tertiary)] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:bg-[var(--bg-elevated)]",
+                        meta.border
                       )}
-                      style={{ animationDelay: `${index * 50}ms`, animationFillMode: "backwards" }}
+                      key={template.id}
+                      style={{
+                        animationDelay: `${index * 50}ms`,
+                        animationFillMode: "backwards",
+                      }}
                     >
                       <div className="flex items-start gap-3">
                         <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-elevated)] p-2">
-                          <Icon size={15} className={meta.iconTone} />
+                          <Icon className={meta.iconTone} size={15} />
                         </div>
                         <div className="min-w-0">
-                          <h3 className={cn("text-sm font-semibold", meta.tone)}>{template.name}</h3>
-                          <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">
+                          <h3
+                            className={cn("font-semibold text-sm", meta.tone)}
+                          >
+                            {template.name}
+                          </h3>
+                          <p className="mt-1 text-[var(--text-secondary)] text-xs leading-relaxed">
                             {template.description}
                           </p>
                         </div>
                       </div>
 
-                      <div className="mt-4 flex items-center justify-between text-xs text-[var(--text-muted)]">
+                      <div className="mt-4 flex items-center justify-between text-[var(--text-muted)] text-xs">
                         <span>{template.cadence}</span>
                         <span>{template.format}</span>
                       </div>
 
-                      <div className="mt-3 flex items-center gap-2 border-t border-[var(--border-color)] pt-3">
+                      <div className="mt-3 flex items-center gap-2 border-[var(--border-color)] border-t pt-3">
                         <button
-                          type="button"
-                          onClick={() => void handleGenerate(template)}
+                          className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-sky-300 px-3 py-2 font-semibold text-slate-950 text-xs transition-all duration-200 hover:scale-105 hover:bg-sky-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
                           disabled={isGenerating !== null}
-                          className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-sky-300 px-3 py-2 text-xs font-semibold text-slate-950 transition-all duration-200 hover:bg-sky-200 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
+                          onClick={() => void handleGenerate(template)}
+                          type="button"
                         >
                           {isGenerating === template.id ? (
                             <ShieldLoader size="sm" variant="cyber" />
                           ) : (
                             <Download size={12} />
                           )}
-                          {isGenerating === template.id ? "Generating..." : "Generate"}
+                          {isGenerating === template.id
+                            ? "Generating..."
+                            : "Generate"}
                         </button>
                       </div>
                     </article>
@@ -672,12 +754,16 @@ export default function ReportsPage() {
             </article>
 
             <article className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
-              <div className="flex items-center justify-between border-b border-[var(--border-color)] px-5 py-4">
+              <div className="flex items-center justify-between border-[var(--border-color)] border-b px-5 py-4">
                 <div>
-                  <h2 className="text-base font-semibold text-[var(--text-primary)]">Recently Generated</h2>
-                  <p className="text-sm text-[var(--text-secondary)]">Latest report outputs and status</p>
+                  <h2 className="font-semibold text-[var(--text-primary)] text-base">
+                    Recently Generated
+                  </h2>
+                  <p className="text-[var(--text-secondary)] text-sm">
+                    Latest report outputs and status
+                  </p>
                 </div>
-                <span className="text-xs text-[var(--text-muted)]">
+                <span className="text-[var(--text-muted)] text-xs">
                   {numberFormatter.format(reportsList.length)} total
                 </span>
               </div>
@@ -685,8 +771,10 @@ export default function ReportsPage() {
               {reportsList.length === 0 ? (
                 <div className="p-12 text-center">
                   <FileText className="mx-auto h-10 w-10 text-[var(--text-muted)]" />
-                  <p className="mt-4 text-base font-medium text-[var(--text-primary)]">No Reports Yet</p>
-                  <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                  <p className="mt-4 font-medium text-[var(--text-primary)] text-base">
+                    No Reports Yet
+                  </p>
+                  <p className="mt-2 text-[var(--text-secondary)] text-sm">
                     Generate your first report from the templates above.
                   </p>
                 </div>
@@ -694,17 +782,22 @@ export default function ReportsPage() {
                 <div className="divide-y divide-[var(--border-color)]">
                   {reportsList.map((report, index) => (
                     <div
+                      className="fade-in slide-in-from-left-2 flex animate-in items-center justify-between gap-3 px-5 py-4 transition-all duration-200 hover:bg-[var(--bg-elevated)]"
                       key={report.id}
-                      className="flex items-center justify-between gap-3 px-5 py-4 transition-all duration-200 hover:bg-[var(--bg-elevated)] animate-in fade-in slide-in-from-left-2"
-                      style={{ animationDelay: `${index * 30}ms`, animationFillMode: "backwards" }}
+                      style={{
+                        animationDelay: `${index * 30}ms`,
+                        animationFillMode: "backwards",
+                      }}
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{report.name}</p>
+                          <p className="truncate font-semibold text-[var(--text-primary)] text-sm">
+                            {report.name}
+                          </p>
                           <span
                             className={cn(
-                              "rounded-md border px-2 py-0.5 text-[11px] font-medium",
-                              getReportStatusTone(report.status),
+                              "rounded-md border px-2 py-0.5 font-medium text-[11px]",
+                              getReportStatusTone(report.status)
                             )}
                           >
                             {formatLabel(report.status || "PENDING")}
@@ -713,33 +806,37 @@ export default function ReportsPage() {
                             {formatLabel(report.type || "Report")}
                           </span>
                         </div>
-                        <p className="mt-1 text-xs text-[var(--text-muted)]">
-                          {new Date(report.createdAt).toLocaleString()} • {report.size || "Calculating..."}
+                        <p className="mt-1 text-[var(--text-muted)] text-xs">
+                          {new Date(report.createdAt).toLocaleString()} •{" "}
+                          {report.size || "Calculating..."}
                         </p>
                       </div>
 
                       <div className="flex items-center gap-2">
                         {report.url && report.url !== "#" ? (
                           <a
+                            className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 font-medium text-[var(--text-primary)] text-xs transition-all duration-200 hover:scale-105 hover:bg-[var(--bg-elevated)] active:scale-95"
                             href={report.url}
-                            target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-xs font-medium text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95"
+                            target="_blank"
                           >
                             <Download size={12} />
                             Download
                           </a>
                         ) : (
                           <button
-                            type="button"
+                            className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 font-medium text-[var(--text-muted)] text-xs"
                             disabled
-                            className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2 text-xs font-medium text-[var(--text-muted)]"
+                            type="button"
                           >
                             <Download size={12} />
                             Pending
                           </button>
                         )}
-                        <ChevronRight size={14} className="text-[var(--text-muted)]" />
+                        <ChevronRight
+                          className="text-[var(--text-muted)]"
+                          size={14}
+                        />
                       </div>
                     </div>
                   ))}
@@ -748,15 +845,19 @@ export default function ReportsPage() {
             </article>
           </div>
 
-          <aside className="xl:col-span-4 space-y-4">
+          <aside className="space-y-4 xl:col-span-4">
             <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
-              <h3 className="text-base font-semibold text-[var(--text-primary)]">Compliance Snapshot</h3>
-              <p className="mt-1 text-sm text-[var(--text-secondary)]">Framework score comparison</p>
+              <h3 className="font-semibold text-[var(--text-primary)] text-base">
+                Compliance Snapshot
+              </h3>
+              <p className="mt-1 text-[var(--text-secondary)] text-sm">
+                Framework score comparison
+              </p>
               <div className="mt-4">
                 {complianceOverview.length > 0 ? (
                   <ComplianceBarChart data={complianceOverview} />
                 ) : (
-                  <p className="rounded-xl border border-dashed border-[var(--border-hover)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
+                  <p className="rounded-xl border border-[var(--border-hover)] border-dashed bg-[var(--bg-tertiary)] p-4 text-[var(--text-muted)] text-sm">
                     Compliance chart appears when frameworks are available.
                   </p>
                 )}
@@ -764,8 +865,12 @@ export default function ReportsPage() {
             </section>
 
             <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
-              <h3 className="text-base font-semibold text-[var(--text-primary)]">Output Queue</h3>
-              <p className="mt-1 text-sm text-[var(--text-muted)]">Current report generation states</p>
+              <h3 className="font-semibold text-[var(--text-primary)] text-base">
+                Output Queue
+              </h3>
+              <p className="mt-1 text-[var(--text-muted)] text-sm">
+                Current report generation states
+              </p>
               <div className="mt-4 space-y-3">
                 {[
                   {
@@ -790,17 +895,17 @@ export default function ReportsPage() {
                   const Icon = item.icon;
                   return (
                     <div
-                      key={item.label}
                       className={cn(
                         "flex items-center justify-between rounded-xl border px-3 py-2.5",
-                        item.tone,
+                        item.tone
                       )}
+                      key={item.label}
                     >
-                      <span className="inline-flex items-center gap-2 text-sm font-medium">
+                      <span className="inline-flex items-center gap-2 font-medium text-sm">
                         <Icon size={13} />
                         {item.label}
                       </span>
-                      <span className="text-lg font-semibold">
+                      <span className="font-semibold text-lg">
                         {numberFormatter.format(item.value)}
                       </span>
                     </div>
@@ -810,17 +915,25 @@ export default function ReportsPage() {
             </section>
 
             <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
-              <h3 className="text-base font-semibold text-[var(--text-primary)]">Top Frameworks</h3>
-              <p className="mt-1 text-sm text-[var(--text-muted)]">Highest compliance performance</p>
+              <h3 className="font-semibold text-[var(--text-primary)] text-base">
+                Top Frameworks
+              </h3>
+              <p className="mt-1 text-[var(--text-muted)] text-sm">
+                Highest compliance performance
+              </p>
               <div className="mt-4 space-y-3">
                 {complianceOverview.length > 0 ? (
                   [...complianceOverview]
-                    .sort((a, b) => b.compliancePercentage - a.compliancePercentage)
+                    .sort(
+                      (a, b) => b.compliancePercentage - a.compliancePercentage
+                    )
                     .slice(0, 4)
                     .map((framework) => (
                       <div key={framework.frameworkId}>
                         <div className="mb-1.5 flex items-center justify-between text-xs">
-                          <span className="text-[var(--text-secondary)]">{framework.frameworkName}</span>
+                          <span className="text-[var(--text-secondary)]">
+                            {framework.frameworkName}
+                          </span>
                           <span
                             className={cn(
                               "font-semibold",
@@ -828,7 +941,7 @@ export default function ReportsPage() {
                                 ? "text-emerald-600 dark:text-emerald-300"
                                 : framework.compliancePercentage >= 60
                                   ? "text-yellow-600 dark:text-yellow-300"
-                                  : "text-red-600 dark:text-red-300",
+                                  : "text-red-600 dark:text-red-300"
                             )}
                           >
                             {framework.compliancePercentage.toFixed(0)}%
@@ -842,12 +955,12 @@ export default function ReportsPage() {
                                 ? "bg-emerald-400"
                                 : framework.compliancePercentage >= 60
                                   ? "bg-yellow-400"
-                                  : "bg-red-400",
+                                  : "bg-red-400"
                             )}
                             style={{
                               width: `${Math.min(
                                 Math.max(framework.compliancePercentage, 0),
-                                100,
+                                100
                               )}%`,
                             }}
                           />
@@ -855,48 +968,62 @@ export default function ReportsPage() {
                       </div>
                     ))
                 ) : (
-                  <p className="text-sm text-[var(--text-muted)]">No framework data available yet.</p>
+                  <p className="text-[var(--text-muted)] text-sm">
+                    No framework data available yet.
+                  </p>
                 )}
               </div>
             </section>
 
             <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
-              <h3 className="text-base font-semibold text-[var(--text-primary)]">Custom Dashboard Views</h3>
-              <p className="mt-1 text-sm text-[var(--text-muted)]">
+              <h3 className="font-semibold text-[var(--text-primary)] text-base">
+                Custom Dashboard Views
+              </h3>
+              <p className="mt-1 text-[var(--text-muted)] text-sm">
                 Build widget layouts, share by role, and set defaults.
               </p>
 
               <div className="mt-4 space-y-3">
                 <div>
-                  <label className="mb-1 block text-xs text-[var(--text-muted)]">View Name</label>
+                  <label className="mb-1 block text-[var(--text-muted)] text-xs">
+                    View Name
+                  </label>
                   <BoilerplateInput
                     className=""
-                    value={viewName}
                     onChange={(event) => setViewName(event.target.value)}
                     placeholder="SOC Operations View"
+                    value={viewName}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <label className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2 text-xs text-[var(--text-secondary)]">
+                  <label className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2 text-[var(--text-secondary)] text-xs">
                     Share Role
-                    <Select value={viewShareRole} onValueChange={(event) => setViewShareRole(event)}>
-                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                    <Select
+                      onValueChange={(event) => setViewShareRole(event)}
+                      value={viewShareRole}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
-                      <SelectItem value="ANALYST">ANALYST</SelectItem>
-                      <SelectItem value="PENTESTER">PENTESTER</SelectItem>
-                      <SelectItem value="IT_OFFICER">IT_OFFICER</SelectItem>
-                      <SelectItem value="MAIN_OFFICER">MAIN_OFFICER</SelectItem>
-
+                          <SelectItem value="ANALYST">ANALYST</SelectItem>
+                          <SelectItem value="PENTESTER">PENTESTER</SelectItem>
+                          <SelectItem value="IT_OFFICER">IT_OFFICER</SelectItem>
+                          <SelectItem value="MAIN_OFFICER">
+                            MAIN_OFFICER
+                          </SelectItem>
                         </SelectGroup>
                       </SelectContent>
                     </Select>
                   </label>
-                  <label className="flex items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2 text-xs text-[var(--text-secondary)]">
+                  <label className="flex items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2 text-[var(--text-secondary)] text-xs">
                     <BoilerplateCheckbox
                       checked={viewDefault}
-                      onCheckedChange={(checked) => setViewDefault(Boolean(checked))}
+                      onCheckedChange={(checked) =>
+                        setViewDefault(Boolean(checked))
+                      }
                     />
                     Default View
                   </label>
@@ -904,15 +1031,15 @@ export default function ReportsPage() {
 
                 <WidgetBuilder
                   availableWidgets={dashboardWidgetCatalog}
-                  value={viewWidgets}
                   onChange={setViewWidgets}
+                  value={viewWidgets}
                 />
 
                 <button
-                  type="button"
-                  onClick={() => void saveDashboardView()}
+                  className="inline-flex items-center gap-2 rounded-lg bg-sky-300 px-3 py-2 font-semibold text-slate-950 text-xs transition hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={!viewName.trim() || isSavingView}
-                  className="inline-flex items-center gap-2 rounded-lg bg-sky-300 px-3 py-2 text-xs font-semibold text-slate-950 transition hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={() => void saveDashboardView()}
+                  type="button"
                 >
                   {isSavingView ? "Saving..." : "Save View"}
                 </button>
@@ -920,32 +1047,38 @@ export default function ReportsPage() {
                 <div className="space-y-2">
                   {dashboardViews.map((view) => (
                     <div
-                      key={view.id}
                       className="flex items-center justify-between rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-3 py-2"
+                      key={view.id}
                     >
                       <button
-                        type="button"
+                        className="truncate text-left text-[var(--text-secondary)] text-xs hover:text-[var(--text-primary)]"
                         onClick={() => {
                           setViewName(view.name);
-                          setViewWidgets(Array.isArray(view.layout?.widgets) ? view.layout.widgets : []);
+                          setViewWidgets(
+                            Array.isArray(view.layout?.widgets)
+                              ? view.layout.widgets
+                              : []
+                          );
                           setViewDefault(view.isDefault);
                         }}
-                        className="truncate text-left text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                        type="button"
                       >
                         {view.name} {view.isDefault ? "• default" : ""}
                       </button>
                       <button
-                        type="button"
-                        onClick={() => void deleteDashboardView(view.id)}
+                        className="rounded-md border border-red-400/35 bg-red-500/10 px-2 py-1 text-[11px] text-red-700 transition hover:bg-red-500/20 disabled:opacity-50 dark:text-red-200"
                         disabled={isSavingView}
-                        className="rounded-md border border-red-400/35 bg-red-500/10 px-2 py-1 text-[11px] text-red-700 dark:text-red-200 transition hover:bg-red-500/20 disabled:opacity-50"
+                        onClick={() => void deleteDashboardView(view.id)}
+                        type="button"
                       >
                         Delete
                       </button>
                     </div>
                   ))}
                   {dashboardViews.length === 0 ? (
-                    <p className="text-xs text-[var(--text-muted)]">No saved views yet.</p>
+                    <p className="text-[var(--text-muted)] text-xs">
+                      No saved views yet.
+                    </p>
                   ) : null}
                 </div>
               </div>

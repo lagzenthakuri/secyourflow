@@ -5,65 +5,68 @@ export const TOTP_STEP_SECONDS = 30;
 export const TOTP_WINDOW = 1;
 
 function getAuthenticator() {
-    authenticator.options = {
-        digits: TOTP_DIGITS,
-        step: TOTP_STEP_SECONDS,
-        window: TOTP_WINDOW,
-    };
+  authenticator.options = {
+    digits: TOTP_DIGITS,
+    step: TOTP_STEP_SECONDS,
+    window: TOTP_WINDOW,
+  };
 
-    return authenticator;
+  return authenticator;
 }
 
 export function normalizeTotpCode(code: string): string | null {
-    const normalized = code.replace(/\s+/g, "").trim();
-    return /^\d{6}$/.test(normalized) ? normalized : null;
+  const normalized = code.replace(/\s+/g, "").trim();
+  return /^\d{6}$/.test(normalized) ? normalized : null;
 }
 
 export function generateTotpSecret(): string {
-    return getAuthenticator().generateSecret();
+  return getAuthenticator().generateSecret();
 }
 
-export function buildTotpOtpAuthUrl(secret: string, accountEmail: string, issuer = "SecYourFlow"): string {
-    return getAuthenticator().keyuri(accountEmail, issuer, secret);
+export function buildTotpOtpAuthUrl(
+  secret: string,
+  accountEmail: string,
+  issuer = "SecYourFlow"
+): string {
+  return getAuthenticator().keyuri(accountEmail, issuer, secret);
 }
-
 
 export function verifyTotpToken(
-    secret: string,
-    code: string,
-    lastUsedStep: number | null,
-    epochMs = Date.now(),
+  secret: string,
+  code: string,
+  lastUsedStep: number | null,
+  epochMs = Date.now()
 ):
-    | { valid: true; matchedStep: number }
-    | { valid: false; reason: "invalid_code" }
-    | { valid: false; reason: "replay"; matchedStep: number } {
-    const normalized = normalizeTotpCode(code);
-    if (!normalized) {
-        return { valid: false, reason: "invalid_code" };
-    }
+  | { valid: true; matchedStep: number }
+  | { valid: false; reason: "invalid_code" }
+  | { valid: false; reason: "replay"; matchedStep: number } {
+  const normalized = normalizeTotpCode(code);
+  if (!normalized) {
+    return { valid: false, reason: "invalid_code" };
+  }
 
-    const currentOptions = authenticator.options;
-    authenticator.options = {
-        ...currentOptions,
-        digits: TOTP_DIGITS,
-        step: TOTP_STEP_SECONDS,
-        window: TOTP_WINDOW, // Symmetric window
-    };
+  const currentOptions = authenticator.options;
+  authenticator.options = {
+    ...currentOptions,
+    digits: TOTP_DIGITS,
+    step: TOTP_STEP_SECONDS,
+    window: TOTP_WINDOW, // Symmetric window
+  };
 
-    const delta = authenticator.checkDelta(normalized, secret);
+  const delta = authenticator.checkDelta(normalized, secret);
 
-    authenticator.options = currentOptions;
+  authenticator.options = currentOptions;
 
-    if (delta === null) {
-        return { valid: false, reason: "invalid_code" };
-    }
+  if (delta === null) {
+    return { valid: false, reason: "invalid_code" };
+  }
 
-    const currentStep = Math.floor(epochMs / (TOTP_STEP_SECONDS * 1000));
-    const matchedStep = currentStep + delta;
+  const currentStep = Math.floor(epochMs / (TOTP_STEP_SECONDS * 1000));
+  const matchedStep = currentStep + delta;
 
-    if (lastUsedStep !== null && matchedStep <= lastUsedStep) {
-        return { valid: false, reason: "replay", matchedStep };
-    }
+  if (lastUsedStep !== null && matchedStep <= lastUsedStep) {
+    return { valid: false, reason: "replay", matchedStep };
+  }
 
-    return { valid: true, matchedStep };
+  return { valid: true, matchedStep };
 }

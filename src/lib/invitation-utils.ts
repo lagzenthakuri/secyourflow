@@ -1,4 +1,4 @@
-import { randomBytes } from "crypto";
+import { randomBytes } from "node:crypto";
 
 /**
  * Generate a cryptographically secure invitation token
@@ -12,7 +12,7 @@ export function generateInvitationToken(): string {
  * Calculate invitation expiration time
  * Default: 48 hours from now
  */
-export function getInvitationExpiry(hoursFromNow: number = 48): Date {
+export function getInvitationExpiry(hoursFromNow = 48): Date {
   const expiry = new Date();
   expiry.setHours(expiry.getHours() + hoursFromNow);
   return expiry;
@@ -37,5 +37,9 @@ export function isInvitationUsed(usedAt: Date | null): boolean {
  */
 export function isValidInvitationTokenFormat(token: string): boolean {
   // Base64url tokens should be at least 43 characters (32 bytes encoded)
-  return typeof token === "string" && token.length >= 43 && /^[A-Za-z0-9_-]+$/.test(token);
+  return (
+    typeof token === "string" &&
+    token.length >= 43 &&
+    /^[A-Za-z0-9_-]+$/.test(token)
+  );
 }

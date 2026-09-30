@@ -1,7 +1,7 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { JobName } from "@/lib/queue/types";
 import { queueForJob } from "@/lib/queue/types";
-import type { Prisma } from "@prisma/client";
 
 /**
  * Durable job history.
@@ -12,10 +12,10 @@ import type { Prisma } from "@prisma/client";
  */
 
 export interface CreateJobRunInput {
+  entityId?: string | null;
+  entityType?: string | null;
   name: JobName;
   organizationId?: string | null;
-  entityType?: string | null;
-  entityId?: string | null;
   payload?: unknown;
 }
 
@@ -27,7 +27,9 @@ export async function createJobRun(input: CreateJobRunInput) {
       organizationId: input.organizationId ?? null,
       entityType: input.entityType ?? null,
       entityId: input.entityId ?? null,
-      payload: (input.payload ?? undefined) as Prisma.InputJsonValue | undefined,
+      payload: (input.payload ?? undefined) as
+        | Prisma.InputJsonValue
+        | undefined,
     },
     select: { id: true },
   });
@@ -67,7 +69,11 @@ export async function markJobFailed(jobRunId: string, error: unknown) {
   await prisma.jobRun
     .update({
       where: { id: jobRunId },
-      data: { status: "FAILED", finishedAt: new Date(), error: message.slice(0, 4000) },
+      data: {
+        status: "FAILED",
+        finishedAt: new Date(),
+        error: message.slice(0, 4000),
+      },
     })
     .catch(() => undefined);
 }

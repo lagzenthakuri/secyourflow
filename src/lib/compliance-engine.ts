@@ -1,5 +1,3 @@
-import { prisma } from "@/lib/prisma";
-import { normalizeIndicatorValue } from "@/modules/threat-intel/ioc/normalizer";
 import type {
   ComplianceStatus,
   ControlFrequency,
@@ -8,28 +6,30 @@ import type {
   ImplementationStatus,
   Severity,
 } from "@repo/database";
+import { prisma } from "@/lib/prisma";
+import { normalizeIndicatorValue } from "@/modules/threat-intel/ioc/normalizer";
 
 interface ComplianceRiskAnalysis {
-  controls_violated_iso27001?: string[];
-  selected_controls?: string[];
-  likelihood_score?: number;
   confidence?: number;
-  threat?: string;
+  controls_violated_iso27001?: string[];
+  likelihood_score?: number;
   rationale_for_risk_rating?: string;
   risk_category?: string;
+  selected_controls?: string[];
+  threat?: string;
 }
 
 interface ComplianceRiskEntry {
+  aiAnalysis: ComplianceRiskAnalysis;
   id: string;
   organizationId: string;
   riskScore: number;
-  aiAnalysis: ComplianceRiskAnalysis;
 }
 
 interface ComplianceVulnerability {
-  title: string;
   cveId?: string | null;
   severity?: Severity | null;
+  title: string;
 }
 
 interface ComplianceAsset {
@@ -38,59 +38,59 @@ interface ComplianceAsset {
 }
 
 interface AutomatedAssessmentAsset {
-  id: string;
-  name: string;
   criticality: Criticality;
+  id: string;
+  lastSeen: Date | null;
+  metadata: unknown;
+  name: string;
+  owner: string | null;
   status: string;
   tags: string[];
-  owner: string | null;
-  metadata: unknown;
   updatedAt: Date;
-  lastSeen: Date | null;
 }
 
 interface RuleEvaluation {
+  details: string;
+  evaluatedAssetIds: string[];
+  evaluatedAssets: number;
+  failedAssetIds: string[];
+  notApplicable: boolean;
+  pass: boolean;
+  passedAssets: number;
   ruleId: string;
   ruleName: string;
-  pass: boolean;
-  notApplicable: boolean;
-  evaluatedAssets: number;
-  evaluatedAssetIds: string[];
-  passedAssets: number;
-  failedAssetIds: string[];
-  details: string;
 }
 
 interface AutomatedAssessmentRule {
-  id: string;
   controlType: ControlType;
-  name: string;
   description: string;
-  keywords: string[];
   evaluate: (assets: AutomatedAssessmentAsset[]) => RuleEvaluation;
+  id: string;
+  keywords: string[];
+  name: string;
 }
 
 interface ControlAssessmentEvaluation {
-  status: ComplianceStatus;
-  ruleEvaluations: RuleEvaluation[];
-  evidenceSummary: string;
   assetStatuses: Map<string, ComplianceStatus>;
+  evidenceSummary: string;
+  ruleEvaluations: RuleEvaluation[];
+  status: ComplianceStatus;
 }
 
 interface AutomatedAssessmentResult {
+  assessedAt: string;
   controlId: string;
   frameworkId: string;
-  statusBefore: ComplianceStatus;
-  statusAfter: ComplianceStatus;
-  assessedAt: string;
-  ruleCount: number;
   nonCompliantAssets: number;
+  ruleCount: number;
+  statusAfter: ComplianceStatus;
+  statusBefore: ComplianceStatus;
 }
 
 interface ScheduledAssessmentResult {
-  scannedControls: number;
   assessedControls: number;
   failedControls: number;
+  scannedControls: number;
   snapshotsCreated: number;
 }
 
@@ -103,14 +103,31 @@ const METADATA_BOOLEAN_KEYS = {
     "edrEnabled",
     "xdrEnabled",
   ],
-  encryption: ["encryptionEnabled", "diskEncryptionEnabled", "storageEncryptionEnabled"],
-  logging: ["loggingEnabled", "siemConnected", "auditLoggingEnabled", "monitoringEnabled"],
+  encryption: [
+    "encryptionEnabled",
+    "diskEncryptionEnabled",
+    "storageEncryptionEnabled",
+  ],
+  logging: [
+    "loggingEnabled",
+    "siemConnected",
+    "auditLoggingEnabled",
+    "monitoringEnabled",
+  ],
   backup: ["backupEnabled", "snapshotEnabled", "drReplicaEnabled"],
   patching: ["patchingEnabled", "autoPatchingEnabled"],
 } as const;
 
 const TAG_HINTS = {
-  antivirus: ["av", "antivirus", "endpoint", "edr", "xdr", "defender", "malware"],
+  antivirus: [
+    "av",
+    "antivirus",
+    "endpoint",
+    "edr",
+    "xdr",
+    "defender",
+    "malware",
+  ],
   encryption: ["encrypted", "encryption", "kms", "tls", "disk-encryption"],
   logging: ["siem", "logging", "log", "audit", "monitoring", "edr"],
   backup: ["backup", "snapshot", "replica", "recovery", "dr"],
@@ -127,15 +144,26 @@ function toMetadataObject(metadata: unknown): Record<string, unknown> {
   return {};
 }
 
-function hasTruthyMetadata(metadata: Record<string, unknown>, keys: readonly string[]) {
+function hasTruthyMetadata(
+  metadata: Record<string, unknown>,
+  keys: readonly string[]
+) {
   return keys.some((key) => {
     const value = metadata[key];
-    if (typeof value === "boolean") return value;
+    if (typeof value === "boolean") {
+      return value;
+    }
     if (typeof value === "string") {
       const normalized = normalizeLower(value);
-      return normalized === "true" || normalized === "enabled" || normalized === "yes";
+      return (
+        normalized === "true" ||
+        normalized === "enabled" ||
+        normalized === "yes"
+      );
     }
-    if (typeof value === "number") return value > 0;
+    if (typeof value === "number") {
+      return value > 0;
+    }
     return false;
   });
 }
@@ -148,14 +176,19 @@ function hasTagHint(tags: string[], hints: readonly string[]) {
 function hasCapability(
   asset: AutomatedAssessmentAsset,
   metadataKeys: readonly string[],
-  tagHints: readonly string[],
+  tagHints: readonly string[]
 ) {
   const metadata = toMetadataObject(asset.metadata);
-  return hasTruthyMetadata(metadata, metadataKeys) || hasTagHint(asset.tags, tagHints);
+  return (
+    hasTruthyMetadata(metadata, metadataKeys) ||
+    hasTagHint(asset.tags, tagHints)
+  );
 }
 
 function parseDateLike(value: unknown): Date | null {
-  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
   if (typeof value === "string" || typeof value === "number") {
     const parsed = new Date(value);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
@@ -174,7 +207,9 @@ function getLastPatchTimestamp(asset: AutomatedAssessmentAsset): Date | null {
 
   for (const candidate of candidates) {
     const parsed = parseDateLike(candidate);
-    if (parsed) return parsed;
+    if (parsed) {
+      return parsed;
+    }
   }
 
   return null;
@@ -229,7 +264,16 @@ const AUTOMATED_ASSESSMENT_RULES: AutomatedAssessmentRule[] = [
     controlType: "PREVENTIVE",
     name: "Critical assets have anti-malware controls",
     description: "Every active critical asset should have AV/EDR evidence.",
-    keywords: ["malware", "antivirus", "av", "endpoint", "protection", "virus", "5.2.3", "a.8.7"],
+    keywords: [
+      "malware",
+      "antivirus",
+      "av",
+      "endpoint",
+      "protection",
+      "virus",
+      "5.2.3",
+      "a.8.7",
+    ],
     evaluate: (assets) =>
       assessRuleCoverage({
         ruleId: "preventive-critical-av-coverage",
@@ -237,9 +281,14 @@ const AUTOMATED_ASSESSMENT_RULES: AutomatedAssessmentRule[] = [
         assets,
         inScope: (asset) => asset.criticality === "CRITICAL",
         compliant: (asset) =>
-          hasCapability(asset, METADATA_BOOLEAN_KEYS.antivirus, TAG_HINTS.antivirus),
+          hasCapability(
+            asset,
+            METADATA_BOOLEAN_KEYS.antivirus,
+            TAG_HINTS.antivirus
+          ),
         successSummary: "All critical assets have anti-malware coverage.",
-        failureSummary: "One or more critical assets are missing anti-malware coverage.",
+        failureSummary:
+          "One or more critical assets are missing anti-malware coverage.",
       }),
   },
   {
@@ -247,17 +296,32 @@ const AUTOMATED_ASSESSMENT_RULES: AutomatedAssessmentRule[] = [
     controlType: "PREVENTIVE",
     name: "Sensitive assets enforce encryption",
     description: "Critical and high assets should have encryption enabled.",
-    keywords: ["encryption", "crypt", "data protection", "at rest", "in transit", "cc6.6", "pr.ds-01"],
+    keywords: [
+      "encryption",
+      "crypt",
+      "data protection",
+      "at rest",
+      "in transit",
+      "cc6.6",
+      "pr.ds-01",
+    ],
     evaluate: (assets) =>
       assessRuleCoverage({
         ruleId: "preventive-sensitive-encryption",
         ruleName: "Sensitive assets enforce encryption",
         assets,
-        inScope: (asset) => asset.criticality === "CRITICAL" || asset.criticality === "HIGH",
+        inScope: (asset) =>
+          asset.criticality === "CRITICAL" || asset.criticality === "HIGH",
         compliant: (asset) =>
-          hasCapability(asset, METADATA_BOOLEAN_KEYS.encryption, TAG_HINTS.encryption),
-        successSummary: "Sensitive assets meet encryption coverage requirement.",
-        failureSummary: "Sensitive assets are missing encryption coverage evidence.",
+          hasCapability(
+            asset,
+            METADATA_BOOLEAN_KEYS.encryption,
+            TAG_HINTS.encryption
+          ),
+        successSummary:
+          "Sensitive assets meet encryption coverage requirement.",
+        failureSummary:
+          "Sensitive assets are missing encryption coverage evidence.",
       }),
   },
   {
@@ -271,17 +335,22 @@ const AUTOMATED_ASSESSMENT_RULES: AutomatedAssessmentRule[] = [
         ruleId: "preventive-patching-sla",
         ruleName: "Critical/high assets patched within 30 days",
         assets,
-        inScope: (asset) => asset.criticality === "CRITICAL" || asset.criticality === "HIGH",
+        inScope: (asset) =>
+          asset.criticality === "CRITICAL" || asset.criticality === "HIGH",
         compliant: (asset) => {
           const patchDate = getLastPatchTimestamp(asset);
           if (patchDate) {
             const ageMs = Date.now() - patchDate.getTime();
             return ageMs <= 30 * 24 * 60 * 60 * 1000;
           }
-          return hasTruthyMetadata(toMetadataObject(asset.metadata), METADATA_BOOLEAN_KEYS.patching);
+          return hasTruthyMetadata(
+            toMetadataObject(asset.metadata),
+            METADATA_BOOLEAN_KEYS.patching
+          );
         },
         successSummary: "Critical/high assets have recent patching evidence.",
-        failureSummary: "Critical/high assets are missing patch recency evidence.",
+        failureSummary:
+          "Critical/high assets are missing patch recency evidence.",
       }),
   },
   {
@@ -289,16 +358,32 @@ const AUTOMATED_ASSESSMENT_RULES: AutomatedAssessmentRule[] = [
     controlType: "DETECTIVE",
     name: "High-risk assets send security logs",
     description: "Critical and high assets should emit security telemetry.",
-    keywords: ["log", "monitor", "siem", "audit", "detect", "de.cm-01", "10.4.1", "a.8.15"],
+    keywords: [
+      "log",
+      "monitor",
+      "siem",
+      "audit",
+      "detect",
+      "de.cm-01",
+      "10.4.1",
+      "a.8.15",
+    ],
     evaluate: (assets) =>
       assessRuleCoverage({
         ruleId: "detective-log-coverage",
         ruleName: "High-risk assets send security logs",
         assets,
-        inScope: (asset) => asset.criticality === "CRITICAL" || asset.criticality === "HIGH",
-        compliant: (asset) => hasCapability(asset, METADATA_BOOLEAN_KEYS.logging, TAG_HINTS.logging),
+        inScope: (asset) =>
+          asset.criticality === "CRITICAL" || asset.criticality === "HIGH",
+        compliant: (asset) =>
+          hasCapability(
+            asset,
+            METADATA_BOOLEAN_KEYS.logging,
+            TAG_HINTS.logging
+          ),
         successSummary: "High-risk assets are covered by security logging.",
-        failureSummary: "One or more high-risk assets are missing logging coverage.",
+        failureSummary:
+          "One or more high-risk assets are missing logging coverage.",
       }),
   },
   {
@@ -306,7 +391,14 @@ const AUTOMATED_ASSESSMENT_RULES: AutomatedAssessmentRule[] = [
     controlType: "DETECTIVE",
     name: "Asset visibility is current",
     description: "Assets should report telemetry recently.",
-    keywords: ["anomaly", "visibility", "telemetry", "asset inventory", "id.am-01", "cc7.2"],
+    keywords: [
+      "anomaly",
+      "visibility",
+      "telemetry",
+      "asset inventory",
+      "id.am-01",
+      "cc7.2",
+    ],
     evaluate: (assets) =>
       assessRuleCoverage({
         ruleId: "detective-asset-visibility",
@@ -327,14 +419,23 @@ const AUTOMATED_ASSESSMENT_RULES: AutomatedAssessmentRule[] = [
     controlType: "CORRECTIVE",
     name: "Critical assets have backup and recovery coverage",
     description: "Critical assets should have backup or snapshot evidence.",
-    keywords: ["backup", "recover", "restore", "resilience", "a.8.13", "rc.rp-01", "a1.2"],
+    keywords: [
+      "backup",
+      "recover",
+      "restore",
+      "resilience",
+      "a.8.13",
+      "rc.rp-01",
+      "a1.2",
+    ],
     evaluate: (assets) =>
       assessRuleCoverage({
         ruleId: "corrective-backup-coverage",
         ruleName: "Critical assets have backup and recovery coverage",
         assets,
         inScope: (asset) => asset.criticality === "CRITICAL",
-        compliant: (asset) => hasCapability(asset, METADATA_BOOLEAN_KEYS.backup, TAG_HINTS.backup),
+        compliant: (asset) =>
+          hasCapability(asset, METADATA_BOOLEAN_KEYS.backup, TAG_HINTS.backup),
         successSummary: "Critical assets have backup coverage evidence.",
         failureSummary: "Critical assets are missing backup/recovery evidence.",
       }),
@@ -344,15 +445,25 @@ const AUTOMATED_ASSESSMENT_RULES: AutomatedAssessmentRule[] = [
     controlType: "CORRECTIVE",
     name: "Assets have accountable owners",
     description: "Corrective response requires accountable ownership.",
-    keywords: ["incident", "response", "owner", "remediation", "cc8.1", "12.10.2", "rs.mi-01"],
+    keywords: [
+      "incident",
+      "response",
+      "owner",
+      "remediation",
+      "cc8.1",
+      "12.10.2",
+      "rs.mi-01",
+    ],
     evaluate: (assets) =>
       assessRuleCoverage({
         ruleId: "corrective-owned-assets",
         ruleName: "Assets have accountable owners",
         assets,
         inScope: () => true,
-        compliant: (asset) => typeof asset.owner === "string" && asset.owner.trim().length > 0,
-        successSummary: "All assets have owners for remediation accountability.",
+        compliant: (asset) =>
+          typeof asset.owner === "string" && asset.owner.trim().length > 0,
+        successSummary:
+          "All assets have owners for remediation accountability.",
         failureSummary: "One or more assets are missing owner assignments.",
       }),
   },
@@ -371,7 +482,13 @@ function getControlSearchText(control: {
   objective: string | null;
   category: string | null;
 }) {
-  return [control.controlId, control.title, control.description ?? "", control.objective ?? "", control.category ?? ""]
+  return [
+    control.controlId,
+    control.title,
+    control.description ?? "",
+    control.objective ?? "",
+    control.category ?? "",
+  ]
     .join(" ")
     .toLowerCase();
 }
@@ -385,7 +502,7 @@ export function getAssessmentRulesForControl(control: {
   controlType: ControlType;
 }): AutomatedAssessmentRule[] {
   const rulesForType = AUTOMATED_ASSESSMENT_RULES.filter(
-    (rule) => rule.controlType === control.controlType,
+    (rule) => rule.controlType === control.controlType
   );
 
   if (rulesForType.length === 0) {
@@ -394,23 +511,29 @@ export function getAssessmentRulesForControl(control: {
 
   const searchText = getControlSearchText(control);
   const keywordMatched = rulesForType.filter((rule) =>
-    rule.keywords.some((keyword) => searchText.includes(keyword.toLowerCase())),
+    rule.keywords.some((keyword) => searchText.includes(keyword.toLowerCase()))
   );
 
   if (keywordMatched.length > 0) {
     return keywordMatched;
   }
 
-  const fallback = rulesForType.find((rule) => rule.id === DEFAULT_RULE_BY_TYPE[control.controlType]);
+  const fallback = rulesForType.find(
+    (rule) => rule.id === DEFAULT_RULE_BY_TYPE[control.controlType]
+  );
   return fallback ? [fallback] : [rulesForType[0]];
 }
 
-function deriveComplianceStatus(ruleEvaluations: RuleEvaluation[]): ComplianceStatus {
+function deriveComplianceStatus(
+  ruleEvaluations: RuleEvaluation[]
+): ComplianceStatus {
   if (ruleEvaluations.length === 0) {
     return "NOT_ASSESSED";
   }
 
-  const applicable = ruleEvaluations.filter((evaluation) => !evaluation.notApplicable);
+  const applicable = ruleEvaluations.filter(
+    (evaluation) => !evaluation.notApplicable
+  );
   if (applicable.length === 0) {
     return "NOT_APPLICABLE";
   }
@@ -425,7 +548,9 @@ function deriveComplianceStatus(ruleEvaluations: RuleEvaluation[]): ComplianceSt
   return "NON_COMPLIANT";
 }
 
-function statusToImplementation(status: ComplianceStatus): ImplementationStatus {
+function statusToImplementation(
+  status: ComplianceStatus
+): ImplementationStatus {
   switch (status) {
     case "COMPLIANT":
       return "IMPLEMENTED";
@@ -442,7 +567,7 @@ function statusToImplementation(status: ComplianceStatus): ImplementationStatus 
 
 function buildAssetStatusMap(
   assets: AutomatedAssessmentAsset[],
-  evaluations: RuleEvaluation[],
+  evaluations: RuleEvaluation[]
 ): Map<string, ComplianceStatus> {
   const inScope = new Set<string>();
   const failed = new Set<string>();
@@ -474,10 +599,18 @@ function buildAssetStatusMap(
   return result;
 }
 
-function buildEvidenceSummary(controlId: string, status: ComplianceStatus, evaluations: RuleEvaluation[]) {
+function buildEvidenceSummary(
+  controlId: string,
+  status: ComplianceStatus,
+  evaluations: RuleEvaluation[]
+) {
   const timestamp = new Date().toISOString();
   const lines = evaluations.map((evaluation) => {
-    const state = evaluation.notApplicable ? "N/A" : evaluation.pass ? "PASS" : "FAIL";
+    const state = evaluation.notApplicable
+      ? "N/A"
+      : evaluation.pass
+        ? "PASS"
+        : "FAIL";
     return `- ${evaluation.ruleName}: ${state} (${evaluation.passedAssets}/${evaluation.evaluatedAssets}) ${evaluation.details}`;
   });
 
@@ -491,7 +624,7 @@ function buildEvidenceSummary(controlId: string, status: ComplianceStatus, evalu
 
 export function calculateNextAssessmentDate(
   fromDate: Date,
-  frequency: ControlFrequency,
+  frequency: ControlFrequency
 ): Date {
   const next = new Date(fromDate);
 
@@ -514,7 +647,6 @@ export function calculateNextAssessmentDate(
     case "SEMI_ANNUAL":
       next.setMonth(next.getMonth() + 6);
       break;
-    case "ANNUAL":
     default:
       next.setFullYear(next.getFullYear() + 1);
       break;
@@ -532,12 +664,16 @@ function evaluateControlRules(
     category: string | null;
     controlType: ControlType;
   },
-  assets: AutomatedAssessmentAsset[],
+  assets: AutomatedAssessmentAsset[]
 ): ControlAssessmentEvaluation {
   const rules = getAssessmentRulesForControl(control);
   const ruleEvaluations = rules.map((rule) => rule.evaluate(assets));
   const status = deriveComplianceStatus(ruleEvaluations);
-  const evidenceSummary = buildEvidenceSummary(control.controlId, status, ruleEvaluations);
+  const evidenceSummary = buildEvidenceSummary(
+    control.controlId,
+    status,
+    ruleEvaluations
+  );
   const assetStatuses = buildAssetStatusMap(assets, ruleEvaluations);
 
   return {
@@ -565,12 +701,18 @@ export async function recordComplianceTrendSnapshot(frameworkId: string) {
   }
 
   const totalControls = framework.controls.length;
-  const compliant = framework.controls.filter((control) => control.status === "COMPLIANT").length;
-  const nonCompliant = framework.controls.filter((control) => control.status === "NON_COMPLIANT").length;
-  const partiallyCompliant = framework.controls.filter(
-    (control) => control.status === "PARTIALLY_COMPLIANT",
+  const compliant = framework.controls.filter(
+    (control) => control.status === "COMPLIANT"
   ).length;
-  const notAssessed = framework.controls.filter((control) => control.status === "NOT_ASSESSED").length;
+  const nonCompliant = framework.controls.filter(
+    (control) => control.status === "NON_COMPLIANT"
+  ).length;
+  const partiallyCompliant = framework.controls.filter(
+    (control) => control.status === "PARTIALLY_COMPLIANT"
+  ).length;
+  const notAssessed = framework.controls.filter(
+    (control) => control.status === "NOT_ASSESSED"
+  ).length;
 
   return prisma.complianceTrendSnapshot.create({
     data: {
@@ -581,7 +723,8 @@ export async function recordComplianceTrendSnapshot(frameworkId: string) {
       nonCompliant,
       partiallyCompliant,
       notAssessed,
-      compliancePercentage: totalControls > 0 ? (compliant / totalControls) * 100 : 0,
+      compliancePercentage:
+        totalControls > 0 ? (compliant / totalControls) * 100 : 0,
     },
   });
 }
@@ -591,7 +734,7 @@ export async function runAutomatedControlAssessment(
   options: {
     persistSnapshot?: boolean;
     reason?: string;
-  } = {},
+  } = {}
 ): Promise<AutomatedAssessmentResult> {
   const control = await prisma.complianceControl.findUnique({
     where: { id: controlId },
@@ -692,7 +835,7 @@ export async function runAutomatedControlAssessment(
   }
 
   const failedAssets = Array.from(evaluated.assetStatuses.values()).filter(
-    (status) => status === "NON_COMPLIANT",
+    (status) => status === "NON_COMPLIANT"
   ).length;
 
   return {
@@ -712,7 +855,7 @@ export async function runAutomatedFrameworkAssessment(
     /** Required: the framework must be verified to belong to this tenant. */
     organizationId: string;
     reason?: string;
-  },
+  }
 ) {
   const framework = await prisma.complianceFramework.findFirst({
     where: { id: frameworkId, organizationId: options.organizationId },
@@ -759,13 +902,11 @@ export async function runAutomatedFrameworkAssessment(
  * `{ framework: {} }` — every control in every tenant — which was reachable
  * from `POST /api/compliance/assessments/run` with the admin token and no body.
  */
-export async function runScheduledComplianceAssessments(
-  options: {
-    organizationId: string;
-    asOf?: Date;
-    limit?: number;
-  },
-): Promise<ScheduledAssessmentResult> {
+export async function runScheduledComplianceAssessments(options: {
+  organizationId: string;
+  asOf?: Date;
+  limit?: number;
+}): Promise<ScheduledAssessmentResult> {
   const asOf = options.asOf ?? new Date();
   const limit = options.limit ?? 250;
 
@@ -774,16 +915,10 @@ export async function runScheduledComplianceAssessments(
       framework: {
         organizationId: options.organizationId,
       },
-      OR: [
-        { nextAssessment: null },
-        { nextAssessment: { lte: asOf } },
-      ],
+      OR: [{ nextAssessment: null }, { nextAssessment: { lte: asOf } }],
     },
     take: limit,
-    orderBy: [
-      { nextAssessment: "asc" },
-      { updatedAt: "asc" },
-    ],
+    orderBy: [{ nextAssessment: "asc" }, { updatedAt: "asc" }],
     select: {
       id: true,
       frameworkId: true,
@@ -807,7 +942,10 @@ export async function runScheduledComplianceAssessments(
       frameworkIds.add(control.frameworkId);
     } catch (error) {
       failedControls += 1;
-      console.error("[ComplianceEngine] Scheduled control assessment failed:", error);
+      console.error(
+        "[ComplianceEngine] Scheduled control assessment failed:",
+        error
+      );
     }
   }
 
@@ -830,13 +968,15 @@ export async function runScheduledComplianceAssessments(
 export async function updateComplianceFromRisk(
   riskEntry: ComplianceRiskEntry,
   vulnerability: ComplianceVulnerability,
-  asset: ComplianceAsset,
+  asset: ComplianceAsset
 ) {
   const analysis = riskEntry.aiAnalysis;
   const violatedControlIds = analysis.controls_violated_iso27001 ?? [];
 
   if (violatedControlIds.length === 0) {
-    console.log(`[ComplianceEngine] No ISO controls violated for '${vulnerability.title}'`);
+    console.log(
+      `[ComplianceEngine] No ISO controls violated for '${vulnerability.title}'`
+    );
     return;
   }
 
@@ -880,7 +1020,12 @@ export async function updateComplianceFromRisk(
           organizationId: riskEntry.organizationId,
         },
       })
-      .catch((err) => console.error("[ComplianceEngine] Failed to create threat indicator:", err));
+      .catch((err) =>
+        console.error(
+          "[ComplianceEngine] Failed to create threat indicator:",
+          err
+        )
+      );
   }
 
   // Ensure framework exists
@@ -889,7 +1034,9 @@ export async function updateComplianceFromRisk(
   });
 
   if (!framework) {
-    console.log("[ComplianceEngine] No framework found, creating default ISO 27001 framework");
+    console.log(
+      "[ComplianceEngine] No framework found, creating default ISO 27001 framework"
+    );
     framework = await prisma.complianceFramework.create({
       data: {
         name: "ISO 27001:2022",
@@ -901,11 +1048,13 @@ export async function updateComplianceFromRisk(
   }
 
   console.log(
-    `[ComplianceEngine] Processing ${violatedControlIds.length} controls for asset ${asset.name}`,
+    `[ComplianceEngine] Processing ${violatedControlIds.length} controls for asset ${asset.name}`
   );
 
   // OPTIMIZATION 1: Batch fetch all existing controls (1 query instead of N)
-  const controlIdPatterns = violatedControlIds.map((code: string) => `ISO-${code}`);
+  const controlIdPatterns = violatedControlIds.map(
+    (code: string) => `ISO-${code}`
+  );
   const existingControls = await prisma.complianceControl.findMany({
     where: {
       controlId: { in: controlIdPatterns },
@@ -913,10 +1062,14 @@ export async function updateComplianceFromRisk(
     },
   });
 
-  const existingControlMap = new Map(existingControls.map((control) => [control.controlId, control]));
+  const existingControlMap = new Map(
+    existingControls.map((control) => [control.controlId, control])
+  );
 
   // OPTIMIZATION 2: Identify and batch create missing controls
-  const missingControlIds = controlIdPatterns.filter((id: string) => !existingControlMap.has(id));
+  const missingControlIds = controlIdPatterns.filter(
+    (id: string) => !existingControlMap.has(id)
+  );
 
   if (missingControlIds.length > 0) {
     // Batch create all missing controls (1 query instead of N)
@@ -940,12 +1093,15 @@ export async function updateComplianceFromRisk(
     });
 
     // Add to map
-    newControls.forEach((control) => existingControlMap.set(control.controlId, control));
+    newControls.forEach((control) =>
+      existingControlMap.set(control.controlId, control)
+    );
   }
 
   // OPTIMIZATION 3: Use transaction for all updates (ensures atomicity)
   const allControls = Array.from(existingControlMap.values());
-  const highRiskControlIds = riskEntry.riskScore >= 12 ? allControls.map((control) => control.id) : [];
+  const highRiskControlIds =
+    riskEntry.riskScore >= 12 ? allControls.map((control) => control.id) : [];
 
   await prisma.$transaction(async (tx) => {
     // Batch upsert all asset compliance controls
@@ -1008,7 +1164,7 @@ export async function updateComplianceFromRisk(
         title: "Evidence Required: Control Failures",
         message: `${allControls.length} control(s) marked NON_COMPLIANT for ${asset.name}. AI recommends: ${recommendations}.`,
         type: "WARNING",
-        link: `/compliance`,
+        link: "/compliance",
       })),
     });
 
@@ -1026,5 +1182,7 @@ export async function updateComplianceFromRisk(
       .catch(() => {});
   }
 
-  console.log(`[ComplianceEngine] Pipeline Complete. Processed ${allControls.length} controls.`);
+  console.log(
+    `[ComplianceEngine] Pipeline Complete. Processed ${allControls.length} controls.`
+  );
 }

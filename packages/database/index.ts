@@ -1,7 +1,7 @@
 import "server-only";
 
-import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@prisma/client";
 import pg from "pg";
 import { normalizeDatabaseUrl } from "./database-url";
 
@@ -12,7 +12,7 @@ const globalForPrisma = globalThis as typeof globalThis & {
 };
 
 const runningInServerless = Boolean(
-  process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME,
+  process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME
 );
 const developmentPoolSize = process.env.NODE_ENV === "development" ? 3 : 5;
 const positiveIntegerFromEnv = (name: string, fallback: number) => {
@@ -20,27 +20,29 @@ const positiveIntegerFromEnv = (name: string, fallback: number) => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 };
 
-const pool = globalForPrisma.pool ?? new pg.Pool({
+const pool =
+  globalForPrisma.pool ??
+  new pg.Pool({
     connectionString: normalizeDatabaseUrl(process.env.DATABASE_URL),
     // Prisma Postgres uses a managed pool in front of the database. A large
     // per-process client pool can overwhelm that shared pool, especially in
     // Next dev where several route workers may be active at once.
     max: positiveIntegerFromEnv(
       "DB_POOL_MAX",
-      runningInServerless ? 1 : developmentPoolSize,
+      runningInServerless ? 1 : developmentPoolSize
     ),
     idleTimeoutMillis: positiveIntegerFromEnv(
       "DB_IDLE_TIMEOUT_MS",
-      runningInServerless ? 10_000 : 30_000,
+      runningInServerless ? 10_000 : 30_000
     ),
     connectionTimeoutMillis: positiveIntegerFromEnv(
       "DB_CONNECT_TIMEOUT_MS",
-      5_000,
+      5000
     ),
     allowExitOnIdle: runningInServerless,
     keepAlive: true,
     keepAliveInitialDelayMillis: 10_000,
-});
+  });
 
 if (!globalForPrisma.pool) {
   pool.on("error", (error) => {

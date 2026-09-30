@@ -3,7 +3,10 @@ import { requireSessionWithOrg } from "@/lib/api-auth";
 import { NvdAdapter } from "@/modules/cve-search/adapters/nvd-adapter";
 import { getCveSearchConfig } from "@/modules/cve-search/api/config";
 import { logEvent } from "@/modules/cve-search/api/log";
-import { internalServerError, jsonResponse } from "@/modules/cve-search/api/route-utils";
+import {
+  internalServerError,
+  jsonResponse,
+} from "@/modules/cve-search/api/route-utils";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -39,7 +42,7 @@ const kevFeedSchema = z
             dueDate: z.string().optional(),
             notes: z.string().optional(),
           })
-          .passthrough(),
+          .passthrough()
       )
       .default([]),
   })
@@ -47,49 +50,56 @@ const kevFeedSchema = z
 
 interface RankedCandidate {
   cveId: string;
-  vulnerabilityName: string | undefined;
   dateAdded: string | undefined;
   knownRansomwareCampaignUse: string | undefined;
   product: string | undefined;
-  vendorProject: string | undefined;
   shortDescription: string | undefined;
+  vendorProject: string | undefined;
+  vulnerabilityName: string | undefined;
 }
 
 interface ThreatActiveItem {
   cveId: string;
-  name: string;
-  productSummary: string;
   cvssScore: number;
   dateAdded: string;
-  link: string;
-  epssScore: number;
   epssPercentile: number;
+  epssScore: number;
+  link: string;
+  name: string;
+  productSummary: string;
   trendScore: number;
 }
 
 interface ThreatActiveCacheEntry {
-  expiresAt: number;
   catalogVersion: string | null;
-  dateReleased: string | null;
-  generatedAt: string;
   data: ThreatActiveItem[];
+  dateReleased: string | null;
+  expiresAt: number;
+  generatedAt: string;
   recentMatchCount: number;
 }
 
 let threatActiveCache: ThreatActiveCacheEntry | null = null;
 
 function parseDateToMs(value: string | undefined): number {
-  if (!value) return 0;
+  if (!value) {
+    return 0;
+  }
   const parsed = Date.parse(value);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function isKnownRansomware(value: string | undefined): boolean {
+function _isKnownRansomware(value: string | undefined): boolean {
   return value?.trim().toLowerCase() === "known";
 }
 
-function pickName(vulnerabilityName: string | undefined, title: string | null, description: string): string {
-  const preferred = vulnerabilityName?.trim() || title?.trim() || description.trim();
+function pickName(
+  vulnerabilityName: string | undefined,
+  title: string | null,
+  description: string
+): string {
+  const preferred =
+    vulnerabilityName?.trim() || title?.trim() || description.trim();
   return preferred.length > 0 ? preferred : "Unnamed vulnerability";
 }
 
@@ -99,20 +109,20 @@ function buildProductSummary(
   shortDescription: string | undefined
 ): string {
   const parts: string[] = [];
-  
+
   if (vendorProject?.trim()) {
     parts.push(vendorProject.trim());
   }
-  
+
   if (product?.trim() && product.trim() !== vendorProject?.trim()) {
     parts.push(product.trim());
   }
-  
+
   if (parts.length === 0 && shortDescription?.trim()) {
     const desc = shortDescription.trim();
-    return desc.length > 100 ? desc.substring(0, 97) + "..." : desc;
+    return desc.length > 100 ? `${desc.substring(0, 97)}...` : desc;
   }
-  
+
   return parts.length > 0 ? parts.join(" - ") : "Unknown Product";
 }
 
@@ -121,9 +131,11 @@ interface EpssData {
   percentile: number;
 }
 
-async function fetchEpssBatch(cveIds: string[]): Promise<Map<string, EpssData>> {
+async function fetchEpssBatch(
+  cveIds: string[]
+): Promise<Map<string, EpssData>> {
   const result = new Map<string, EpssData>();
-  
+
   if (cveIds.length === 0) {
     return result;
   }
@@ -131,7 +143,7 @@ async function fetchEpssBatch(cveIds: string[]): Promise<Map<string, EpssData>> 
   try {
     const cveList = cveIds.join(",");
     const url = `${EPSS_API_URL}?cve=${cveList}`;
-    
+
     const response = await fetch(url, {
       method: "GET",
       cache: "no-store",
@@ -146,14 +158,18 @@ async function fetchEpssBatch(cveIds: string[]): Promise<Map<string, EpssData>> 
     }
 
     const payload = await response.json();
-    
+
     if (payload?.data && Array.isArray(payload.data)) {
       for (const entry of payload.data) {
-        if (entry.cve && typeof entry.epss === "string" && typeof entry.percentile === "string") {
-          const epssScore = parseFloat(entry.epss);
-          const percentile = parseFloat(entry.percentile) * 100; // Convert to 0-100 scale
-          
-          if (!isNaN(epssScore) && !isNaN(percentile)) {
+        if (
+          entry.cve &&
+          typeof entry.epss === "string" &&
+          typeof entry.percentile === "string"
+        ) {
+          const epssScore = Number.parseFloat(entry.epss);
+          const percentile = Number.parseFloat(entry.percentile) * 100; // Convert to 0-100 scale
+
+          if (!(Number.isNaN(epssScore) || Number.isNaN(percentile))) {
             result.set(entry.cve.toUpperCase(), {
               epss: epssScore,
               percentile,
@@ -176,7 +192,7 @@ function computeTrendScore(
 ): number {
   const now = Date.now();
   const daysSinceKev = Math.floor((now - dateAddedMs) / (24 * 60 * 60 * 1000));
-  
+
   let recencyScore = 0;
   if (daysSinceKev <= 7) {
     recencyScore = 100;
@@ -187,9 +203,9 @@ function computeTrendScore(
   } else {
     recencyScore = 10;
   }
-  
+
   // Weighted formula: CVSS (35%), EPSS percentile (45%), Recency (20%)
-  return (cvssScore * 10 * 0.35) + (epssPercentile * 0.45) + (recencyScore * 0.20);
+  return cvssScore * 10 * 0.35 + epssPercentile * 0.45 + recencyScore * 0.2;
 }
 
 function isTrendingCve(
@@ -198,13 +214,15 @@ function isTrendingCve(
   dateAddedMs: number
 ): boolean {
   const now = Date.now();
-  const daysSinceKevAdded = Math.floor((now - dateAddedMs) / (24 * 60 * 60 * 1000));
-  
+  const daysSinceKevAdded = Math.floor(
+    (now - dateAddedMs) / (24 * 60 * 60 * 1000)
+  );
+
   // Mandatory KEV recency gate: must be added within last 90 days
   if (daysSinceKevAdded > 90) {
     return false;
   }
-  
+
   // Must meet at least ONE of these trending criteria:
   // 1. High EPSS percentile (>= 85th percentile)
   // 2. Critical CVSS score (>= 9.0)
@@ -213,34 +231,40 @@ function isTrendingCve(
     epssPercentile >= TRENDING_EPSS_PERCENTILE_THRESHOLD ||
     cvssScore >= TRENDING_CVSS_THRESHOLD ||
     daysSinceKevAdded <= TRENDING_KEV_RECENCY_DAYS;
-  
+
   // Final rule: in KEV (implicit) AND passes trending AND within 90 days
   return passesTrending && daysSinceKevAdded <= 90;
 }
 
-function isRecentCve(cveId: string, dateAdded: string | undefined, cvssScore: number): boolean {
+function _isRecentCve(
+  cveId: string,
+  dateAdded: string | undefined,
+  cvssScore: number
+): boolean {
   const now = Date.now();
-  const recentThreshold = now - (RECENT_DAYS_THRESHOLD * 24 * 60 * 60 * 1000);
+  const recentThreshold = now - RECENT_DAYS_THRESHOLD * 24 * 60 * 60 * 1000;
   const dateAddedMs = parseDateToMs(dateAdded);
-  
+
   // Always include if added in last 90 days
   if (dateAddedMs >= recentThreshold) {
     return true;
   }
-  
+
   // Extract year from CVE ID (format: CVE-YYYY-NNNNN)
   const yearMatch = cveId.match(/CVE-(\d{4})-/);
-  const cveYear = yearMatch ? parseInt(yearMatch[1], 10) : 0;
-  
+  const cveYear = yearMatch ? Number.parseInt(yearMatch[1], 10) : 0;
+
   // Include if CVE is from 2025+ OR is a critical zero-day (CVSS >= 9.0)
   if (cveYear >= 2025 || cvssScore >= CRITICAL_ZERO_DAY_THRESHOLD) {
     return true;
   }
-  
+
   return false;
 }
 
-async function fetchThreatActiveCriticalCves(): Promise<Omit<ThreatActiveCacheEntry, "expiresAt">> {
+async function fetchThreatActiveCriticalCves(): Promise<
+  Omit<ThreatActiveCacheEntry, "expiresAt">
+> {
   const response = await fetch(CISA_KEV_URL, {
     method: "GET",
     cache: "no-store",
@@ -283,7 +307,7 @@ async function fetchThreatActiveCriticalCves(): Promise<Omit<ThreatActiveCacheEn
       ...config,
       timeouts: {
         ...config.timeouts,
-        perSourceMs: Math.min(config.timeouts.perSourceMs, 4_000),
+        perSourceMs: Math.min(config.timeouts.perSourceMs, 4000),
       },
       retries: {
         ...config.retries,
@@ -294,10 +318,14 @@ async function fetchThreatActiveCriticalCves(): Promise<Omit<ThreatActiveCacheEn
 
   const rankedItems: Array<ThreatActiveItem & { dateAddedMs: number }> = [];
   const seen = new Set<string>();
-  let processedCount = 0;
+  let _processedCount = 0;
 
   // Process in batches until we have enough candidates
-  for (let index = 0; index < allCandidates.length && rankedItems.length < TOP_N_RESULTS * 3; index += BATCH_SIZE) {
+  for (
+    let index = 0;
+    index < allCandidates.length && rankedItems.length < TOP_N_RESULTS * 3;
+    index += BATCH_SIZE
+  ) {
     const batch = allCandidates.slice(index, index + BATCH_SIZE);
     const batchCveIds = batch.map((entry) => entry.cveId);
 
@@ -320,7 +348,7 @@ async function fetchThreatActiveCriticalCves(): Promise<Omit<ThreatActiveCacheEn
         } catch {
           return null;
         }
-      }),
+      })
     );
 
     // Fetch EPSS data for batch
@@ -343,7 +371,11 @@ async function fetchThreatActiveCriticalCves(): Promise<Omit<ThreatActiveCacheEn
         continue;
       }
 
-      const trendScore = computeTrendScore(nvdData.cvssScore, epssPercentile, dateAddedMs);
+      const trendScore = computeTrendScore(
+        nvdData.cvssScore,
+        epssPercentile,
+        dateAddedMs
+      );
       const productSummary = buildProductSummary(
         nvdData.entry.product,
         nvdData.entry.vendorProject,
@@ -353,7 +385,11 @@ async function fetchThreatActiveCriticalCves(): Promise<Omit<ThreatActiveCacheEn
       seen.add(nvdData.cveId);
       rankedItems.push({
         cveId: nvdData.cveId,
-        name: pickName(nvdData.entry.vulnerabilityName, nvdData.title, nvdData.description),
+        name: pickName(
+          nvdData.entry.vulnerabilityName,
+          nvdData.title,
+          nvdData.description
+        ),
         productSummary,
         cvssScore: nvdData.cvssScore,
         dateAdded: nvdData.entry.dateAdded || "Unknown",
@@ -365,7 +401,7 @@ async function fetchThreatActiveCriticalCves(): Promise<Omit<ThreatActiveCacheEn
       });
     }
 
-    processedCount += batch.length;
+    _processedCount += batch.length;
 
     // Early exit if we have enough high-quality results
     if (rankedItems.length >= TOP_N_RESULTS * 2) {
@@ -390,17 +426,19 @@ async function fetchThreatActiveCriticalCves(): Promise<Omit<ThreatActiveCacheEn
   });
 
   // Step 4: Take TOP 10
-  const data: ThreatActiveItem[] = rankedItems.slice(0, TOP_N_RESULTS).map((item) => ({
-    cveId: item.cveId,
-    name: item.name,
-    productSummary: item.productSummary,
-    cvssScore: item.cvssScore,
-    dateAdded: item.dateAdded,
-    link: item.link,
-    epssScore: item.epssScore,
-    epssPercentile: item.epssPercentile,
-    trendScore: item.trendScore,
-  }));
+  const data: ThreatActiveItem[] = rankedItems
+    .slice(0, TOP_N_RESULTS)
+    .map((item) => ({
+      cveId: item.cveId,
+      name: item.name,
+      productSummary: item.productSummary,
+      cvssScore: item.cvssScore,
+      dateAdded: item.dateAdded,
+      link: item.link,
+      epssScore: item.epssScore,
+      epssPercentile: item.epssPercentile,
+      trendScore: item.trendScore,
+    }));
 
   return {
     catalogVersion: parsed.data.catalogVersion ?? null,
@@ -435,9 +473,10 @@ export async function GET(request: Request) {
   try {
     const result = await getThreatActiveCriticalCves();
 
-    const displayTitle = result.data.length > 0
-      ? `Top ${result.data.length} Trending Exploited CVEs`
-      : "0 Active - No trending threat-active CVEs in results";
+    const displayTitle =
+      result.data.length > 0
+        ? `Top ${result.data.length} Trending Exploited CVEs`
+        : "0 Active - No trending threat-active CVEs in results";
 
     return jsonResponse({
       meta: {
@@ -447,9 +486,10 @@ export async function GET(request: Request) {
         generatedAt: result.generatedAt,
         count: result.data.length,
         displayTitle,
-        description: result.data.length > 0
-          ? `Showing ${result.data.length} highest trending CISA KEV entries (ranked by EPSS, CVSS, and recency)`
-          : "No trending threat-active CVEs found (requires high EPSS percentile, critical CVSS, or recent KEV addition)",
+        description:
+          result.data.length > 0
+            ? `Showing ${result.data.length} highest trending CISA KEV entries (ranked by EPSS, CVSS, and recency)`
+            : "No trending threat-active CVEs found (requires high EPSS percentile, critical CVSS, or recent KEV addition)",
       },
       data: result.data,
     });

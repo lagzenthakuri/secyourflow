@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { requireSessionWithOrg } from "@/lib/api-auth";
 import { logActivity } from "@/lib/logger";
+import { prisma } from "@/lib/prisma";
 
 /**
  * DELETE /api/invitations/[id]
@@ -79,7 +79,10 @@ export async function DELETE(
       message: "Invitation revoked successfully",
     });
   } catch (error) {
-    console.error("Revoke invitation error:", error instanceof Error ? error.message : String(error));
+    console.error(
+      "Revoke invitation error:",
+      error instanceof Error ? error.message : String(error)
+    );
 
     return NextResponse.json(
       { error: "Failed to revoke invitation" },

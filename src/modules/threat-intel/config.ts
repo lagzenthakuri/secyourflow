@@ -4,6 +4,12 @@ export interface ThreatIntelConfig {
     attackMatrixEnabled: boolean;
     iocCorrelationEnabled: boolean;
   };
+  feeds: {
+    otxApiKey: string | null;
+    circlApiBaseUrl: string;
+    urlhausAuthKey: string | null;
+    malwareBazaarAuthKey: string | null;
+  };
   ingestion: {
     timeoutMs: number;
     maxRetries: number;
@@ -13,12 +19,6 @@ export interface ThreatIntelConfig {
   mitre: {
     taxiiDiscoveryUrl: string;
     enterpriseCollectionId: string;
-  };
-  feeds: {
-    otxApiKey: string | null;
-    circlApiBaseUrl: string;
-    urlhausAuthKey: string | null;
-    malwareBazaarAuthKey: string | null;
   };
   scoring: {
     highConfidenceThreshold: number;
@@ -68,28 +68,40 @@ export function getThreatIntelConfig(): ThreatIntelConfig {
     features: {
       enabled: toBoolean(process.env.THREAT_INTEL_ENABLED, true),
       attackMatrixEnabled: toBoolean(process.env.ATTACK_MATRIX_ENABLED, true),
-      iocCorrelationEnabled: toBoolean(process.env.IOC_CORRELATION_ENABLED, true),
+      iocCorrelationEnabled: toBoolean(
+        process.env.IOC_CORRELATION_ENABLED,
+        true
+      ),
     },
     ingestion: {
-      timeoutMs: toInteger(process.env.THREAT_INTEL_TIMEOUT_MS, 15000),
+      timeoutMs: toInteger(process.env.THREAT_INTEL_TIMEOUT_MS, 15_000),
       maxRetries: toInteger(process.env.THREAT_INTEL_MAX_RETRIES, 3),
       baseBackoffMs: toInteger(process.env.THREAT_INTEL_BACKOFF_MS, 750),
-      defaultSyncIntervalSeconds: toInteger(process.env.THREAT_INTEL_DEFAULT_SYNC_INTERVAL, 3600),
+      defaultSyncIntervalSeconds: toInteger(
+        process.env.THREAT_INTEL_DEFAULT_SYNC_INTERVAL,
+        3600
+      ),
     },
     mitre: {
-      taxiiDiscoveryUrl: process.env.MITRE_ATTACK_TAXII_DISCOVERY_URL || "https://attack-taxii.mitre.org/taxii2/",
+      taxiiDiscoveryUrl:
+        process.env.MITRE_ATTACK_TAXII_DISCOVERY_URL ||
+        "https://attack-taxii.mitre.org/taxii2/",
       enterpriseCollectionId:
         process.env.MITRE_ATTACK_ENTERPRISE_COLLECTION_ID ||
         "x-mitre-collection--1f5f1533-f617-4ca8-9ab4-6a02367fa019",
     },
     feeds: {
       otxApiKey: process.env.OTX_API_KEY || null,
-      circlApiBaseUrl: process.env.CIRCL_API_BASE_URL || "https://vulnerability.circl.lu/api",
+      circlApiBaseUrl:
+        process.env.CIRCL_API_BASE_URL || "https://vulnerability.circl.lu/api",
       urlhausAuthKey: process.env.URLHAUS_AUTH_KEY || null,
       malwareBazaarAuthKey: process.env.MALWAREBAZAAR_AUTH_KEY || null,
     },
     scoring: {
-      highConfidenceThreshold: toInteger(process.env.THREAT_INTEL_HIGH_CONFIDENCE_THRESHOLD, 75),
+      highConfidenceThreshold: toInteger(
+        process.env.THREAT_INTEL_HIGH_CONFIDENCE_THRESHOLD,
+        75
+      ),
       defaultExpirationDays: {
         IP_ADDRESS: toInteger(process.env.THREAT_INTEL_EXPIRE_IP_DAYS, 14),
         DOMAIN: toInteger(process.env.THREAT_INTEL_EXPIRE_DOMAIN_DAYS, 30),

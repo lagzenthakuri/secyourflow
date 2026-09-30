@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireSessionWithOrg } from "@/lib/api-auth";
 import {
@@ -12,13 +12,17 @@ const createSchema = z.object({
   description: z.string().max(4000).optional(),
   ownerId: z.string().optional(),
   dueDate: z.string().datetime().optional(),
-  status: z.enum(["DRAFT", "ACTIVE", "BLOCKED", "COMPLETED", "ARCHIVED"]).optional(),
+  status: z
+    .enum(["DRAFT", "ACTIVE", "BLOCKED", "COMPLETED", "ARCHIVED"])
+    .optional(),
   vulnerabilityIds: z.array(z.string()).optional(),
 });
 
 export async function GET(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const data = await getRemediationPlans(authResult.context.organizationId);
   return NextResponse.json({ data });
@@ -26,13 +30,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const parsed = createSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid payload", details: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -51,9 +57,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(plan, { status: 201 });
   } catch (error) {
     if (error instanceof RemediationPlanError) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
     }
 
-    return NextResponse.json({ error: "Failed to create remediation plan" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create remediation plan" },
+      { status: 500 }
+    );
   }
 }

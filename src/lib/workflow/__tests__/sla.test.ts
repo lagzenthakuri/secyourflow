@@ -11,13 +11,13 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 describe("SLA windows", () => {
   it("shortens the window as severity rises", () => {
     expect(getDefaultSlaDaysForSeverity("CRITICAL")).toBeLessThan(
-      getDefaultSlaDaysForSeverity("HIGH"),
+      getDefaultSlaDaysForSeverity("HIGH")
     );
     expect(getDefaultSlaDaysForSeverity("HIGH")).toBeLessThan(
-      getDefaultSlaDaysForSeverity("MEDIUM"),
+      getDefaultSlaDaysForSeverity("MEDIUM")
     );
     expect(getDefaultSlaDaysForSeverity("MEDIUM")).toBeLessThan(
-      getDefaultSlaDaysForSeverity("LOW"),
+      getDefaultSlaDaysForSeverity("LOW")
     );
   });
 
@@ -44,6 +44,8 @@ describe("SLA windows", () => {
   it("detects a breach on absolute time", () => {
     const now = new Date("2026-06-10T00:00:00.000Z");
     expect(isSlaBreached(new Date("2026-06-09T23:59:59.000Z"), now)).toBe(true);
-    expect(isSlaBreached(new Date("2026-06-10T00:00:01.000Z"), now)).toBe(false);
+    expect(isSlaBreached(new Date("2026-06-10T00:00:01.000Z"), now)).toBe(
+      false
+    );
   });
 });

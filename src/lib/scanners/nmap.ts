@@ -1,29 +1,38 @@
-import { prisma } from "@/lib/prisma";
-import { Prisma } from "@repo/database";
+import type { Prisma } from "@repo/database";
 import type { DiscoveredAssetRecord } from "@/lib/discovery/adapters/types";
+import { prisma } from "@/lib/prisma";
 
 interface ParsedHost {
   hostname?: string;
   ipAddress?: string;
-  status: string;
   openPorts: number[];
+  status: string;
 }
 
-function extractTagValue(block: string, tagPattern: RegExp): string | undefined {
+function extractTagValue(
+  block: string,
+  tagPattern: RegExp
+): string | undefined {
   const match = block.match(tagPattern);
   return match?.[1];
 }
 
 function parseHostBlock(block: string): ParsedHost {
-  const ipAddress = extractTagValue(block, /<address[^>]*addr="([^"]+)"[^>]*addrtype="ipv4"[^>]*\/?>/i);
+  const ipAddress = extractTagValue(
+    block,
+    /<address[^>]*addr="([^"]+)"[^>]*addrtype="ipv4"[^>]*\/?>/i
+  );
   const hostname = extractTagValue(
     block,
-    /<hostname[^>]*name="([^"]+)"[^>]*\/?>/i,
+    /<hostname[^>]*name="([^"]+)"[^>]*\/?>/i
   );
-  const status = extractTagValue(block, /<status[^>]*state="([^"]+)"[^>]*\/?>/i) || "unknown";
+  const status =
+    extractTagValue(block, /<status[^>]*state="([^"]+)"[^>]*\/?>/i) ||
+    "unknown";
 
   const openPorts: number[] = [];
-  const portRegex = /<port[^>]*portid="(\d+)"[^>]*>[\s\S]*?<state[^>]*state="open"[^>]*\/?>(?:<\/state>)?[\s\S]*?<\/port>/gi;
+  const portRegex =
+    /<port[^>]*portid="(\d+)"[^>]*>[\s\S]*?<state[^>]*state="open"[^>]*\/?>(?:<\/state>)?[\s\S]*?<\/port>/gi;
   let portMatch: RegExpExecArray | null = null;
   while ((portMatch = portRegex.exec(block))) {
     const port = Number(portMatch[1]);

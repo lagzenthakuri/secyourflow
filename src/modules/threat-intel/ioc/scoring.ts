@@ -2,13 +2,13 @@ import type { IndicatorType, Severity } from "@repo/database";
 import type { ThreatIntelConfig } from "../config";
 
 const SOURCE_TRUST_WEIGHTS: Record<string, number> = {
-  "ALIENVAULT_OTX": 65,
-  "CIRCL": 60,
-  "URLHAUS": 78,
-  "MALWAREBAZAAR": 82,
-  "CUSTOM": 50,
-  "MITRE_ATTACK": 88,
-  "MANUAL": 95,
+  ALIENVAULT_OTX: 65,
+  CIRCL: 60,
+  URLHAUS: 78,
+  MALWAREBAZAAR: 82,
+  CUSTOM: 50,
+  MITRE_ATTACK: 88,
+  MANUAL: 95,
 };
 
 const SEVERITY_BOOST: Partial<Record<Severity, number>> = {
@@ -20,16 +20,19 @@ const SEVERITY_BOOST: Partial<Record<Severity, number>> = {
 };
 
 export interface ConfidenceInput {
-  source: string;
   feedProvidedConfidence?: number | null;
   firstSeen?: Date | null;
   lastSeen?: Date | null;
   severity?: Severity | null;
+  source: string;
 }
 
 export function calculateConfidence(input: ConfidenceInput): number {
   const trustBase = SOURCE_TRUST_WEIGHTS[input.source.toUpperCase()] ?? 45;
-  const feedScore = Math.max(0, Math.min(100, input.feedProvidedConfidence ?? trustBase));
+  const feedScore = Math.max(
+    0,
+    Math.min(100, input.feedProvidedConfidence ?? trustBase)
+  );
 
   let recencyBoost = 0;
   const lastSeen = input.lastSeen ?? input.firstSeen;
@@ -46,12 +49,19 @@ export function calculateConfidence(input: ConfidenceInput): number {
     }
   }
 
-  const severityBoost = input.severity ? SEVERITY_BOOST[input.severity] ?? 0 : 0;
-  const weighted = Math.round((feedScore * 0.6) + (trustBase * 0.4) + recencyBoost + severityBoost);
+  const severityBoost = input.severity
+    ? (SEVERITY_BOOST[input.severity] ?? 0)
+    : 0;
+  const weighted = Math.round(
+    feedScore * 0.6 + trustBase * 0.4 + recencyBoost + severityBoost
+  );
   return Math.max(0, Math.min(100, weighted));
 }
 
-function expirationDaysForType(type: IndicatorType, config: ThreatIntelConfig): number {
+function expirationDaysForType(
+  type: IndicatorType,
+  config: ThreatIntelConfig
+): number {
   switch (type) {
     case "IP_ADDRESS":
       return config.scoring.defaultExpirationDays.IP_ADDRESS;
@@ -73,8 +83,8 @@ function expirationDaysForType(type: IndicatorType, config: ThreatIntelConfig): 
 export function calculateExpirationDate(
   type: IndicatorType,
   referenceDate: Date,
-  config: ThreatIntelConfig,
+  config: ThreatIntelConfig
 ): Date {
   const days = expirationDaysForType(type, config);
-  return new Date(referenceDate.getTime() + (days * 24 * 60 * 60 * 1000));
+  return new Date(referenceDate.getTime() + days * 24 * 60 * 60 * 1000);
 }

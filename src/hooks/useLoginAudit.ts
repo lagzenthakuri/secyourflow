@@ -1,12 +1,12 @@
-import { useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
+import { useEffect, useRef } from "react";
 
 /**
  * Hook to audit user login events with IP and user agent information.
- * 
+ *
  * This hook calls the audit-login API endpoint once per session to log
  * the user's login with their IP address and user agent.
- * 
+ *
  * Deduplication: Uses sessionStorage to ensure we only log once per session.
  */
 export function useLoginAudit() {

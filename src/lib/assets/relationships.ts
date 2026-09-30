@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
 import type { AssetRelationshipType } from "@repo/database";
+import { prisma } from "@/lib/prisma";
 
 export async function createAssetRelationship(params: {
   organizationId: string;
@@ -21,7 +21,9 @@ export async function createAssetRelationship(params: {
   });
 
   if (assets.length !== 2) {
-    throw new Error("parentAssetId and childAssetId must belong to your organization");
+    throw new Error(
+      "parentAssetId and childAssetId must belong to your organization"
+    );
   }
 
   return prisma.assetRelationship.create({

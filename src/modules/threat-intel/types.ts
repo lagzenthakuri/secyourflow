@@ -1,10 +1,10 @@
 import type {
+  AttackMappingSource,
   IndicatorType,
   Severity,
   ThreatFeedFormat,
   ThreatFeedType,
   ThreatMatchStatus,
-  AttackMappingSource,
 } from "@repo/database";
 
 export interface ThreatIngestionCheckpoint {
@@ -13,58 +13,58 @@ export interface ThreatIngestionCheckpoint {
 }
 
 export interface NormalizedIndicatorInput {
-  type: IndicatorType;
-  value: string;
-  normalizedValue: string;
   confidence: number | null;
-  severity: Severity | null;
+  description: string | null;
+  expiresAt: Date | null;
   firstSeen: Date;
   lastSeen: Date;
-  expiresAt: Date | null;
-  source: string;
-  description: string | null;
-  tags: string[];
-  tacticId?: string | null;
-  techniqueId?: string | null;
   metadata?: Record<string, unknown> | null;
+  normalizedValue: string;
+  severity: Severity | null;
+  source: string;
+  tacticId?: string | null;
+  tags: string[];
+  techniqueId?: string | null;
+  type: IndicatorType;
+  value: string;
 }
 
 export interface ThreatFeedUpsertInput {
-  name: string;
-  source: string;
-  type: ThreatFeedType;
-  format: ThreatFeedFormat;
-  url?: string | null;
   apiKey?: string | null;
-  syncInterval?: number;
+  format: ThreatFeedFormat;
   isActive?: boolean;
   metadata?: Record<string, unknown> | null;
+  name: string;
+  source: string;
+  syncInterval?: number;
+  type: ThreatFeedType;
+  url?: string | null;
 }
 
 export interface ThreatFeedRunSummary {
-  fetched: number;
-  created: number;
-  updated: number;
-  skipped: number;
-  errors: string[];
   checkpoint: string | null;
+  created: number;
+  errors: string[];
+  fetched: number;
+  skipped: number;
+  updated: number;
 }
 
 export interface AttackTechniqueMappingInput {
-  vulnerabilityId: string;
-  techniqueExternalId: string;
-  mappingSource: AttackMappingSource;
   confidence: number | null;
+  mappingSource: AttackMappingSource;
   notes?: string;
+  techniqueExternalId: string;
+  vulnerabilityId: string;
 }
 
 export interface ThreatIndicatorMatchInput {
-  indicatorId: string;
   assetId: string;
-  organizationId: string;
+  confidence: number | null;
+  indicatorId: string;
   matchField: string;
   matchValue: string;
-  confidence: number | null;
-  status?: ThreatMatchStatus;
   notes?: string;
+  organizationId: string;
+  status?: ThreatMatchStatus;
 }

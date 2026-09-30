@@ -1,12 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import {
+  ROLE_VULNERABILITY_WRITE,
+  requireSessionWithOrg,
+} from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
-import { requireSessionWithOrg, ROLE_VULNERABILITY_WRITE } from "@/lib/api-auth";
-import { applyWorkflowStateTimestamps, assertValidWorkflowTransition } from "@/lib/workflow/state-machine";
 import { calculateSlaDueAt } from "@/lib/workflow/sla";
+import {
+  applyWorkflowStateTimestamps,
+  assertValidWorkflowTransition,
+} from "@/lib/workflow/state-machine";
 
 const workflowSchema = z.object({
-  toState: z.enum(["NEW", "TRIAGED", "IN_PROGRESS", "RESOLVED", "CLOSED"]).optional(),
+  toState: z
+    .enum(["NEW", "TRIAGED", "IN_PROGRESS", "RESOLVED", "CLOSED"])
+    .optional(),
   note: z.string().max(2000).optional(),
   assignedUserId: z.string().optional().nullable(),
   assignedTeam: z.string().max(120).optional().nullable(),
@@ -16,18 +24,20 @@ const workflowSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireSessionWithOrg(request, {
     allowedRoles: ROLE_VULNERABILITY_WRITE,
   });
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const parsed = workflowSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid workflow payload", details: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -40,7 +50,10 @@ export async function PATCH(
   });
 
   if (!vulnerability) {
-    return NextResponse.json({ error: "Vulnerability not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Vulnerability not found" },
+      { status: 404 }
+    );
   }
 
   const now = new Date();
@@ -48,7 +61,8 @@ export async function PATCH(
   const assignedUserId =
     payload.assignedUserId === null
       ? null
-      : typeof payload.assignedUserId === "string" && payload.assignedUserId.trim().length > 0
+      : typeof payload.assignedUserId === "string" &&
+          payload.assignedUserId.trim().length > 0
         ? payload.assignedUserId.trim()
         : undefined;
 
@@ -57,8 +71,10 @@ export async function PATCH(
       assertValidWorkflowTransition(vulnerability.workflowState, toState);
     } catch (error) {
       return NextResponse.json(
-        { error: error instanceof Error ? error.message : "Invalid transition" },
-        { status: 400 },
+        {
+          error: error instanceof Error ? error.message : "Invalid transition",
+        },
+        { status: 400 }
       );
     }
   }
@@ -77,7 +93,10 @@ export async function PATCH(
     });
 
     if (!assignee) {
-      return NextResponse.json({ error: "assignedUserId is invalid for your organization" }, { status: 400 });
+      return NextResponse.json(
+        { error: "assignedUserId is invalid for your organization" },
+        { status: 400 }
+      );
     }
   }
 

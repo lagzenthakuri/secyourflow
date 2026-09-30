@@ -1,24 +1,28 @@
-import { prisma } from "@/lib/prisma";
-import { Prisma } from "@repo/database";
 import type { ReportOutputFormat, ReportTemplateKey } from "@repo/database";
+import { Prisma } from "@repo/database";
+import { prisma } from "@/lib/prisma";
 import type { RenderedReport } from "@/lib/reporting/types";
 
 interface PersistReportRunParams {
-  organizationId: string;
-  userId: string;
+  artifact: RenderedReport;
+  metadata?: Record<string, unknown>;
   name: string;
-  templateKey: ReportTemplateKey;
+  organizationId: string;
   outputFormat: ReportOutputFormat;
   scheduleId?: string;
-  metadata?: Record<string, unknown>;
-  artifact: RenderedReport;
+  templateKey: ReportTemplateKey;
+  userId: string;
 }
 
 function toOptionalJson(
-  value: unknown,
+  value: unknown
 ): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined {
-  if (value === undefined) return undefined;
-  if (value === null) return Prisma.JsonNull;
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return Prisma.JsonNull;
+  }
   return value as Prisma.InputJsonValue;
 }
 

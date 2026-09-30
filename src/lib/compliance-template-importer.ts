@@ -1,25 +1,25 @@
-import { prisma } from "@/lib/prisma";
 import {
+  type ComplianceTemplateId,
   getComplianceTemplate,
   isComplianceTemplateId,
-  type ComplianceTemplateId,
 } from "@/lib/compliance-template-library";
+import { prisma } from "@/lib/prisma";
 
 interface ImportTemplateOptions {
-  templateId: ComplianceTemplateId;
+  frameworkDescription?: string;
+  frameworkName?: string;
   organizationId: string;
   overwriteExisting?: boolean;
-  frameworkName?: string;
-  frameworkDescription?: string;
+  templateId: ComplianceTemplateId;
 }
 
 interface ImportTemplateResult {
+  createdControls: number;
+  createdFramework: boolean;
   frameworkId: string;
   frameworkName: string;
-  createdFramework: boolean;
-  createdControls: number;
-  updatedControls: number;
   skippedControls: number;
+  updatedControls: number;
 }
 
 export function assertTemplateId(value: string): ComplianceTemplateId {
@@ -30,11 +30,12 @@ export function assertTemplateId(value: string): ComplianceTemplateId {
 }
 
 export async function importComplianceTemplate(
-  options: ImportTemplateOptions,
+  options: ImportTemplateOptions
 ): Promise<ImportTemplateResult> {
   const template = getComplianceTemplate(options.templateId);
   const overwriteExisting = options.overwriteExisting ?? false;
-  const frameworkName = options.frameworkName?.trim() || `${template.name} ${template.version}`;
+  const frameworkName =
+    options.frameworkName?.trim() || `${template.name} ${template.version}`;
 
   const existingFramework = await prisma.complianceFramework.findFirst({
     where: {
@@ -49,7 +50,8 @@ export async function importComplianceTemplate(
       data: {
         name: frameworkName,
         version: template.version,
-        description: options.frameworkDescription?.trim() || template.description,
+        description:
+          options.frameworkDescription?.trim() || template.description,
         isActive: true,
         organizationId: options.organizationId,
       },
@@ -68,9 +70,13 @@ export async function importComplianceTemplate(
     },
   });
 
-  const existingMap = new Map(existingControls.map((control) => [control.controlId, control.id]));
+  const existingMap = new Map(
+    existingControls.map((control) => [control.controlId, control.id])
+  );
 
-  const controlsToCreate = template.controls.filter((control) => !existingMap.has(control.controlId));
+  const controlsToCreate = template.controls.filter(
+    (control) => !existingMap.has(control.controlId)
+  );
   if (controlsToCreate.length > 0) {
     await prisma.complianceControl.createMany({
       data: controlsToCreate.map((control) => ({

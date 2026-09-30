@@ -1,37 +1,39 @@
 import type { RenderedReport, TabularReportData } from "@/lib/reporting/types";
 
-type WorkbookLike = {
-  creator?: string;
+interface WorkbookLike {
   addWorksheet: (name: string) => {
     addRow: (row: Array<string | number>) => void;
   };
+  creator?: string;
   xlsx: {
     writeBuffer: () => Promise<ArrayBuffer | Buffer>;
   };
-};
+}
 
-type ExcelJsModule = {
+interface ExcelJsModule {
   Workbook: new () => WorkbookLike;
-};
+}
 
 async function loadExcelJs(): Promise<ExcelJsModule> {
   try {
     const runtimeImport = new Function(
       "specifier",
-      "return import(specifier);",
-    ) as (specifier: string) => Promise<ExcelJsModule & { default?: ExcelJsModule }>;
+      "return import(specifier);"
+    ) as (
+      specifier: string
+    ) => Promise<ExcelJsModule & { default?: ExcelJsModule }>;
     const excelModule = await runtimeImport("exceljs");
     return excelModule.default ?? excelModule;
   } catch {
     throw new Error(
-      'XLSX export dependency is missing. Install it with "npm install exceljs" and restart the server.',
+      'XLSX export dependency is missing. Install it with "npm install exceljs" and restart the server.'
     );
   }
 }
 
 export async function renderXlsxReport(
   data: TabularReportData,
-  fileNameBase: string,
+  fileNameBase: string
 ): Promise<RenderedReport> {
   const ExcelJS = await loadExcelJs();
   const workbook = new ExcelJS.Workbook();
@@ -55,7 +57,8 @@ export async function renderXlsxReport(
 
   return {
     fileName: `${fileNameBase}.xlsx`,
-    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     bytes,
   };
 }

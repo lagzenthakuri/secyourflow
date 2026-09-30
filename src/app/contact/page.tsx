@@ -1,11 +1,9 @@
 "use client";
 import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
 import { Textarea as BoilerplateTextarea } from "@repo/design-system/components/ui/textarea";
-
-
+import { ArrowLeft, ArrowRight, Mail, MapPin, Phone, Send } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Mail, Phone, MapPin, Send, ArrowRight } from "lucide-react";
 import { useState } from "react";
 
 export default function Contact() {
@@ -67,7 +65,9 @@ export default function Contact() {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -83,42 +83,64 @@ export default function Contact() {
       </div>
 
       {/* Navigation */}
-      <nav className="marketing-nav-glass fixed top-0 z-50 w-full border-b backdrop-blur-xl" role="navigation" aria-label="Main navigation">
+      <nav
+        aria-label="Main navigation"
+        className="marketing-nav-glass fixed top-0 z-50 w-full border-b backdrop-blur-xl"
+      >
         <div className="mx-auto flex h-20 w-full max-w-6xl items-center justify-between px-6">
-          <Link href="/" className="inline-flex items-center gap-3" aria-label="SecYourFlow home">
+          <Link
+            aria-label="SecYourFlow home"
+            className="inline-flex items-center gap-3"
+            href="/"
+          >
             <Image
-              src="/logo1.png"
               alt="SecYourFlow logo"
-              width={40}
               height={40}
+              src="/logo1.png"
+              width={40}
             />
-            <span className="text-xs font-semibold tracking-[0.25em] text-[var(--text-primary)] sm:text-sm">
+            <span className="font-semibold text-[var(--text-primary)] text-xs tracking-[0.25em] sm:text-sm">
               SECYOUR<span className="text-intent-accent">FLOW</span>
             </span>
           </Link>
 
           <div className="hidden items-center gap-8 md:flex">
-            <Link href="/#features" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
+            <Link
+              className="rounded px-2 py-1 text-[var(--text-secondary)] text-sm transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)]"
+              href="/#features"
+            >
               Platform
             </Link>
-            <Link href="/#workflow" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
+            <Link
+              className="rounded px-2 py-1 text-[var(--text-secondary)] text-sm transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)]"
+              href="/#workflow"
+            >
               Workflow
             </Link>
-            <Link href="/#use-cases" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
+            <Link
+              className="rounded px-2 py-1 text-[var(--text-secondary)] text-sm transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)]"
+              href="/#use-cases"
+            >
               Use Cases
             </Link>
-            <Link href="/#outcomes" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
+            <Link
+              className="rounded px-2 py-1 text-[var(--text-secondary)] text-sm transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)]"
+              href="/#outcomes"
+            >
               Outcomes
             </Link>
-            <Link href="/contact" className="text-sm text-intent-accent transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] rounded px-2 py-1">
+            <Link
+              className="rounded px-2 py-1 text-intent-accent text-sm transition hover:text-[var(--text-primary)] focus:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)]"
+              href="/contact"
+            >
               Contact
             </Link>
           </div>
 
           <div className="flex items-center gap-3">
             <Link
+              className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 font-semibold text-slate-950 text-sm shadow-[0_10px_28px_-16px_rgba(56,189,248,0.9)] transition hover:bg-sky-200 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)]"
               href="/dashboard"
-              className="inline-flex items-center gap-2 rounded-xl bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 shadow-[0_10px_28px_-16px_rgba(56,189,248,0.9)] transition hover:bg-sky-200 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)]"
             >
               Dashboard
               <ArrowRight size={16} />
@@ -129,61 +151,75 @@ export default function Contact() {
 
       {/* Main Content */}
       <div className="relative z-10 pt-20">
-        <div className="min-h-screen flex items-center justify-center px-6 py-12">
-          <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-16 items-center">
-            
+        <div className="flex min-h-screen items-center justify-center px-6 py-12">
+          <div className="grid w-full max-w-6xl items-center gap-16 lg:grid-cols-2">
             {/* Left Side - Contact Info */}
             <div className="space-y-12">
               <Link
+                className="group inline-flex items-center gap-2 text-intent-accent text-sm transition-colors hover:text-intent-accent-strong"
                 href="/"
-                className="inline-flex items-center gap-2 text-sm text-intent-accent hover:text-intent-accent-strong transition-colors group"
               >
-                <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                <ArrowLeft
+                  className="transition-transform group-hover:-translate-x-1"
+                  size={16}
+                />
                 BACK TO HOME
               </Link>
 
               <div>
-                <h1 className="text-5xl lg:text-6xl font-bold text-[var(--text-primary)] mb-6">
+                <h1 className="mb-6 font-bold text-5xl text-[var(--text-primary)] lg:text-6xl">
                   Contact <span className="text-intent-accent">Us</span>
                 </h1>
-                <p className="text-lg text-[var(--text-muted)] leading-relaxed">
+                <p className="text-[var(--text-muted)] text-lg leading-relaxed">
                   Get in touch with us. We would love to hear from you!
                 </p>
               </div>
 
               <div className="space-y-8">
-                <h2 className="text-sm font-semibold text-intent-accent uppercase tracking-wider">
+                <h2 className="font-semibold text-intent-accent text-sm uppercase tracking-wider">
                   GET IN TOUCH
                 </h2>
 
                 <div className="space-y-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-5 h-5 flex items-center justify-center">
-                      <Mail size={20} className="text-intent-accent" />
+                    <div className="flex h-5 w-5 items-center justify-center">
+                      <Mail className="text-intent-accent" size={20} />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-1">EMAIL</p>
-                      <p className="text-[var(--text-primary)] font-medium">thakurizen2@gmail.com</p>
+                      <p className="mb-1 font-medium text-[var(--text-secondary)] text-sm uppercase tracking-wide">
+                        EMAIL
+                      </p>
+                      <p className="font-medium text-[var(--text-primary)]">
+                        thakurizen2@gmail.com
+                      </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-4">
-                    <div className="w-5 h-5 flex items-center justify-center">
-                      <Phone size={20} className="text-intent-accent" />
+                    <div className="flex h-5 w-5 items-center justify-center">
+                      <Phone className="text-intent-accent" size={20} />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-1">PHONE</p>
-                      <p className="text-[var(--text-primary)] font-medium">+977 9849291185</p>
+                      <p className="mb-1 font-medium text-[var(--text-secondary)] text-sm uppercase tracking-wide">
+                        PHONE
+                      </p>
+                      <p className="font-medium text-[var(--text-primary)]">
+                        +977 9849291185
+                      </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-4">
-                    <div className="w-5 h-5 flex items-center justify-center">
-                      <MapPin size={20} className="text-intent-accent" />
+                    <div className="flex h-5 w-5 items-center justify-center">
+                      <MapPin className="text-intent-accent" size={20} />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-1">ADDRESS</p>
-                      <p className="text-[var(--text-primary)] font-medium">Kathmandu 44600</p>
+                      <p className="mb-1 font-medium text-[var(--text-secondary)] text-sm uppercase tracking-wide">
+                        ADDRESS
+                      </p>
+                      <p className="font-medium text-[var(--text-primary)]">
+                        Kathmandu 44600
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -192,86 +228,98 @@ export default function Contact() {
 
             {/* Right Side - Contact Form */}
             <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-8 backdrop-blur-sm">
-              <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-8 uppercase tracking-wide">
+              <h2 className="mb-8 font-bold text-2xl text-[var(--text-primary)] uppercase tracking-wide">
                 SEND US A MESSAGE
               </h2>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form className="space-y-6" onSubmit={handleSubmit}>
                 {submitStatus.type && (
                   <div
-                    className={`p-4 rounded-lg border ${
+                    className={`rounded-lg border p-4 ${
                       submitStatus.type === "success"
-                        ? "bg-green-500/10 border-green-500/50 text-green-700 dark:text-green-400"
-                        : "bg-red-500/10 border-red-500/50 text-intent-danger"
+                        ? "border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400"
+                        : "border-red-500/50 bg-red-500/10 text-intent-danger"
                     }`}
                   >
                     {submitStatus.message}
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-3">
+                    <label
+                      className="mb-3 block font-medium text-[var(--text-secondary)] text-sm uppercase tracking-wide"
+                      htmlFor="name"
+                    >
                       NAME
                     </label>
                     <BoilerplateInput
-                      type="text"
+                      className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-4 text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-all duration-300 focus:border-blue-400/50 focus:outline-none focus:ring-1 focus:ring-blue-400/50"
                       id="name"
                       name="name"
-                      value={formData.name}
                       onChange={handleChange}
-                      required
-                      className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-4 text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-all duration-300 focus:border-blue-400/50 focus:outline-none focus:ring-1 focus:ring-blue-400/50"
                       placeholder="Your name"
+                      required
+                      type="text"
+                      value={formData.name}
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-3">
+                    <label
+                      className="mb-3 block font-medium text-[var(--text-secondary)] text-sm uppercase tracking-wide"
+                      htmlFor="email"
+                    >
                       EMAIL
                     </label>
                     <BoilerplateInput
-                      type="email"
+                      className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-4 text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-all duration-300 focus:border-blue-400/50 focus:outline-none focus:ring-1 focus:ring-blue-400/50"
                       id="email"
                       name="email"
-                      value={formData.email}
                       onChange={handleChange}
-                      required
-                      className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-4 text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-all duration-300 focus:border-blue-400/50 focus:outline-none focus:ring-1 focus:ring-blue-400/50"
                       placeholder="your@email.com"
+                      required
+                      type="email"
+                      value={formData.email}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="message" className="block text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-3">
+                  <label
+                    className="mb-3 block font-medium text-[var(--text-secondary)] text-sm uppercase tracking-wide"
+                    htmlFor="message"
+                  >
                     MESSAGE
                   </label>
                   <BoilerplateTextarea
+                    className="w-full resize-none rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-4 text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-all duration-300 focus:border-blue-400/50 focus:outline-none focus:ring-1 focus:ring-blue-400/50"
                     id="message"
                     name="message"
-                    value={formData.message}
                     onChange={handleChange}
+                    placeholder="Your message here..."
                     required
                     rows={6}
-                    className="w-full resize-none rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-4 text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-all duration-300 focus:border-blue-400/50 focus:outline-none focus:ring-1 focus:ring-blue-400/50"
-                    placeholder="Your message here..."
+                    value={formData.message}
                   />
                 </div>
 
                 <button
-                  type="submit"
+                  className="group flex w-full items-center justify-center gap-2 rounded-lg bg-blue-500 px-6 py-4 font-semibold text-white uppercase tracking-wide transition-all duration-300 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={isSubmitting}
-                  className="w-full px-6 py-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-[var(--focus-ring-offset)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group uppercase tracking-wide"
+                  type="submit"
                 >
                   {isSubmitting ? (
                     <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                       SENDING...
                     </>
                   ) : (
                     <>
-                      <Send size={18} className="group-hover:translate-x-1 transition-transform" />
+                      <Send
+                        className="transition-transform group-hover:translate-x-1"
+                        size={18}
+                      />
                       SEND MESSAGE
                     </>
                   )}

@@ -5,7 +5,9 @@ export async function register() {
     process.env.NODE_ENV === "development" ||
     process.env.NEXT_RUNTIME !== "nodejs" ||
     !sentryDsn
-  ) return;
+  ) {
+    return;
+  }
 
   const { initializeNodeSentry } = await import(
     "./src/lib/observability/sentry-node"
@@ -16,13 +18,15 @@ export async function register() {
 export async function onRequestError(
   error: unknown,
   request: unknown,
-  context: unknown,
+  context: unknown
 ) {
   if (
     process.env.NODE_ENV === "development" ||
     process.env.NEXT_RUNTIME !== "nodejs" ||
     !sentryDsn
-  ) return;
+  ) {
+    return;
+  }
 
   const { captureNodeRequestError } = await import(
     "./src/lib/observability/sentry-node"

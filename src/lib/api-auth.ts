@@ -10,30 +10,48 @@ import { isTwoFactorSatisfied } from "@/lib/security/two-factor";
  * PENTESTER    — vulnerability assessment.
  * ANALYST      — risk analysis and reporting.
  */
-export const ROLE_ALL = ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER", "ANALYST"] as const;
+export const ROLE_ALL = [
+  "MAIN_OFFICER",
+  "IT_OFFICER",
+  "PENTESTER",
+  "ANALYST",
+] as const;
 /** Can create and edit findings. */
-export const ROLE_VULNERABILITY_WRITE = ["MAIN_OFFICER", "IT_OFFICER", "PENTESTER"] as const;
+export const ROLE_VULNERABILITY_WRITE = [
+  "MAIN_OFFICER",
+  "IT_OFFICER",
+  "PENTESTER",
+] as const;
 /** Can destroy findings. Deliberately narrower than write. */
-export const ROLE_VULNERABILITY_DELETE = ["MAIN_OFFICER", "IT_OFFICER"] as const;
+export const ROLE_VULNERABILITY_DELETE = [
+  "MAIN_OFFICER",
+  "IT_OFFICER",
+] as const;
 
 export interface SessionOrgContext {
-  userId: string;
   organizationId: string;
   role: string;
+  userId: string;
 }
 
-type RequireSessionOptions = {
+interface RequireSessionOptions {
   allowedRoles?: readonly string[];
-};
+}
 
 export type AuthResult =
   | { ok: true; context: SessionOrgContext }
   | { ok: false; response: NextResponse };
 
-type AuthFailure = { ok: false; response: NextResponse };
+interface AuthFailure {
+  ok: false;
+  response: NextResponse;
+}
 
 function unauthorized(): AuthFailure {
-  return { ok: false, response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
+  return {
+    ok: false,
+    response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+  };
 }
 
 function forbidden(error: string): AuthFailure {
@@ -51,7 +69,7 @@ function forbidden(error: string): AuthFailure {
  */
 export async function requireSessionWithOrg(
   _request: Request,
-  options: RequireSessionOptions = {},
+  options: RequireSessionOptions = {}
 ): Promise<AuthResult> {
   const session = await auth();
 
@@ -69,11 +87,17 @@ export async function requireSessionWithOrg(
 
   const effectiveRole = role || "ANALYST";
 
-  if (effectiveRole.toUpperCase() !== "MAIN_OFFICER" && !isTwoFactorSatisfied(session)) {
+  if (
+    effectiveRole.toUpperCase() !== "MAIN_OFFICER" &&
+    !isTwoFactorSatisfied(session)
+  ) {
     return forbidden("Two-factor authentication required");
   }
 
-  if (options.allowedRoles?.length && !options.allowedRoles.includes(effectiveRole)) {
+  if (
+    options.allowedRoles?.length &&
+    !options.allowedRoles.includes(effectiveRole)
+  ) {
     return forbidden("Forbidden: insufficient role permissions");
   }
 
@@ -82,7 +106,10 @@ export async function requireSessionWithOrg(
 
 export function requireMainOfficer(role: string) {
   if (role !== "MAIN_OFFICER") {
-    return NextResponse.json({ error: "MAIN_OFFICER role required" }, { status: 403 });
+    return NextResponse.json(
+      { error: "MAIN_OFFICER role required" },
+      { status: 403 }
+    );
   }
 
   return null;
@@ -124,15 +151,15 @@ function timingSafeEqualString(a: string, b: string): boolean {
 }
 
 export interface AutomationContext {
-  /** True when the caller authenticated with ADMIN_API_TOKEN rather than a session. */
-  tokenAuthorized: boolean;
-  userId: string | null;
   /**
    * The tenant to operate on. `null` means "every tenant" and is only ever
    * reachable via the admin token with no explicit organizationId — never from
    * a user session.
    */
   organizationId: string | null;
+  /** True when the caller authenticated with ADMIN_API_TOKEN rather than a session. */
+  tokenAuthorized: boolean;
+  userId: string | null;
 }
 
 /**
@@ -144,18 +171,27 @@ export interface AutomationContext {
  */
 export async function requireAutomationContext(
   request: Request,
-  requestedOrganizationId?: string,
-): Promise<{ ok: true; context: AutomationContext } | { ok: false; response: NextResponse }> {
+  requestedOrganizationId?: string
+): Promise<
+  | { ok: true; context: AutomationContext }
+  | { ok: false; response: NextResponse }
+> {
   const requested = requestedOrganizationId?.trim() || undefined;
 
   if (isAdminTokenAuthorized(request)) {
     return {
       ok: true,
-      context: { tokenAuthorized: true, userId: null, organizationId: requested ?? null },
+      context: {
+        tokenAuthorized: true,
+        userId: null,
+        organizationId: requested ?? null,
+      },
     };
   }
 
-  const result = await requireSessionWithOrg(request, { allowedRoles: ["MAIN_OFFICER"] });
+  const result = await requireSessionWithOrg(request, {
+    allowedRoles: ["MAIN_OFFICER"],
+  });
   if (!result.ok) {
     return { ok: false, response: result.response };
   }

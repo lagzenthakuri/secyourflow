@@ -43,7 +43,8 @@ export function normalizeDatabaseUrl(rawUrl: string | undefined): string {
   // explicit. A URL that opts into libpq compatibility is left untouched so
   // providers that intentionally use require/prefer semantics still work.
   const sslMode = parsed.searchParams.get("sslmode")?.toLowerCase();
-  const useLibpqCompat = parsed.searchParams.get("uselibpqcompat")?.toLowerCase() === "true";
+  const useLibpqCompat =
+    parsed.searchParams.get("uselibpqcompat")?.toLowerCase() === "true";
   if (sslMode && legacyAliasSslModes.has(sslMode) && !useLibpqCompat) {
     parsed.searchParams.set("sslmode", "verify-full");
   }

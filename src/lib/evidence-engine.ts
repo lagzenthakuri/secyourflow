@@ -1,6 +1,9 @@
-import { prisma } from "@/lib/prisma";
 import { runScheduledComplianceAssessments } from "@/lib/compliance-engine";
-import { writeTextEvidenceFile, ensureEvidenceStorageExists } from "@/lib/compliance-evidence-storage";
+import {
+  ensureEvidenceStorageExists,
+  writeTextEvidenceFile,
+} from "@/lib/compliance-evidence-storage";
+import { prisma } from "@/lib/prisma";
 
 function isLogDrivenControl(control: {
   controlId: string;
@@ -8,12 +11,15 @@ function isLogDrivenControl(control: {
   description: string | null;
   controlType: string;
 }) {
-  const search = `${control.controlId} ${control.title} ${control.description ?? ""}`.toLowerCase();
+  const search =
+    `${control.controlId} ${control.title} ${control.description ?? ""}`.toLowerCase();
   if (control.controlType === "DETECTIVE") {
     return true;
   }
 
-  return ["log", "siem", "monitor", "audit", "detect"].some((keyword) => search.includes(keyword));
+  return ["log", "siem", "monitor", "audit", "detect"].some((keyword) =>
+    search.includes(keyword)
+  );
 }
 
 export async function pullEvidenceFromLogs(controlId: string, assetId: string) {
@@ -45,25 +51,29 @@ export async function pullEvidenceFromLogs(controlId: string, assetId: string) {
     throw new Error(`Asset ${assetId} not found`);
   }
   if (asset.organizationId !== control.framework.organizationId) {
-    throw new Error(`Asset ${assetId} is outside the control organization scope`);
+    throw new Error(
+      `Asset ${assetId} is outside the control organization scope`
+    );
   }
 
-  console.log(`[EvidenceEngine] Pulling log evidence for Control ${control.controlId} on Asset ${asset.name}`);
+  console.log(
+    `[EvidenceEngine] Pulling log evidence for Control ${control.controlId} on Asset ${asset.name}`
+  );
 
   const scanTime = new Date();
   const logs = [
     {
-      timestamp: new Date(scanTime.getTime() - 10000).toISOString(),
+      timestamp: new Date(scanTime.getTime() - 10_000).toISOString(),
       event: "MFA_SUCCESS",
       source: "IAM",
     },
     {
-      timestamp: new Date(scanTime.getTime() - 40000).toISOString(),
+      timestamp: new Date(scanTime.getTime() - 40_000).toISOString(),
       event: "LOGIN_SUCCESS",
       source: "SSO",
     },
     {
-      timestamp: new Date(scanTime.getTime() - 70000).toISOString(),
+      timestamp: new Date(scanTime.getTime() - 70_000).toISOString(),
       event: "ENDPOINT_HEALTH_OK",
       source: "EDR",
     },
@@ -107,7 +117,9 @@ export async function pullEvidenceFromLogs(controlId: string, assetId: string) {
       },
     }));
 
-  const nextVersion = existingEvidence ? existingEvidence.currentVersion + 1 : 1;
+  const nextVersion = existingEvidence
+    ? existingEvidence.currentVersion + 1
+    : 1;
 
   const filePayload = await writeTextEvidenceFile({
     controlId: control.id,
@@ -173,10 +185,14 @@ export async function pullEvidenceFromLogs(controlId: string, assetId: string) {
  * the function sweep every tenant in the database — reachable from an HTTP
  * route with the admin token and no body.
  */
-export async function runContinuousComplianceAudit(options: { organizationId: string }) {
+export async function runContinuousComplianceAudit(options: {
+  organizationId: string;
+}) {
   const { organizationId } = options;
 
-  const scheduleSummary = await runScheduledComplianceAssessments({ organizationId });
+  const scheduleSummary = await runScheduledComplianceAssessments({
+    organizationId,
+  });
 
   const [assets, controls] = await Promise.all([
     prisma.asset.findMany({
@@ -217,13 +233,17 @@ export async function runContinuousComplianceAudit(options: { organizationId: st
  * that fanning out across organizations is always a conscious choice.
  */
 export async function runContinuousComplianceAuditForAllOrganizations() {
-  const organizations = await prisma.organization.findMany({ select: { id: true } });
+  const organizations = await prisma.organization.findMany({
+    select: { id: true },
+  });
 
   let scheduledAssessments = 0;
   let evidenceItemsCreated = 0;
 
   for (const organization of organizations) {
-    const summary = await runContinuousComplianceAudit({ organizationId: organization.id });
+    const summary = await runContinuousComplianceAudit({
+      organizationId: organization.id,
+    });
     scheduledAssessments += summary.scheduledAssessments;
     evidenceItemsCreated += summary.evidenceItemsCreated;
   }

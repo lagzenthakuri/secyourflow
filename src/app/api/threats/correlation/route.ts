@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireThreatIntelContext } from "@/modules/threat-intel/auth";
-import { ThreatIntelRepository } from "@/modules/threat-intel/persistence/repository";
 import { getThreatIntelConfig } from "@/modules/threat-intel/config";
 import { IocCorrelationEngine } from "@/modules/threat-intel/correlation/engine";
+import { ThreatIntelRepository } from "@/modules/threat-intel/persistence/repository";
 
 export async function GET(request: Request) {
   const authResult = await requireThreatIntelContext(request);
@@ -12,7 +12,9 @@ export async function GET(request: Request) {
 
   try {
     const repository = new ThreatIntelRepository();
-    const matches = await repository.listIndicatorMatches(authResult.context.organizationId);
+    const matches = await repository.listIndicatorMatches(
+      authResult.context.organizationId
+    );
     return NextResponse.json({ data: matches });
   } catch (error) {
     return NextResponse.json(
@@ -20,20 +22,25 @@ export async function GET(request: Request) {
         error: "Failed to fetch correlation results",
         message: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
 
 export async function POST(request: Request) {
-  const authResult = await requireThreatIntelContext(request, { requireMainOfficer: true });
+  const authResult = await requireThreatIntelContext(request, {
+    requireMainOfficer: true,
+  });
   if (!authResult.ok) {
     return authResult.response;
   }
 
   const config = getThreatIntelConfig();
   if (!config.features.iocCorrelationEnabled) {
-    return NextResponse.json({ error: "IOC correlation is disabled" }, { status: 403 });
+    return NextResponse.json(
+      { error: "IOC correlation is disabled" },
+      { status: 403 }
+    );
   }
 
   try {
@@ -48,7 +55,7 @@ export async function POST(request: Request) {
         error: "Failed to run IOC correlation",
         message: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

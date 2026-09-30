@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireSessionWithOrg } from "@/lib/api-auth";
 import { importDiscoveredAssets } from "@/lib/scanners/nmap";
@@ -23,13 +23,21 @@ const discoveredAssetSchema = z.object({
   hostname: z.string().optional(),
   ipAddress: z.string().optional(),
   operatingSystem: z.string().optional(),
-  environment: z.enum(["PRODUCTION", "STAGING", "DEVELOPMENT", "TESTING", "DR"]).optional(),
-  criticality: z.enum(["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"]).optional(),
-  status: z.enum(["ACTIVE", "INACTIVE", "DECOMMISSIONED", "MAINTENANCE"]).optional(),
+  environment: z
+    .enum(["PRODUCTION", "STAGING", "DEVELOPMENT", "TESTING", "DR"])
+    .optional(),
+  criticality: z
+    .enum(["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"])
+    .optional(),
+  status: z
+    .enum(["ACTIVE", "INACTIVE", "DECOMMISSIONED", "MAINTENANCE"])
+    .optional(),
   owner: z.string().optional(),
   department: z.string().optional(),
   location: z.string().optional(),
-  cloudProvider: z.enum(["AWS", "AZURE", "GCP", "ORACLE", "IBM", "ALIBABA", "OTHER"]).optional(),
+  cloudProvider: z
+    .enum(["AWS", "AZURE", "GCP", "ORACLE", "IBM", "ALIBABA", "OTHER"])
+    .optional(),
   cloudRegion: z.string().optional(),
   cloudAccountId: z.string().optional(),
   tags: z.array(z.string()).optional(),
@@ -44,13 +52,18 @@ const schema = z.object({
 
 export async function POST(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid discovery import payload", details: parsed.error.flatten() },
-      { status: 400 },
+      {
+        error: "Invalid discovery import payload",
+        details: parsed.error.flatten(),
+      },
+      { status: 400 }
     );
   }
 
@@ -58,7 +71,10 @@ export async function POST(request: NextRequest) {
     organizationId: authResult.context.organizationId,
     source: parsed.data.source,
     actorId: authResult.context.userId,
-    rawInput: parsed.data.rawInput || { source: parsed.data.source, imported: true },
+    rawInput: parsed.data.rawInput || {
+      source: parsed.data.source,
+      imported: true,
+    },
     assets: parsed.data.assets,
   });
 

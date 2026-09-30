@@ -1,12 +1,18 @@
-import { describe, expect, it } from "vitest";
 import type { WorkflowState } from "@prisma/client";
+import { describe, expect, it } from "vitest";
 import {
   applyWorkflowStateTimestamps,
   assertValidWorkflowTransition,
   canTransitionWorkflowState,
 } from "@/lib/workflow/state-machine";
 
-const ALL_STATES: WorkflowState[] = ["NEW", "TRIAGED", "IN_PROGRESS", "RESOLVED", "CLOSED"];
+const ALL_STATES: WorkflowState[] = [
+  "NEW",
+  "TRIAGED",
+  "IN_PROGRESS",
+  "RESOLVED",
+  "CLOSED",
+];
 
 describe("workflow state machine", () => {
   it("allows the normal triage path", () => {
@@ -24,7 +30,9 @@ describe("workflow state machine", () => {
 
   it("rejects skipping straight from NEW to RESOLVED", () => {
     expect(canTransitionWorkflowState("NEW", "RESOLVED")).toBe(false);
-    expect(() => assertValidWorkflowTransition("NEW", "RESOLVED")).toThrow(/Invalid workflow transition/);
+    expect(() => assertValidWorkflowTransition("NEW", "RESOLVED")).toThrow(
+      /Invalid workflow transition/
+    );
   });
 
   it("never throws for any pair of declared states", () => {
@@ -39,9 +47,15 @@ describe("workflow state machine", () => {
 
   it("stamps only the timestamp belonging to the new state", () => {
     const now = new Date("2026-06-01T00:00:00.000Z");
-    expect(applyWorkflowStateTimestamps("TRIAGED", now)).toEqual({ triagedAt: now });
-    expect(applyWorkflowStateTimestamps("RESOLVED", now)).toEqual({ resolvedAt: now });
-    expect(applyWorkflowStateTimestamps("CLOSED", now)).toEqual({ closedAt: now });
+    expect(applyWorkflowStateTimestamps("TRIAGED", now)).toEqual({
+      triagedAt: now,
+    });
+    expect(applyWorkflowStateTimestamps("RESOLVED", now)).toEqual({
+      resolvedAt: now,
+    });
+    expect(applyWorkflowStateTimestamps("CLOSED", now)).toEqual({
+      closedAt: now,
+    });
     expect(applyWorkflowStateTimestamps("NEW", now)).toEqual({});
   });
 });

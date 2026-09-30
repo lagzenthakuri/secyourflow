@@ -1,11 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
-import { listComplianceTemplates } from "@/lib/compliance-template-library";
-import { assertTemplateId, importComplianceTemplate } from "@/lib/compliance-template-importer";
+import { type NextRequest, NextResponse } from "next/server";
 import { requireSessionWithOrg } from "@/lib/api-auth";
+import {
+  assertTemplateId,
+  importComplianceTemplate,
+} from "@/lib/compliance-template-importer";
+import { listComplianceTemplates } from "@/lib/compliance-template-library";
 
 export async function GET(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   return NextResponse.json({
     data: listComplianceTemplates(),
@@ -13,8 +18,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authResult = await requireSessionWithOrg(request, { allowedRoles: ["MAIN_OFFICER"] });
-  if (!authResult.ok) return authResult.response;
+  const authResult = await requireSessionWithOrg(request, {
+    allowedRoles: ["MAIN_OFFICER"],
+  });
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   try {
     const body = (await request.json()) as {
@@ -25,7 +34,10 @@ export async function POST(request: NextRequest) {
     };
 
     if (!body.templateId) {
-      return NextResponse.json({ error: "templateId is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "templateId is required" },
+        { status: 400 }
+      );
     }
 
     const templateId = assertTemplateId(body.templateId);
@@ -41,8 +53,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to import template" },
-      { status: 400 },
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to import template",
+      },
+      { status: 400 }
     );
   }
 }

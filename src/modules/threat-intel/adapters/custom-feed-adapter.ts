@@ -1,29 +1,34 @@
 import type { IndicatorType, ThreatFeedFormat } from "@repo/database";
 import type { ThreatIntelConfig } from "../config";
-import type { AdapterContext, AdapterFetchResult, ThreatFeedAdapter, ThreatFeedAdapterHealth } from "./types";
-import { fetchWithRetry } from "../utils/http";
-import { calculateConfidence, calculateExpirationDate } from "../ioc/scoring";
 import { guessIndicatorType, normalizeIndicatorValue } from "../ioc/normalizer";
+import { calculateConfidence, calculateExpirationDate } from "../ioc/scoring";
 import type { NormalizedIndicatorInput } from "../types";
+import { fetchWithRetry } from "../utils/http";
+import type {
+  AdapterContext,
+  AdapterFetchResult,
+  ThreatFeedAdapter,
+  ThreatFeedAdapterHealth,
+} from "./types";
 
 interface CustomFeedOptions {
+  apiKey?: string | null;
+  format: ThreatFeedFormat;
+  headers?: Record<string, string>;
   source: string;
   url: string;
-  format: ThreatFeedFormat;
-  apiKey?: string | null;
-  headers?: Record<string, string>;
 }
 
 interface CustomRecord {
-  type: IndicatorType;
-  value: string;
   confidence: number | null;
-  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFORMATIONAL" | null;
   description: string | null;
-  tags: string[];
+  expiresAt: Date | null;
   firstSeen: Date;
   lastSeen: Date;
-  expiresAt: Date | null;
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFORMATIONAL" | null;
+  tags: string[];
+  type: IndicatorType;
+  value: string;
 }
 
 function parseCsvLine(line: string): string[] {
@@ -80,10 +85,16 @@ function parseCsv(content: string): Record<string, string>[] {
   });
 }
 
-function parseSeverity(value: string | null | undefined): CustomRecord["severity"] {
-  if (!value) return null;
+function parseSeverity(
+  value: string | null | undefined
+): CustomRecord["severity"] {
+  if (!value) {
+    return null;
+  }
   const normalized = value.trim().toUpperCase();
-  if (["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"].includes(normalized)) {
+  if (
+    ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"].includes(normalized)
+  ) {
     return normalized as CustomRecord["severity"];
   }
 
@@ -91,7 +102,9 @@ function parseSeverity(value: string | null | undefined): CustomRecord["severity
 }
 
 function toDate(value: string | null | undefined, fallback: Date): Date {
-  if (!value) return fallback;
+  if (!value) {
+    return fallback;
+  }
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? fallback : parsed;
 }
@@ -103,7 +116,10 @@ export class CustomFeedAdapter implements ThreatFeedAdapter<CustomRecord> {
   private readonly format: ThreatFeedFormat;
   private readonly headers: Record<string, string>;
 
-  constructor(private readonly config: ThreatIntelConfig, options: CustomFeedOptions) {
+  constructor(
+    private readonly config: ThreatIntelConfig,
+    options: CustomFeedOptions
+  ) {
     this.source = options.source;
     this.url = options.url;
     this.format = options.format;
@@ -113,11 +129,14 @@ export class CustomFeedAdapter implements ThreatFeedAdapter<CustomRecord> {
     };
 
     if (options.apiKey) {
-      this.headers.Authorization = this.headers.Authorization || `Bearer ${options.apiKey}`;
+      this.headers.Authorization =
+        this.headers.Authorization || `Bearer ${options.apiKey}`;
     }
   }
 
-  async fetchSince(checkpoint: string | null): Promise<AdapterFetchResult<CustomRecord>> {
+  async fetchSince(
+    checkpoint: string | null
+  ): Promise<AdapterFetchResult<CustomRecord>> {
     void checkpoint;
     const response = await fetchWithRetry({
       url: this.url,
@@ -139,18 +158,29 @@ export class CustomFeedAdapter implements ThreatFeedAdapter<CustomRecord> {
       records = parseCsv(text)
         .map((row) => {
           const value = row.value || row.indicator || row.ioc;
-          if (!value) return null;
+          if (!value) {
+            return null;
+          }
 
-          const type = (row.type?.toUpperCase() as IndicatorType | undefined) ?? guessIndicatorType(value);
+          const type =
+            (row.type?.toUpperCase() as IndicatorType | undefined) ??
+            guessIndicatorType(value);
           const firstSeen = toDate(row.first_seen || row.firstseen, now);
           const lastSeen = toDate(row.last_seen || row.lastseen, firstSeen);
           return {
             type,
             value,
-            confidence: row.confidence ? Number.parseInt(row.confidence, 10) : null,
+            confidence: row.confidence
+              ? Number.parseInt(row.confidence, 10)
+              : null,
             severity: parseSeverity(row.severity),
             description: row.description || null,
-            tags: row.tags ? row.tags.split("|").map((tag) => tag.trim()).filter(Boolean) : [],
+            tags: row.tags
+              ? row.tags
+                  .split("|")
+                  .map((tag) => tag.trim())
+                  .filter(Boolean)
+              : [],
             firstSeen,
             lastSeen,
             expiresAt: row.expires_at ? toDate(row.expires_at, lastSeen) : null,
@@ -161,31 +191,68 @@ export class CustomFeedAdapter implements ThreatFeedAdapter<CustomRecord> {
       const json = (await response.json()) as unknown;
       const items = Array.isArray(json)
         ? json
-        : json && typeof json === "object" && Array.isArray((json as { data?: unknown[] }).data)
+        : json &&
+            typeof json === "object" &&
+            Array.isArray((json as { data?: unknown[] }).data)
           ? (json as { data: unknown[] }).data
           : [];
 
       records = items
         .map((item) => {
-          if (!item || typeof item !== "object") return null;
+          if (!item || typeof item !== "object") {
+            return null;
+          }
           const row = item as Record<string, unknown>;
-          const value = typeof row.value === "string" ? row.value : typeof row.indicator === "string" ? row.indicator : null;
-          if (!value) return null;
+          const value =
+            typeof row.value === "string"
+              ? row.value
+              : typeof row.indicator === "string"
+                ? row.indicator
+                : null;
+          if (!value) {
+            return null;
+          }
 
-          const type = typeof row.type === "string" ? (row.type.toUpperCase() as IndicatorType) : guessIndicatorType(value);
-          const firstSeen = toDate(typeof row.firstSeen === "string" ? row.firstSeen : typeof row.first_seen === "string" ? row.first_seen : null, now);
-          const lastSeen = toDate(typeof row.lastSeen === "string" ? row.lastSeen : typeof row.last_seen === "string" ? row.last_seen : null, firstSeen);
+          const type =
+            typeof row.type === "string"
+              ? (row.type.toUpperCase() as IndicatorType)
+              : guessIndicatorType(value);
+          const firstSeen = toDate(
+            typeof row.firstSeen === "string"
+              ? row.firstSeen
+              : typeof row.first_seen === "string"
+                ? row.first_seen
+                : null,
+            now
+          );
+          const lastSeen = toDate(
+            typeof row.lastSeen === "string"
+              ? row.lastSeen
+              : typeof row.last_seen === "string"
+                ? row.last_seen
+                : null,
+            firstSeen
+          );
 
           return {
             type,
             value,
-            confidence: typeof row.confidence === "number" ? row.confidence : null,
-            severity: parseSeverity(typeof row.severity === "string" ? row.severity : null),
-            description: typeof row.description === "string" ? row.description : null,
-            tags: Array.isArray(row.tags) ? row.tags.filter((tag): tag is string => typeof tag === "string") : [],
+            confidence:
+              typeof row.confidence === "number" ? row.confidence : null,
+            severity: parseSeverity(
+              typeof row.severity === "string" ? row.severity : null
+            ),
+            description:
+              typeof row.description === "string" ? row.description : null,
+            tags: Array.isArray(row.tags)
+              ? row.tags.filter((tag): tag is string => typeof tag === "string")
+              : [],
             firstSeen,
             lastSeen,
-            expiresAt: typeof row.expiresAt === "string" ? toDate(row.expiresAt, lastSeen) : null,
+            expiresAt:
+              typeof row.expiresAt === "string"
+                ? toDate(row.expiresAt, lastSeen)
+                : null,
           } satisfies CustomRecord;
         })
         .filter((entry): entry is CustomRecord => Boolean(entry));
@@ -198,17 +265,24 @@ export class CustomFeedAdapter implements ThreatFeedAdapter<CustomRecord> {
     };
   }
 
-  normalize(record: CustomRecord, context: AdapterContext): NormalizedIndicatorInput {
+  normalize(
+    record: CustomRecord,
+    context: AdapterContext
+  ): NormalizedIndicatorInput {
     void context;
     const normalizedValue = normalizeIndicatorValue(record.type, record.value);
-    const confidence = record.confidence ?? calculateConfidence({
-      source: this.source,
-      firstSeen: record.firstSeen,
-      lastSeen: record.lastSeen,
-      severity: record.severity,
-    });
+    const confidence =
+      record.confidence ??
+      calculateConfidence({
+        source: this.source,
+        firstSeen: record.firstSeen,
+        lastSeen: record.lastSeen,
+        severity: record.severity,
+      });
 
-    const expiresAt = record.expiresAt ?? calculateExpirationDate(record.type, record.lastSeen, this.config);
+    const expiresAt =
+      record.expiresAt ??
+      calculateExpirationDate(record.type, record.lastSeen, this.config);
 
     return {
       type: record.type,
@@ -246,7 +320,10 @@ export class CustomFeedAdapter implements ThreatFeedAdapter<CustomRecord> {
     } catch (error) {
       return {
         ok: false,
-        message: error instanceof Error ? error.message : "Custom feed health check failed",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Custom feed health check failed",
       };
     }
   }

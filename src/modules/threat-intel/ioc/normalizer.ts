@@ -4,7 +4,10 @@ function normalizeUrlValue(value: string): string {
   try {
     const parsed = new URL(value.trim());
     parsed.hostname = parsed.hostname.toLowerCase();
-    if ((parsed.protocol === "http:" && parsed.port === "80") || (parsed.protocol === "https:" && parsed.port === "443")) {
+    if (
+      (parsed.protocol === "http:" && parsed.port === "80") ||
+      (parsed.protocol === "https:" && parsed.port === "443")
+    ) {
       parsed.port = "";
     }
 
@@ -23,7 +26,10 @@ function normalizeDomainValue(value: string): string {
   return normalized.endsWith(".") ? normalized.slice(0, -1) : normalized;
 }
 
-export function normalizeIndicatorValue(type: IndicatorType, value: string): string {
+export function normalizeIndicatorValue(
+  type: IndicatorType,
+  value: string
+): string {
   switch (type) {
     case "IP_ADDRESS":
       return value.trim().toLowerCase();
@@ -60,7 +66,10 @@ const hashPatternByType: Record<IndicatorType, RegExp | null> = {
   USER_AGENT: null,
 };
 
-export function isValidIndicatorValue(type: IndicatorType, value: string): boolean {
+export function isValidIndicatorValue(
+  type: IndicatorType,
+  value: string
+): boolean {
   const trimmed = value.trim();
   if (!trimmed) {
     return false;
@@ -68,7 +77,8 @@ export function isValidIndicatorValue(type: IndicatorType, value: string): boole
 
   switch (type) {
     case "IP_ADDRESS": {
-      const ipv4 = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
+      const ipv4 =
+        /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
       const ipv6 = /^([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}$/;
       return ipv4.test(trimmed) || ipv6.test(trimmed);
     }
@@ -111,7 +121,11 @@ export function guessIndicatorType(value: string): IndicatorType {
     return "EMAIL";
   }
 
-  if (/^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/.test(trimmed)) {
+  if (
+    /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/.test(
+      trimmed
+    )
+  ) {
     return "IP_ADDRESS";
   }
 

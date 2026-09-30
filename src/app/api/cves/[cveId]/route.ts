@@ -1,6 +1,5 @@
-import { logEvent } from "@/modules/cve-search/api/log";
-import { getCveSearchService } from "@/modules/cve-search/api/service";
 import { requireSessionWithOrg } from "@/lib/api-auth";
+import { logEvent } from "@/modules/cve-search/api/log";
 import {
   badRequest,
   internalServerError,
@@ -9,6 +8,7 @@ import {
   parseCveId,
   toRequestErrorMessage,
 } from "@/modules/cve-search/api/route-utils";
+import { getCveSearchService } from "@/modules/cve-search/api/service";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
