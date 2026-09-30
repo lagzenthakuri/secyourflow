@@ -1,7 +1,7 @@
 import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
 import { Textarea as BoilerplateTextarea } from "@repo/design-system/components/ui/textarea";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
     Download,
     Search,
@@ -81,11 +81,7 @@ export function RiskRegisterTable() {
         }
     };
 
-    useEffect(() => {
-        fetchRisks();
-    }, []);
-
-    const fetchRisks = async () => {
+    const fetchRisks = useCallback(async () => {
         try {
             setIsLoading(true);
             const res = await fetch("/api/risk-register");
@@ -98,7 +94,11 @@ export function RiskRegisterTable() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        fetchRisks();
+    }, [fetchRisks]);
 
     const handleEdit = (risk: RiskEntry) => {
         setEditingId(risk.id);

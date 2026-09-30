@@ -1,8 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+import type {
+  AssetStatus,
+  AssetType,
+  Criticality,
+  Prisma,
+} from "@repo/database";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
-import { AssetStatus, AssetType, Criticality, Prisma } from "@repo/database";
 import { requireSessionWithOrg } from "@/lib/api-auth";
+import { prisma } from "@/lib/prisma";
 
 const createAssetSchema = z.object({
   name: z.string().min(2).max(200),
@@ -26,13 +31,21 @@ const createAssetSchema = z.object({
   macAddress: z.string().optional(),
   operatingSystem: z.string().optional(),
   version: z.string().optional(),
-  environment: z.enum(["PRODUCTION", "STAGING", "DEVELOPMENT", "TESTING", "DR"]).optional(),
-  criticality: z.enum(["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"]).optional(),
-  status: z.enum(["ACTIVE", "INACTIVE", "DECOMMISSIONED", "MAINTENANCE"]).optional(),
+  environment: z
+    .enum(["PRODUCTION", "STAGING", "DEVELOPMENT", "TESTING", "DR"])
+    .optional(),
+  criticality: z
+    .enum(["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"])
+    .optional(),
+  status: z
+    .enum(["ACTIVE", "INACTIVE", "DECOMMISSIONED", "MAINTENANCE"])
+    .optional(),
   owner: z.string().optional(),
   department: z.string().optional(),
   location: z.string().optional(),
-  cloudProvider: z.enum(["AWS", "AZURE", "GCP", "ORACLE", "IBM", "ALIBABA", "OTHER"]).optional(),
+  cloudProvider: z
+    .enum(["AWS", "AZURE", "GCP", "ORACLE", "IBM", "ALIBABA", "OTHER"])
+    .optional(),
   cloudRegion: z.string().optional(),
   cloudAccountId: z.string().optional(),
   tags: z.array(z.string()).optional(),
@@ -41,7 +54,9 @@ const createAssetSchema = z.object({
 
 export async function GET(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const searchParams = request.nextUrl.searchParams;
   const type = searchParams.get("type");
@@ -51,17 +66,23 @@ export async function GET(request: NextRequest) {
   const tag = searchParams.get("tag");
   const groupId = searchParams.get("groupId");
   const search = searchParams.get("search");
-  const page = parseInt(searchParams.get("page") || "1", 10);
-  const limit = parseInt(searchParams.get("limit") || "20", 10);
+  const page = Number.parseInt(searchParams.get("page") || "1", 10);
+  const limit = Number.parseInt(searchParams.get("limit") || "20", 10);
 
   try {
     const where: Record<string, unknown> = {
       organizationId: authResult.context.organizationId,
     };
 
-    if (type) where.type = type as AssetType;
-    if (status) where.status = status as AssetStatus;
-    if (criticality) where.criticality = criticality as Criticality;
+    if (type) {
+      where.type = type as AssetType;
+    }
+    if (status) {
+      where.status = status as AssetStatus;
+    }
+    if (criticality) {
+      where.criticality = criticality as Criticality;
+    }
 
     if (owner) {
       where.owner = { contains: owner, mode: "insensitive" };
@@ -87,41 +108,42 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const [assets, total, typeDistribution, envDistribution] = await Promise.all([
-      prisma.asset.findMany({
-        where,
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: { createdAt: "desc" },
-        include: {
-          _count: {
-            select: { vulnerabilities: true },
-          },
-          groupMembers: {
-            include: {
-              group: {
-                select: {
-                  id: true,
-                  name: true,
-                  color: true,
+    const [assets, total, typeDistribution, envDistribution] =
+      await Promise.all([
+        prisma.asset.findMany({
+          where,
+          skip: (page - 1) * limit,
+          take: limit,
+          orderBy: { createdAt: "desc" },
+          include: {
+            _count: {
+              select: { vulnerabilities: true },
+            },
+            groupMembers: {
+              include: {
+                group: {
+                  select: {
+                    id: true,
+                    name: true,
+                    color: true,
+                  },
                 },
               },
             },
           },
-        },
-      }),
-      prisma.asset.count({ where }),
-      prisma.asset.groupBy({
-        by: ["type"],
-        where: { organizationId: authResult.context.organizationId },
-        _count: { _all: true },
-      }),
-      prisma.asset.groupBy({
-        by: ["environment"],
-        where: { organizationId: authResult.context.organizationId },
-        _count: { _all: true },
-      }),
-    ]);
+        }),
+        prisma.asset.count({ where }),
+        prisma.asset.groupBy({
+          by: ["type"],
+          where: { organizationId: authResult.context.organizationId },
+          _count: { _all: true },
+        }),
+        prisma.asset.groupBy({
+          by: ["environment"],
+          where: { organizationId: authResult.context.organizationId },
+          _count: { _all: true },
+        }),
+      ]);
 
     const formattedAssets = assets.map((asset) => ({
       ...asset,
@@ -156,26 +178,34 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Assets API Error:", error);
-    return NextResponse.json({ error: "Failed to fetch assets" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch assets" },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid JSON payload" },
+      { status: 400 }
+    );
   }
 
   const parsed = createAssetSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid payload", details: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -193,6 +223,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(newAsset, { status: 201 });
   } catch (error) {
     console.error("Create Asset Error:", error);
-    return NextResponse.json({ error: "Failed to create asset" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Failed to create asset" },
+      { status: 400 }
+    );
   }
 }

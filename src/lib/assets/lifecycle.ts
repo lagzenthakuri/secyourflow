@@ -1,9 +1,9 @@
-import { prisma } from "@/lib/prisma";
-import { Prisma } from "@repo/database";
 import type { Environment, LifecycleEventType } from "@repo/database";
+import { Prisma } from "@repo/database";
+import { prisma } from "@/lib/prisma";
 
 function toNullableJsonValue(
-  value: unknown,
+  value: unknown
 ): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined {
   if (value === undefined) {
     return undefined;

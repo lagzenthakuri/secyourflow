@@ -1,12 +1,12 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import { useId } from "react";
+import { cn } from "@/lib/utils";
 
 interface ShieldLoaderProps {
+  className?: string;
   size?: "sm" | "md" | "lg" | "xl";
   variant?: "primary" | "cyber"; // keep minimal (blue themes)
-  className?: string;
 }
 
 const sizeMap = {
@@ -58,82 +58,82 @@ export function ShieldLoader({
 
   return (
     <svg
-      width={s.px}
-      height={s.px}
-      viewBox="0 0 24 24"
-      fill="none"
-      role="img"
       aria-label="Loading"
       className={cn("syf-shield", className)}
+      fill="none"
+      height={s.px}
+      role="img"
+      viewBox="0 0 24 24"
+      width={s.px}
     >
-        <defs>
-          {/* Clip to shield shape */}
-          <clipPath id={clipId}>
-            <path d={SHIELD_PATH} />
-          </clipPath>
+      <defs>
+        {/* Clip to shield shape */}
+        <clipPath id={clipId}>
+          <path d={SHIELD_PATH} />
+        </clipPath>
 
-          {/* Fill gradient (calm blue) */}
-          <linearGradient id={gradFillId} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor={v.c1} stopOpacity="0.9" />
-            <stop offset="0.6" stopColor={v.c2} stopOpacity="0.85" />
-            <stop offset="1" stopColor={v.c3} stopOpacity="0.75" />
-          </linearGradient>
+        {/* Fill gradient (calm blue) */}
+        <linearGradient id={gradFillId} x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0" stopColor={v.c1} stopOpacity="0.9" />
+          <stop offset="0.6" stopColor={v.c2} stopOpacity="0.85" />
+          <stop offset="1" stopColor={v.c3} stopOpacity="0.75" />
+        </linearGradient>
 
-          {/* Stroke highlight gradient */}
-          <linearGradient id={gradStrokeId} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor={v.c2} stopOpacity="0.9" />
-            <stop offset="1" stopColor={v.c3} stopOpacity="0.9" />
-          </linearGradient>
+        {/* Stroke highlight gradient */}
+        <linearGradient id={gradStrokeId} x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0" stopColor={v.c2} stopOpacity="0.9" />
+          <stop offset="1" stopColor={v.c3} stopOpacity="0.9" />
+        </linearGradient>
 
-          {/* Mask: white reveals, black hides.
+        {/* Mask: white reveals, black hides.
               The black circle starts big (hides center) then shrinks -> outside->inside reveal. */}
-          <mask id={maskId} maskUnits="userSpaceOnUse">
-            <rect x="0" y="0" width="24" height="24" fill="white" />
-            <circle
-              cx="12"
-              cy="12"
-              r="13"
-              fill="black"
-              className="syf-shield-wipe"
-            />
-          </mask>
-        </defs>
-
-        {/* Base outline (quiet) */}
-        <path
-          d={SHIELD_PATH}
-          stroke="rgba(255,255,255,0.18)"
-          strokeWidth={s.stroke}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {/* Fill layer (outside -> inside wipe) */}
-        <g clipPath={`url(#${clipId})`}>
-          <rect
-            x="0"
-            y="0"
-            width="24"
-            height="24"
-            fill={`url(#${gradFillId})`}
-            mask={`url(#${maskId})`}
-            opacity="0.22"
-            className="syf-shield-fill"
+        <mask id={maskId} maskUnits="userSpaceOnUse">
+          <rect fill="white" height="24" width="24" x="0" y="0" />
+          <circle
+            className="syf-shield-wipe"
+            cx="12"
+            cy="12"
+            fill="black"
+            r="13"
           />
-        </g>
+        </mask>
+      </defs>
 
-        {/* Subtle animated stroke draw */}
-        <path
-          d={SHIELD_PATH}
-          stroke={`url(#${gradStrokeId})`}
-          strokeWidth={s.stroke}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-          className="syf-shield-stroke"
-          strokeDasharray="96"
-          strokeDashoffset="96"
+      {/* Base outline (quiet) */}
+      <path
+        d={SHIELD_PATH}
+        stroke="rgba(255,255,255,0.18)"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={s.stroke}
+      />
+
+      {/* Fill layer (outside -> inside wipe) */}
+      <g clipPath={`url(#${clipId})`}>
+        <rect
+          className="syf-shield-fill"
+          fill={`url(#${gradFillId})`}
+          height="24"
+          mask={`url(#${maskId})`}
+          opacity="0.22"
+          width="24"
+          x="0"
+          y="0"
         />
-      </svg>
+      </g>
+
+      {/* Subtle animated stroke draw */}
+      <path
+        className="syf-shield-stroke"
+        d={SHIELD_PATH}
+        fill="none"
+        stroke={`url(#${gradStrokeId})`}
+        strokeDasharray="96"
+        strokeDashoffset="96"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={s.stroke}
+      />
+    </svg>
   );
 }

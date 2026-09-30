@@ -7,76 +7,82 @@
  * afterthought, and is the default when it is reachable.
  */
 
-export const AI_PROVIDERS = ["OLLAMA", "OPENROUTER", "OPENAI", "ANTHROPIC", "DISABLED"] as const;
+export const AI_PROVIDERS = [
+  "OLLAMA",
+  "OPENROUTER",
+  "OPENAI",
+  "ANTHROPIC",
+  "DISABLED",
+] as const;
 
 export type AiProviderId = (typeof AI_PROVIDERS)[number];
 
 export interface AiMessage {
-    role: "system" | "user";
-    content: string;
+  content: string;
+  role: "system" | "user";
 }
 
 export interface AiChatRequest {
-    messages: AiMessage[];
-    /** Ask the provider for strict JSON where it supports it. */
-    json?: boolean;
-    temperature?: number;
-    /** Hard ceiling on wall-clock time for a single call. */
-    timeoutMs?: number;
+  /** Ask the provider for strict JSON where it supports it. */
+  json?: boolean;
+  messages: AiMessage[];
+  temperature?: number;
+  /** Hard ceiling on wall-clock time for a single call. */
+  timeoutMs?: number;
 }
 
 export interface AiChatResult {
-    content: string;
-    model: string;
-    provider: AiProviderId;
+  content: string;
+  model: string;
+  provider: AiProviderId;
 }
 
 export interface AiProviderConfig {
-    provider: AiProviderId;
-    model: string;
-    /** Base URL. Only meaningful for self-hosted providers such as Ollama. */
-    endpoint?: string | null;
-    apiKey?: string | null;
+  apiKey?: string | null;
+  /** Base URL. Only meaningful for self-hosted providers such as Ollama. */
+  endpoint?: string | null;
+  model: string;
+  provider: AiProviderId;
 }
 
 export interface AiProviderAdapter {
-    id: AiProviderId;
-    label: string;
-    /** True when this provider runs inside the caller's own perimeter. */
-    selfHosted: boolean;
-    /** Where the key comes from, for surfacing setup instructions. */
-    apiKeyEnvVar?: string;
-    defaultModel: string;
-    defaultEndpoint?: string;
-    chat(config: AiProviderConfig, request: AiChatRequest): Promise<AiChatResult>;
-    /** Cheap reachability probe used by the settings UI. */
-    probe(config: AiProviderConfig): Promise<AiProbeResult>;
+  /** Where the key comes from, for surfacing setup instructions. */
+  apiKeyEnvVar?: string;
+  chat(config: AiProviderConfig, request: AiChatRequest): Promise<AiChatResult>;
+  defaultEndpoint?: string;
+  defaultModel: string;
+  id: AiProviderId;
+  label: string;
+  /** Cheap reachability probe used by the settings UI. */
+  probe(config: AiProviderConfig): Promise<AiProbeResult>;
+  /** True when this provider runs inside the caller's own perimeter. */
+  selfHosted: boolean;
 }
 
 export interface AiProbeResult {
-    reachable: boolean;
-    /** Models the provider reports, when it can enumerate them. */
-    models?: string[];
-    error?: string;
-    latencyMs?: number;
+  error?: string;
+  latencyMs?: number;
+  /** Models the provider reports, when it can enumerate them. */
+  models?: string[];
+  reachable: boolean;
 }
 
 export const DEFAULT_AI_TIMEOUT_MS = 60_000;
 
 /** Shared fetch wrapper so every provider honours the same timeout budget. */
 export async function fetchWithTimeout(
-    url: string,
-    init: RequestInit,
-    timeoutMs = DEFAULT_AI_TIMEOUT_MS,
+  url: string,
+  init: RequestInit,
+  timeoutMs = DEFAULT_AI_TIMEOUT_MS
 ): Promise<Response> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    try {
-        return await fetch(url, { ...init, signal: controller.signal });
-    } finally {
-        clearTimeout(timer);
-    }
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
@@ -85,21 +91,21 @@ export async function fetchWithTimeout(
  * rather than defensive.
  */
 export function extractJsonObject(raw: string): string | null {
-    const trimmed = raw.trim();
+  const trimmed = raw.trim();
 
-    const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
-    const candidate = fenced ? fenced[1].trim() : trimmed;
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidate = fenced ? fenced[1].trim() : trimmed;
 
-    if (candidate.startsWith("{") && candidate.endsWith("}")) {
-        return candidate;
-    }
+  if (candidate.startsWith("{") && candidate.endsWith("}")) {
+    return candidate;
+  }
 
-    // Fall back to the outermost brace pair.
-    const start = candidate.indexOf("{");
-    const end = candidate.lastIndexOf("}");
-    if (start !== -1 && end > start) {
-        return candidate.slice(start, end + 1);
-    }
+  // Fall back to the outermost brace pair.
+  const start = candidate.indexOf("{");
+  const end = candidate.lastIndexOf("}");
+  if (start !== -1 && end > start) {
+    return candidate.slice(start, end + 1);
+  }
 
-    return null;
+  return null;
 }

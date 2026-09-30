@@ -1,25 +1,29 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { requireSessionWithOrg } from "@/lib/api-auth";
+import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
   assetIds: z.array(z.string()).min(1),
   operation: z.enum(["set_status", "set_owner", "set_tags"]),
-  status: z.enum(["ACTIVE", "INACTIVE", "DECOMMISSIONED", "MAINTENANCE"]).optional(),
+  status: z
+    .enum(["ACTIVE", "INACTIVE", "DECOMMISSIONED", "MAINTENANCE"])
+    .optional(),
   owner: z.string().optional().nullable(),
   tags: z.array(z.string()).optional(),
 });
 
 export async function POST(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid bulk payload", details: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -42,7 +46,10 @@ export async function POST(request: NextRequest) {
 
   if (payload.operation === "set_status") {
     if (!payload.status) {
-      return NextResponse.json({ error: "status is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "status is required" },
+        { status: 400 }
+      );
     }
 
     const result = await prisma.asset.updateMany({
@@ -71,8 +78,8 @@ export async function POST(request: NextRequest) {
       prisma.asset.update({
         where: { id },
         data: { tags: payload.tags || [] },
-      }),
-    ),
+      })
+    )
   );
 
   return NextResponse.json({ updated: ids.length });

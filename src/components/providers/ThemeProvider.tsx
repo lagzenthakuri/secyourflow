@@ -1,23 +1,23 @@
 "use client";
 
+import { Moon, Sun } from "lucide-react";
+import { usePathname } from "next/navigation";
 import {
   createContext,
+  type ReactNode,
   useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
-import { Moon, Sun } from "lucide-react";
-import { usePathname } from "next/navigation";
 
 type ThemeMode = "dark" | "light";
-type ThemeContextValue = {
+interface ThemeContextValue {
   theme: ThemeMode;
   toggleTheme: () => void;
-};
+}
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 export const THEME_STORAGE_KEY = "secyourflow.theme.mode.v1";
@@ -45,7 +45,9 @@ function resolveSystemTheme(): ThemeMode {
     return "dark";
   }
 
-  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  return window.matchMedia("(prefers-color-scheme: light)").matches
+    ? "light"
+    : "dark";
 }
 
 function resolveStoredTheme(): ThemeMode | null {
@@ -124,7 +126,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
     if (typeof mediaQuery.addEventListener === "function") {
       mediaQuery.addEventListener("change", handleSystemThemeChange);
-      return () => mediaQuery.removeEventListener("change", handleSystemThemeChange);
+      return () =>
+        mediaQuery.removeEventListener("change", handleSystemThemeChange);
     }
 
     mediaQuery.addListener(handleSystemThemeChange);
@@ -165,7 +168,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       theme,
       toggleTheme,
     }),
-    [theme],
+    [theme, toggleTheme]
   );
 
   const showFloatingToggle = !isAppShellPath(pathname);
@@ -175,11 +178,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       {children}
       {showFloatingToggle && (
         <button
-          type="button"
-          onClick={toggleTheme}
           aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+          className="fixed right-5 bottom-5 z-[120] inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border-color)] bg-[var(--bg-elevated)] text-[var(--text-primary)] shadow-[var(--shadow-md)] transition hover:scale-105 hover:border-[var(--border-hover)]"
+          onClick={toggleTheme}
           title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-          className="fixed bottom-5 right-5 z-[120] inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border-color)] bg-[var(--bg-elevated)] text-[var(--text-primary)] shadow-[var(--shadow-md)] transition hover:scale-105 hover:border-[var(--border-hover)]"
+          type="button"
         >
           {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
         </button>

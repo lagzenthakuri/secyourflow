@@ -1,14 +1,19 @@
 import type { Severity } from "@repo/database";
 import type { ThreatIntelConfig } from "../config";
-import type { AdapterContext, AdapterFetchResult, ThreatFeedAdapter, ThreatFeedAdapterHealth } from "./types";
-import { fetchJsonWithRetry } from "../utils/http";
-import { calculateConfidence, calculateExpirationDate } from "../ioc/scoring";
 import { normalizeIndicatorValue } from "../ioc/normalizer";
+import { calculateConfidence, calculateExpirationDate } from "../ioc/scoring";
 import type { NormalizedIndicatorInput } from "../types";
+import { fetchJsonWithRetry } from "../utils/http";
+import type {
+  AdapterContext,
+  AdapterFetchResult,
+  ThreatFeedAdapter,
+  ThreatFeedAdapterHealth,
+} from "./types";
 
 interface CirclRecord {
-  id: string;
   cveId: string;
+  id: string;
   publishedAt: Date;
 }
 
@@ -43,7 +48,9 @@ export class CirclAdapter implements ThreatFeedAdapter<CirclRecord> {
 
   constructor(private readonly config: ThreatIntelConfig) {}
 
-  async fetchSince(checkpoint: string | null): Promise<AdapterFetchResult<CirclRecord>> {
+  async fetchSince(
+    checkpoint: string | null
+  ): Promise<AdapterFetchResult<CirclRecord>> {
     void checkpoint;
     const data = await fetchJsonWithRetry<unknown[]>({
       url: `${this.config.feeds.circlApiBaseUrl.replace(/\/$/, "")}/last`,
@@ -91,7 +98,10 @@ export class CirclAdapter implements ThreatFeedAdapter<CirclRecord> {
     };
   }
 
-  normalize(record: CirclRecord, context: AdapterContext): NormalizedIndicatorInput {
+  normalize(
+    record: CirclRecord,
+    context: AdapterContext
+  ): NormalizedIndicatorInput {
     void context;
     const normalizedValue = normalizeIndicatorValue("CVE", record.cveId);
     const confidence = calculateConfidence({
@@ -109,7 +119,11 @@ export class CirclAdapter implements ThreatFeedAdapter<CirclRecord> {
       severity: "MEDIUM",
       firstSeen: record.publishedAt,
       lastSeen: record.publishedAt,
-      expiresAt: calculateExpirationDate("CVE", record.publishedAt, this.config),
+      expiresAt: calculateExpirationDate(
+        "CVE",
+        record.publishedAt,
+        this.config
+      ),
       source: this.source,
       description: "CIRCL advisory reference",
       tags: ["circl", "advisory"],
@@ -131,7 +145,8 @@ export class CirclAdapter implements ThreatFeedAdapter<CirclRecord> {
     } catch (error) {
       return {
         ok: false,
-        message: error instanceof Error ? error.message : "CIRCL health check failed",
+        message:
+          error instanceof Error ? error.message : "CIRCL health check failed",
       };
     }
   }

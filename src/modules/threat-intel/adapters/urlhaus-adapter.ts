@@ -1,10 +1,15 @@
 import type { Severity } from "@repo/database";
 import type { ThreatIntelConfig } from "../config";
-import type { AdapterContext, AdapterFetchResult, ThreatFeedAdapter, ThreatFeedAdapterHealth } from "./types";
-import { fetchJsonWithRetry } from "../utils/http";
-import { calculateConfidence, calculateExpirationDate } from "../ioc/scoring";
 import { normalizeIndicatorValue } from "../ioc/normalizer";
+import { calculateConfidence, calculateExpirationDate } from "../ioc/scoring";
 import type { NormalizedIndicatorInput } from "../types";
+import { fetchJsonWithRetry } from "../utils/http";
+import type {
+  AdapterContext,
+  AdapterFetchResult,
+  ThreatFeedAdapter,
+  ThreatFeedAdapterHealth,
+} from "./types";
 
 interface UrlhausResponse {
   query_status: string;
@@ -19,11 +24,11 @@ interface UrlhausResponse {
 }
 
 interface UrlhausRecord {
-  id: string;
-  url: string;
   firstSeen: Date;
+  id: string;
   tags: string[];
   threat: string | null;
+  url: string;
 }
 
 export class UrlhausAdapter implements ThreatFeedAdapter<UrlhausRecord> {
@@ -32,7 +37,9 @@ export class UrlhausAdapter implements ThreatFeedAdapter<UrlhausRecord> {
 
   constructor(private readonly config: ThreatIntelConfig) {}
 
-  async fetchSince(checkpoint: string | null): Promise<AdapterFetchResult<UrlhausRecord>> {
+  async fetchSince(
+    checkpoint: string | null
+  ): Promise<AdapterFetchResult<UrlhausRecord>> {
     void checkpoint;
     if (!this.config.feeds.urlhausAuthKey) {
       return {
@@ -57,8 +64,12 @@ export class UrlhausAdapter implements ThreatFeedAdapter<UrlhausRecord> {
 
     const records: UrlhausRecord[] = [];
     for (const item of payload.urls ?? []) {
-      if (!item.url) continue;
-      const firstSeen = item.date_added ? new Date(item.date_added) : new Date();
+      if (!item.url) {
+        continue;
+      }
+      const firstSeen = item.date_added
+        ? new Date(item.date_added)
+        : new Date();
       records.push({
         id: item.id || `${item.url}-${firstSeen.toISOString()}`,
         url: item.url,
@@ -71,14 +82,22 @@ export class UrlhausAdapter implements ThreatFeedAdapter<UrlhausRecord> {
     return {
       records,
       checkpoint: new Date().toISOString(),
-      warnings: payload.query_status === "ok" ? [] : [`URLhaus query status: ${payload.query_status}`],
+      warnings:
+        payload.query_status === "ok"
+          ? []
+          : [`URLhaus query status: ${payload.query_status}`],
     };
   }
 
-  normalize(record: UrlhausRecord, context: AdapterContext): NormalizedIndicatorInput {
+  normalize(
+    record: UrlhausRecord,
+    context: AdapterContext
+  ): NormalizedIndicatorInput {
     void context;
     const normalizedValue = normalizeIndicatorValue("URL", record.url);
-    const severity = record.threat?.toLowerCase().includes("malware") ? "HIGH" : "MEDIUM";
+    const severity = record.threat?.toLowerCase().includes("malware")
+      ? "HIGH"
+      : "MEDIUM";
     const confidence = calculateConfidence({
       source: this.source,
       firstSeen: record.firstSeen,
@@ -127,7 +146,10 @@ export class UrlhausAdapter implements ThreatFeedAdapter<UrlhausRecord> {
     } catch (error) {
       return {
         ok: false,
-        message: error instanceof Error ? error.message : "URLhaus health check failed",
+        message:
+          error instanceof Error
+            ? error.message
+            : "URLhaus health check failed",
       };
     }
   }

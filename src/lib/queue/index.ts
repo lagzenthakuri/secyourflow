@@ -1,5 +1,6 @@
 import type { Queue } from "bullmq";
 import { isRedisConfigured } from "@/lib/queue/connection";
+import { loadHandlers } from "@/lib/queue/handlers";
 import {
   attachQueueJobId,
   createJobRun,
@@ -7,7 +8,6 @@ import {
   markJobRunning,
   markJobSucceeded,
 } from "@/lib/queue/job-run";
-import { loadHandlers } from "@/lib/queue/handlers";
 import type { JobName, JobPayloads, QueueName } from "@/lib/queue/types";
 import { queueForJob } from "@/lib/queue/types";
 
@@ -41,11 +41,20 @@ async function getQueue(name: QueueName): Promise<Queue> {
 }
 
 /** How long a producer may wait on Redis before running the job in-process. */
-const ENQUEUE_DEADLINE_MS = Number(process.env.QUEUE_ENQUEUE_TIMEOUT_MS ?? 3_000);
+const ENQUEUE_DEADLINE_MS = Number(
+  process.env.QUEUE_ENQUEUE_TIMEOUT_MS ?? 3000
+);
 
-function withDeadline<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+function withDeadline<T>(
+  promise: Promise<T>,
+  ms: number,
+  label: string
+): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    const timer = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms
+    );
     promise.then(
       (value) => {
         clearTimeout(timer);
@@ -54,22 +63,22 @@ function withDeadline<T>(promise: Promise<T>, ms: number, label: string): Promis
       (error) => {
         clearTimeout(timer);
         reject(error);
-      },
+      }
     );
   });
 }
 
 export interface EnqueueOptions {
-  organizationId?: string | null;
-  /** Domain object the job acts on, so the UI can poll by entity. */
-  entityType?: string | null;
-  entityId?: string | null;
   /**
    * Stable id for work that must not be queued twice (a nightly ingestion, a
    * re-analysis of the same finding). BullMQ drops a duplicate id.
    */
   dedupeKey?: string;
   delayMs?: number;
+  entityId?: string | null;
+  /** Domain object the job acts on, so the UI can poll by entity. */
+  entityType?: string | null;
+  organizationId?: string | null;
 }
 
 export interface EnqueueResult {
@@ -88,7 +97,7 @@ export interface EnqueueResult {
 export async function enqueue<N extends JobName>(
   name: N,
   payload: JobPayloads[N],
-  options: EnqueueOptions = {},
+  options: EnqueueOptions = {}
 ): Promise<EnqueueResult> {
   const jobRun = await createJobRun({
     name,
@@ -113,16 +122,15 @@ export async function enqueue<N extends JobName>(
       queue.add(
         name,
         { ...payload, __jobRunId: jobRun.id },
-        { jobId: options.dedupeKey, delay: options.delayMs },
+        { jobId: options.dedupeKey, delay: options.delayMs }
       ),
       ENQUEUE_DEADLINE_MS,
-      `enqueue ${name}`,
+      `enqueue ${name}`
     );
 
     if (job.id) {
       await attachQueueJobId(jobRun.id, job.id);
     }
-
 
     return { jobRunId: jobRun.id, queued: true };
   } catch (error) {
@@ -140,7 +148,11 @@ export async function enqueue<N extends JobName>(
  * immediately. This is safe only because that mode runs under a long-lived
  * Node server — the JobRun row still records the outcome either way.
  */
-function runInline<N extends JobName>(name: N, payload: JobPayloads[N], jobRunId: string): void {
+function runInline<N extends JobName>(
+  name: N,
+  payload: JobPayloads[N],
+  jobRunId: string
+): void {
   void (async () => {
     await markJobRunning(jobRunId, 1);
     try {
@@ -155,6 +167,8 @@ function runInline<N extends JobName>(name: N, payload: JobPayloads[N], jobRunId
 }
 
 export async function closeQueues(): Promise<void> {
-  await Promise.all([...queues.values()].map((queue) => queue.close().catch(() => undefined)));
+  await Promise.all(
+    [...queues.values()].map((queue) => queue.close().catch(() => undefined))
+  );
   queues.clear();
 }

@@ -6,10 +6,10 @@ import { Spinner } from "@repo/design-system/components/ui/spinner";
 import { publishGoogleAuthPopupResult } from "@/lib/auth/google-popup-storage";
 
 export default function GoogleAuthPopupCompletePage() {
-    useEffect(() => {
-        const state = new URLSearchParams(window.location.search).get("state");
+  useEffect(() => {
+    const state = new URLSearchParams(window.location.search).get("state");
 
-        if (state) {
+    if (state) {
             const controller = new AbortController();
             const timeout = window.setTimeout(() => controller.abort(), 5000);
 
@@ -32,8 +32,8 @@ export default function GoogleAuthPopupCompletePage() {
             return;
         }
 
-        window.location.replace("/login");
-    }, []);
+    window.location.replace("/login");
+  }, []);
 
     return (
         <main className="grid min-h-svh place-items-center bg-background p-6 text-foreground">

@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { type NextRequest, NextResponse } from "next/server";
 import { requireSessionWithOrg } from "@/lib/api-auth";
+import { prisma } from "@/lib/prisma";
 import { enqueue } from "@/lib/queue";
 
 const MAX_BATCH_SIZE = Number(process.env.RISK_GENERATE_BATCH_SIZE ?? 50);
@@ -46,13 +46,18 @@ export async function POST(request: NextRequest) {
     });
 
     if (candidates.length === 0) {
-      return NextResponse.json({ message: "No vulnerabilities need assessment", queued: 0 });
+      return NextResponse.json({
+        message: "No vulnerabilities need assessment",
+        queued: 0,
+      });
     }
 
     const jobRunIds: string[] = [];
     for (const vulnerability of candidates) {
       const assetId = vulnerability.assets[0]?.assetId;
-      if (!assetId) continue;
+      if (!assetId) {
+        continue;
+      }
 
       const { jobRunId } = await enqueue(
         "risk.assess",
@@ -62,7 +67,7 @@ export async function POST(request: NextRequest) {
           entityType: "Vulnerability",
           entityId: vulnerability.id,
           dedupeKey: `risk.assess:${organizationId}:${assetId}:${vulnerability.id}`,
-        },
+        }
       );
       jobRunIds.push(jobRunId);
     }
@@ -73,10 +78,13 @@ export async function POST(request: NextRequest) {
         queued: jobRunIds.length,
         jobRunIds,
       },
-      { status: 202 },
+      { status: 202 }
     );
   } catch (error) {
     console.error("Error queueing risk register entries:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }

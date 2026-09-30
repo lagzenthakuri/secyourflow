@@ -1,13 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { requireSessionWithOrg } from "@/lib/api-auth";
+import { prisma } from "@/lib/prisma";
 
 const createRuleSchema = z.object({
   name: z.string().min(2).max(180),
   channel: z.literal("IN_APP"),
   eventType: z.string().min(2).max(120),
-  minimumSeverity: z.enum(["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"]).optional(),
+  minimumSeverity: z
+    .enum(["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"])
+    .optional(),
   includeExploited: z.boolean().default(false),
   includeKev: z.boolean().default(false),
   recipients: z.array(z.string().email()).default([]),
@@ -20,7 +22,9 @@ const patchRuleSchema = createRuleSchema.partial().extend({
 
 export async function GET(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const data = await prisma.notificationRule.findMany({
     where: {
@@ -36,13 +40,18 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const parsed = createRuleSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid notification rule payload", details: parsed.error.flatten() },
-      { status: 400 },
+      {
+        error: "Invalid notification rule payload",
+        details: parsed.error.flatten(),
+      },
+      { status: 400 }
     );
   }
 
@@ -59,13 +68,18 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const parsed = patchRuleSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid notification rule update payload", details: parsed.error.flatten() },
-      { status: 400 },
+      {
+        error: "Invalid notification rule update payload",
+        details: parsed.error.flatten(),
+      },
+      { status: 400 }
     );
   }
 
@@ -94,7 +108,9 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   const id = request.nextUrl.searchParams.get("id");
   if (!id) {

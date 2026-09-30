@@ -1,11 +1,9 @@
 "use client";
 import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
-
-
-import { Suspense, useState } from "react";
+import { AlertCircle, CheckCircle2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertCircle, CheckCircle2, ShieldCheck } from "lucide-react";
+import { Suspense, useState } from "react";
 
 /**
  * Invitation acceptance.
@@ -51,7 +49,9 @@ function AcceptInviteForm() {
       setDone(true);
       setTimeout(() => router.push("/login"), 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not accept this invitation.");
+      setError(
+        err instanceof Error ? err.message : "Could not accept this invitation."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -59,7 +59,7 @@ function AcceptInviteForm() {
 
   if (!token) {
     return (
-      <div className="rounded-2xl border border-red-400/30 bg-red-500/10 p-6 text-sm text-red-700 dark:text-red-200">
+      <div className="rounded-2xl border border-red-400/30 bg-red-500/10 p-6 text-red-700 text-sm dark:text-red-200">
         <div className="flex items-center gap-2 font-medium">
           <AlertCircle size={18} />
           This invitation link is missing its token.
@@ -73,7 +73,7 @@ function AcceptInviteForm() {
 
   if (done) {
     return (
-      <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-6 text-sm text-emerald-700 dark:text-emerald-200">
+      <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-6 text-emerald-700 text-sm dark:text-emerald-200">
         <div className="flex items-center gap-2 font-medium">
           <CheckCircle2 size={18} />
           Account created. Redirecting you to sign in…
@@ -83,11 +83,11 @@ function AcceptInviteForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form className="space-y-4" onSubmit={handleSubmit}>
       {error ? (
         <div
+          className="flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-red-700 text-sm dark:text-red-200"
           role="alert"
-          className="flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-200"
         >
           <AlertCircle size={16} />
           {error}
@@ -95,53 +95,64 @@ function AcceptInviteForm() {
       ) : null}
 
       <label className="block">
-        <span className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">Full name</span>
+        <span className="mb-1 block font-medium text-[var(--text-secondary)] text-sm">
+          Full name
+        </span>
         <BoilerplateInput
-          required
-          minLength={2}
-          value={name}
-          onChange={(event) => setName(event.target.value)}
           className="w-full"
+          minLength={2}
+          onChange={(event) => setName(event.target.value)}
           placeholder="Jane Okafor"
+          required
+          value={name}
         />
       </label>
 
       <label className="block">
-        <span className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">Password</span>
+        <span className="mb-1 block font-medium text-[var(--text-secondary)] text-sm">
+          Password
+        </span>
         <BoilerplateInput
+          autoComplete="new-password"
+          className="w-full"
+          minLength={8}
+          onChange={(event) => setPassword(event.target.value)}
+          placeholder="At least 8 characters"
           required
           type="password"
-          minLength={8}
-          autoComplete="new-password"
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          className="w-full"
-          placeholder="At least 8 characters"
         />
       </label>
 
       <label className="block">
-        <span className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
+        <span className="mb-1 block font-medium text-[var(--text-secondary)] text-sm">
           Confirm password
         </span>
         <BoilerplateInput
+          autoComplete="new-password"
+          className="w-full"
+          minLength={8}
+          onChange={(event) => setConfirmPassword(event.target.value)}
           required
           type="password"
-          minLength={8}
-          autoComplete="new-password"
           value={confirmPassword}
-          onChange={(event) => setConfirmPassword(event.target.value)}
-          className="w-full"
         />
       </label>
 
-      <button type="submit" disabled={isSubmitting} className="btn btn-primary w-full">
+      <button
+        className="btn btn-primary w-full"
+        disabled={isSubmitting}
+        type="submit"
+      >
         {isSubmitting ? "Creating account…" : "Accept invitation"}
       </button>
 
-      <p className="text-center text-xs text-[var(--text-muted)]">
+      <p className="text-center text-[var(--text-muted)] text-xs">
         Already have an account?{" "}
-        <Link href="/login" className="text-sky-600 hover:underline dark:text-sky-400">
+        <Link
+          className="text-sky-600 hover:underline dark:text-sky-400"
+          href="/login"
+        >
           Sign in
         </Link>
       </p>
@@ -155,16 +166,20 @@ export default function AcceptInvitePage() {
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
           <ShieldCheck className="mx-auto h-10 w-10 text-sky-600 dark:text-sky-400" />
-          <h1 className="mt-3 text-xl font-semibold text-[var(--text-primary)]">
+          <h1 className="mt-3 font-semibold text-[var(--text-primary)] text-xl">
             Accept your invitation
           </h1>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          <p className="mt-1 text-[var(--text-secondary)] text-sm">
             Set a password to finish creating your SecYourFlow account.
           </p>
         </div>
 
         <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-6">
-          <Suspense fallback={<p className="text-sm text-[var(--text-muted)]">Loading…</p>}>
+          <Suspense
+            fallback={
+              <p className="text-[var(--text-muted)] text-sm">Loading…</p>
+            }
+          >
             <AcceptInviteForm />
           </Suspense>
         </div>

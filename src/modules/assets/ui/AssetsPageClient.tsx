@@ -1,33 +1,26 @@
 "use client";
 import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/design-system/components/ui/select";
 import { Textarea as BoilerplateTextarea } from "@repo/design-system/components/ui/textarea";
-
-
-
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@repo/design-system/components/ui/select";
-import dynamic from "next/dynamic";
-import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { AddAssetModal } from "@/components/assets/AddAssetModal";
-import { EditAssetModal } from "@/components/assets/EditAssetModal";
-import { AssetActions } from "@/components/assets/AssetActions";
-import { Modal } from "@/components/ui/Modal";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { ShieldLoader } from "@/components/ui/ShieldLoader";
-import { cn, formatLabel } from "@/lib/utils";
-import { Asset } from "@/types";
+import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle,
   Box,
   CheckCircle2,
+  CheckSquare,
   ChevronLeft,
   ChevronRight,
   Cloud,
   Database,
   Download,
   Eye,
-  Filter,
   Globe,
   LayoutGrid,
   Loader2,
@@ -40,19 +33,33 @@ import {
   Server,
   Sparkles,
   Square,
-  CheckSquare,
   UploadCloud,
   XCircle,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AddAssetModal } from "@/components/assets/AddAssetModal";
+import { AssetActions } from "@/components/assets/AssetActions";
+import { EditAssetModal } from "@/components/assets/EditAssetModal";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Modal } from "@/components/ui/Modal";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { ShieldLoader } from "@/components/ui/ShieldLoader";
+import { cn, formatLabel } from "@/lib/utils";
+import type { Asset } from "@/types";
 
 const AssetTypeChart = dynamic(
   () =>
-    import("@/components/charts/DashboardCharts").then((mod) => mod.AssetTypeChart),
+    import("@/components/charts/DashboardCharts").then(
+      (mod) => mod.AssetTypeChart
+    ),
   {
     ssr: false,
-    loading: () => <div className="h-[240px] animate-pulse rounded-xl bg-[var(--bg-tertiary)]" />,
-  },
+    loading: () => (
+      <div className="h-[240px] animate-pulse rounded-xl bg-[var(--bg-tertiary)]" />
+    ),
+  }
 );
 
 const AssetMap = dynamic(
@@ -64,25 +71,25 @@ const AssetMap = dynamic(
         <ShieldLoader size="lg" variant="cyber" />
       </div>
     ),
-  },
+  }
 );
 
 interface PaginationState {
-  page: number;
   limit: number;
-  totalPages: number;
+  page: number;
   total: number;
+  totalPages: number;
 }
 
 interface TypeDistributionItem {
-  type: string;
   count: number;
   percentage: number;
+  type: string;
 }
 
 interface EnvironmentBreakdownItem {
-  name: string;
   count: number;
+  name: string;
   percentage: number;
 }
 
@@ -96,22 +103,22 @@ interface AssetsResponse {
 }
 
 interface AssetGroupRecord {
+  color?: string | null;
   id: string;
   name: string;
-  color?: string | null;
 }
 
 interface AssetRelationshipRecord {
-  id: string;
-  relationshipType: string;
-  parentAsset: {
-    id: string;
-    name: string;
-  };
   childAsset: {
     id: string;
     name: string;
   };
+  id: string;
+  parentAsset: {
+    id: string;
+    name: string;
+  };
+  relationshipType: string;
 }
 
 interface AssetImpactResponse {
@@ -125,7 +132,12 @@ interface AssetImpactResponse {
 
 type AssetStatus = "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
 
-type AssetCriticality = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFORMATIONAL";
+type AssetCriticality =
+  | "CRITICAL"
+  | "HIGH"
+  | "MEDIUM"
+  | "LOW"
+  | "INFORMATIONAL";
 
 const assetTypes = [
   "SERVER",
@@ -175,22 +187,27 @@ const assetTypeIcons: Record<string, LucideIcon> = {
 };
 
 const statusTones: Record<AssetStatus, string> = {
-  ACTIVE: "border-emerald-400/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
-  INACTIVE: "border-[var(--border-hover)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]",
-  MAINTENANCE: "border-yellow-400/35 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200",
-  DECOMMISSIONED: "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200",
+  ACTIVE:
+    "border-emerald-400/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
+  INACTIVE:
+    "border-[var(--border-hover)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]",
+  MAINTENANCE:
+    "border-yellow-400/35 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200",
+  DECOMMISSIONED:
+    "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200",
 };
 
 const criticalityTones: Record<AssetCriticality, string> = {
   CRITICAL: "border-red-400/35 bg-red-500/10 text-red-700 dark:text-red-200",
   HIGH: "border-orange-400/35 bg-orange-500/10 text-orange-700 dark:text-orange-200",
-  MEDIUM: "border-yellow-400 bg-yellow-100 text-yellow-800 dark:bg-yellow-500/10 dark:text-yellow-200 dark:border-yellow-400/35",
+  MEDIUM:
+    "border-yellow-400 bg-yellow-100 text-yellow-800 dark:bg-yellow-500/10 dark:text-yellow-200 dark:border-yellow-400/35",
   LOW: "border-emerald-400/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
-  INFORMATIONAL: "border-[var(--border-hover)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]",
+  INFORMATIONAL:
+    "border-[var(--border-hover)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]",
 };
 
 const numberFormatter = new Intl.NumberFormat("en-US");
-
 
 export default function AssetsPage() {
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -212,15 +229,19 @@ export default function AssetsPage() {
     total: 0,
   });
 
-  const [summary, setSummary] = useState<AssetsResponse["summary"] | null>(null);
+  const [summary, setSummary] = useState<AssetsResponse["summary"] | null>(
+    null
+  );
   const [groups, setGroups] = useState<AssetGroupRecord[]>([]);
-  const [relationships, setRelationships] = useState<AssetRelationshipRecord[]>([]);
+  const [relationships, setRelationships] = useState<AssetRelationshipRecord[]>(
+    []
+  );
   const [impact, setImpact] = useState<AssetImpactResponse | null>(null);
   const [impactAssetId, setImpactAssetId] = useState<string | null>(null);
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
-  const [bulkOperation, setBulkOperation] = useState<"set_status" | "set_owner" | "set_tags">(
-    "set_status",
-  );
+  const [bulkOperation, setBulkOperation] = useState<
+    "set_status" | "set_owner" | "set_tags"
+  >("set_status");
   const [bulkValue, setBulkValue] = useState("");
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -235,7 +256,8 @@ export default function AssetsPage() {
   const [lifecycleAction, setLifecycleAction] = useState<
     "transfer" | "decommission" | "ownership_change" | "reactivate"
   >("transfer");
-  const [lifecycleToEnvironment, setLifecycleToEnvironment] = useState("PRODUCTION");
+  const [lifecycleToEnvironment, setLifecycleToEnvironment] =
+    useState("PRODUCTION");
   const [lifecycleToOwner, setLifecycleToOwner] = useState("");
   const [lifecycleNotes, setLifecycleNotes] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -258,12 +280,24 @@ export default function AssetsPage() {
           limit: String(pagination.limit),
         });
 
-        if (searchQuery.trim()) params.set("search", searchQuery.trim());
-        if (selectedType !== "ALL") params.set("type", selectedType);
-        if (selectedStatus !== "ALL") params.set("status", selectedStatus);
-        if (selectedCriticality !== "ALL") params.set("criticality", selectedCriticality);
-        if (selectedTag.trim()) params.set("tag", selectedTag.trim());
-        if (selectedGroupId !== "ALL") params.set("groupId", selectedGroupId);
+        if (searchQuery.trim()) {
+          params.set("search", searchQuery.trim());
+        }
+        if (selectedType !== "ALL") {
+          params.set("type", selectedType);
+        }
+        if (selectedStatus !== "ALL") {
+          params.set("status", selectedStatus);
+        }
+        if (selectedCriticality !== "ALL") {
+          params.set("criticality", selectedCriticality);
+        }
+        if (selectedTag.trim()) {
+          params.set("tag", selectedTag.trim());
+        }
+        if (selectedGroupId !== "ALL") {
+          params.set("groupId", selectedGroupId);
+        }
 
         const response = await fetch(`/api/assets?${params.toString()}`, {
           cache: "no-store",
@@ -303,7 +337,7 @@ export default function AssetsPage() {
       selectedCriticality,
       selectedTag,
       selectedGroupId,
-    ],
+    ]
   );
 
   const refreshAssets = useCallback(async () => {
@@ -313,7 +347,9 @@ export default function AssetsPage() {
   const fetchGroups = useCallback(async () => {
     try {
       const response = await fetch("/api/assets/groups", { cache: "no-store" });
-      if (!response.ok) return;
+      if (!response.ok) {
+        return;
+      }
       const payload = (await response.json()) as { data?: AssetGroupRecord[] };
       setGroups(payload.data || []);
     } catch {
@@ -323,9 +359,15 @@ export default function AssetsPage() {
 
   const fetchRelationships = useCallback(async () => {
     try {
-      const response = await fetch("/api/assets/relationships", { cache: "no-store" });
-      if (!response.ok) return;
-      const payload = (await response.json()) as { data?: AssetRelationshipRecord[] };
+      const response = await fetch("/api/assets/relationships", {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        return;
+      }
+      const payload = (await response.json()) as {
+        data?: AssetRelationshipRecord[];
+      };
       setRelationships(payload.data || []);
     } catch {
       // Non-blocking UI helper
@@ -334,8 +376,12 @@ export default function AssetsPage() {
 
   const fetchImpact = useCallback(async (assetId: string) => {
     try {
-      const response = await fetch(`/api/assets/${assetId}/impact`, { cache: "no-store" });
-      if (!response.ok) return;
+      const response = await fetch(`/api/assets/${assetId}/impact`, {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        return;
+      }
       const payload = (await response.json()) as AssetImpactResponse;
       setImpact(payload);
       setImpactAssetId(assetId);
@@ -374,13 +420,14 @@ export default function AssetsPage() {
 
         await fetchAssets({ silent: true });
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to delete asset";
+        const message =
+          err instanceof Error ? err.message : "Failed to delete asset";
         setActionError(message);
       } finally {
         setDeletingId(null);
       }
     },
-    [fetchAssets],
+    [fetchAssets]
   );
 
   const resetFilters = () => {
@@ -393,37 +440,40 @@ export default function AssetsPage() {
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
-  const exportData = useCallback(
-    async (format: "csv" | "xlsx") => {
-      try {
-        setActionError(null);
-        const response = await fetch(`/api/exports/assets?format=${format}`);
-        if (!response.ok) {
-          throw new Error("Failed to export assets");
-        }
-
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `assets.${format}`;
-        link.click();
-        window.URL.revokeObjectURL(url);
-      } catch (err) {
-        setActionError(err instanceof Error ? err.message : "Failed to export assets");
+  const exportData = useCallback(async (format: "csv" | "xlsx") => {
+    try {
+      setActionError(null);
+      const response = await fetch(`/api/exports/assets?format=${format}`);
+      if (!response.ok) {
+        throw new Error("Failed to export assets");
       }
-    },
-    [],
-  );
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `assets.${format}`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : "Failed to export assets"
+      );
+    }
+  }, []);
 
   const toggleAssetSelection = useCallback((assetId: string) => {
     setSelectedAssetIds((prev) =>
-      prev.includes(assetId) ? prev.filter((id) => id !== assetId) : [...prev, assetId],
+      prev.includes(assetId)
+        ? prev.filter((id) => id !== assetId)
+        : [...prev, assetId]
     );
   }, []);
 
   const runBulkOperation = useCallback(async () => {
-    if (!selectedAssetIds.length) return;
+    if (!selectedAssetIds.length) {
+      return;
+    }
 
     try {
       setActionError(null);
@@ -438,9 +488,9 @@ export default function AssetsPage() {
           tags:
             bulkOperation === "set_tags"
               ? bulkValue
-                .split(",")
-                .map((item) => item.trim())
-                .filter(Boolean)
+                  .split(",")
+                  .map((item) => item.trim())
+                  .filter(Boolean)
               : undefined,
         }),
       });
@@ -454,7 +504,9 @@ export default function AssetsPage() {
       setBulkValue("");
       await fetchAssets({ silent: true });
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to apply bulk operation");
+      setActionError(
+        err instanceof Error ? err.message : "Failed to apply bulk operation"
+      );
     }
   }, [bulkOperation, bulkValue, fetchAssets, selectedAssetIds]);
 
@@ -491,7 +543,9 @@ export default function AssetsPage() {
         });
         const payload = (await response.json()) as { error?: string };
         if (!response.ok) {
-          throw new Error(payload.error || "Failed to import discovery payload");
+          throw new Error(
+            payload.error || "Failed to import discovery payload"
+          );
         }
       }
 
@@ -500,25 +554,46 @@ export default function AssetsPage() {
       await fetchAssets({ silent: true });
       await fetchRelationships();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to import discovery payload");
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : "Failed to import discovery payload"
+      );
     }
-  }, [discoveryMode, discoveryPayload, discoverySource, fetchAssets, fetchRelationships]);
+  }, [
+    discoveryMode,
+    discoveryPayload,
+    discoverySource,
+    fetchAssets,
+    fetchRelationships,
+  ]);
 
   const submitLifecycleAction = useCallback(async () => {
-    if (!lifecycleAsset) return;
+    if (!lifecycleAsset) {
+      return;
+    }
 
     try {
       setActionError(null);
-      const response = await fetch(`/api/assets/${lifecycleAsset.id}/lifecycle`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: lifecycleAction,
-          toEnvironment: lifecycleAction === "transfer" ? lifecycleToEnvironment : undefined,
-          toOwner: lifecycleAction === "ownership_change" ? lifecycleToOwner : undefined,
-          notes: lifecycleNotes || undefined,
-        }),
-      });
+      const response = await fetch(
+        `/api/assets/${lifecycleAsset.id}/lifecycle`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: lifecycleAction,
+            toEnvironment:
+              lifecycleAction === "transfer"
+                ? lifecycleToEnvironment
+                : undefined,
+            toOwner:
+              lifecycleAction === "ownership_change"
+                ? lifecycleToOwner
+                : undefined,
+            notes: lifecycleNotes || undefined,
+          }),
+        }
+      );
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) {
         throw new Error(payload.error || "Failed to apply lifecycle action");
@@ -530,7 +605,9 @@ export default function AssetsPage() {
       await fetchAssets({ silent: true });
       await fetchImpact(lifecycleAsset.id);
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to apply lifecycle action");
+      setActionError(
+        err instanceof Error ? err.message : "Failed to apply lifecycle action"
+      );
     }
   }, [
     fetchAssets,
@@ -544,17 +621,17 @@ export default function AssetsPage() {
 
   const activeOnPage = useMemo(
     () => assets.filter((asset) => asset.status === "ACTIVE").length,
-    [assets],
+    [assets]
   );
 
   const criticalOnPage = useMemo(
     () => assets.filter((asset) => asset.criticality === "CRITICAL").length,
-    [assets],
+    [assets]
   );
 
   const vulnOnPage = useMemo(
     () => assets.filter((asset) => (asset.vulnerabilityCount || 0) > 0).length,
-    [assets],
+    [assets]
   );
 
   const typeDistribution = summary?.typeDistribution ?? [];
@@ -574,57 +651,59 @@ export default function AssetsPage() {
     <DashboardLayout>
       <div className="space-y-5">
         <PageHeader
-          title="Asset Inventory"
-          description="Keep asset context, ownership, and exposure status centralized for faster SOC triage and cleaner operational decisions."
-          badge={
-            <>
-              <Sparkles size={13} />
-              Asset Operations Workspace
-            </>
-          }
           actions={
             <>
               <button
-                type="button"
-                onClick={() => void exportData("csv")}
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 font-medium text-[var(--text-primary)] text-sm transition-all duration-200 hover:scale-105 hover:bg-[var(--bg-elevated)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={!assets.length}
-                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => void exportData("csv")}
+                type="button"
               >
                 <Download size={14} />
                 Export CSV
               </button>
               <button
-                type="button"
-                onClick={() => void exportData("xlsx")}
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 font-medium text-[var(--text-primary)] text-sm transition-all duration-200 hover:scale-105 hover:bg-[var(--bg-elevated)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={!assets.length}
-                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => void exportData("xlsx")}
+                type="button"
               >
                 <Download size={14} />
                 Export XLSX
               </button>
               <button
-                type="button"
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 font-medium text-[var(--text-primary)] text-sm transition-all duration-200 hover:scale-105 hover:bg-[var(--bg-elevated)] active:scale-95"
                 onClick={() => setIsDiscoveryModalOpen(true)}
-                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95"
+                type="button"
               >
                 <UploadCloud size={14} />
                 Discovery Import
               </button>
               <button
-                type="button"
+                className="btn btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 font-semibold text-sm transition-all duration-200 hover:scale-105 active:scale-95"
                 onClick={() => setIsAddModalOpen(true)}
-                className="btn btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
+                type="button"
               >
                 <Plus size={14} />
                 Add Asset
               </button>
             </>
           }
+          badge={
+            <>
+              <Sparkles size={13} />
+              Asset Operations Workspace
+            </>
+          }
+          description="Keep asset context, ownership, and exposure status centralized for faster SOC triage and cleaner operational decisions."
           stats={[
             {
               label: "Total Assets",
               value: numberFormatter.format(pagination.total),
-              trend: { value: `${pagination.totalPages} pages indexed`, neutral: true },
+              trend: {
+                value: `${pagination.totalPages} pages indexed`,
+                neutral: true,
+              },
               icon: Server,
             },
             {
@@ -646,10 +725,11 @@ export default function AssetsPage() {
               icon: XCircle,
             },
           ]}
+          title="Asset Inventory"
         />
 
         {actionError ? (
-          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-3 text-sm text-red-700 dark:text-red-200">
+          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-3 text-red-700 text-sm dark:text-red-200">
             {actionError}
           </section>
         ) : null}
@@ -657,25 +737,32 @@ export default function AssetsPage() {
         {selectedAssetIds.length > 0 ? (
           <section className="rounded-2xl border border-sky-300/30 bg-sky-500/10 p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <p className="text-sm text-sky-700 dark:text-sky-100">
-                {selectedAssetIds.length} asset{selectedAssetIds.length > 1 ? "s" : ""} selected
+              <p className="text-sky-700 text-sm dark:text-sky-100">
+                {selectedAssetIds.length} asset
+                {selectedAssetIds.length > 1 ? "s" : ""} selected
               </p>
               <div className="grid gap-2 sm:grid-cols-[150px_1fr_auto]">
-                <Select value={bulkOperation} onValueChange={(event) =>
-                    setBulkOperation(event as "set_status" | "set_owner" | "set_tags")}>
-                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <Select
+                  onValueChange={(event) =>
+                    setBulkOperation(
+                      event as "set_status" | "set_owner" | "set_tags"
+                    )
+                  }
+                  value={bulkOperation}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                  <SelectItem value="set_status">Set Status</SelectItem>
-                  <SelectItem value="set_owner">Set Owner</SelectItem>
-                  <SelectItem value="set_tags">Set Tags</SelectItem>
-
+                      <SelectItem value="set_status">Set Status</SelectItem>
+                      <SelectItem value="set_owner">Set Owner</SelectItem>
+                      <SelectItem value="set_tags">Set Tags</SelectItem>
                     </SelectGroup>
                   </SelectContent>
                 </Select>
                 <BoilerplateInput
                   className="h-10 text-sm"
-                  value={bulkValue}
                   onChange={(event) => setBulkValue(event.target.value)}
                   placeholder={
                     bulkOperation === "set_status"
@@ -684,11 +771,12 @@ export default function AssetsPage() {
                         ? "new owner"
                         : "comma,separated,tags"
                   }
+                  value={bulkValue}
                 />
                 <button
-                  type="button"
+                  className="inline-flex h-10 items-center justify-center rounded-xl bg-sky-300 px-4 font-semibold text-slate-950 text-sm transition hover:bg-sky-200"
                   onClick={() => void runBulkOperation()}
-                  className="inline-flex h-10 items-center justify-center rounded-xl bg-sky-300 px-4 text-sm font-semibold text-slate-950 transition hover:bg-sky-200"
+                  type="button"
                 >
                   Apply
                 </button>
@@ -697,154 +785,176 @@ export default function AssetsPage() {
           </section>
         ) : null}
 
-
-        <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '200ms', animationFillMode: 'backwards' }}>
+        <section
+          className="fade-in slide-in-from-bottom-2 animate-in rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4 duration-500"
+          style={{ animationDelay: "200ms", animationFillMode: "backwards" }}
+        >
           <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr_0.9fr_0.9fr_auto]">
             <label className="relative block">
               <Search
+                className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[var(--text-muted)] transition-colors duration-200"
                 size={15}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] transition-colors duration-200"
               />
               <BoilerplateInput
-                type="text"
-                value={searchQuery}
+                className="!pl-9 h-10 w-full border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)] text-sm placeholder-[var(--text-muted)] transition-all duration-200 focus:ring-2 focus:ring-sky-300/30"
                 onChange={(event) => {
                   setSearchQuery(event.target.value);
                   setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
                 placeholder="Search by name, IP, or hostname"
-                className="h-10 w-full !pl-9 text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30 text-[var(--text-primary)] placeholder-[var(--text-muted)] border-[var(--border-color)] bg-[var(--bg-secondary)]"
+                type="text"
+                value={searchQuery}
               />
             </label>
 
             <div className="min-w-0">
-              <Select value={selectedType} onValueChange={(event) => {
+              <Select
+                onValueChange={(event) => {
                   setSelectedType(event);
                   setPagination((prev) => ({ ...prev, page: 1 }));
-                }}>
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                }}
+                value={selectedType}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                <SelectItem value="ALL">All Types</SelectItem>
-                {assetTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {formatLabel(type)}
-                  </SelectItem>
-                ))}
-
+                    <SelectItem value="ALL">All Types</SelectItem>
+                    {assetTypes.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {formatLabel(type)}
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="min-w-0">
-              <Select value={selectedStatus} onValueChange={(event) => {
+              <Select
+                onValueChange={(event) => {
                   setSelectedStatus(event);
                   setPagination((prev) => ({ ...prev, page: 1 }));
-                }}>
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                }}
+                value={selectedStatus}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                <SelectItem value="ALL">All Status</SelectItem>
-                {statusOptions.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {formatLabel(status)}
-                  </SelectItem>
-                ))}
-
+                    <SelectItem value="ALL">All Status</SelectItem>
+                    {statusOptions.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {formatLabel(status)}
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>
             </div>
 
-            <Select value={selectedCriticality} onValueChange={(event) => {
+            <Select
+              onValueChange={(event) => {
                 setSelectedCriticality(event);
                 setPagination((prev) => ({ ...prev, page: 1 }));
-              }}>
-              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              }}
+              value={selectedCriticality}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-              <SelectItem value="ALL">All Criticality</SelectItem>
-              {criticalityOptions.map((criticality) => (
-                <SelectItem key={criticality} value={criticality}>
-                  {formatLabel(criticality)}
-                </SelectItem>
-              ))}
-
+                  <SelectItem value="ALL">All Criticality</SelectItem>
+                  {criticalityOptions.map((criticality) => (
+                    <SelectItem key={criticality} value={criticality}>
+                      {formatLabel(criticality)}
+                    </SelectItem>
+                  ))}
                 </SelectGroup>
               </SelectContent>
             </Select>
 
             <BoilerplateInput
-              type="text"
-              value={selectedTag}
+              className="h-10 w-full text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30"
               onChange={(event) => {
                 setSelectedTag(event.target.value);
                 setPagination((prev) => ({ ...prev, page: 1 }));
               }}
               placeholder="Filter tag"
-              className="h-10 w-full text-sm transition-all duration-200 focus:ring-2 focus:ring-sky-300/30"
+              type="text"
+              value={selectedTag}
             />
 
-            <Select value={selectedGroupId} onValueChange={(event) => {
+            <Select
+              onValueChange={(event) => {
                 setSelectedGroupId(event);
                 setPagination((prev) => ({ ...prev, page: 1 }));
-              }}>
-              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              }}
+              value={selectedGroupId}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-              <SelectItem value="ALL">All Groups</SelectItem>
-              {groups.map((group) => (
-                <SelectItem key={group.id} value={group.id}>
-                  {group.name}
-                </SelectItem>
-              ))}
-
+                  <SelectItem value="ALL">All Groups</SelectItem>
+                  {groups.map((group) => (
+                    <SelectItem key={group.id} value={group.id}>
+                      {group.name}
+                    </SelectItem>
+                  ))}
                 </SelectGroup>
               </SelectContent>
             </Select>
 
             <div className="flex gap-2">
               <button
-                type="button"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-4 text-[var(--text-secondary)] text-sm transition-all duration-200 hover:scale-105 hover:bg-[var(--bg-elevated)] active:scale-95"
                 onClick={resetFilters}
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-4 text-sm text-[var(--text-secondary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95"
+                type="button"
               >
                 Reset
               </button>
               <button
-                type="button"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-4 text-[var(--text-secondary)] text-sm transition-all duration-200 hover:scale-105 hover:bg-[var(--bg-elevated)] active:scale-95"
                 onClick={() => void refreshAssets()}
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-4 text-sm text-[var(--text-secondary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95"
+                type="button"
               >
-                {isRefreshing ? <Loader2 size={15} className="animate-spin" /> : "Refresh"}
+                {isRefreshing ? (
+                  <Loader2 className="animate-spin" size={15} />
+                ) : (
+                  "Refresh"
+                )}
               </button>
             </div>
           </div>
 
           <div className="mt-3 flex w-fit rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-1">
             <button
-              type="button"
-              onClick={() => setViewMode("list")}
               className={cn(
                 "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-all duration-200",
                 viewMode === "list"
                   ? "bg-sky-300 text-slate-950 shadow-lg shadow-sky-300/20"
-                  : "text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]",
+                  : "text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
               )}
+              onClick={() => setViewMode("list")}
+              type="button"
             >
               <LayoutGrid size={14} />
               List
             </button>
             <button
-              type="button"
-              onClick={() => setViewMode("map")}
               className={cn(
                 "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-all duration-200",
                 viewMode === "map"
                   ? "bg-sky-300 text-slate-950 shadow-lg shadow-sky-300/20"
-                  : "text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]",
+                  : "text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
               )}
+              onClick={() => setViewMode("map")}
+              type="button"
             >
               <MapPin size={14} />
               Map
@@ -853,7 +963,7 @@ export default function AssetsPage() {
         </section>
 
         {error ? (
-          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-sm text-red-700 dark:text-red-200">
+          <section className="rounded-2xl border border-red-400/25 bg-red-500/5 p-4 text-red-700 text-sm dark:text-red-200">
             {error}
           </section>
         ) : null}
@@ -863,28 +973,55 @@ export default function AssetsPage() {
             <AssetMap assets={assets} />
 
             <div className="space-y-4">
-              <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '300ms', animationFillMode: 'backwards' }}>
-                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Type Distribution</h2>
-                <p className="mt-1 text-sm text-[var(--text-muted)]">Current filtered inventory mix.</p>
+              <article
+                className="fade-in slide-in-from-right-4 animate-in rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 duration-500"
+                style={{
+                  animationDelay: "300ms",
+                  animationFillMode: "backwards",
+                }}
+              >
+                <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                  Type Distribution
+                </h2>
+                <p className="mt-1 text-[var(--text-muted)] text-sm">
+                  Current filtered inventory mix.
+                </p>
                 <div className="mt-4">
                   {typeDistribution.length > 0 ? (
                     <AssetTypeChart data={typeDistribution} />
                   ) : (
-                    <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
+                    <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-[var(--text-muted)] text-sm">
                       No type distribution data available.
                     </div>
                   )}
                 </div>
               </article>
 
-              <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '400ms', animationFillMode: 'backwards' }}>
-                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Environment Coverage</h2>
+              <article
+                className="fade-in slide-in-from-right-4 animate-in rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 duration-500"
+                style={{
+                  animationDelay: "400ms",
+                  animationFillMode: "backwards",
+                }}
+              >
+                <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                  Environment Coverage
+                </h2>
                 <div className="mt-4 space-y-3">
                   {environmentBreakdown.length > 0 ? (
                     environmentBreakdown.map((env, index) => (
-                      <div key={env.name} className="animate-in fade-in slide-in-from-right-2 duration-300" style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}>
+                      <div
+                        className="fade-in slide-in-from-right-2 animate-in duration-300"
+                        key={env.name}
+                        style={{
+                          animationDelay: `${index * 50}ms`,
+                          animationFillMode: "backwards",
+                        }}
+                      >
                         <div className="mb-1.5 flex items-center justify-between text-xs">
-                          <span className="text-[var(--text-secondary)]">{formatLabel(env.name)}</span>
+                          <span className="text-[var(--text-secondary)]">
+                            {formatLabel(env.name)}
+                          </span>
                           <span className="text-[var(--text-muted)]">
                             {env.count} ({env.percentage.toFixed(1)}%)
                           </span>
@@ -892,13 +1029,15 @@ export default function AssetsPage() {
                         <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
                           <div
                             className="h-full rounded-full bg-sky-300 transition-all duration-700 ease-out"
-                            style={{ width: `${Math.min(Math.max(env.percentage, 0), 100)}%` }}
+                            style={{
+                              width: `${Math.min(Math.max(env.percentage, 0), 100)}%`,
+                            }}
                           />
                         </div>
                       </div>
                     ))
                   ) : (
-                    <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
+                    <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-[var(--text-muted)] text-sm">
                       No environment breakdown available.
                     </p>
                   )}
@@ -909,60 +1048,82 @@ export default function AssetsPage() {
         ) : (
           <section className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
             <article className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)]">
-              <header className="flex flex-col gap-3 border-b border-[var(--border-color)] p-4 sm:flex-row sm:items-center sm:justify-between">
+              <header className="flex flex-col gap-3 border-[var(--border-color)] border-b p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">Asset List</h2>
-                  <p className="text-sm text-[var(--text-muted)]">
-                    Showing {assets.length} of {numberFormatter.format(pagination.total)} assets
+                  <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                    Asset List
+                  </h2>
+                  <p className="text-[var(--text-muted)] text-sm">
+                    Showing {assets.length} of{" "}
+                    {numberFormatter.format(pagination.total)} assets
                   </p>
                 </div>
-                <div className="text-xs text-[var(--text-muted)]">Page {pagination.page}</div>
+                <div className="text-[var(--text-muted)] text-xs">
+                  Page {pagination.page}
+                </div>
               </header>
 
               {assets.length === 0 ? (
                 <div className="p-16 text-center">
                   <Server className="mx-auto h-12 w-12 text-[var(--text-muted)]" />
-                  <p className="mt-4 text-sm text-[var(--text-muted)]">No assets match current filters.</p>
+                  <p className="mt-4 text-[var(--text-muted)] text-sm">
+                    No assets match current filters.
+                  </p>
                 </div>
               ) : (
                 <div className="divide-y divide-[var(--border-color)]">
                   {assets.map((asset, index) => {
                     const Icon = assetTypeIcons[asset.type] || Server;
-                    const statusTone = statusTones[(asset.status as AssetStatus) || "ACTIVE"];
+                    const statusTone =
+                      statusTones[(asset.status as AssetStatus) || "ACTIVE"];
                     const criticalityTone =
-                      criticalityTones[(asset.criticality as AssetCriticality) || "INFORMATIONAL"];
+                      criticalityTones[
+                        (asset.criticality as AssetCriticality) ||
+                          "INFORMATIONAL"
+                      ];
                     const vulnerabilityCount = asset.vulnerabilityCount || 0;
 
                     return (
                       <div
+                        className="group fade-in slide-in-from-left-2 animate-in p-4 transition-all duration-200 hover:bg-[var(--bg-elevated)]"
                         key={asset.id}
-                        className="group p-4 transition-all duration-200 hover:bg-[var(--bg-elevated)] animate-in fade-in slide-in-from-left-2"
-                        style={{ animationDelay: `${index * 30}ms`, animationFillMode: 'backwards' }}
+                        style={{
+                          animationDelay: `${index * 30}ms`,
+                          animationFillMode: "backwards",
+                        }}
                       >
                         <div className="flex items-start gap-3">
                           <button
-                            type="button"
-                            onClick={() => toggleAssetSelection(asset.id)}
                             className="mt-1 inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-muted)] transition hover:bg-[var(--bg-elevated)] hover:text-[var(--text-secondary)]"
+                            onClick={() => toggleAssetSelection(asset.id)}
+                            type="button"
                           >
                             {selectedAssetIds.includes(asset.id) ? (
-                              <CheckSquare size={14} className="text-sky-700 dark:text-sky-200" />
+                              <CheckSquare
+                                className="text-sky-700 dark:text-sky-200"
+                                size={14}
+                              />
                             ) : (
                               <Square size={14} />
                             )}
                           </button>
 
-                          <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2.5 transition-all duration-200 group-hover:border-sky-400/40 group-hover:bg-sky-100/80 dark:group-hover:border-sky-300/30 dark:group-hover:bg-sky-300/10 group-hover:scale-110">
-                            <Icon size={18} className="text-intent-accent transition-transform duration-200 group-hover:rotate-12" />
+                          <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2.5 transition-all duration-200 group-hover:scale-110 group-hover:border-sky-400/40 group-hover:bg-sky-100/80 dark:group-hover:border-sky-300/30 dark:group-hover:bg-sky-300/10">
+                            <Icon
+                              className="text-intent-accent transition-transform duration-200 group-hover:rotate-12"
+                              size={18}
+                            />
                           </div>
 
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="truncate text-sm font-medium text-[var(--text-primary)]">{asset.name}</h3>
+                              <h3 className="truncate font-medium text-[var(--text-primary)] text-sm">
+                                {asset.name}
+                              </h3>
                               <span
                                 className={cn(
                                   "rounded-full border px-2 py-0.5 text-[11px]",
-                                  criticalityTone,
+                                  criticalityTone
                                 )}
                               >
                                 {asset.criticality}
@@ -970,36 +1131,45 @@ export default function AssetsPage() {
                               <span
                                 className={cn(
                                   "rounded-full border px-2 py-0.5 text-[11px]",
-                                  statusTone,
+                                  statusTone
                                 )}
                               >
                                 {asset.status}
                               </span>
                             </div>
 
-                            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
+                            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[var(--text-muted)] text-xs">
                               <span>{formatLabel(asset.type)}</span>
                               <span>{formatLabel(asset.environment)}</span>
-                              {asset.ipAddress ? <span>IP {asset.ipAddress}</span> : null}
-                              {asset.hostname ? <span>Host {asset.hostname}</span> : null}
+                              {asset.ipAddress ? (
+                                <span>IP {asset.ipAddress}</span>
+                              ) : null}
+                              {asset.hostname ? (
+                                <span>Host {asset.hostname}</span>
+                              ) : null}
                               {asset.location ? (
                                 <span className="inline-flex items-center gap-1">
-                                  <MapPin size={11} className="text-[var(--text-muted)]" />
+                                  <MapPin
+                                    className="text-[var(--text-muted)]"
+                                    size={11}
+                                  />
                                   {asset.location}
                                 </span>
                               ) : null}
-                              {asset.cloudRegion ? <span>{asset.cloudRegion}</span> : null}
+                              {asset.cloudRegion ? (
+                                <span>{asset.cloudRegion}</span>
+                              ) : null}
                               <button
-                                type="button"
-                                onClick={() => void fetchImpact(asset.id)}
                                 className="inline-flex items-center gap-1 rounded-md border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)]"
+                                onClick={() => void fetchImpact(asset.id)}
+                                type="button"
                               >
                                 <Network size={11} />
                                 Impact
                               </button>
                               <Link
-                                href={`/assets/${asset.id}`}
                                 className="inline-flex items-center gap-1 rounded-md border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)] hover:text-blue-500"
+                                href={`/assets/${asset.id}`}
                               >
                                 <Eye size={11} />
                                 Overview
@@ -1010,8 +1180,8 @@ export default function AssetsPage() {
                               <div className="mt-2 flex flex-wrap gap-1.5">
                                 {asset.tags.slice(0, 4).map((tag) => (
                                   <span
-                                    key={`${asset.id}-${tag}`}
                                     className="rounded-md border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-[11px] text-[var(--text-muted)]"
+                                    key={`${asset.id}-${tag}`}
                                   >
                                     {tag}
                                   </span>
@@ -1023,28 +1193,32 @@ export default function AssetsPage() {
                           <div className="hidden text-right md:block">
                             <p
                               className={cn(
-                                "text-sm font-semibold",
-                                vulnerabilityCount > 0 ? "text-orange-600 dark:text-orange-300" : "text-emerald-600 dark:text-emerald-300",
+                                "font-semibold text-sm",
+                                vulnerabilityCount > 0
+                                  ? "text-orange-600 dark:text-orange-300"
+                                  : "text-emerald-600 dark:text-emerald-300"
                               )}
                             >
                               {vulnerabilityCount}
                             </p>
-                            <p className="text-xs text-[var(--text-muted)]">Vulnerabilities</p>
+                            <p className="text-[var(--text-muted)] text-xs">
+                              Vulnerabilities
+                            </p>
                           </div>
 
                           <AssetActions
                             asset={asset}
+                            isDeleting={deletingId === asset.id}
+                            onDelete={() => {
+                              void handleDelete(asset.id);
+                            }}
                             onEdit={() => {
                               setEditingAsset(asset);
                               setIsEditModalOpen(true);
                             }}
-                            onDelete={() => {
-                              void handleDelete(asset.id);
-                            }}
-                            isDeleting={deletingId === asset.id}
                           />
                           <button
-                            type="button"
+                            className="inline-flex items-center rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-1 text-[11px] text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)]"
                             onClick={() => {
                               setLifecycleAsset(asset);
                               setLifecycleAction("transfer");
@@ -1053,7 +1227,7 @@ export default function AssetsPage() {
                               setLifecycleNotes("");
                               setIsLifecycleModalOpen(true);
                             }}
-                            className="inline-flex items-center rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] px-2 py-1 text-[11px] text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)]"
+                            type="button"
                           >
                             Lifecycle
                           </button>
@@ -1064,32 +1238,37 @@ export default function AssetsPage() {
                 </div>
               )}
 
-              <footer className="flex items-center justify-between border-t border-[var(--border-color)] p-4">
-                <p className="text-xs text-[var(--text-muted)]">
+              <footer className="flex items-center justify-between border-[var(--border-color)] border-t p-4">
+                <p className="text-[var(--text-muted)] text-xs">
                   Page {pagination.page} of {pagination.totalPages}
                 </p>
                 <div className="flex items-center gap-2">
                   <button
-                    type="button"
+                    className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-[var(--text-secondary)] text-sm transition-all duration-200 hover:scale-105 hover:bg-[var(--bg-elevated)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={pagination.page <= 1 || isLoading}
                     onClick={() =>
-                      setPagination((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))
+                      setPagination((prev) => ({
+                        ...prev,
+                        page: Math.max(1, prev.page - 1),
+                      }))
                     }
-                    className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    type="button"
                   >
                     <ChevronLeft size={14} />
                     Prev
                   </button>
                   <button
-                    type="button"
-                    disabled={pagination.page >= pagination.totalPages || isLoading}
+                    className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-[var(--text-secondary)] text-sm transition-all duration-200 hover:scale-105 hover:bg-[var(--bg-elevated)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={
+                      pagination.page >= pagination.totalPages || isLoading
+                    }
                     onClick={() =>
                       setPagination((prev) => ({
                         ...prev,
                         page: Math.min(prev.totalPages, prev.page + 1),
                       }))
                     }
-                    className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hover)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    type="button"
                   >
                     Next
                     <ChevronRight size={14} />
@@ -1099,28 +1278,55 @@ export default function AssetsPage() {
             </article>
 
             <div className="space-y-4">
-              <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '300ms', animationFillMode: 'backwards' }}>
-                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Type Distribution</h2>
-                <p className="mt-1 text-sm text-[var(--text-muted)]">Current filtered inventory mix.</p>
+              <article
+                className="fade-in slide-in-from-right-4 animate-in rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 duration-500"
+                style={{
+                  animationDelay: "300ms",
+                  animationFillMode: "backwards",
+                }}
+              >
+                <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                  Type Distribution
+                </h2>
+                <p className="mt-1 text-[var(--text-muted)] text-sm">
+                  Current filtered inventory mix.
+                </p>
                 <div className="mt-4">
                   {typeDistribution.length > 0 ? (
                     <AssetTypeChart data={typeDistribution} />
                   ) : (
-                    <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
+                    <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-[var(--text-muted)] text-sm">
                       No type distribution data available.
                     </div>
                   )}
                 </div>
               </article>
 
-              <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '400ms', animationFillMode: 'backwards' }}>
-                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Environment Breakdown</h2>
+              <article
+                className="fade-in slide-in-from-right-4 animate-in rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 duration-500"
+                style={{
+                  animationDelay: "400ms",
+                  animationFillMode: "backwards",
+                }}
+              >
+                <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                  Environment Breakdown
+                </h2>
                 <div className="mt-4 space-y-3">
                   {environmentBreakdown.length > 0 ? (
                     environmentBreakdown.map((env, index) => (
-                      <div key={env.name} className="animate-in fade-in slide-in-from-right-2 duration-300" style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}>
+                      <div
+                        className="fade-in slide-in-from-right-2 animate-in duration-300"
+                        key={env.name}
+                        style={{
+                          animationDelay: `${index * 50}ms`,
+                          animationFillMode: "backwards",
+                        }}
+                      >
                         <div className="mb-1.5 flex items-center justify-between text-xs">
-                          <span className="text-[var(--text-secondary)]">{formatLabel(env.name)}</span>
+                          <span className="text-[var(--text-secondary)]">
+                            {formatLabel(env.name)}
+                          </span>
                           <span className="text-[var(--text-muted)]">
                             {env.count} ({env.percentage.toFixed(1)}%)
                           </span>
@@ -1128,71 +1334,96 @@ export default function AssetsPage() {
                         <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
                           <div
                             className="h-full rounded-full bg-sky-300 transition-all duration-700 ease-out"
-                            style={{ width: `${Math.min(Math.max(env.percentage, 0), 100)}%` }}
+                            style={{
+                              width: `${Math.min(Math.max(env.percentage, 0), 100)}%`,
+                            }}
                           />
                         </div>
                       </div>
                     ))
                   ) : (
-                    <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
+                    <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-[var(--text-muted)] text-sm">
                       No environment breakdown available.
                     </p>
                   )}
                 </div>
               </article>
 
-              <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '500ms', animationFillMode: 'backwards' }}>
-                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Recently Added</h2>
+              <article
+                className="fade-in slide-in-from-right-4 animate-in rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 duration-500"
+                style={{
+                  animationDelay: "500ms",
+                  animationFillMode: "backwards",
+                }}
+              >
+                <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                  Recently Added
+                </h2>
                 <div className="mt-4 space-y-2">
                   {assets.slice(0, 4).map((asset, index) => {
                     const Icon = assetTypeIcons[asset.type] || Server;
                     return (
                       <div
+                        className="fade-in slide-in-from-right-2 animate-in rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 transition-all duration-200 hover:scale-[1.02] hover:border-sky-400/40 hover:bg-[var(--bg-elevated)] dark:hover:border-sky-300/30"
                         key={asset.id}
-                        className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 transition-all duration-200 hover:bg-[var(--bg-elevated)] hover:border-sky-400/40 dark:hover:border-sky-300/30 hover:scale-[1.02] animate-in fade-in slide-in-from-right-2"
-                        style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}
+                        style={{
+                          animationDelay: `${index * 50}ms`,
+                          animationFillMode: "backwards",
+                        }}
                       >
                         <div className="flex items-center gap-2.5">
                           <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-1.5 transition-all duration-200 group-hover:border-sky-400/40 dark:group-hover:border-sky-300/30">
-                            <Icon size={13} className="text-intent-accent" />
+                            <Icon className="text-intent-accent" size={13} />
                           </div>
                           <div className="min-w-0">
-                            <p className="truncate text-sm text-[var(--text-secondary)]">{asset.name}</p>
-                            <p className="text-xs text-[var(--text-muted)]">
-                              {formatLabel(asset.type)} · {formatLabel(asset.environment)}
+                            <p className="truncate text-[var(--text-secondary)] text-sm">
+                              {asset.name}
+                            </p>
+                            <p className="text-[var(--text-muted)] text-xs">
+                              {formatLabel(asset.type)} ·{" "}
+                              {formatLabel(asset.environment)}
                             </p>
                           </div>
                         </div>
                       </div>
                     );
                   })}
-                  {!assets.length ? (
-                    <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-sm text-[var(--text-muted)]">
+                  {assets.length ? null : (
+                    <p className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-4 text-[var(--text-muted)] text-sm">
                       No assets available.
                     </p>
-                  ) : null}
+                  )}
                 </div>
               </article>
 
-              <article className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '600ms', animationFillMode: 'backwards' }}>
-                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Relationships</h2>
-                <p className="mt-1 text-sm text-[var(--text-muted)]">
+              <article
+                className="fade-in slide-in-from-right-4 animate-in rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 duration-500"
+                style={{
+                  animationDelay: "600ms",
+                  animationFillMode: "backwards",
+                }}
+              >
+                <h2 className="font-semibold text-[var(--text-primary)] text-lg">
+                  Relationships
+                </h2>
+                <p className="mt-1 text-[var(--text-muted)] text-sm">
                   Dependency mapping and impact summary.
                 </p>
                 <div className="mt-3 space-y-2">
                   {relationships.slice(0, 6).map((relationship) => (
                     <div
+                      className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2 text-[var(--text-secondary)] text-xs"
                       key={relationship.id}
-                      className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-2 text-xs text-[var(--text-secondary)]"
                     >
                       <p className="font-medium">
-                        {relationship.parentAsset.name} {formatLabel(relationship.relationshipType)}{" "}
+                        {relationship.parentAsset.name}{" "}
+                        {formatLabel(relationship.relationshipType)}{" "}
                         {relationship.childAsset.name}
                       </p>
                     </div>
                   ))}
                   {relationships.length === 0 ? (
-                    <p className="rounded-lg border border-dashed border-[var(--border-hover)] p-3 text-xs text-[var(--text-muted)]">
+                    <p className="rounded-lg border border-[var(--border-hover)] border-dashed p-3 text-[var(--text-muted)] text-xs">
                       No relationships created yet.
                     </p>
                   ) : null}
@@ -1200,18 +1431,25 @@ export default function AssetsPage() {
 
                 {impact ? (
                   <div className="mt-4 rounded-xl border border-sky-300/25 bg-sky-300/10 p-3">
-                    <p className="text-xs text-sky-700 dark:text-sky-100">
-                      Impact Summary {impactAssetId ? `(Asset ${impactAssetId.slice(0, 8)}...)` : ""}
+                    <p className="text-sky-700 text-xs dark:text-sky-100">
+                      Impact Summary{" "}
+                      {impactAssetId
+                        ? `(Asset ${impactAssetId.slice(0, 8)}...)`
+                        : ""}
                     </p>
-                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[var(--text-secondary)]">
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-[var(--text-secondary)] text-xs">
                       <span>Relationships: {impact.summary.relationships}</span>
                       <span>Connected: {impact.summary.connectedAssets}</span>
-                      <span>Critical deps: {impact.summary.criticalDependencies}</span>
-                      <span>Open vulns: {impact.summary.connectedOpenVulns}</span>
+                      <span>
+                        Critical deps: {impact.summary.criticalDependencies}
+                      </span>
+                      <span>
+                        Open vulns: {impact.summary.connectedOpenVulns}
+                      </span>
                     </div>
                   </div>
                 ) : (
-                  <p className="mt-3 text-xs text-[var(--text-muted)]">
+                  <p className="mt-3 text-[var(--text-muted)] text-xs">
                     Click `Impact` on an asset row to view blast-radius metrics.
                   </p>
                 )}
@@ -1222,123 +1460,158 @@ export default function AssetsPage() {
       </div>
 
       <Modal
-        isOpen={isDiscoveryModalOpen}
-        onClose={() => setIsDiscoveryModalOpen(false)}
-        title="Discovery Import"
-        maxWidth="lg"
         footer={
           <div className="flex justify-end gap-2">
-            <button className="btn btn-secondary" onClick={() => setIsDiscoveryModalOpen(false)}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => setIsDiscoveryModalOpen(false)}
+            >
               Cancel
             </button>
             <button
               className="btn btn-primary"
-              onClick={() => void submitDiscoveryImport()}
               disabled={!discoveryPayload.trim()}
+              onClick={() => void submitDiscoveryImport()}
             >
               Import
             </button>
           </div>
         }
+        isOpen={isDiscoveryModalOpen}
+        maxWidth="lg"
+        onClose={() => setIsDiscoveryModalOpen(false)}
+        title="Discovery Import"
       >
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm text-[var(--text-primary)]">Mode</label>
-              <Select value={discoveryMode} onValueChange={(event) => setDiscoveryMode(event as "nmap" | "json")}>
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <label className="mb-1 block text-[var(--text-primary)] text-sm">
+                Mode
+              </label>
+              <Select
+                onValueChange={(event) =>
+                  setDiscoveryMode(event as "nmap" | "json")
+                }
+                value={discoveryMode}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                <SelectItem value="nmap">Nmap XML</SelectItem>
-                <SelectItem value="json">Normalized JSON</SelectItem>
-
+                    <SelectItem value="nmap">Nmap XML</SelectItem>
+                    <SelectItem value="json">Normalized JSON</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>
             </div>
             {discoveryMode === "json" ? (
               <div>
-                <label className="mb-1 block text-sm text-[var(--text-primary)]">Source</label>
+                <label className="mb-1 block text-[var(--text-primary)] text-sm">
+                  Source
+                </label>
                 <BoilerplateInput
                   className=""
-                  value={discoverySource}
                   onChange={(event) => setDiscoverySource(event.target.value)}
+                  value={discoverySource}
                 />
               </div>
             ) : null}
           </div>
           <div>
-            <label className="mb-1 block text-sm text-[var(--text-primary)]">
+            <label className="mb-1 block text-[var(--text-primary)] text-sm">
               {discoveryMode === "nmap" ? "Nmap XML" : "JSON payload"}
             </label>
             <BoilerplateTextarea
               className="min-h-[260px] font-mono text-xs"
+              onChange={(event) => setDiscoveryPayload(event.target.value)}
               placeholder={
                 discoveryMode === "nmap"
                   ? "<nmaprun>...</nmaprun>"
                   : '{"assets":[{"name":"host-1","type":"SERVER"}]}'
               }
               value={discoveryPayload}
-              onChange={(event) => setDiscoveryPayload(event.target.value)}
             />
           </div>
         </div>
       </Modal>
 
       <Modal
-        isOpen={isLifecycleModalOpen}
-        onClose={() => setIsLifecycleModalOpen(false)}
-        title="Asset Lifecycle Action"
         footer={
           <div className="flex justify-end gap-2">
-            <button className="btn btn-secondary" onClick={() => setIsLifecycleModalOpen(false)}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => setIsLifecycleModalOpen(false)}
+            >
               Cancel
             </button>
-            <button className="btn btn-primary" onClick={() => void submitLifecycleAction()}>
+            <button
+              className="btn btn-primary"
+              onClick={() => void submitLifecycleAction()}
+            >
               Apply
             </button>
           </div>
         }
+        isOpen={isLifecycleModalOpen}
+        onClose={() => setIsLifecycleModalOpen(false)}
+        title="Asset Lifecycle Action"
       >
         <div className="space-y-3">
-          <p className="text-xs text-[var(--text-muted)]">
-            Asset: {lifecycleAsset?.name || "N/A"} ({lifecycleAsset?.id || "N/A"})
+          <p className="text-[var(--text-muted)] text-xs">
+            Asset: {lifecycleAsset?.name || "N/A"} (
+            {lifecycleAsset?.id || "N/A"})
           </p>
           <div>
-            <label className="mb-1 block text-sm text-[var(--text-primary)]">Action</label>
-            <Select value={lifecycleAction} onValueChange={(event) =>
+            <label className="mb-1 block text-[var(--text-primary)] text-sm">
+              Action
+            </label>
+            <Select
+              onValueChange={(event) =>
                 setLifecycleAction(
                   event as
-                  | "transfer"
-                  | "decommission"
-                  | "ownership_change"
-                  | "reactivate",
-                )}>
-              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                    | "transfer"
+                    | "decommission"
+                    | "ownership_change"
+                    | "reactivate"
+                )
+              }
+              value={lifecycleAction}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-              <SelectItem value="transfer">Transfer Environment</SelectItem>
-              <SelectItem value="ownership_change">Change Ownership</SelectItem>
-              <SelectItem value="decommission">Decommission</SelectItem>
-              <SelectItem value="reactivate">Reactivate</SelectItem>
-
+                  <SelectItem value="transfer">Transfer Environment</SelectItem>
+                  <SelectItem value="ownership_change">
+                    Change Ownership
+                  </SelectItem>
+                  <SelectItem value="decommission">Decommission</SelectItem>
+                  <SelectItem value="reactivate">Reactivate</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
           </div>
           {lifecycleAction === "transfer" ? (
             <div>
-              <label className="mb-1 block text-sm text-[var(--text-primary)]">Target Environment</label>
-              <Select value={lifecycleToEnvironment} onValueChange={(event) => setLifecycleToEnvironment(event)}>
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <label className="mb-1 block text-[var(--text-primary)] text-sm">
+                Target Environment
+              </label>
+              <Select
+                onValueChange={(event) => setLifecycleToEnvironment(event)}
+                value={lifecycleToEnvironment}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                <SelectItem value="PRODUCTION">PRODUCTION</SelectItem>
-                <SelectItem value="STAGING">STAGING</SelectItem>
-                <SelectItem value="DEVELOPMENT">DEVELOPMENT</SelectItem>
-                <SelectItem value="TESTING">TESTING</SelectItem>
-                <SelectItem value="DR">DR</SelectItem>
-
+                    <SelectItem value="PRODUCTION">PRODUCTION</SelectItem>
+                    <SelectItem value="STAGING">STAGING</SelectItem>
+                    <SelectItem value="DEVELOPMENT">DEVELOPMENT</SelectItem>
+                    <SelectItem value="TESTING">TESTING</SelectItem>
+                    <SelectItem value="DR">DR</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -1346,20 +1619,24 @@ export default function AssetsPage() {
           ) : null}
           {lifecycleAction === "ownership_change" ? (
             <div>
-              <label className="mb-1 block text-sm text-[var(--text-primary)]">New Owner</label>
+              <label className="mb-1 block text-[var(--text-primary)] text-sm">
+                New Owner
+              </label>
               <BoilerplateInput
                 className=""
-                value={lifecycleToOwner}
                 onChange={(event) => setLifecycleToOwner(event.target.value)}
+                value={lifecycleToOwner}
               />
             </div>
           ) : null}
           <div>
-            <label className="mb-1 block text-sm text-[var(--text-primary)]">Notes</label>
+            <label className="mb-1 block text-[var(--text-primary)] text-sm">
+              Notes
+            </label>
             <BoilerplateTextarea
               className="min-h-[100px]"
-              value={lifecycleNotes}
               onChange={(event) => setLifecycleNotes(event.target.value)}
+              value={lifecycleNotes}
             />
           </div>
         </div>
@@ -1375,6 +1652,7 @@ export default function AssetsPage() {
 
       {editingAsset ? (
         <EditAssetModal
+          asset={editingAsset}
           isOpen={isEditModalOpen}
           onClose={() => {
             setIsEditModalOpen(false);
@@ -1383,7 +1661,6 @@ export default function AssetsPage() {
           onSuccess={() => {
             void fetchAssets({ silent: true });
           }}
-          asset={editingAsset}
         />
       ) : null}
     </DashboardLayout>

@@ -250,7 +250,9 @@ REAL_API_TESTS=true bun run test
 
 Vercel functions cannot access a database running on your laptop, inside Docker,
 or on a private network. Configure a Vercel-accessible PostgreSQL provider and
-use its **pooled** connection string for `DATABASE_URL`.
+use its **pooled** connection string for the runtime `DATABASE_URL`. When the
+provider requires a direct connection for DDL, run migrations with its direct
+(non-pooled) URL instead.
 
 Required production environment variables:
 
@@ -260,6 +262,8 @@ AUTH_SECRET=<long-random-secret>
 NEXTAUTH_URL=https://secyourflow.vercel.app
 AUTH_GOOGLE_ID=<google-client-id>
 AUTH_GOOGLE_SECRET=<google-client-secret>
+# Optional: set to true only when public email/password registration is intended.
+ALLOW_PUBLIC_REGISTRATION=true
 DB_POOL_MAX=1
 DB_CONNECT_TIMEOUT_MS=5000
 ```
@@ -275,7 +279,8 @@ Also configure these trusted URLs in Google Cloud Console:
 https://secyourflow.vercel.app/api/auth/callback/google
 ```
 
-Apply migrations to the hosted database before enabling the Vercel deployment:
+Apply migrations to the hosted database before enabling the Vercel deployment.
+`prisma generate` only generates the client; it does not create database tables.
 
 ```bash
 DATABASE_URL='<hosted-pooled-database-url>' bun run db:migrate

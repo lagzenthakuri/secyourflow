@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { isAdminTokenAuthorized, requireSessionWithOrg } from "@/lib/api-auth";
+import { prisma } from "@/lib/prisma";
 
 export interface ThreatIntelRequestContext {
-  userId: string;
   organizationId: string;
   role: string;
   tokenAuthorized: boolean;
+  userId: string;
 }
 
 export { isAdminTokenAuthorized };
@@ -21,16 +21,24 @@ export { isAdminTokenAuthorized };
  */
 export async function requireThreatIntelContext(
   request: Request,
-  options: { allowAdminToken?: boolean; requireMainOfficer?: boolean } = {},
-): Promise<{ ok: true; context: ThreatIntelRequestContext } | { ok: false; response: NextResponse }> {
+  options: { allowAdminToken?: boolean; requireMainOfficer?: boolean } = {}
+): Promise<
+  | { ok: true; context: ThreatIntelRequestContext }
+  | { ok: false; response: NextResponse }
+> {
   if (options.allowAdminToken === true && isAdminTokenAuthorized(request)) {
-    const orgId = request.headers.get("x-secyourflow-org-id") || request.headers.get("x-org-id");
+    const orgId =
+      request.headers.get("x-secyourflow-org-id") ||
+      request.headers.get("x-org-id");
     if (!orgId) {
       return {
         ok: false,
         response: NextResponse.json(
-          { error: "x-secyourflow-org-id header is required for token-based threat intel access" },
-          { status: 400 },
+          {
+            error:
+              "x-secyourflow-org-id header is required for token-based threat intel access",
+          },
+          { status: 400 }
         ),
       };
     }
@@ -43,7 +51,10 @@ export async function requireThreatIntelContext(
     if (!org) {
       return {
         ok: false,
-        response: NextResponse.json({ error: "Invalid organization context" }, { status: 403 }),
+        response: NextResponse.json(
+          { error: "Invalid organization context" },
+          { status: 403 }
+        ),
       };
     }
 

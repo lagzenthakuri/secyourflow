@@ -1,25 +1,26 @@
 #!/usr/bin/env tsx
 /**
  * Security Verification Script for Invitation System
- * 
+ *
  * This script verifies that the invitation system meets banking-grade security requirements.
  * Run this before deploying to production.
  */
 
-import { readFileSync } from "fs";
-import { join } from "path";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 interface SecurityCheck {
-  name: string;
-  description: string;
   check: () => boolean | Promise<boolean>;
   critical: boolean;
+  description: string;
+  name: string;
 }
 
 const checks: SecurityCheck[] = [
   {
     name: "No REGISTRATION_DEFAULT_ORGANIZATION_ID in code",
-    description: "Verify that REGISTRATION_DEFAULT_ORGANIZATION_ID is not used anywhere",
+    description:
+      "Verify that REGISTRATION_DEFAULT_ORGANIZATION_ID is not used anywhere",
     critical: true,
     check: () => {
       const registerRoute = readFileSync(
@@ -66,8 +67,13 @@ const checks: SecurityCheck[] = [
         "utf-8"
       );
       const invitationModel = schema.match(/model Invitation \{[\s\S]*?\}/);
-      if (!invitationModel) return false;
-      return invitationModel[0].includes("@unique") && invitationModel[0].includes("token");
+      if (!invitationModel) {
+        return false;
+      }
+      return (
+        invitationModel[0].includes("@unique") &&
+        invitationModel[0].includes("token")
+      );
     },
   },
   {
@@ -84,7 +90,8 @@ const checks: SecurityCheck[] = [
   },
   {
     name: "Invitation acceptance is public",
-    description: "Verify that invitation acceptance does not require authentication",
+    description:
+      "Verify that invitation acceptance does not require authentication",
     critical: true,
     check: () => {
       const acceptRoute = readFileSync(
@@ -96,7 +103,8 @@ const checks: SecurityCheck[] = [
   },
   {
     name: "Token generation uses crypto.randomBytes",
-    description: "Verify that tokens are generated with cryptographically secure random",
+    description:
+      "Verify that tokens are generated with cryptographically secure random",
     critical: true,
     check: () => {
       const utils = readFileSync(
@@ -163,7 +171,8 @@ const checks: SecurityCheck[] = [
   },
   {
     name: "Transaction for user creation",
-    description: "Verify that user creation and invitation marking use transaction",
+    description:
+      "Verify that user creation and invitation marking use transaction",
     critical: true,
     check: () => {
       const acceptRoute = readFileSync(
@@ -177,7 +186,7 @@ const checks: SecurityCheck[] = [
 
 async function runSecurityChecks() {
   console.log("🔒 Running Security Verification for Invitation System\n");
-  console.log("=" .repeat(70));
+  console.log("=".repeat(70));
 
   let passed = 0;
   let failed = 0;
@@ -199,7 +208,9 @@ async function runSecurityChecks() {
       }
     } catch (error) {
       console.log(`❌ ERROR: ${check.name}`);
-      console.log(`   ${error instanceof Error ? error.message : String(error)}`);
+      console.log(
+        `   ${error instanceof Error ? error.message : String(error)}`
+      );
       failed++;
       if (check.critical) {
         criticalFailed++;
@@ -207,11 +218,13 @@ async function runSecurityChecks() {
     }
   }
 
-  console.log("=" .repeat(70));
+  console.log("=".repeat(70));
   console.log(`\n📊 Results: ${passed} passed, ${failed} failed`);
 
   if (criticalFailed > 0) {
-    console.log(`\n🚨 CRITICAL: ${criticalFailed} critical security checks failed!`);
+    console.log(
+      `\n🚨 CRITICAL: ${criticalFailed} critical security checks failed!`
+    );
     console.log("❌ DO NOT DEPLOY TO PRODUCTION");
     process.exit(1);
   } else if (failed > 0) {

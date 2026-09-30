@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
+import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { requireSessionWithOrg } from "@/lib/api-auth";
 import { logAssetChange } from "@/lib/assets/lifecycle";
-import { z } from "zod";
-import type { Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 const updateAssetSchema = z
   .object({
@@ -30,13 +30,22 @@ const updateAssetSchema = z
     macAddress: z.string().optional().nullable(),
     operatingSystem: z.string().optional().nullable(),
     version: z.string().optional().nullable(),
-    environment: z.enum(["PRODUCTION", "STAGING", "DEVELOPMENT", "TESTING", "DR"]).optional(),
-    criticality: z.enum(["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"]).optional(),
-    status: z.enum(["ACTIVE", "INACTIVE", "DECOMMISSIONED", "MAINTENANCE"]).optional(),
+    environment: z
+      .enum(["PRODUCTION", "STAGING", "DEVELOPMENT", "TESTING", "DR"])
+      .optional(),
+    criticality: z
+      .enum(["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"])
+      .optional(),
+    status: z
+      .enum(["ACTIVE", "INACTIVE", "DECOMMISSIONED", "MAINTENANCE"])
+      .optional(),
     owner: z.string().optional().nullable(),
     department: z.string().optional().nullable(),
     location: z.string().optional().nullable(),
-    cloudProvider: z.enum(["AWS", "AZURE", "GCP", "ORACLE", "IBM", "ALIBABA", "OTHER"]).optional().nullable(),
+    cloudProvider: z
+      .enum(["AWS", "AZURE", "GCP", "ORACLE", "IBM", "ALIBABA", "OTHER"])
+      .optional()
+      .nullable(),
     cloudRegion: z.string().optional().nullable(),
     cloudAccountId: z.string().optional().nullable(),
     tags: z.array(z.string()).optional(),
@@ -46,10 +55,12 @@ const updateAssetSchema = z
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   try {
     const { id } = await params;
@@ -76,24 +87,32 @@ export async function GET(
     });
   } catch (error) {
     console.error("Get Asset Error:", error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Unknown error" },
+      { status: 500 }
+    );
   }
 }
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   try {
     const { id } = await params;
     const parsed = updateAssetSchema.safeParse(await request.json());
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid asset update payload", details: parsed.error.flatten() },
-        { status: 400 },
+        {
+          error: "Invalid asset update payload",
+          details: parsed.error.flatten(),
+        },
+        { status: 400 }
       );
     }
 
@@ -126,23 +145,30 @@ export async function PATCH(
         changedById: authResult.context.userId,
         field: key,
         oldValue: (existing as Record<string, unknown>)[key],
-        newValue: (updatedAsset as Record<string, unknown>)[key] ?? (updateData as Record<string, unknown>)[key],
+        newValue:
+          (updatedAsset as Record<string, unknown>)[key] ??
+          (updateData as Record<string, unknown>)[key],
       });
     }
 
     return NextResponse.json(updatedAsset);
   } catch (error) {
     console.error("Update Asset Error:", error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 400 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Unknown error" },
+      { status: 400 }
+    );
   }
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
   try {
     const { id } = await params;
@@ -181,7 +207,9 @@ export async function DELETE(
         select: { vulnerabilityId: true },
       });
 
-      const stillLinkedIds = new Set(stillLinkedVulns.map((v) => v.vulnerabilityId));
+      const stillLinkedIds = new Set(
+        stillLinkedVulns.map((v) => v.vulnerabilityId)
+      );
       const orphanIds = vulnIds.filter((vid) => !stillLinkedIds.has(vid));
 
       if (orphanIds.length > 0) {
@@ -194,9 +222,14 @@ export async function DELETE(
       }
     }
 
-    return NextResponse.json({ message: "Asset and associated data deleted successfully" });
+    return NextResponse.json({
+      message: "Asset and associated data deleted successfully",
+    });
   } catch (error) {
     console.error("Delete Asset Error:", error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 400 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Unknown error" },
+      { status: 400 }
+    );
   }
 }

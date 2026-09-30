@@ -55,7 +55,9 @@ let lastCommandClientErrorLoggedAt = 0;
 
 function getRedisErrorMessage(error: unknown): string {
   if (error instanceof AggregateError) {
-    const nestedMessages = error.errors.map(getRedisErrorMessage).filter(Boolean);
+    const nestedMessages = error.errors
+      .map(getRedisErrorMessage)
+      .filter(Boolean);
     return nestedMessages.join("; ") || "Connection failed";
   }
 
@@ -78,8 +80,8 @@ export function getRedisCommandClient(): Redis {
       // Reject while disconnected rather than queueing until the socket is back.
       enableOfflineQueue: false,
       enableReadyCheck: false,
-      connectTimeout: 1_000,
-      commandTimeout: 1_000,
+      connectTimeout: 1000,
+      commandTimeout: 1000,
       retryStrategy: (attempt) => Math.min(attempt * 500, 10_000),
     });
 
@@ -89,7 +91,9 @@ export function getRedisCommandClient(): Redis {
       const now = Date.now();
       if (now - lastCommandClientErrorLoggedAt > 60_000) {
         lastCommandClientErrorLoggedAt = now;
-        console.error(`[redis] Command client unavailable: ${getRedisErrorMessage(error)}`);
+        console.error(
+          `[redis] Command client unavailable: ${getRedisErrorMessage(error)}`
+        );
       }
     });
   }
@@ -103,7 +107,9 @@ export function getRedisCommandClient(): Redis {
  * queue is disabled; waiting briefly avoids a spurious first-request fallback
  * immediately after process startup.
  */
-export async function getReadyRedisCommandClient(timeoutMs: number): Promise<Redis | null> {
+export async function getReadyRedisCommandClient(
+  timeoutMs: number
+): Promise<Redis | null> {
   const client = getRedisCommandClient();
   if (client.status === "ready") {
     return client;
@@ -112,7 +118,9 @@ export async function getReadyRedisCommandClient(timeoutMs: number): Promise<Red
   return new Promise<Redis | null>((resolve) => {
     let settled = false;
     const finish = (value: Redis | null) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
       clearTimeout(timer);
       client.off("ready", onReady);

@@ -1,12 +1,25 @@
-import { NextResponse } from "next/server";
 import type { IndicatorType, Severity } from "@repo/database";
+import { NextResponse } from "next/server";
 import { requireThreatIntelContext } from "@/modules/threat-intel/auth";
-import { ThreatIntelRepository } from "@/modules/threat-intel/persistence/repository";
-import { guessIndicatorType, isValidIndicatorValue, normalizeIndicatorValue } from "@/modules/threat-intel/ioc/normalizer";
-import { calculateConfidence, calculateExpirationDate } from "@/modules/threat-intel/ioc/scoring";
 import { getThreatIntelConfig } from "@/modules/threat-intel/config";
+import {
+  guessIndicatorType,
+  isValidIndicatorValue,
+  normalizeIndicatorValue,
+} from "@/modules/threat-intel/ioc/normalizer";
+import {
+  calculateConfidence,
+  calculateExpirationDate,
+} from "@/modules/threat-intel/ioc/scoring";
+import { ThreatIntelRepository } from "@/modules/threat-intel/persistence/repository";
 
-const severityValues = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"] as const;
+const severityValues = [
+  "CRITICAL",
+  "HIGH",
+  "MEDIUM",
+  "LOW",
+  "INFORMATIONAL",
+] as const;
 
 function parseIndicatorType(value: string): IndicatorType {
   const normalized = value.toUpperCase();
@@ -23,7 +36,9 @@ function parseIndicatorType(value: string): IndicatorType {
     "USER_AGENT",
   ];
 
-  return valid.includes(normalized as IndicatorType) ? (normalized as IndicatorType) : "USER_AGENT";
+  return valid.includes(normalized as IndicatorType)
+    ? (normalized as IndicatorType)
+    : "USER_AGENT";
 }
 
 function parseSeverity(value: string | null): Severity | undefined {
@@ -32,7 +47,9 @@ function parseSeverity(value: string | null): Severity | undefined {
   }
 
   const normalized = value.toUpperCase();
-  return severityValues.includes(normalized as Severity) ? (normalized as Severity) : undefined;
+  return severityValues.includes(normalized as Severity)
+    ? (normalized as Severity)
+    : undefined;
 }
 
 export async function GET(request: Request) {
@@ -50,12 +67,15 @@ export async function GET(request: Request) {
 
   try {
     const repository = new ThreatIntelRepository();
-    const indicators = await repository.listIndicators(authResult.context.organizationId, {
-      type: type ? parseIndicatorType(type) : undefined,
-      severity: parseSeverity(severity),
-      search: search ?? undefined,
-      includeExpired,
-    });
+    const indicators = await repository.listIndicators(
+      authResult.context.organizationId,
+      {
+        type: type ? parseIndicatorType(type) : undefined,
+        severity: parseSeverity(severity),
+        search: search ?? undefined,
+        includeExpired,
+      }
+    );
 
     return NextResponse.json({ data: indicators });
   } catch (error) {
@@ -64,7 +84,7 @@ export async function GET(request: Request) {
         error: "Failed to fetch indicators",
         message: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -83,12 +103,20 @@ export async function POST(request: Request) {
 
     const rawValue = String(body.value || "").trim();
     if (!rawValue) {
-      return NextResponse.json({ error: "IOC value is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "IOC value is required" },
+        { status: 400 }
+      );
     }
 
-    const type = body.type ? parseIndicatorType(String(body.type)) : guessIndicatorType(rawValue);
+    const type = body.type
+      ? parseIndicatorType(String(body.type))
+      : guessIndicatorType(rawValue);
     if (!isValidIndicatorValue(type, rawValue)) {
-      return NextResponse.json({ error: `Invalid IOC value for type ${type}` }, { status: 400 });
+      return NextResponse.json(
+        { error: `Invalid IOC value for type ${type}` },
+        { status: 400 }
+      );
     }
 
     const feed = await repository.upsertFeed(organizationId, {
@@ -101,7 +129,8 @@ export async function POST(request: Request) {
 
     const now = new Date();
     const normalizedValue = normalizeIndicatorValue(type, rawValue);
-    const severity = parseSeverity(body.severity ? String(body.severity) : null) ?? "MEDIUM";
+    const severity =
+      parseSeverity(body.severity ? String(body.severity) : null) ?? "MEDIUM";
     const confidence = body.confidence
       ? Number.parseInt(String(body.confidence), 10)
       : calculateConfidence({
@@ -125,9 +154,13 @@ export async function POST(request: Request) {
       lastSeen: now,
       expiresAt,
       source: "MANUAL",
-      description: body.description ? String(body.description) : "Manual IOC entry",
+      description: body.description
+        ? String(body.description)
+        : "Manual IOC entry",
       tags: Array.isArray(body.tags)
-        ? body.tags.filter((tag: unknown): tag is string => typeof tag === "string")
+        ? body.tags.filter(
+            (tag: unknown): tag is string => typeof tag === "string"
+          )
         : [],
       tacticId: body.tacticId ? String(body.tacticId) : null,
       techniqueId: body.techniqueId ? String(body.techniqueId) : null,
@@ -143,7 +176,7 @@ export async function POST(request: Request) {
         error: "Failed to create IOC",
         message: error instanceof Error ? error.message : String(error),
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 }

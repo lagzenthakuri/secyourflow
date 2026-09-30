@@ -1,10 +1,19 @@
-import crypto from "crypto";
-import path from "path";
-import { promises as fs } from "fs";
+import crypto from "node:crypto";
+import { promises as fs } from "node:fs";
+import path from "node:path";
 
 export const MAX_EVIDENCE_FILE_SIZE_BYTES = 15 * 1024 * 1024;
 
-const ALLOWED_EXTENSIONS = new Set([".pdf", ".png", ".jpg", ".jpeg", ".txt", ".log", ".csv", ".json"]);
+const ALLOWED_EXTENSIONS = new Set([
+  ".pdf",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".txt",
+  ".log",
+  ".csv",
+  ".json",
+]);
 
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
@@ -20,10 +29,16 @@ export function sanitizeFileName(fileName: string) {
   return fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
-export function assertEvidenceFileAllowed(fileName: string, mimeType: string, sizeBytes: number) {
+export function assertEvidenceFileAllowed(
+  fileName: string,
+  mimeType: string,
+  sizeBytes: number
+) {
   const extension = path.extname(fileName).toLowerCase();
   if (!ALLOWED_EXTENSIONS.has(extension)) {
-    throw new Error(`Unsupported evidence file extension: ${extension || "(none)"}`);
+    throw new Error(
+      `Unsupported evidence file extension: ${extension || "(none)"}`
+    );
   }
 
   if (!ALLOWED_MIME_TYPES.has(mimeType)) {
@@ -32,7 +47,7 @@ export function assertEvidenceFileAllowed(fileName: string, mimeType: string, si
 
   if (sizeBytes > MAX_EVIDENCE_FILE_SIZE_BYTES) {
     throw new Error(
-      `Evidence file too large (${sizeBytes} bytes). Max allowed is ${MAX_EVIDENCE_FILE_SIZE_BYTES} bytes.`,
+      `Evidence file too large (${sizeBytes} bytes). Max allowed is ${MAX_EVIDENCE_FILE_SIZE_BYTES} bytes.`
     );
   }
 }
@@ -66,11 +81,14 @@ export async function writeEvidenceFile(options: {
     .join(
       options.controlId,
       options.evidenceId,
-      `v${options.version}_${buildTimestampSlug()}_${safeName}`,
+      `v${options.version}_${buildTimestampSlug()}_${safeName}`
     )
     .replace(/\\/g, "/");
 
-  const checksum = crypto.createHash("sha256").update(options.data).digest("hex");
+  const checksum = crypto
+    .createHash("sha256")
+    .update(options.data)
+    .digest("hex");
 
   return {
     storagePath: relativePath,
@@ -82,8 +100,8 @@ export async function writeEvidenceFile(options: {
     data: new Uint8Array(
       options.data.buffer.slice(
         options.data.byteOffset,
-        options.data.byteOffset + options.data.byteLength,
-      ) as ArrayBuffer,
+        options.data.byteOffset + options.data.byteLength
+      ) as ArrayBuffer
     ),
   };
 }
@@ -108,7 +126,10 @@ export async function readEvidenceContent(version: {
   const absolutePath = path.resolve(baseDir, normalized);
 
   // `startsWith` on the base alone would accept a sibling like `/data/evidence-x`.
-  if (absolutePath !== baseDir && !absolutePath.startsWith(baseDir + path.sep)) {
+  if (
+    absolutePath !== baseDir &&
+    !absolutePath.startsWith(baseDir + path.sep)
+  ) {
     throw new Error("Invalid evidence file path");
   }
 
@@ -116,7 +137,7 @@ export async function readEvidenceContent(version: {
     return await fs.readFile(absolutePath);
   } catch {
     throw new Error(
-      "Evidence content is unavailable. It predates database storage and is not present on this instance.",
+      "Evidence content is unavailable. It predates database storage and is not present on this instance."
     );
   }
 }

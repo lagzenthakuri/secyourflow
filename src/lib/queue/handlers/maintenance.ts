@@ -5,7 +5,9 @@ import { prisma } from "@/lib/prisma";
  */
 
 /** How long an assessment may sit in PROCESSING before it is declared dead. */
-const STALE_RISK_ENTRY_MS = Number(process.env.RISK_ENTRY_STALE_MS ?? 30 * 60 * 1000);
+const STALE_RISK_ENTRY_MS = Number(
+  process.env.RISK_ENTRY_STALE_MS ?? 30 * 60 * 1000
+);
 
 /**
  * Retires assessments abandoned mid-flight.
@@ -21,7 +23,8 @@ export async function reapStaleRiskEntries() {
     where: { status: "PROCESSING", updatedAt: { lt: cutoff } },
     data: {
       status: "FAILED",
-      failureReason: "Analysis did not finish within the expected time. Re-run to assess.",
+      failureReason:
+        "Analysis did not finish within the expected time. Re-run to assess.",
     },
   });
 
@@ -72,7 +75,8 @@ export async function runDueReportSchedules() {
         templateKey: schedule.templateKey,
         outputFormat: schedule.outputFormat,
         name: schedule.name,
-        filters: (schedule.filters as Record<string, unknown> | null) ?? undefined,
+        filters:
+          (schedule.filters as Record<string, unknown> | null) ?? undefined,
         scheduleId: schedule.id,
       },
       {
@@ -81,7 +85,7 @@ export async function runDueReportSchedules() {
         entityId: schedule.id,
         // One run per schedule per due-window, however many workers race here.
         dedupeKey: `report-schedule:${schedule.id}:${schedule.nextRunAt.toISOString()}`,
-      },
+      }
     );
   }
 
@@ -90,10 +94,16 @@ export async function runDueReportSchedules() {
 
 /** Keeps JobRun bounded; the queue itself is trimmed by BullMQ. */
 export async function pruneJobRuns() {
-  const cutoff = new Date(Date.now() - Number(process.env.JOB_RUN_RETENTION_MS ?? 30 * 24 * 60 * 60 * 1000));
+  const cutoff = new Date(
+    Date.now() -
+      Number(process.env.JOB_RUN_RETENTION_MS ?? 30 * 24 * 60 * 60 * 1000)
+  );
 
   const { count } = await prisma.jobRun.deleteMany({
-    where: { createdAt: { lt: cutoff }, status: { in: ["SUCCEEDED", "FAILED"] } },
+    where: {
+      createdAt: { lt: cutoff },
+      status: { in: ["SUCCEEDED", "FAILED"] },
+    },
   });
 
   return { pruned: count };

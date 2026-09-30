@@ -1,49 +1,72 @@
 import type { IndicatorType, Severity } from "@repo/database";
 import type { ThreatIntelConfig } from "../config";
-import { fetchJsonWithRetry } from "../utils/http";
-import type { AdapterContext, AdapterFetchResult, ThreatFeedAdapter, ThreatFeedAdapterHealth } from "./types";
-import { calculateConfidence, calculateExpirationDate } from "../ioc/scoring";
 import { normalizeIndicatorValue } from "../ioc/normalizer";
+import { calculateConfidence, calculateExpirationDate } from "../ioc/scoring";
 import type { NormalizedIndicatorInput } from "../types";
+import { fetchJsonWithRetry } from "../utils/http";
+import type {
+  AdapterContext,
+  AdapterFetchResult,
+  ThreatFeedAdapter,
+  ThreatFeedAdapterHealth,
+} from "./types";
 
 interface OtxPulseResponse {
   results?: OtxPulse[];
 }
 
 interface OtxPulse {
-  id: string;
-  modified?: string;
   created?: string;
-  name?: string;
-  tags?: string[];
+  id: string;
   indicators?: Array<{
     indicator?: string;
     type?: string;
     title?: string;
     created?: string;
   }>;
+  modified?: string;
+  name?: string;
+  tags?: string[];
 }
 
 interface OtxIndicatorRecord {
+  createdAt: string | null;
+  indicatorType: string;
+  indicatorValue: string;
   pulseId: string;
   pulseName: string;
-  indicatorValue: string;
-  indicatorType: string;
   tags: string[];
-  createdAt: string | null;
 }
 
 function mapOtxTypeToIndicator(type: string): IndicatorType | null {
   const normalized = type.toLowerCase();
-  if (normalized === "ipv4" || normalized === "ipv6") return "IP_ADDRESS";
-  if (normalized === "domain") return "DOMAIN";
-  if (normalized === "url") return "URL";
-  if (normalized === "filehash-md5") return "FILE_HASH_MD5";
-  if (normalized === "filehash-sha1") return "FILE_HASH_SHA1";
-  if (normalized === "filehash-sha256") return "FILE_HASH_SHA256";
-  if (normalized === "email") return "EMAIL";
-  if (normalized === "cve") return "CVE";
-  if (normalized === "useragent") return "USER_AGENT";
+  if (normalized === "ipv4" || normalized === "ipv6") {
+    return "IP_ADDRESS";
+  }
+  if (normalized === "domain") {
+    return "DOMAIN";
+  }
+  if (normalized === "url") {
+    return "URL";
+  }
+  if (normalized === "filehash-md5") {
+    return "FILE_HASH_MD5";
+  }
+  if (normalized === "filehash-sha1") {
+    return "FILE_HASH_SHA1";
+  }
+  if (normalized === "filehash-sha256") {
+    return "FILE_HASH_SHA256";
+  }
+  if (normalized === "email") {
+    return "EMAIL";
+  }
+  if (normalized === "cve") {
+    return "CVE";
+  }
+  if (normalized === "useragent") {
+    return "USER_AGENT";
+  }
   return null;
 }
 
@@ -53,7 +76,9 @@ export class OtxAdapter implements ThreatFeedAdapter<OtxIndicatorRecord> {
 
   constructor(private readonly config: ThreatIntelConfig) {}
 
-  async fetchSince(checkpoint: string | null): Promise<AdapterFetchResult<OtxIndicatorRecord>> {
+  async fetchSince(
+    checkpoint: string | null
+  ): Promise<AdapterFetchResult<OtxIndicatorRecord>> {
     void checkpoint;
     if (!this.config.feeds.otxApiKey) {
       return {
@@ -78,14 +103,17 @@ export class OtxAdapter implements ThreatFeedAdapter<OtxIndicatorRecord> {
 
     for (const pulse of payload.results ?? []) {
       for (const indicator of pulse.indicators ?? []) {
-        if (!indicator.indicator || !indicator.type) continue;
+        if (!(indicator.indicator && indicator.type)) {
+          continue;
+        }
         records.push({
           pulseId: pulse.id,
           pulseName: pulse.name || "OTX Pulse",
           indicatorValue: indicator.indicator,
           indicatorType: indicator.type,
           tags: pulse.tags ?? [],
-          createdAt: indicator.created ?? pulse.modified ?? pulse.created ?? null,
+          createdAt:
+            indicator.created ?? pulse.modified ?? pulse.created ?? null,
         });
       }
     }
@@ -97,15 +125,23 @@ export class OtxAdapter implements ThreatFeedAdapter<OtxIndicatorRecord> {
     };
   }
 
-  normalize(record: OtxIndicatorRecord, context: AdapterContext): NormalizedIndicatorInput | null {
+  normalize(
+    record: OtxIndicatorRecord,
+    context: AdapterContext
+  ): NormalizedIndicatorInput | null {
     void context;
     const mappedType = mapOtxTypeToIndicator(record.indicatorType);
     if (!mappedType) {
       return null;
     }
 
-    const firstSeen = record.createdAt ? new Date(record.createdAt) : new Date();
-    const normalizedValue = normalizeIndicatorValue(mappedType, record.indicatorValue);
+    const firstSeen = record.createdAt
+      ? new Date(record.createdAt)
+      : new Date();
+    const normalizedValue = normalizeIndicatorValue(
+      mappedType,
+      record.indicatorValue
+    );
     const confidence = calculateConfidence({
       source: this.source,
       firstSeen,
@@ -152,7 +188,8 @@ export class OtxAdapter implements ThreatFeedAdapter<OtxIndicatorRecord> {
     } catch (error) {
       return {
         ok: false,
-        message: error instanceof Error ? error.message : "OTX health check failed",
+        message:
+          error instanceof Error ? error.message : "OTX health check failed",
       };
     }
   }

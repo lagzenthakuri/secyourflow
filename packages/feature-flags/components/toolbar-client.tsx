@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ComponentType } from "react";
+import { type ComponentType, useEffect, useState } from "react";
 
 export function VercelToolbarClient() {
   const shouldLoadToolbar =
@@ -9,12 +9,16 @@ export function VercelToolbarClient() {
   const [Toolbar, setToolbar] = useState<ComponentType | null>(null);
 
   useEffect(() => {
-    if (!shouldLoadToolbar) return;
+    if (!shouldLoadToolbar) {
+      return;
+    }
 
     let active = true;
     void import("@vercel/toolbar/next")
       .then(({ VercelToolbar }) => {
-        if (active) setToolbar(() => VercelToolbar);
+        if (active) {
+          setToolbar(() => VercelToolbar);
+        }
       })
       .catch((error: unknown) => {
         console.error("Unable to load the Vercel Toolbar:", error);
@@ -25,6 +29,8 @@ export function VercelToolbarClient() {
     };
   }, [shouldLoadToolbar]);
 
-  if (!shouldLoadToolbar || !Toolbar) return null;
+  if (!(shouldLoadToolbar && Toolbar)) {
+    return null;
+  }
   return <Toolbar />;
 }

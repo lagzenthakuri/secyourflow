@@ -1,4 +1,8 @@
-import type { ControlFrequency, ControlType, NistCsfFunction } from "@repo/database";
+import type {
+  ControlFrequency,
+  ControlType,
+  NistCsfFunction,
+} from "@repo/database";
 
 export type ComplianceTemplateId =
   | "iso27001_2022"
@@ -7,36 +11,38 @@ export type ComplianceTemplateId =
   | "soc2_type_ii";
 
 export interface ComplianceTemplateControl {
-  controlId: string;
-  title: string;
-  description: string;
   category: string;
-  objective: string;
+  controlId: string;
   controlType: ControlType;
+  description: string;
+  evidenceRequired: string[];
   frequency: ControlFrequency;
   nistCsfFunction?: NistCsfFunction;
+  objective: string;
   ownerRole: string;
-  evidenceRequired: string[];
+  title: string;
 }
 
 export interface ComplianceTemplate {
+  controls: ComplianceTemplateControl[];
+  description: string;
   id: ComplianceTemplateId;
   name: string;
   version: string;
-  description: string;
-  controls: ComplianceTemplateControl[];
 }
 
 const ISO_27001_2022: ComplianceTemplate = {
   id: "iso27001_2022",
   name: "ISO 27001",
   version: "2022",
-  description: "ISO/IEC 27001:2022 Annex A starter control set for operational deployment.",
+  description:
+    "ISO/IEC 27001:2022 Annex A starter control set for operational deployment.",
   controls: [
     {
       controlId: "A.5.1",
       title: "Policies for information security",
-      description: "Information security policy set is approved, published, and reviewed.",
+      description:
+        "Information security policy set is approved, published, and reviewed.",
       category: "Organizational",
       objective: "Define and govern enterprise security expectations.",
       controlType: "PREVENTIVE",
@@ -136,7 +142,8 @@ const NIST_CSF_2_0: ComplianceTemplate = {
   id: "nist_csf_2_0",
   name: "NIST CSF",
   version: "2.0",
-  description: "NIST Cybersecurity Framework 2.0 operational baseline controls.",
+  description:
+    "NIST Cybersecurity Framework 2.0 operational baseline controls.",
   controls: [
     {
       controlId: "GV.OC-01",
@@ -241,7 +248,8 @@ const PCI_DSS_4_0: ComplianceTemplate = {
   id: "pci_dss_4_0",
   name: "PCI DSS",
   version: "4.0",
-  description: "PCI DSS 4.0 starter control set for payment environment coverage.",
+  description:
+    "PCI DSS 4.0 starter control set for payment environment coverage.",
   controls: [
     {
       controlId: "1.2.5",
@@ -464,7 +472,9 @@ export function listComplianceTemplates() {
   }));
 }
 
-export function getComplianceTemplate(id: ComplianceTemplateId): ComplianceTemplate {
+export function getComplianceTemplate(
+  id: ComplianceTemplateId
+): ComplianceTemplate {
   const template = TEMPLATE_LIBRARY[id];
   if (!template) {
     throw new Error(`Unknown compliance template: ${id}`);
@@ -472,6 +482,8 @@ export function getComplianceTemplate(id: ComplianceTemplateId): ComplianceTempl
   return template;
 }
 
-export function isComplianceTemplateId(value: string): value is ComplianceTemplateId {
+export function isComplianceTemplateId(
+  value: string
+): value is ComplianceTemplateId {
   return value in TEMPLATE_LIBRARY;
 }

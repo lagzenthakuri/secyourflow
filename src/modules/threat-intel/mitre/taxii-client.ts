@@ -7,9 +7,9 @@ interface TaxiiDiscovery {
 }
 
 interface TaxiiObjectsResponse {
-  objects?: unknown[];
   more?: boolean;
   next?: string;
+  objects?: unknown[];
 }
 
 export class MitreTaxiiClient {
@@ -19,7 +19,7 @@ export class MitreTaxiiClient {
     return {
       timeoutMs: Math.max(this.config.ingestion.timeoutMs, 30_000),
       maxRetries: Math.max(this.config.ingestion.maxRetries, 6),
-      baseBackoffMs: Math.max(this.config.ingestion.baseBackoffMs, 1_500),
+      baseBackoffMs: Math.max(this.config.ingestion.baseBackoffMs, 1500),
     };
   }
 
@@ -69,7 +69,9 @@ export class MitreTaxiiClient {
     let nextCursor: string | null = null;
 
     for (;;) {
-      const url = new URL(`${apiRoot}/collections/${params.collectionId}/objects/`);
+      const url = new URL(
+        `${apiRoot}/collections/${params.collectionId}/objects/`
+      );
       url.searchParams.set("limit", String(limit));
       if (params.addedAfter) {
         url.searchParams.set("added_after", params.addedAfter);
@@ -90,7 +92,7 @@ export class MitreTaxiiClient {
 
       records.push(...(response.objects ?? []));
 
-      if (!response.more || !response.next) {
+      if (!(response.more && response.next)) {
         break;
       }
 

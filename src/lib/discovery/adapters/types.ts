@@ -1,26 +1,32 @@
-import type { AssetType, Criticality, Environment, AssetStatus, CloudProvider } from "@repo/database";
+import type {
+  AssetStatus,
+  AssetType,
+  CloudProvider,
+  Criticality,
+  Environment,
+} from "@repo/database";
 
 export interface DiscoveredAssetRecord {
-  externalId?: string;
-  name: string;
-  type: AssetType;
-  hostname?: string;
-  ipAddress?: string;
-  operatingSystem?: string;
-  environment?: Environment;
-  criticality?: Criticality;
-  status?: AssetStatus;
-  owner?: string;
-  department?: string;
-  location?: string;
+  cloudAccountId?: string;
   cloudProvider?: CloudProvider;
   cloudRegion?: string;
-  cloudAccountId?: string;
-  tags?: string[];
+  criticality?: Criticality;
+  department?: string;
+  environment?: Environment;
+  externalId?: string;
+  hostname?: string;
+  ipAddress?: string;
+  location?: string;
   metadata?: Record<string, unknown>;
+  name: string;
+  operatingSystem?: string;
+  owner?: string;
+  status?: AssetStatus;
+  tags?: string[];
+  type: AssetType;
 }
 
 export interface AssetDiscoveryAdapter {
-  source: string;
   listDiscoveredAssets(): Promise<DiscoveredAssetRecord[]>;
+  source: string;
 }

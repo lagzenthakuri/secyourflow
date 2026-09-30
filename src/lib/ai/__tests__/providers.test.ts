@@ -10,13 +10,14 @@ import type { AiProviderConfig } from "@/lib/ai/types";
  */
 
 function mockFetch(responseBody: unknown, ok = true) {
-  const fetchMock = vi.fn(async () =>
-    ({
-      ok,
-      status: ok ? 200 : 400,
-      json: async () => responseBody,
-      text: async () => JSON.stringify(responseBody),
-    }) as unknown as Response,
+  const fetchMock = vi.fn(
+    async () =>
+      ({
+        ok,
+        status: ok ? 200 : 400,
+        json: async () => responseBody,
+        text: async () => JSON.stringify(responseBody),
+      }) as unknown as Response
   );
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
@@ -28,7 +29,9 @@ function callsOf(fetchMock: { mock: { calls: unknown[] } }): FetchCall[] {
   return fetchMock.mock.calls as unknown as FetchCall[];
 }
 
-function bodyOf(fetchMock: { mock: { calls: unknown[] } }): Record<string, unknown> {
+function bodyOf(fetchMock: {
+  mock: { calls: unknown[] };
+}): Record<string, unknown> {
   return JSON.parse(callsOf(fetchMock)[0][1].body as string);
 }
 
@@ -83,10 +86,16 @@ describe("Anthropic adapter", () => {
 
   it("reports a policy refusal as a refusal, not a malformed response", async () => {
     // A decline is HTTP 200 with no text block.
-    mockFetch({ stop_reason: "refusal", stop_details: { category: "cyber" }, content: [] });
+    mockFetch({
+      stop_reason: "refusal",
+      stop_details: { category: "cyber" },
+      content: [],
+    });
 
     await expect(
-      AI_ADAPTERS.ANTHROPIC.chat(anthropicConfig, { messages: [{ role: "user", content: "x" }] }),
+      AI_ADAPTERS.ANTHROPIC.chat(anthropicConfig, {
+        messages: [{ role: "user", content: "x" }],
+      })
     ).rejects.toThrow(/declined/i);
   });
 
@@ -99,8 +108,8 @@ describe("Anthropic adapter", () => {
     await expect(
       AI_ADAPTERS.ANTHROPIC.chat(
         { ...anthropicConfig, apiKey: null },
-        { messages: [{ role: "user", content: "x" }] },
-      ),
+        { messages: [{ role: "user", content: "x" }] }
+      )
     ).rejects.toThrow(/ANTHROPIC_API_KEY/);
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -113,7 +122,7 @@ describe("OpenAI-compatible adapters", () => {
 
     await AI_ADAPTERS.OPENAI.chat(
       { provider: "OPENAI", model: "gpt-4o-mini", apiKey: "k" },
-      { messages: [{ role: "user", content: "hi" }], json: true },
+      { messages: [{ role: "user", content: "hi" }], json: true }
     );
 
     const body = bodyOf(fetchMock);
@@ -127,8 +136,12 @@ describe("Ollama adapter", () => {
     const fetchMock = mockFetch({ message: { content: "{}" } });
 
     await AI_ADAPTERS.OLLAMA.chat(
-      { provider: "OLLAMA", model: "llama3.1", endpoint: "http://127.0.0.1:11434" },
-      { messages: [{ role: "user", content: "hi" }], json: true },
+      {
+        provider: "OLLAMA",
+        model: "llama3.1",
+        endpoint: "http://127.0.0.1:11434",
+      },
+      { messages: [{ role: "user", content: "hi" }], json: true }
     );
 
     expect(callsOf(fetchMock)[0][0]).toBe("http://127.0.0.1:11434/api/chat");

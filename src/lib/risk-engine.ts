@@ -1,17 +1,16 @@
-import { prisma } from "@/lib/prisma";
-import { logActivity } from "@/lib/logger";
+import type { Prisma, RiskAnalysisSource } from "@prisma/client";
 import { aiChatJson } from "@/lib/ai";
-import type { Prisma } from "@prisma/client";
+import { logActivity } from "@/lib/logger";
+import { prisma } from "@/lib/prisma";
 import {
-    type RiskAnalysis,
-    type RiskInputAsset,
-    type RiskInputVulnerability,
-    deterministicAnalysis,
-    normalizeRiskAnalysis,
-    parseCVSSVector,
-    scoreFromAnalysis,
+  deterministicAnalysis,
+  normalizeRiskAnalysis,
+  parseCVSSVector,
+  type RiskAnalysis,
+  type RiskInputAsset,
+  type RiskInputVulnerability,
+  scoreFromAnalysis,
 } from "@/lib/risk/scoring";
-import type { RiskAnalysisSource } from "@prisma/client";
 
 export * from "@/lib/risk/scoring";
 
@@ -30,11 +29,11 @@ export * from "@/lib/risk/scoring";
  */
 
 function buildPrompt(
-    vulnerability: RiskInputVulnerability,
-    asset: RiskInputAsset,
-    cia: { c: number; i: number; a: number },
+  vulnerability: RiskInputVulnerability,
+  asset: RiskInputAsset,
+  cia: { c: number; i: number; a: number }
 ): string {
-    return `Assess the risk this vulnerability poses to this asset.
+  return `Assess the risk this vulnerability poses to this asset.
 
 Asset:
 - Name: ${asset.name}
@@ -83,47 +82,50 @@ Respond with JSON only:
 }
 
 async function analyzeRisk(
-    vulnerability: RiskInputVulnerability,
-    asset: RiskInputAsset,
-    organizationId: string,
+  vulnerability: RiskInputVulnerability,
+  asset: RiskInputAsset,
+  organizationId: string
 ): Promise<{ analysis: RiskAnalysis; source: RiskAnalysisSource }> {
-    const fallback = deterministicAnalysis(vulnerability, asset);
-    const cia = parseCVSSVector(vulnerability.cvssVector);
+  const fallback = deterministicAnalysis(vulnerability, asset);
+  const cia = parseCVSSVector(vulnerability.cvssVector);
 
-    const result = await aiChatJson<Record<string, unknown>>(organizationId, {
-        messages: [
-            {
-                role: "system",
-                content:
-                    "You are a cybersecurity risk analyst. Output only valid JSON matching the requested shape, with no commentary.",
-            },
-            { role: "user", content: buildPrompt(vulnerability, asset, cia) },
-        ],
-    });
+  const result = await aiChatJson<Record<string, unknown>>(organizationId, {
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a cybersecurity risk analyst. Output only valid JSON matching the requested shape, with no commentary.",
+      },
+      { role: "user", content: buildPrompt(vulnerability, asset, cia) },
+    ],
+  });
 
-    if (!result) {
-        console.warn("[RiskEngine] No AI result; using deterministic scoring.");
-        return { analysis: fallback, source: "DETERMINISTIC" };
-    }
+  if (!result) {
+    console.warn("[RiskEngine] No AI result; using deterministic scoring.");
+    return { analysis: fallback, source: "DETERMINISTIC" };
+  }
 
-    return { analysis: normalizeRiskAnalysis(result.value, fallback), source: "AI" };
+  return {
+    analysis: normalizeRiskAnalysis(result.value, fallback),
+    source: "AI",
+  };
 }
 
 export type RiskAssessmentOutcome =
-    | {
-          status: "COMPLETED";
-          riskEntryId: string;
-          riskScore: number;
-          analysisSource: RiskAnalysisSource;
-      }
-    | { status: "SKIPPED"; reason: string }
-    | { status: "FAILED"; reason: string };
+  | {
+      status: "COMPLETED";
+      riskEntryId: string;
+      riskScore: number;
+      analysisSource: RiskAnalysisSource;
+    }
+  | { status: "SKIPPED"; reason: string }
+  | { status: "FAILED"; reason: string };
 
 export interface ProcessRiskAssessmentParams {
-    vulnerabilityId: string;
-    assetId: string;
-    organizationId: string;
-    userId?: string;
+  assetId: string;
+  organizationId: string;
+  userId?: string;
+  vulnerabilityId: string;
 }
 
 /**
@@ -135,118 +137,127 @@ export interface ProcessRiskAssessmentParams {
  * take minutes.
  */
 export async function processRiskAssessment(
-    params: ProcessRiskAssessmentParams,
+  params: ProcessRiskAssessmentParams
 ): Promise<RiskAssessmentOutcome> {
-    const { vulnerabilityId, assetId, organizationId, userId } = params;
+  const { vulnerabilityId, assetId, organizationId, userId } = params;
 
-    const [asset, vulnerability] = await Promise.all([
-        prisma.asset.findFirst({ where: { id: assetId, organizationId } }),
-        prisma.vulnerability.findFirst({ where: { id: vulnerabilityId, organizationId } }),
-    ]);
+  const [asset, vulnerability] = await Promise.all([
+    prisma.asset.findFirst({ where: { id: assetId, organizationId } }),
+    prisma.vulnerability.findFirst({
+      where: { id: vulnerabilityId, organizationId },
+    }),
+  ]);
 
-    if (!asset || !vulnerability) {
-        return { status: "SKIPPED", reason: "Asset or vulnerability not found in this organization" };
-    }
+  if (!(asset && vulnerability)) {
+    return {
+      status: "SKIPPED",
+      reason: "Asset or vulnerability not found in this organization",
+    };
+  }
 
-    // One row per (organization, asset, vulnerability), enforced by a unique
-    // constraint. Re-running an assessment updates in place.
-    const entry = await prisma.riskRegister.upsert({
-        where: {
-            organizationId_assetId_vulnerabilityId: { organizationId, assetId, vulnerabilityId },
-        },
-        create: {
-            organizationId,
-            assetId,
-            vulnerabilityId,
-            riskScore: 0,
-            impactScore: 0,
-            likelihoodScore: 0,
-            status: "PROCESSING",
-            analysisSource: "DETERMINISTIC",
-            aiAnalysis: {},
-        },
-        update: { status: "PROCESSING", failureReason: null },
-        select: { id: true },
+  // One row per (organization, asset, vulnerability), enforced by a unique
+  // constraint. Re-running an assessment updates in place.
+  const entry = await prisma.riskRegister.upsert({
+    where: {
+      organizationId_assetId_vulnerabilityId: {
+        organizationId,
+        assetId,
+        vulnerabilityId,
+      },
+    },
+    create: {
+      organizationId,
+      assetId,
+      vulnerabilityId,
+      riskScore: 0,
+      impactScore: 0,
+      likelihoodScore: 0,
+      status: "PROCESSING",
+      analysisSource: "DETERMINISTIC",
+      aiAnalysis: {},
+    },
+    update: { status: "PROCESSING", failureReason: null },
+    select: { id: true },
+  });
+
+  try {
+    const { analysis, source } = await analyzeRisk(
+      {
+        title: vulnerability.title,
+        description: vulnerability.description ?? undefined,
+        cvssVector: vulnerability.cvssVector ?? undefined,
+        cveId: vulnerability.cveId ?? undefined,
+        severity: vulnerability.severity,
+        cvssScore: vulnerability.cvssScore ?? undefined,
+        isExploited: vulnerability.isExploited,
+        cisaKev: vulnerability.cisaKev,
+        epssScore: vulnerability.epssScore,
+      },
+      {
+        name: asset.name,
+        type: asset.type,
+        criticality: asset.criticality,
+        environment: asset.environment,
+        owner: asset.owner ?? undefined,
+      },
+      organizationId
+    );
+
+    const { impactScore, riskScore } = scoreFromAnalysis(analysis);
+
+    await prisma.riskRegister.update({
+      where: { id: entry.id },
+      data: {
+        riskScore,
+        impactScore,
+        likelihoodScore: analysis.likelihood_score,
+        aiAnalysis: analysis as unknown as Prisma.InputJsonValue,
+        status: "ACTIVE",
+        analysisSource: source,
+        failureReason: null,
+        treatmentOption: analysis.treatment_option || null,
+        responsibleParty: analysis.responsible_party || null,
+        currentControls: analysis.current_controls.join(", ") || null,
+        riskCategory2: analysis.risk_category_2 || null,
+        actionPlan: analysis.action_plan || null,
+        selectedControls: analysis.selected_controls.join(", ") || null,
+        remarks: analysis.remarks || null,
+        confidence: analysis.confidence,
+      },
     });
 
-    try {
-        const { analysis, source } = await analyzeRisk(
-            {
-                title: vulnerability.title,
-                description: vulnerability.description ?? undefined,
-                cvssVector: vulnerability.cvssVector ?? undefined,
-                cveId: vulnerability.cveId ?? undefined,
-                severity: vulnerability.severity,
-                cvssScore: vulnerability.cvssScore ?? undefined,
-                isExploited: vulnerability.isExploited,
-                cisaKev: vulnerability.cisaKev,
-                epssScore: vulnerability.epssScore,
-            },
-            {
-                name: asset.name,
-                type: asset.type,
-                criticality: asset.criticality,
-                environment: asset.environment,
-                owner: asset.owner ?? undefined,
-            },
-            organizationId,
-        );
+    // Mirror the score onto the vulnerability so the queue can sort by it.
+    await prisma.vulnerability
+      .update({ where: { id: vulnerabilityId }, data: { riskScore } })
+      .catch(() => undefined);
 
-        const { impactScore, riskScore } = scoreFromAnalysis(analysis);
+    await logActivity(
+      "RISK_ASSESSMENT_COMPLETED",
+      "RiskRegister",
+      entry.id,
+      null,
+      { riskScore, impactScore, analysisSource: source },
+      `Risk assessed at ${riskScore.toFixed(1)}/25 (${source === "AI" ? "AI" : "deterministic"}).`,
+      userId
+    );
 
-        await prisma.riskRegister.update({
-            where: { id: entry.id },
-            data: {
-                riskScore,
-                impactScore,
-                likelihoodScore: analysis.likelihood_score,
-                aiAnalysis: analysis as unknown as Prisma.InputJsonValue,
-                status: "ACTIVE",
-                analysisSource: source,
-                failureReason: null,
-                treatmentOption: analysis.treatment_option || null,
-                responsibleParty: analysis.responsible_party || null,
-                currentControls: analysis.current_controls.join(", ") || null,
-                riskCategory2: analysis.risk_category_2 || null,
-                actionPlan: analysis.action_plan || null,
-                selectedControls: analysis.selected_controls.join(", ") || null,
-                remarks: analysis.remarks || null,
-                confidence: analysis.confidence,
-            },
-        });
+    return {
+      status: "COMPLETED",
+      riskEntryId: entry.id,
+      riskScore,
+      analysisSource: source,
+    };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    console.error("[RiskEngine] Assessment failed:", reason);
 
-        // Mirror the score onto the vulnerability so the queue can sort by it.
-        await prisma.vulnerability
-            .update({ where: { id: vulnerabilityId }, data: { riskScore } })
-            .catch(() => undefined);
+    await prisma.riskRegister
+      .update({
+        where: { id: entry.id },
+        data: { status: "FAILED", failureReason: reason.slice(0, 1000) },
+      })
+      .catch(() => undefined);
 
-        await logActivity(
-            "RISK_ASSESSMENT_COMPLETED",
-            "RiskRegister",
-            entry.id,
-            null,
-            { riskScore, impactScore, analysisSource: source },
-            `Risk assessed at ${riskScore.toFixed(1)}/25 (${source === "AI" ? "AI" : "deterministic"}).`,
-            userId,
-        );
-
-        return {
-            status: "COMPLETED",
-            riskEntryId: entry.id,
-            riskScore,
-            analysisSource: source,
-        };
-    } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        console.error("[RiskEngine] Assessment failed:", reason);
-
-        await prisma.riskRegister
-            .update({
-                where: { id: entry.id },
-                data: { status: "FAILED", failureReason: reason.slice(0, 1000) },
-            })
-            .catch(() => undefined);
-
-        return { status: "FAILED", reason };
-    }
+    return { status: "FAILED", reason };
+  }
 }

@@ -1,24 +1,24 @@
-import { prisma } from "../../../lib/prisma";
 import type { IndicatorType, ThreatMatchStatus } from "@repo/database";
+import { prisma } from "../../../lib/prisma";
 import type { ThreatIntelConfig } from "../config";
 import { normalizeIndicatorValue } from "../ioc/normalizer";
-import { ThreatIntelRepository } from "../persistence/repository";
+import type { ThreatIntelRepository } from "../persistence/repository";
 
 interface AssetRecord {
-  id: string;
-  name: string;
-  ipAddress: string | null;
   hostname: string | null;
+  id: string;
+  ipAddress: string | null;
   metadata: unknown;
+  name: string;
 }
 
 interface IndicatorRecord {
-  id: string;
-  type: IndicatorType;
-  normalizedValue: string;
   confidence: number | null;
+  id: string;
+  normalizedValue: string;
   severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFORMATIONAL" | null;
   source: string | null;
+  type: IndicatorType;
 }
 
 function collectMetadataStringValues(value: unknown, out: string[]): void {
@@ -41,13 +41,20 @@ function collectMetadataStringValues(value: unknown, out: string[]): void {
   }
 }
 
-export function matchesIndicator(indicator: IndicatorRecord, asset: AssetRecord): Array<{ field: string; value: string }> {
+export function matchesIndicator(
+  indicator: IndicatorRecord,
+  asset: AssetRecord
+): Array<{ field: string; value: string }> {
   const matches: Array<{ field: string; value: string }> = [];
 
   const candidateValues: Array<{ field: string; value: string }> = [];
 
-  if (asset.ipAddress) candidateValues.push({ field: "ipAddress", value: asset.ipAddress });
-  if (asset.hostname) candidateValues.push({ field: "hostname", value: asset.hostname });
+  if (asset.ipAddress) {
+    candidateValues.push({ field: "ipAddress", value: asset.ipAddress });
+  }
+  if (asset.hostname) {
+    candidateValues.push({ field: "hostname", value: asset.hostname });
+  }
   candidateValues.push({ field: "name", value: asset.name });
 
   const metadataStrings: string[] = [];
@@ -57,7 +64,10 @@ export function matchesIndicator(indicator: IndicatorRecord, asset: AssetRecord)
   }
 
   for (const candidate of candidateValues) {
-    const normalizedCandidate = normalizeIndicatorValue(indicator.type, candidate.value);
+    const normalizedCandidate = normalizeIndicatorValue(
+      indicator.type,
+      candidate.value
+    );
 
     if (normalizedCandidate === indicator.normalizedValue) {
       matches.push({ field: candidate.field, value: candidate.value });
@@ -68,11 +78,11 @@ export function matchesIndicator(indicator: IndicatorRecord, asset: AssetRecord)
 }
 
 export interface CorrelationSummary {
-  scannedIndicators: number;
-  scannedAssets: number;
+  alertsGenerated: number;
   matchesCreated: number;
   matchesUpdated: number;
-  alertsGenerated: number;
+  scannedAssets: number;
+  scannedIndicators: number;
 }
 
 export class IocCorrelationEngine {
@@ -84,7 +94,12 @@ export class IocCorrelationEngine {
       indicatorValue: string;
       assetName: string;
       matchField: string;
-    }) => Promise<number> = async ({ organizationId, indicatorValue, assetName, matchField }) => {
+    }) => Promise<number> = async ({
+      organizationId,
+      indicatorValue,
+      assetName,
+      matchField,
+    }) => {
       const recipients = await prisma.user.findMany({
         where: {
           organizationId,
@@ -110,7 +125,7 @@ export class IocCorrelationEngine {
       });
 
       return recipients.length;
-    },
+    }
   ) {}
 
   async run(organizationId: string): Promise<CorrelationSummary> {
@@ -118,7 +133,9 @@ export class IocCorrelationEngine {
       includeExpired: false,
     })) as IndicatorRecord[];
 
-    const assets = (await this.repository.listOrgAssets(organizationId)) as AssetRecord[];
+    const assets = (await this.repository.listOrgAssets(
+      organizationId
+    )) as AssetRecord[];
 
     let matchesCreated = 0;
     let matchesUpdated = 0;
@@ -138,7 +155,8 @@ export class IocCorrelationEngine {
             status: "ACTIVE" as ThreatMatchStatus,
           });
 
-          const wasCreated = result.createdAt.getTime() === result.updatedAt.getTime();
+          const wasCreated =
+            result.createdAt.getTime() === result.updatedAt.getTime();
           if (wasCreated) {
             matchesCreated += 1;
           } else {
@@ -146,7 +164,10 @@ export class IocCorrelationEngine {
           }
 
           const confidence = indicator.confidence ?? 0;
-          if (wasCreated && confidence >= this.config.scoring.highConfidenceThreshold) {
+          if (
+            wasCreated &&
+            confidence >= this.config.scoring.highConfidenceThreshold
+          ) {
             alertsGenerated += await this.notifyHighConfidenceMatch({
               organizationId,
               indicatorValue: indicator.normalizedValue,

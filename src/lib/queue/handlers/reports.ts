@@ -1,16 +1,20 @@
-import type { ReportFrequency, ReportOutputFormat, ReportTemplateKey } from "@prisma/client";
+import type {
+  ReportFrequency,
+  ReportOutputFormat,
+  ReportTemplateKey,
+} from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { generateRenderedReport } from "@/lib/reporting/engine";
 import { persistReportRun } from "@/lib/reporting/archive";
+import { generateRenderedReport } from "@/lib/reporting/engine";
 
 export interface RenderReportJob {
-  organizationId: string;
-  requestedByUserId: string;
-  templateKey: string;
-  outputFormat: string;
-  name?: string;
   filters?: Record<string, unknown>;
+  name?: string;
+  organizationId: string;
+  outputFormat: string;
+  requestedByUserId: string;
   scheduleId?: string;
+  templateKey: string;
 }
 
 /**
@@ -19,13 +23,21 @@ export interface RenderReportJob {
  * Advances from `from` in whole periods until it is in the future, so a worker
  * that was down for three days produces one catch-up run rather than three.
  */
-export function nextRunAt(frequency: ReportFrequency, from: Date, now: Date = new Date()): Date {
+export function nextRunAt(
+  frequency: ReportFrequency,
+  from: Date,
+  now: Date = new Date()
+): Date {
   const next = new Date(from);
 
   const advance = () => {
-    if (frequency === "DAILY") next.setUTCDate(next.getUTCDate() + 1);
-    else if (frequency === "WEEKLY") next.setUTCDate(next.getUTCDate() + 7);
-    else next.setUTCMonth(next.getUTCMonth() + 1);
+    if (frequency === "DAILY") {
+      next.setUTCDate(next.getUTCDate() + 1);
+    } else if (frequency === "WEEKLY") {
+      next.setUTCDate(next.getUTCDate() + 7);
+    } else {
+      next.setUTCMonth(next.getUTCMonth() + 1);
+    }
   };
 
   advance();
@@ -72,9 +84,14 @@ export async function renderAndArchiveReport(job: RenderReportJob) {
       await prisma.reportSchedule
         .update({
           where: { id: job.scheduleId },
-          data: { lastRunAt: now, nextRunAt: nextRunAt(schedule.frequency, schedule.nextRunAt, now) },
+          data: {
+            lastRunAt: now,
+            nextRunAt: nextRunAt(schedule.frequency, schedule.nextRunAt, now),
+          },
         })
-        .catch((error) => console.error("[reports] failed to advance schedule:", error));
+        .catch((error) =>
+          console.error("[reports] failed to advance schedule:", error)
+        );
     }
   }
 

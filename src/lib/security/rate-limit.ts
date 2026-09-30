@@ -1,5 +1,8 @@
 import type { Redis } from "ioredis";
-import { getReadyRedisCommandClient, isRedisConfigured } from "@/lib/queue/connection";
+import {
+  getReadyRedisCommandClient,
+  isRedisConfigured,
+} from "@/lib/queue/connection";
 
 /**
  * Rate limiting for authentication and 2FA.
@@ -18,12 +21,17 @@ export type RateLimitResult =
   | { allowed: true; remaining: number }
   | { allowed: false; retryAfterSeconds: number };
 
-type Bucket = { attempts: number; resetAt: number };
+interface Bucket {
+  attempts: number;
+  resetAt: number;
+}
 
 const memoryBuckets = new Map<string, Bucket>();
 
 function sweepMemory(now: number) {
-  if (memoryBuckets.size < 512) return;
+  if (memoryBuckets.size < 512) {
+    return;
+  }
   for (const [key, bucket] of memoryBuckets) {
     if (bucket.resetAt <= now) {
       memoryBuckets.delete(key);
@@ -31,7 +39,11 @@ function sweepMemory(now: number) {
   }
 }
 
-function consumeInMemory(key: string, maxAttempts: number, windowMs: number): RateLimitResult {
+function consumeInMemory(
+  key: string,
+  maxAttempts: number,
+  windowMs: number
+): RateLimitResult {
   const now = Date.now();
   sweepMemory(now);
 
@@ -44,12 +56,18 @@ function consumeInMemory(key: string, maxAttempts: number, windowMs: number): Ra
   if (existing.attempts >= maxAttempts) {
     return {
       allowed: false,
-      retryAfterSeconds: Math.max(Math.ceil((existing.resetAt - now) / 1000), 1),
+      retryAfterSeconds: Math.max(
+        Math.ceil((existing.resetAt - now) / 1000),
+        1
+      ),
     };
   }
 
   existing.attempts += 1;
-  return { allowed: true, remaining: Math.max(maxAttempts - existing.attempts, 0) };
+  return {
+    allowed: true,
+    remaining: Math.max(maxAttempts - existing.attempts, 0),
+  };
 }
 
 const REDIS_PREFIX = "ratelimit:";
@@ -65,7 +83,7 @@ async function consumeInRedis(
   redis: Redis,
   key: string,
   maxAttempts: number,
-  windowMs: number,
+  windowMs: number
 ): Promise<RateLimitResult> {
   const redisKey = `${REDIS_PREFIX}${key}`;
 
@@ -82,7 +100,10 @@ async function consumeInRedis(
     }
     return {
       allowed: false,
-      retryAfterSeconds: Math.max(Math.ceil((ttlMs > 0 ? ttlMs : windowMs) / 1000), 1),
+      retryAfterSeconds: Math.max(
+        Math.ceil((ttlMs > 0 ? ttlMs : windowMs) / 1000),
+        1
+      ),
     };
   }
 
@@ -91,16 +112,21 @@ async function consumeInRedis(
 
 /** Upper bound on how long Redis may hold up a login or a 2FA challenge. */
 const REDIS_READY_DEADLINE_MS = 500;
-const REDIS_DEADLINE_MS = 1_500;
+const REDIS_DEADLINE_MS = 1500;
 const REDIS_FALLBACK_LOG_INTERVAL_MS = 60_000;
 let lastRedisFallbackLoggedAt = 0;
 
 function getRedisFailureMessage(error: unknown): string {
   if (error instanceof AggregateError) {
-    return error.errors.map(getRedisFailureMessage).filter(Boolean).join("; ") || "Connection failed";
+    return (
+      error.errors.map(getRedisFailureMessage).filter(Boolean).join("; ") ||
+      "Connection failed"
+    );
   }
 
-  return error instanceof Error && error.message ? error.message : "Connection failed";
+  return error instanceof Error && error.message
+    ? error.message
+    : "Connection failed";
 }
 
 /**
@@ -112,7 +138,10 @@ function getRedisFailureMessage(error: unknown): string {
  */
 function withTimeout<T>(promise: Promise<T>): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("Redis timed out")), REDIS_DEADLINE_MS);
+    const timer = setTimeout(
+      () => reject(new Error("Redis timed out")),
+      REDIS_DEADLINE_MS
+    );
     promise.then(
       (value) => {
         clearTimeout(timer);
@@ -121,7 +150,7 @@ function withTimeout<T>(promise: Promise<T>): Promise<T> {
       (error) => {
         clearTimeout(timer);
         reject(error);
-      },
+      }
     );
   });
 }
@@ -129,7 +158,7 @@ function withTimeout<T>(promise: Promise<T>): Promise<T> {
 export async function consumeRateLimit(
   key: string,
   maxAttempts: number,
-  windowMs: number,
+  windowMs: number
 ): Promise<RateLimitResult> {
   if (!isRedisConfigured()) {
     return consumeInMemory(key, maxAttempts, windowMs);
@@ -149,7 +178,9 @@ export async function consumeRateLimit(
     const now = Date.now();
     if (now - lastRedisFallbackLoggedAt > REDIS_FALLBACK_LOG_INTERVAL_MS) {
       lastRedisFallbackLoggedAt = now;
-      console.error(`[rate-limit] Redis unavailable; using in-memory limiter: ${getRedisFailureMessage(error)}`);
+      console.error(
+        `[rate-limit] Redis unavailable; using in-memory limiter: ${getRedisFailureMessage(error)}`
+      );
     }
     return consumeInMemory(key, maxAttempts, windowMs);
   }
@@ -159,7 +190,9 @@ export async function consumeRateLimit(
 export async function resetRateLimit(key: string): Promise<void> {
   memoryBuckets.delete(key);
 
-  if (!isRedisConfigured()) return;
+  if (!isRedisConfigured()) {
+    return;
+  }
 
   try {
     const redis = await getReadyRedisCommandClient(REDIS_READY_DEADLINE_MS);

@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
 import type { Setting } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { logActivity } from "@/lib/logger";
-import { extractRequestContext } from "@/lib/request-utils";
-import { requireSessionWithOrg } from "@/lib/api-auth";
+import { type NextRequest, NextResponse } from "next/server";
 import { AI_PROVIDERS } from "@/lib/ai";
+import { requireSessionWithOrg } from "@/lib/api-auth";
 import { encryptSecret } from "@/lib/crypto/sealed-secrets";
+import { logActivity } from "@/lib/logger";
+import { prisma } from "@/lib/prisma";
+import { extractRequestContext } from "@/lib/request-utils";
 
 /** Placeholder the API returns instead of a stored key. */
 export const REDACTED_SECRET = "********";
@@ -13,12 +13,11 @@ export const REDACTED_SECRET = "********";
 const PASSWORD_POLICIES = new Set(["STRONG", "MEDIUM", "BASIC"]);
 
 const DEFAULT_SETTING_VALUES = {
-    require2FA: false,
-    sessionTimeout: 30,
-    passwordPolicy: "STRONG",
-    aiRiskAssessmentEnabled: true,
+  require2FA: false,
+  sessionTimeout: 30,
+  passwordPolicy: "STRONG",
+  aiRiskAssessmentEnabled: true,
 };
-
 
 /**
  * Strips the stored AI credential from a settings row.
@@ -28,418 +27,469 @@ const DEFAULT_SETTING_VALUES = {
  * needs to know whether a key is set.
  */
 function redactSettings<T extends { aiApiKey?: string | null }>(settings: T) {
-    const { aiApiKey, ...rest } = settings;
-    return { ...rest, aiApiKey: aiApiKey ? REDACTED_SECRET : null, hasAiApiKey: Boolean(aiApiKey) };
+  const { aiApiKey, ...rest } = settings;
+  return {
+    ...rest,
+    aiApiKey: aiApiKey ? REDACTED_SECRET : null,
+    hasAiApiKey: Boolean(aiApiKey),
+  };
 }
 
 export async function GET(request: NextRequest) {
-    try {
-        const authResult = await requireSessionWithOrg(request);
-        if (!authResult.ok) return authResult.response;
-
-        const org = await prisma.organization.findUnique({
-            where: { id: authResult.context.organizationId },
-            include: { settings: true }
-        });
-        if (!org) throw new Error("No organization found");
-
-        if (!org.settings) {
-            // Create default settings if they don't exist
-            const defaultSettings = await prisma.setting.create({
-                data: {
-                    organizationId: org.id,
-                    require2FA: false,
-                }
-            });
-            return NextResponse.json({
-                ...redactSettings(defaultSettings),
-                organizationName: org.name,
-                domain: org.domain,
-                systemHealth: getSystemHealth(),
-                serverTimestamp: new Date().toISOString()
-            });
-        }
-
-        return NextResponse.json({
-            ...redactSettings(org.settings),
-            organizationName: org.name,
-            domain: org.domain,
-            systemHealth: getSystemHealth(),
-            serverTimestamp: new Date().toISOString()
-        });
-    } catch (error) {
-        console.error("Settings GET Error:", error);
-        return NextResponse.json(
-            { error: "Failed to fetch settings" },
-            { status: 500 }
-        );
+  try {
+    const authResult = await requireSessionWithOrg(request);
+    if (!authResult.ok) {
+      return authResult.response;
     }
+
+    const org = await prisma.organization.findUnique({
+      where: { id: authResult.context.organizationId },
+      include: { settings: true },
+    });
+    if (!org) {
+      throw new Error("No organization found");
+    }
+
+    if (!org.settings) {
+      // Create default settings if they don't exist
+      const defaultSettings = await prisma.setting.create({
+        data: {
+          organizationId: org.id,
+          require2FA: false,
+        },
+      });
+      return NextResponse.json({
+        ...redactSettings(defaultSettings),
+        organizationName: org.name,
+        domain: org.domain,
+        systemHealth: getSystemHealth(),
+        serverTimestamp: new Date().toISOString(),
+      });
+    }
+
+    return NextResponse.json({
+      ...redactSettings(org.settings),
+      organizationName: org.name,
+      domain: org.domain,
+      systemHealth: getSystemHealth(),
+      serverTimestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Settings GET Error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch settings" },
+      { status: 500 }
+    );
+  }
 }
 
 function getSystemHealth() {
-    return {
-        nvdApiKeyConfigured: !!process.env.NVD_API_KEY,
-        githubTokenConfigured: !!process.env.GITHUB_TOKEN,
-        openrouterConfigured: !!process.env.OPENROUTER_API_KEY,
-        nextauthSecretConfigured: !!(process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET),
-        databaseUrlConfigured: !!process.env.DATABASE_URL,
-    };
+  return {
+    nvdApiKeyConfigured: !!process.env.NVD_API_KEY,
+    githubTokenConfigured: !!process.env.GITHUB_TOKEN,
+    openrouterConfigured: !!process.env.OPENROUTER_API_KEY,
+    nextauthSecretConfigured: !!(
+      process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET
+    ),
+    databaseUrlConfigured: !!process.env.DATABASE_URL,
+  };
 }
 
 function parseRequestBody(body: unknown): Record<string, unknown> {
-    if (!body || typeof body !== "object" || Array.isArray(body)) {
-        return {};
-    }
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return {};
+  }
 
-    return body as Record<string, unknown>;
+  return body as Record<string, unknown>;
 }
 
 function parseStringField(value: unknown): string | undefined {
-    return typeof value === "string" ? value : undefined;
+  return typeof value === "string" ? value : undefined;
 }
 
 function parseBooleanField(value: unknown): boolean | undefined {
-    return typeof value === "boolean" ? value : undefined;
+  return typeof value === "boolean" ? value : undefined;
 }
 
 function parseIntegerField(value: unknown): number | undefined {
-    if (typeof value === "number" && Number.isInteger(value)) {
-        return value;
-    }
+  if (typeof value === "number" && Number.isInteger(value)) {
+    return value;
+  }
 
-    if (typeof value === "string" && value.trim() !== "") {
-        const parsed = Number.parseInt(value, 10);
-        if (Number.isInteger(parsed)) {
-            return parsed;
-        }
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isInteger(parsed)) {
+      return parsed;
     }
+  }
 
-    return undefined;
+  return undefined;
 }
 
 function getCurrentSettingValue(
-    field: keyof typeof DEFAULT_SETTING_VALUES,
-    currentSettings: Setting | null,
+  field: keyof typeof DEFAULT_SETTING_VALUES,
+  currentSettings: Setting | null
 ): boolean | number | string {
-    if (!currentSettings) {
-        return DEFAULT_SETTING_VALUES[field];
-    }
+  if (!currentSettings) {
+    return DEFAULT_SETTING_VALUES[field];
+  }
 
-    const value = currentSettings[field];
-    return value ?? DEFAULT_SETTING_VALUES[field];
+  const value = currentSettings[field];
+  return value ?? DEFAULT_SETTING_VALUES[field];
 }
 
-type BuildSettingsUpdateResult = {
-    settingsData: SettingWriteData;
-    restrictedChanges: string[];
-    validationErrors: string[];
-};
+interface BuildSettingsUpdateResult {
+  restrictedChanges: string[];
+  settingsData: SettingWriteData;
+  validationErrors: string[];
+}
 
 type SettingWriteData = Partial<
-    Pick<
-        Setting,
-        | "timezone"
-        | "dateFormat"
-        | "notifyCritical"
-        | "notifyExploited"
-        | "notifyCompliance"
-        | "notifyScan"
-        | "notifyWeekly"
-        | "require2FA"
-        | "sessionTimeout"
-        | "passwordPolicy"
-        | "aiRiskAssessmentEnabled"
-        | "aiProvider"
-        | "aiModel"
-        | "aiEndpoint"
-        | "aiApiKey"
-    >
+  Pick<
+    Setting,
+    | "timezone"
+    | "dateFormat"
+    | "notifyCritical"
+    | "notifyExploited"
+    | "notifyCompliance"
+    | "notifyScan"
+    | "notifyWeekly"
+    | "require2FA"
+    | "sessionTimeout"
+    | "passwordPolicy"
+    | "aiRiskAssessmentEnabled"
+    | "aiProvider"
+    | "aiModel"
+    | "aiEndpoint"
+    | "aiApiKey"
+  >
 >;
 
 function buildSettingsUpdateData(
-    input: Record<string, unknown>,
-    currentSettings: Setting | null,
-    isMainOfficer: boolean,
+  input: Record<string, unknown>,
+  currentSettings: Setting | null,
+  isMainOfficer: boolean
 ): BuildSettingsUpdateResult {
-    const settingsData: SettingWriteData = {};
-    const restrictedChanges: string[] = [];
-    const validationErrors: string[] = [];
+  const settingsData: SettingWriteData = {};
+  const restrictedChanges: string[] = [];
+  const validationErrors: string[] = [];
 
-    const applyRestrictedBoolean = (field: "aiRiskAssessmentEnabled") => {
-        if (!(field in input)) return;
-
-        const parsed = parseBooleanField(input[field]);
-        if (parsed === undefined) {
-            validationErrors.push(`${field} must be a boolean`);
-            return;
-        }
-
-        if (!isMainOfficer) {
-            const currentValue = getCurrentSettingValue(field, currentSettings);
-            if (parsed !== currentValue) {
-                restrictedChanges.push(field);
-            }
-            return;
-        }
-
-        settingsData[field] = parsed;
-    };
-
-    const applyMandatoryTwoFactorRequirement = () => {
-        if ("require2FA" in input) {
-            const parsed = parseBooleanField(input.require2FA);
-            if (parsed === undefined) {
-                validationErrors.push("require2FA must be a boolean");
-            } else {
-                settingsData.require2FA = parsed;
-            }
-        }
-    };
-
-    const applyRestrictedSessionTimeout = () => {
-        if (!("sessionTimeout" in input)) return;
-
-        const parsed = parseIntegerField(input.sessionTimeout);
-        if (parsed === undefined) {
-            validationErrors.push("sessionTimeout must be an integer");
-            return;
-        }
-
-        if (parsed < 5 || parsed > 1440) {
-            validationErrors.push("sessionTimeout must be between 5 and 1440");
-            return;
-        }
-
-        if (!isMainOfficer) {
-            const currentValue = getCurrentSettingValue("sessionTimeout", currentSettings);
-            if (parsed !== currentValue) {
-                restrictedChanges.push("sessionTimeout");
-            }
-            return;
-        }
-
-        settingsData.sessionTimeout = parsed;
-    };
-
-    const applyRestrictedPasswordPolicy = () => {
-        if (!("passwordPolicy" in input)) return;
-
-        const parsed = parseStringField(input.passwordPolicy);
-        if (parsed === undefined) {
-            validationErrors.push("passwordPolicy must be a string");
-            return;
-        }
-
-        if (!PASSWORD_POLICIES.has(parsed)) {
-            validationErrors.push("passwordPolicy must be one of STRONG, MEDIUM, BASIC");
-            return;
-        }
-
-        if (!isMainOfficer) {
-            const currentValue = getCurrentSettingValue("passwordPolicy", currentSettings);
-            if (parsed !== currentValue) {
-                restrictedChanges.push("passwordPolicy");
-            }
-            return;
-        }
-
-        settingsData.passwordPolicy = parsed;
-    };
-
-    const applyStringField = (field: "timezone" | "dateFormat") => {
-        if (!(field in input)) return;
-
-        const parsed = parseStringField(input[field]);
-        if (parsed === undefined) {
-            validationErrors.push(`${field} must be a string`);
-            return;
-        }
-
-        settingsData[field] = parsed;
-    };
-
-    const applyBooleanField = (
-        field: "notifyCritical" | "notifyExploited" | "notifyCompliance" | "notifyScan" | "notifyWeekly",
-    ) => {
-        if (!(field in input)) return;
-
-        const parsed = parseBooleanField(input[field]);
-        if (parsed === undefined) {
-            validationErrors.push(`${field} must be a boolean`);
-            return;
-        }
-
-        settingsData[field] = parsed;
-    };
-
-    applyStringField("timezone");
-    applyStringField("dateFormat");
-    applyBooleanField("notifyCritical");
-    applyBooleanField("notifyExploited");
-    applyBooleanField("notifyCompliance");
-    applyBooleanField("notifyScan");
-    applyBooleanField("notifyWeekly");
-
-    applyMandatoryTwoFactorRequirement();
-    applyRestrictedBoolean("aiRiskAssessmentEnabled");
-    applyRestrictedSessionTimeout();
-    applyRestrictedPasswordPolicy();
-    applyAiProviderSelection();
-
-    return { settingsData, restrictedChanges, validationErrors };
-
-    /**
-     * Persists the AI provider choice. Only the selection is stored — API keys
-     * stay in the environment and are never written to the database.
-     */
-    function applyAiProviderSelection() {
-        if ("aiProvider" in input) {
-            const value = String(input.aiProvider ?? "").toUpperCase();
-            if (!(AI_PROVIDERS as readonly string[]).includes(value)) {
-                validationErrors.push(
-                    `aiProvider must be one of: ${AI_PROVIDERS.join(", ")}`,
-                );
-            } else if (!isMainOfficer) {
-                restrictedChanges.push("aiProvider");
-            } else {
-                settingsData.aiProvider = value;
-            }
-        }
-
-        if ("aiModel" in input) {
-            const raw = input.aiModel;
-            if (raw !== null && typeof raw !== "string") {
-                validationErrors.push("aiModel must be a string or null");
-            } else if (typeof raw === "string" && raw.length > 200) {
-                validationErrors.push("aiModel is too long");
-            } else if (!isMainOfficer) {
-                restrictedChanges.push("aiModel");
-            } else {
-                settingsData.aiModel = raw ? raw.trim() : null;
-            }
-        }
-
-        if ("aiEndpoint" in input) {
-            const raw = input.aiEndpoint;
-            if (raw !== null && typeof raw !== "string") {
-                validationErrors.push("aiEndpoint must be a string or null");
-            } else if (typeof raw === "string" && raw.trim() && !/^https?:\/\//i.test(raw.trim())) {
-                validationErrors.push("aiEndpoint must be an http(s) URL");
-            } else if (!isMainOfficer) {
-                restrictedChanges.push("aiEndpoint");
-            } else {
-                settingsData.aiEndpoint = raw && raw.trim() ? raw.trim() : null;
-            }
-        }
-
-        if ("aiApiKey" in input) {
-            const raw = input.aiApiKey;
-            if (raw !== null && typeof raw !== "string") {
-                validationErrors.push("aiApiKey must be a string or null");
-            } else if (!isMainOfficer) {
-                restrictedChanges.push("aiApiKey");
-            } else if (raw === null || raw.trim().length === 0) {
-                // Explicitly cleared: fall back to the environment key.
-                settingsData.aiApiKey = null;
-            } else if (raw.trim() === REDACTED_SECRET) {
-                // The GET returns a placeholder rather than the key; echoing it
-                // back means "unchanged", not "set the key to that literal".
-            } else {
-                // Sealed with AES-256-GCM, same envelope as scanner and threat
-                // feed credentials. Never stored or logged in plaintext.
-                settingsData.aiApiKey = encryptSecret(raw.trim());
-            }
-        }
+  const applyRestrictedBoolean = (field: "aiRiskAssessmentEnabled") => {
+    if (!(field in input)) {
+      return;
     }
+
+    const parsed = parseBooleanField(input[field]);
+    if (parsed === undefined) {
+      validationErrors.push(`${field} must be a boolean`);
+      return;
+    }
+
+    if (!isMainOfficer) {
+      const currentValue = getCurrentSettingValue(field, currentSettings);
+      if (parsed !== currentValue) {
+        restrictedChanges.push(field);
+      }
+      return;
+    }
+
+    settingsData[field] = parsed;
+  };
+
+  const applyMandatoryTwoFactorRequirement = () => {
+    if ("require2FA" in input) {
+      const parsed = parseBooleanField(input.require2FA);
+      if (parsed === undefined) {
+        validationErrors.push("require2FA must be a boolean");
+      } else {
+        settingsData.require2FA = parsed;
+      }
+    }
+  };
+
+  const applyRestrictedSessionTimeout = () => {
+    if (!("sessionTimeout" in input)) {
+      return;
+    }
+
+    const parsed = parseIntegerField(input.sessionTimeout);
+    if (parsed === undefined) {
+      validationErrors.push("sessionTimeout must be an integer");
+      return;
+    }
+
+    if (parsed < 5 || parsed > 1440) {
+      validationErrors.push("sessionTimeout must be between 5 and 1440");
+      return;
+    }
+
+    if (!isMainOfficer) {
+      const currentValue = getCurrentSettingValue(
+        "sessionTimeout",
+        currentSettings
+      );
+      if (parsed !== currentValue) {
+        restrictedChanges.push("sessionTimeout");
+      }
+      return;
+    }
+
+    settingsData.sessionTimeout = parsed;
+  };
+
+  const applyRestrictedPasswordPolicy = () => {
+    if (!("passwordPolicy" in input)) {
+      return;
+    }
+
+    const parsed = parseStringField(input.passwordPolicy);
+    if (parsed === undefined) {
+      validationErrors.push("passwordPolicy must be a string");
+      return;
+    }
+
+    if (!PASSWORD_POLICIES.has(parsed)) {
+      validationErrors.push(
+        "passwordPolicy must be one of STRONG, MEDIUM, BASIC"
+      );
+      return;
+    }
+
+    if (!isMainOfficer) {
+      const currentValue = getCurrentSettingValue(
+        "passwordPolicy",
+        currentSettings
+      );
+      if (parsed !== currentValue) {
+        restrictedChanges.push("passwordPolicy");
+      }
+      return;
+    }
+
+    settingsData.passwordPolicy = parsed;
+  };
+
+  const applyStringField = (field: "timezone" | "dateFormat") => {
+    if (!(field in input)) {
+      return;
+    }
+
+    const parsed = parseStringField(input[field]);
+    if (parsed === undefined) {
+      validationErrors.push(`${field} must be a string`);
+      return;
+    }
+
+    settingsData[field] = parsed;
+  };
+
+  const applyBooleanField = (
+    field:
+      | "notifyCritical"
+      | "notifyExploited"
+      | "notifyCompliance"
+      | "notifyScan"
+      | "notifyWeekly"
+  ) => {
+    if (!(field in input)) {
+      return;
+    }
+
+    const parsed = parseBooleanField(input[field]);
+    if (parsed === undefined) {
+      validationErrors.push(`${field} must be a boolean`);
+      return;
+    }
+
+    settingsData[field] = parsed;
+  };
+
+  applyStringField("timezone");
+  applyStringField("dateFormat");
+  applyBooleanField("notifyCritical");
+  applyBooleanField("notifyExploited");
+  applyBooleanField("notifyCompliance");
+  applyBooleanField("notifyScan");
+  applyBooleanField("notifyWeekly");
+
+  applyMandatoryTwoFactorRequirement();
+  applyRestrictedBoolean("aiRiskAssessmentEnabled");
+  applyRestrictedSessionTimeout();
+  applyRestrictedPasswordPolicy();
+  applyAiProviderSelection();
+
+  return { settingsData, restrictedChanges, validationErrors };
+
+  /**
+   * Persists the AI provider choice. Only the selection is stored — API keys
+   * stay in the environment and are never written to the database.
+   */
+  function applyAiProviderSelection() {
+    if ("aiProvider" in input) {
+      const value = String(input.aiProvider ?? "").toUpperCase();
+      if (!(AI_PROVIDERS as readonly string[]).includes(value)) {
+        validationErrors.push(
+          `aiProvider must be one of: ${AI_PROVIDERS.join(", ")}`
+        );
+      } else if (isMainOfficer) {
+        settingsData.aiProvider = value;
+      } else {
+        restrictedChanges.push("aiProvider");
+      }
+    }
+
+    if ("aiModel" in input) {
+      const raw = input.aiModel;
+      if (raw !== null && typeof raw !== "string") {
+        validationErrors.push("aiModel must be a string or null");
+      } else if (typeof raw === "string" && raw.length > 200) {
+        validationErrors.push("aiModel is too long");
+      } else if (isMainOfficer) {
+        settingsData.aiModel = raw ? raw.trim() : null;
+      } else {
+        restrictedChanges.push("aiModel");
+      }
+    }
+
+    if ("aiEndpoint" in input) {
+      const raw = input.aiEndpoint;
+      if (raw !== null && typeof raw !== "string") {
+        validationErrors.push("aiEndpoint must be a string or null");
+      } else if (
+        typeof raw === "string" &&
+        raw.trim() &&
+        !/^https?:\/\//i.test(raw.trim())
+      ) {
+        validationErrors.push("aiEndpoint must be an http(s) URL");
+      } else if (isMainOfficer) {
+        settingsData.aiEndpoint = raw?.trim() ? raw.trim() : null;
+      } else {
+        restrictedChanges.push("aiEndpoint");
+      }
+    }
+
+    if ("aiApiKey" in input) {
+      const raw = input.aiApiKey;
+      if (raw !== null && typeof raw !== "string") {
+        validationErrors.push("aiApiKey must be a string or null");
+      } else if (!isMainOfficer) {
+        restrictedChanges.push("aiApiKey");
+      } else if (raw === null || raw.trim().length === 0) {
+        // Explicitly cleared: fall back to the environment key.
+        settingsData.aiApiKey = null;
+      } else if (raw.trim() === REDACTED_SECRET) {
+        // The GET returns a placeholder rather than the key; echoing it
+        // back means "unchanged", not "set the key to that literal".
+      } else {
+        // Sealed with AES-256-GCM, same envelope as scanner and threat
+        // feed credentials. Never stored or logged in plaintext.
+        settingsData.aiApiKey = encryptSecret(raw.trim());
+      }
+    }
+  }
 }
 
 export async function POST(request: NextRequest) {
-    try {
-        const authResult = await requireSessionWithOrg(request, { allowedRoles: ["MAIN_OFFICER"] });
-        if (!authResult.ok) return authResult.response;
-
-        const ctx = extractRequestContext(request);
-        const body = parseRequestBody(await request.json());
-
-        const org = await prisma.organization.findUnique({
-            where: { id: authResult.context.organizationId },
-            include: { settings: true },
-        });
-        if (!org) throw new Error("No organization found");
-
-        const organizationNameRaw = parseStringField(body.organizationName);
-        const requestedOrganizationName =
-            organizationNameRaw === undefined ? undefined : organizationNameRaw.trim();
-        const requestedDomainRaw = body.domain;
-        const requestedDomain =
-            requestedDomainRaw === null
-                ? null
-                : typeof requestedDomainRaw === "string"
-                    ? (requestedDomainRaw.trim() || null)
-                    : undefined;
-
-        if (requestedOrganizationName !== undefined && requestedOrganizationName.length === 0) {
-            return NextResponse.json(
-                { error: "organizationName cannot be empty" },
-                { status: 400 },
-            );
-        }
-
-        const wantsOrganizationNameChange =
-            requestedOrganizationName !== undefined && requestedOrganizationName !== org.name;
-        const wantsDomainChange =
-            requestedDomain !== undefined && requestedDomain !== (org.domain ?? null);
-
-        const { settingsData, validationErrors } = buildSettingsUpdateData(
-            body,
-            org.settings,
-            true,
-        );
-
-        if (validationErrors.length > 0) {
-            return NextResponse.json(
-                { error: validationErrors.join(". ") },
-                { status: 400 },
-            );
-        }
-
-        // Update organization fields when a value changed.
-        if (wantsOrganizationNameChange || wantsDomainChange) {
-            await prisma.organization.update({
-                where: { id: org.id },
-                data: {
-                    ...(wantsOrganizationNameChange ? { name: requestedOrganizationName as string } : {}),
-                    ...(wantsDomainChange ? { domain: requestedDomain } : {}),
-                }
-            });
-        }
-
-        const updatedSettings = await prisma.setting.upsert({
-            where: { organizationId: org.id },
-            update: settingsData,
-            create: {
-                ...settingsData,
-                organizationId: org.id,
-            }
-        });
-
-        await logActivity(
-            "Settings updated",
-            "settings",
-            updatedSettings.id,
-            null,
-            null,
-            `Settings updated by ${authResult.context.userId}`,
-            authResult.context.userId,
-            ctx,
-        );
-
-        return NextResponse.json(redactSettings(updatedSettings));
-    } catch (error) {
-        console.error("Settings POST Error:", error);
-        return NextResponse.json(
-            { error: "Failed to update settings" },
-            { status: 400 }
-        );
+  try {
+    const authResult = await requireSessionWithOrg(request, {
+      allowedRoles: ["MAIN_OFFICER"],
+    });
+    if (!authResult.ok) {
+      return authResult.response;
     }
+
+    const ctx = extractRequestContext(request);
+    const body = parseRequestBody(await request.json());
+
+    const org = await prisma.organization.findUnique({
+      where: { id: authResult.context.organizationId },
+      include: { settings: true },
+    });
+    if (!org) {
+      throw new Error("No organization found");
+    }
+
+    const organizationNameRaw = parseStringField(body.organizationName);
+    const requestedOrganizationName =
+      organizationNameRaw === undefined
+        ? undefined
+        : organizationNameRaw.trim();
+    const requestedDomainRaw = body.domain;
+    const requestedDomain =
+      requestedDomainRaw === null
+        ? null
+        : typeof requestedDomainRaw === "string"
+          ? requestedDomainRaw.trim() || null
+          : undefined;
+
+    if (
+      requestedOrganizationName !== undefined &&
+      requestedOrganizationName.length === 0
+    ) {
+      return NextResponse.json(
+        { error: "organizationName cannot be empty" },
+        { status: 400 }
+      );
+    }
+
+    const wantsOrganizationNameChange =
+      requestedOrganizationName !== undefined &&
+      requestedOrganizationName !== org.name;
+    const wantsDomainChange =
+      requestedDomain !== undefined && requestedDomain !== (org.domain ?? null);
+
+    const { settingsData, validationErrors } = buildSettingsUpdateData(
+      body,
+      org.settings,
+      true
+    );
+
+    if (validationErrors.length > 0) {
+      return NextResponse.json(
+        { error: validationErrors.join(". ") },
+        { status: 400 }
+      );
+    }
+
+    // Update organization fields when a value changed.
+    if (wantsOrganizationNameChange || wantsDomainChange) {
+      await prisma.organization.update({
+        where: { id: org.id },
+        data: {
+          ...(wantsOrganizationNameChange
+            ? { name: requestedOrganizationName as string }
+            : {}),
+          ...(wantsDomainChange ? { domain: requestedDomain } : {}),
+        },
+      });
+    }
+
+    const updatedSettings = await prisma.setting.upsert({
+      where: { organizationId: org.id },
+      update: settingsData,
+      create: {
+        ...settingsData,
+        organizationId: org.id,
+      },
+    });
+
+    await logActivity(
+      "Settings updated",
+      "settings",
+      updatedSettings.id,
+      null,
+      null,
+      `Settings updated by ${authResult.context.userId}`,
+      authResult.context.userId,
+      ctx
+    );
+
+    return NextResponse.json(redactSettings(updatedSettings));
+  } catch (error) {
+    console.error("Settings POST Error:", error);
+    return NextResponse.json(
+      { error: "Failed to update settings" },
+      { status: 400 }
+    );
+  }
 }

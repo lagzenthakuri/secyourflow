@@ -1,4 +1,3 @@
-import { prisma } from "../../../lib/prisma";
 import type {
   AttackMappingSource,
   IndicatorType,
@@ -8,6 +7,7 @@ import type {
   ThreatFeedType,
   ThreatMatchStatus,
 } from "@repo/database";
+import { prisma } from "../../../lib/prisma";
 import type {
   AttackTechniqueMappingInput,
   NormalizedIndicatorInput,
@@ -19,15 +19,14 @@ import type {
 type PrismaClientLike = typeof prisma;
 
 export interface IndicatorListFilters {
-  type?: IndicatorType;
-  severity?: Severity;
-  search?: string;
   includeExpired?: boolean;
+  search?: string;
+  severity?: Severity;
+  type?: IndicatorType;
 }
 
 export class ThreatIntelRepository {
   constructor(private readonly db: PrismaClientLike = prisma) {}
-
 
   async upsertFeed(organizationId: string, input: ThreatFeedUpsertInput) {
     return this.db.threatFeed.upsert({
@@ -75,15 +74,19 @@ export class ThreatIntelRepository {
     });
   }
 
-  async updateFeed(organizationId: string, feedId: string, data: {
-    isActive?: boolean;
-    syncInterval?: number;
-    checkpoint?: string | null;
-    apiKey?: string | null;
-    url?: string | null;
-    format?: ThreatFeedFormat;
-    lastSync?: Date;
-  }) {
+  async updateFeed(
+    organizationId: string,
+    feedId: string,
+    data: {
+      isActive?: boolean;
+      syncInterval?: number;
+      checkpoint?: string | null;
+      apiKey?: string | null;
+      url?: string | null;
+      format?: ThreatFeedFormat;
+      lastSync?: Date;
+    }
+  ) {
     const existing = await this.db.threatFeed.findFirst({
       where: {
         id: feedId,
@@ -125,7 +128,11 @@ export class ThreatIntelRepository {
     });
   }
 
-  async upsertIndicator(organizationId: string, feedId: string, indicator: NormalizedIndicatorInput) {
+  async upsertIndicator(
+    organizationId: string,
+    feedId: string,
+    indicator: NormalizedIndicatorInput
+  ) {
     const whereKey = {
       organizationId_type_normalizedValue_feedId: {
         organizationId,
@@ -180,7 +187,10 @@ export class ThreatIntelRepository {
     };
   }
 
-  async listIndicators(organizationId: string, filters: IndicatorListFilters = {}) {
+  async listIndicators(
+    organizationId: string,
+    filters: IndicatorListFilters = {}
+  ) {
     const where: Prisma.ThreatIndicatorWhereInput = {
       organizationId,
       ...(filters.type ? { type: filters.type } : {}),
@@ -200,10 +210,7 @@ export class ThreatIntelRepository {
 
     if (!filters.includeExpired) {
       andConditions.push({
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gt: new Date() } },
-        ],
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
       });
     }
 
@@ -281,7 +288,11 @@ export class ThreatIntelRepository {
     });
   }
 
-  async setMatchStatus(organizationId: string, matchId: string, status: ThreatMatchStatus) {
+  async setMatchStatus(
+    organizationId: string,
+    matchId: string,
+    status: ThreatMatchStatus
+  ) {
     const existing = await this.db.threatIndicatorMatch.findFirst({
       where: {
         id: matchId,
@@ -472,8 +483,12 @@ export class ThreatIntelRepository {
     });
   }
 
-  async upsertVulnerabilityTechniqueMapping(input: AttackTechniqueMappingInput) {
-    const technique = await this.findTechniqueByExternalId(input.techniqueExternalId);
+  async upsertVulnerabilityTechniqueMapping(
+    input: AttackTechniqueMappingInput
+  ) {
+    const technique = await this.findTechniqueByExternalId(
+      input.techniqueExternalId
+    );
     if (!technique) {
       return null;
     }
@@ -561,7 +576,10 @@ export class ThreatIntelRepository {
         tactic: true,
         technique: true,
       },
-      orderBy: [{ tactic: { externalId: "asc" } }, { technique: { externalId: "asc" } }],
+      orderBy: [
+        { tactic: { externalId: "asc" } },
+        { technique: { externalId: "asc" } },
+      ],
     });
   }
 
@@ -592,10 +610,7 @@ export class ThreatIntelRepository {
         techniqueId: {
           not: null,
         },
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gt: new Date() } },
-        ],
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
       },
       select: {
         techniqueId: true,
@@ -690,7 +705,11 @@ export class ThreatIntelRepository {
     });
   }
 
-  async markStaleFeedRuns(organizationId: string, feedId: string, staleBefore: Date) {
+  async markStaleFeedRuns(
+    organizationId: string,
+    feedId: string,
+    staleBefore: Date
+  ) {
     return this.db.threatFeedRun.updateMany({
       where: {
         organizationId,
@@ -703,13 +722,15 @@ export class ThreatIntelRepository {
       data: {
         status: "PARTIAL",
         finishedAt: new Date(),
-        errors: ["Run marked stale after exceeding execution window"] as Prisma.InputJsonValue,
+        errors: [
+          "Run marked stale after exceeding execution window",
+        ] as Prisma.InputJsonValue,
       },
     });
   }
 
   async seedDefaultFeeds(organizationId: string) {
-    const defaults: Array<ThreatFeedUpsertInput> = [
+    const defaults: ThreatFeedUpsertInput[] = [
       {
         name: "AlienVault OTX",
         source: "ALIENVAULT_OTX",
@@ -744,7 +765,7 @@ export class ThreatIntelRepository {
         type: "THREAT_ACTOR",
         format: "TAXII",
         url: "https://attack-taxii.mitre.org/taxii2/",
-        syncInterval: 86400,
+        syncInterval: 86_400,
       },
     ];
 
@@ -787,7 +808,9 @@ export class ThreatIntelRepository {
 
 export function coerceFeedType(value: string): ThreatFeedType {
   const normalized = value.toUpperCase();
-  if (["CVE", "MALWARE", "IOC", "THREAT_ACTOR", "CAMPAIGN"].includes(normalized)) {
+  if (
+    ["CVE", "MALWARE", "IOC", "THREAT_ACTOR", "CAMPAIGN"].includes(normalized)
+  ) {
     return normalized as ThreatFeedType;
   }
 

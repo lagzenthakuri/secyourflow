@@ -6,14 +6,23 @@ function fail(message: string): never {
 }
 
 async function expectBlocked(url: string) {
-  const result = await validateOutboundUrl(url, { allowInsecureHttp: true, resolveDns: false });
+  const result = await validateOutboundUrl(url, {
+    allowInsecureHttp: true,
+    resolveDns: false,
+  });
   if (result.ok) {
     fail(`expected blocked: ${url}`);
   }
 }
 
-async function expectAllowed(url: string, opts?: Parameters<typeof validateOutboundUrl>[1]) {
-  const result = await validateOutboundUrl(url, { resolveDns: false, ...(opts ?? {}) });
+async function expectAllowed(
+  url: string,
+  opts?: Parameters<typeof validateOutboundUrl>[1]
+) {
+  const result = await validateOutboundUrl(url, {
+    resolveDns: false,
+    ...(opts ?? {}),
+  });
   if (!result.ok) {
     fail(`expected allowed: ${url} (${result.error})`);
   }
@@ -35,14 +44,21 @@ async function main() {
 
   // https enforced by default
   await expectAllowed("https://1.1.1.1/");
-  const httpDefault = await validateOutboundUrl("http://1.1.1.1/", { resolveDns: false });
+  const httpDefault = await validateOutboundUrl("http://1.1.1.1/", {
+    resolveDns: false,
+  });
   if (httpDefault.ok) {
     fail("expected http:// blocked by default");
   }
 
   // Optional hostname allowlist
-  await expectAllowed("https://feeds.example.com/data.json", { allowedHosts: ["example.com"] });
-  const denied = await validateOutboundUrl("https://evil.com/data.json", { allowedHosts: ["example.com"], resolveDns: false });
+  await expectAllowed("https://feeds.example.com/data.json", {
+    allowedHosts: ["example.com"],
+  });
+  const denied = await validateOutboundUrl("https://evil.com/data.json", {
+    allowedHosts: ["example.com"],
+    resolveDns: false,
+  });
   if (denied.ok) {
     fail("expected allowlist deny");
   }

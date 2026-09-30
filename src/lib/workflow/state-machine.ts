@@ -13,15 +13,23 @@ const transitionMap: Record<WorkflowState, WorkflowState[]> = {
  * transitions the API will accept, rather than keeping its own copy of the
  * table that can silently drift out of step.
  */
-export function allowedWorkflowTransitions(from: WorkflowState): WorkflowState[] {
+export function allowedWorkflowTransitions(
+  from: WorkflowState
+): WorkflowState[] {
   return transitionMap[from] ?? [];
 }
 
-export function canTransitionWorkflowState(from: WorkflowState, to: WorkflowState) {
+export function canTransitionWorkflowState(
+  from: WorkflowState,
+  to: WorkflowState
+) {
   return allowedWorkflowTransitions(from).includes(to);
 }
 
-export function assertValidWorkflowTransition(from: WorkflowState, to: WorkflowState) {
+export function assertValidWorkflowTransition(
+  from: WorkflowState,
+  to: WorkflowState
+) {
   if (!canTransitionWorkflowState(from, to)) {
     throw new Error(`Invalid workflow transition from ${from} to ${to}`);
   }
@@ -29,7 +37,7 @@ export function assertValidWorkflowTransition(from: WorkflowState, to: WorkflowS
 
 export function applyWorkflowStateTimestamps(
   nextState: WorkflowState,
-  now: Date,
+  now: Date
 ): {
   triagedAt?: Date;
   resolvedAt?: Date;

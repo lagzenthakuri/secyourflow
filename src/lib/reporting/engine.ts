@@ -2,37 +2,56 @@ import { prisma } from "@/lib/prisma";
 import { renderCsvReport } from "@/lib/reporting/renderers/csv";
 import { renderPdfReport } from "@/lib/reporting/renderers/pdf";
 import { renderXlsxReport } from "@/lib/reporting/renderers/xlsx";
-import type { ReportContext, RenderedReport, TabularReportData } from "@/lib/reporting/types";
+import type {
+  RenderedReport,
+  ReportContext,
+  TabularReportData,
+} from "@/lib/reporting/types";
 import { templateLabel } from "@/lib/reporting/types";
 
 function withDefaultRows(data: TabularReportData): TabularReportData {
-  if (data.rows.length > 0) return data;
+  if (data.rows.length > 0) {
+    return data;
+  }
   return {
     ...data,
     rows: [["No data", "-"]],
   };
 }
 
-function buildFileBase(templateKey: ReportContext["templateKey"], nowIso: string) {
+function buildFileBase(
+  templateKey: ReportContext["templateKey"],
+  nowIso: string
+) {
   const datePart = nowIso.slice(0, 10);
   return `${templateKey.toLowerCase()}_${datePart}`;
 }
 
-export async function buildTabularReportData(context: ReportContext): Promise<TabularReportData> {
+export async function buildTabularReportData(
+  context: ReportContext
+): Promise<TabularReportData> {
   const generatedAt = new Date().toISOString();
   const title = templateLabel(context.templateKey);
 
   if (context.templateKey === "EXECUTIVE_POSTURE") {
-    const [assetCount, vulnCount, criticalVulnCount, openRiskCount] = await Promise.all([
-      prisma.asset.count({ where: { organizationId: context.organizationId } }),
-      prisma.vulnerability.count({ where: { organizationId: context.organizationId } }),
-      prisma.vulnerability.count({
-        where: { organizationId: context.organizationId, severity: "CRITICAL" },
-      }),
-      prisma.riskRegister.count({
-        where: { organizationId: context.organizationId, status: "ACTIVE" },
-      }),
-    ]);
+    const [assetCount, vulnCount, criticalVulnCount, openRiskCount] =
+      await Promise.all([
+        prisma.asset.count({
+          where: { organizationId: context.organizationId },
+        }),
+        prisma.vulnerability.count({
+          where: { organizationId: context.organizationId },
+        }),
+        prisma.vulnerability.count({
+          where: {
+            organizationId: context.organizationId,
+            severity: "CRITICAL",
+          },
+        }),
+        prisma.riskRegister.count({
+          where: { organizationId: context.organizationId, status: "ACTIVE" },
+        }),
+      ]);
 
     const topRisks = await prisma.riskRegister.findMany({
       where: { organizationId: context.organizationId },
@@ -75,9 +94,7 @@ export async function buildTabularReportData(context: ReportContext): Promise<Ta
     return withDefaultRows({
       title,
       generatedAt,
-      summary: [
-        { label: "Snapshots", value: snapshots.length },
-      ],
+      summary: [{ label: "Snapshots", value: snapshots.length }],
       headers: [
         "Date",
         "Overall Risk",
@@ -148,14 +165,31 @@ export async function buildTabularReportData(context: ReportContext): Promise<Ta
       title,
       generatedAt,
       summary: [{ label: "Frameworks", value: frameworks.length }],
-      headers: ["Framework", "Total Controls", "Compliant", "Non-Compliant", "Coverage %"],
+      headers: [
+        "Framework",
+        "Total Controls",
+        "Compliant",
+        "Non-Compliant",
+        "Coverage %",
+      ],
       rows: frameworks.map((framework) => {
         const total = framework.controls.length;
-        const compliant = framework.controls.filter((c) => c.status === "COMPLIANT").length;
-        const nonCompliant = framework.controls.filter((c) => c.status === "NON_COMPLIANT").length;
-        const coverage = total > 0 ? ((compliant / total) * 100).toFixed(1) : "0.0";
+        const compliant = framework.controls.filter(
+          (c) => c.status === "COMPLIANT"
+        ).length;
+        const nonCompliant = framework.controls.filter(
+          (c) => c.status === "NON_COMPLIANT"
+        ).length;
+        const coverage =
+          total > 0 ? ((compliant / total) * 100).toFixed(1) : "0.0";
 
-        return [framework.name, String(total), String(compliant), String(nonCompliant), coverage];
+        return [
+          framework.name,
+          String(total),
+          String(compliant),
+          String(nonCompliant),
+          coverage,
+        ];
       }),
     });
   }
@@ -240,7 +274,9 @@ export async function buildTabularReportData(context: ReportContext): Promise<Ta
   const vulnerabilities = await prisma.vulnerability.findMany({
     where: {
       organizationId: context.organizationId,
-      ...(context.templateKey === "PENTEST_FINDINGS" ? { source: "MANUAL" } : {}),
+      ...(context.templateKey === "PENTEST_FINDINGS"
+        ? { source: "MANUAL" }
+        : {}),
     },
     include: {
       assignedUser: {
@@ -283,7 +319,10 @@ export async function buildTabularReportData(context: ReportContext): Promise<Ta
   });
 }
 
-export async function renderReport(context: ReportContext, data: TabularReportData): Promise<RenderedReport> {
+export async function renderReport(
+  context: ReportContext,
+  data: TabularReportData
+): Promise<RenderedReport> {
   const base = buildFileBase(context.templateKey, data.generatedAt);
 
   if (context.outputFormat === "CSV") {

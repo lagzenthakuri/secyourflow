@@ -1,8 +1,10 @@
-import { prisma } from "../src/lib/prisma";
 import { importComplianceTemplate } from "../src/lib/compliance-template-importer";
+import { prisma } from "../src/lib/prisma";
 
 async function main() {
-  const organization = await prisma.organization.findFirst({ orderBy: { createdAt: "asc" } });
+  const organization = await prisma.organization.findFirst({
+    orderBy: { createdAt: "asc" },
+  });
   if (!organization) {
     throw new Error("No organization found.");
   }

@@ -2,13 +2,13 @@ import type { ThreatFeedType } from "@repo/database";
 import type { NormalizedIndicatorInput } from "../types";
 
 export interface ThreatFeedAdapterHealth {
-  ok: boolean;
   message: string;
+  ok: boolean;
 }
 
 export interface AdapterFetchResult<TRaw> {
-  records: TRaw[];
   checkpoint: string | null;
+  records: TRaw[];
   warnings: string[];
 }
 
@@ -18,9 +18,12 @@ export interface AdapterContext {
 }
 
 export interface ThreatFeedAdapter<TRaw = unknown> {
-  readonly source: string;
   readonly feedType: ThreatFeedType;
   fetchSince(checkpoint: string | null): Promise<AdapterFetchResult<TRaw>>;
-  normalize(record: TRaw, context: AdapterContext): NormalizedIndicatorInput | null;
   health(): Promise<ThreatFeedAdapterHealth>;
+  normalize(
+    record: TRaw,
+    context: AdapterContext
+  ): NormalizedIndicatorInput | null;
+  readonly source: string;
 }

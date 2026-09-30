@@ -1,14 +1,16 @@
-import { prisma } from "@/lib/prisma";
-import { processRiskAssessment } from "@/lib/risk-engine";
-import { updateComplianceFromRisk } from "@/lib/compliance-engine";
+import {
+  runScheduledComplianceAssessments,
+  updateComplianceFromRisk,
+} from "@/lib/compliance-engine";
 import {
   runContinuousComplianceAudit,
   runContinuousComplianceAuditForAllOrganizations,
 } from "@/lib/evidence-engine";
-import { runScheduledComplianceAssessments } from "@/lib/compliance-engine";
 import { notifySecurityTeam } from "@/lib/notifications/service";
+import { prisma } from "@/lib/prisma";
 import type { JobHandlerMap } from "@/lib/queue/handlers";
 import type { RiskAnalysis } from "@/lib/risk-engine";
+import { processRiskAssessment } from "@/lib/risk-engine";
 
 /**
  * Job implementations.
@@ -17,7 +19,12 @@ import type { RiskAnalysis } from "@/lib/risk-engine";
  * pull the scan, ingestion and AI engines into their bundle.
  */
 export const jobHandlers: JobHandlerMap = {
-  "risk.assess": async ({ organizationId, vulnerabilityId, assetId, userId }) => {
+  "risk.assess": async ({
+    organizationId,
+    vulnerabilityId,
+    assetId,
+    userId,
+  }) => {
     const outcome = await processRiskAssessment({
       organizationId,
       vulnerabilityId,
@@ -38,7 +45,11 @@ export const jobHandlers: JobHandlerMap = {
       await enqueue(
         "risk.propagate-compliance",
         { organizationId, riskEntryId: outcome.riskEntryId },
-        { organizationId, entityType: "RiskRegister", entityId: outcome.riskEntryId },
+        {
+          organizationId,
+          entityType: "RiskRegister",
+          entityId: outcome.riskEntryId,
+        }
       );
     }
 
@@ -88,7 +99,7 @@ export const jobHandlers: JobHandlerMap = {
         cveId: entry.vulnerability.cveId ?? undefined,
         severity: entry.vulnerability.severity,
       },
-      { id: entry.asset.id, name: entry.asset.name },
+      { id: entry.asset.id, name: entry.asset.name }
     );
 
     return { propagated: true };
@@ -114,7 +125,11 @@ export const jobHandlers: JobHandlerMap = {
           target: payload.target,
           userId: payload.userId,
         },
-        { organizationId: payload.organizationId, entityType: "ScanResult", entityId: result.scanResultId },
+        {
+          organizationId: payload.organizationId,
+          entityType: "ScanResult",
+          entityId: result.scanResultId,
+        }
       );
     }
 
@@ -127,7 +142,9 @@ export const jobHandlers: JobHandlerMap = {
   },
 
   "cve.ingest": async ({ source }) => {
-    const { IngestionOrchestrator } = await import("@/modules/cve-ingestion/orchestrator");
+    const { IngestionOrchestrator } = await import(
+      "@/modules/cve-ingestion/orchestrator"
+    );
     const orchestrator = new IngestionOrchestrator();
 
     switch (source) {
@@ -142,10 +159,21 @@ export const jobHandlers: JobHandlerMap = {
     }
   },
 
-  "threat.sync": async ({ organizationId, source, includeMitre, includeCorrelation }) => {
-    const { ThreatIntelOrchestrator } = await import("@/modules/threat-intel/orchestrator");
+  "threat.sync": async ({
+    organizationId,
+    source,
+    includeMitre,
+    includeCorrelation,
+  }) => {
+    const { ThreatIntelOrchestrator } = await import(
+      "@/modules/threat-intel/orchestrator"
+    );
     const orchestrator = new ThreatIntelOrchestrator();
-    return orchestrator.sync(organizationId, { source, includeMitre, includeCorrelation });
+    return orchestrator.sync(organizationId, {
+      source,
+      includeMitre,
+      includeCorrelation,
+    });
   },
 
   "compliance.assess-organization": async ({ organizationId }) =>
@@ -157,17 +185,23 @@ export const jobHandlers: JobHandlerMap = {
       : runContinuousComplianceAuditForAllOrganizations(),
 
   "report.render": async (payload) => {
-    const { renderAndArchiveReport } = await import("@/lib/queue/handlers/reports");
+    const { renderAndArchiveReport } = await import(
+      "@/lib/queue/handlers/reports"
+    );
     return renderAndArchiveReport(payload);
   },
 
   "maintenance.reap-stale-risk-entries": async () => {
-    const { reapStaleRiskEntries } = await import("@/lib/queue/handlers/maintenance");
+    const { reapStaleRiskEntries } = await import(
+      "@/lib/queue/handlers/maintenance"
+    );
     return reapStaleRiskEntries();
   },
 
   "maintenance.run-due-report-schedules": async () => {
-    const { runDueReportSchedules } = await import("@/lib/queue/handlers/maintenance");
+    const { runDueReportSchedules } = await import(
+      "@/lib/queue/handlers/maintenance"
+    );
     return runDueReportSchedules();
   },
 

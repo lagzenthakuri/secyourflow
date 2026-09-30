@@ -1,15 +1,25 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { type NextRequest, NextResponse } from "next/server";
 import { requireSessionWithOrg } from "@/lib/api-auth";
-import { exportResponse, renderTabularExport } from "@/lib/reporting/export-utils";
+import { prisma } from "@/lib/prisma";
+import {
+  exportResponse,
+  renderTabularExport,
+} from "@/lib/reporting/export-utils";
 
 export async function GET(request: NextRequest) {
   const authResult = await requireSessionWithOrg(request);
-  if (!authResult.ok) return authResult.response;
+  if (!authResult.ok) {
+    return authResult.response;
+  }
 
-  const format = (request.nextUrl.searchParams.get("format") || "csv").toLowerCase();
+  const format = (
+    request.nextUrl.searchParams.get("format") || "csv"
+  ).toLowerCase();
   if (format !== "csv" && format !== "xlsx") {
-    return NextResponse.json({ error: "format must be csv or xlsx" }, { status: 400 });
+    return NextResponse.json(
+      { error: "format must be csv or xlsx" },
+      { status: 400 }
+    );
   }
 
   const assets = await prisma.asset.findMany({
@@ -27,7 +37,8 @@ export async function GET(request: NextRequest) {
       { label: "Total Assets", value: assets.length },
       {
         label: "Critical Assets",
-        value: assets.filter((asset) => asset.criticality === "CRITICAL").length,
+        value: assets.filter((asset) => asset.criticality === "CRITICAL")
+          .length,
       },
     ],
     headers: [
@@ -56,6 +67,10 @@ export async function GET(request: NextRequest) {
     ]),
   };
 
-  const rendered = await renderTabularExport(data, format, `assets_${data.generatedAt.slice(0, 10)}`);
+  const rendered = await renderTabularExport(
+    data,
+    format,
+    `assets_${data.generatedAt.slice(0, 10)}`
+  );
   return exportResponse(rendered);
 }

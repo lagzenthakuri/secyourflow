@@ -14,7 +14,11 @@ function neutralizeCsvFormula(value: string): string {
 
 function toCsvValue(value: string): string {
   const normalized = neutralizeCsvFormula(value);
-  if (normalized.includes(",") || normalized.includes('"') || normalized.includes("\n")) {
+  if (
+    normalized.includes(",") ||
+    normalized.includes('"') ||
+    normalized.includes("\n")
+  ) {
     return `"${normalized.replace(/"/g, '""')}"`;
   }
 
@@ -33,9 +37,12 @@ export async function GET(request: Request) {
     const includeExpired = searchParams.get("includeExpired") === "true";
 
     const repository = new ThreatIntelRepository();
-    const indicators = await repository.listIndicators(authResult.context.organizationId, {
-      includeExpired,
-    });
+    const indicators = await repository.listIndicators(
+      authResult.context.organizationId,
+      {
+        includeExpired,
+      }
+    );
 
     if (format === "csv") {
       const headers = [
@@ -92,7 +99,7 @@ export async function GET(request: Request) {
         error: "Failed to export IOCs",
         message: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

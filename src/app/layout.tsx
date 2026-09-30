@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
 import "@designcodeio/threeui/style.css";
+import { AnalyticsProvider } from "@repo/analytics/provider";
+import { TooltipProvider } from "@repo/design-system/components/ui/tooltip";
+import { fonts } from "@repo/design-system/lib/fonts";
+import { Toolbar } from "@repo/feature-flags/components/toolbar";
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import { NativeFormValidation } from "@/components/providers/NativeFormValidation";
 import { NavigationProgress } from "@/components/providers/NavigationProgress";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { UiFeedbackProvider } from "@/components/providers/UiFeedbackProvider";
-import { NativeFormValidation } from "@/components/providers/NativeFormValidation";
-import { TooltipProvider } from "@repo/design-system/components/ui/tooltip";
-import { AnalyticsProvider } from "@repo/analytics/provider";
-import { Toolbar } from "@repo/feature-flags/components/toolbar";
-import { fonts } from "@repo/design-system/lib/fonts";
 
 export const metadata: Metadata = {
   title: "SecYourFlow | Cyber Risk Operations Platform",
@@ -63,7 +63,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${fonts} theme-dark dark`} data-scroll-behavior="smooth" suppressHydrationWarning>
+    <html
+      className={fonts}
+      data-scroll-behavior="smooth"
+      lang="en"
+      suppressHydrationWarning
+    >
       <body className="antialiased">
         <AnalyticsProvider>
           <Script id="theme-bootstrap" strategy="beforeInteractive">

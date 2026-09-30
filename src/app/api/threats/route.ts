@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { requireThreatIntelContext } from "@/modules/threat-intel/auth";
-import { ThreatIntelQueryService } from "@/modules/threat-intel/query-service";
-import { prisma } from "@/lib/prisma";
 import {
   clearDatabaseUnavailable,
   isDatabaseUnavailableError,
   isDatabaseUnavailableInCooldown,
   markDatabaseUnavailable,
 } from "@/lib/database-availability";
+import { prisma } from "@/lib/prisma";
+import { requireThreatIntelContext } from "@/modules/threat-intel/auth";
+import { ThreatIntelQueryService } from "@/modules/threat-intel/query-service";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -49,7 +49,7 @@ function buildFallbackOverview(): ThreatOverviewPayload {
 function buildThreatResponse(
   overview: ThreatOverviewPayload,
   type: string | undefined,
-  degraded = false,
+  degraded = false
 ) {
   if (type === "feeds") {
     return NextResponse.json({ data: overview.feeds, degraded });
@@ -101,7 +101,9 @@ export async function GET(request: Request) {
   } catch (error) {
     if (isDatabaseUnavailableError(error)) {
       if (markDatabaseUnavailable()) {
-        console.warn("Threats API: Database unavailable, serving empty threat overview.");
+        console.warn(
+          "Threats API: Database unavailable, serving empty threat overview."
+        );
       }
       return buildThreatResponse(buildFallbackOverview(), type, true);
     }
@@ -111,13 +113,15 @@ export async function GET(request: Request) {
         error: "Failed to fetch threats",
         message: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
 
 export async function DELETE(request: Request) {
-  const authResult = await requireThreatIntelContext(request, { requireMainOfficer: true });
+  const authResult = await requireThreatIntelContext(request, {
+    requireMainOfficer: true,
+  });
   if (!authResult.ok) {
     return authResult.response;
   }
@@ -142,7 +146,7 @@ export async function DELETE(request: Request) {
         error: "Failed to delete threats",
         message: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

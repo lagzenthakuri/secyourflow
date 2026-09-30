@@ -1,19 +1,23 @@
-import { prisma } from "../src/lib/prisma";
 import {
   assertTemplateId,
   importComplianceTemplate,
 } from "../src/lib/compliance-template-importer";
+import { prisma } from "../src/lib/prisma";
 
 function readArg(name: string): string | undefined {
-  const index = process.argv.findIndex((arg) => arg === name);
-  if (index === -1) return undefined;
+  const index = process.argv.indexOf(name);
+  if (index === -1) {
+    return undefined;
+  }
   return process.argv[index + 1];
 }
 
 async function main() {
   const templateArg = readArg("--template");
   if (!templateArg) {
-    throw new Error("Missing --template argument. Example: --template iso27001_2022");
+    throw new Error(
+      "Missing --template argument. Example: --template iso27001_2022"
+    );
   }
 
   const templateId = assertTemplateId(templateArg);
@@ -25,7 +29,9 @@ async function main() {
     : await prisma.organization.findFirst({ orderBy: { createdAt: "asc" } });
 
   if (!organization) {
-    throw new Error("No organization found. Create an organization before importing templates.");
+    throw new Error(
+      "No organization found. Create an organization before importing templates."
+    );
   }
 
   const result = await importComplianceTemplate({
@@ -42,8 +48,8 @@ async function main() {
         ...result,
       },
       null,
-      2,
-    ),
+      2
+    )
   );
 }
 
