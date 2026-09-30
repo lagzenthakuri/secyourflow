@@ -14,7 +14,7 @@ export function VercelToolbarClient() {
     }
 
     let active = true;
-    void import("@vercel/toolbar/next")
+    import("@vercel/toolbar/next")
       .then(({ VercelToolbar }) => {
         if (active) {
           setToolbar(() => VercelToolbar);

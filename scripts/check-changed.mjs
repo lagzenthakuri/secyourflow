@@ -15,6 +15,7 @@ if (files.length === 0) {
   console.log("No changed files to lint.");
 } else {
   const batchSize = 40;
+  let failed = false;
   for (let index = 0; index < files.length; index += batchSize) {
     const batch = files.slice(index, index + batchSize);
     const result = spawnSync(
@@ -26,8 +27,10 @@ if (files.length === 0) {
       throw result.error;
     }
     if (result.status !== 0) {
-      process.exitCode = result.status ?? 1;
-      break;
+      failed = true;
     }
+  }
+  if (failed) {
+    process.exitCode = 1;
   }
 }

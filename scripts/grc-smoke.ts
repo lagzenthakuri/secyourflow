@@ -225,7 +225,8 @@ async function main() {
       vendors.length === 1,
       `vendor list has exactly one vendor (got ${vendors.length})`
     );
-    const row = vendors[0]!;
+    const row = vendors[0];
+    assert(row, "vendor list contains a row");
     assert(row.name === vendor.name, "vendor name matches");
     assert(
       row.counts.assets === 1,

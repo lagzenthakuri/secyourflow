@@ -66,7 +66,7 @@ async function main() {
   console.log("SECURITY VERIFY PASS");
 }
 
-void main().catch((error) => {
+main().catch((error) => {
   console.error("SECURITY VERIFY ERROR:", error);
   process.exit(1);
 });
