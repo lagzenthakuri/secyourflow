@@ -45,7 +45,7 @@ export function LandingPage() {
         <div aria-hidden="true" className="landing-hero-scrim pointer-events-none absolute inset-0 z-0" />
         <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center text-center">
           <div className="landing-hero-wordmark mb-8 flex items-center gap-3" aria-label="SecYourFlow">
-            <Image src="/logo1.png" alt="" width={44} height={44} priority className="size-11" />
+            <Image src="/logo1.png" alt="" width={44} height={44} priority className="h-11 w-auto" />
             <span className="text-sm font-semibold tracking-[0.2em] text-white">SECYOURFLOW</span>
           </div>
           <p className="landing-hero-eyebrow text-xs font-semibold uppercase tracking-[0.18em] text-white/70">Cyber risk operations</p>
