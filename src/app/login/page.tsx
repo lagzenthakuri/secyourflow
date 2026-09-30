@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { Spinner } from "@repo/design-system/components/ui/spinner";
 import { openGoogleAuthPopup } from "@/lib/auth/google-popup";
@@ -58,12 +58,19 @@ function getAuthErrorMessage(error: string | null, code: string | null): string 
 }
 
 export default function LoginPage() {
+    const { status: sessionStatus } = useSession();
     const [showPassword, setShowPassword] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     const [authError, setAuthError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (sessionStatus === "authenticated") {
+            window.location.replace(getSafeCallbackUrl());
+        }
+    }, [sessionStatus]);
 
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -116,7 +123,10 @@ export default function LoginPage() {
                 return;
             }
 
-            window.location.href = result.url || "/dashboard";
+            // Use the validated destination directly. Auth.js can return a URL
+            // for its own callback flow; the login page should always resume
+            // the originally requested app route after the session is set.
+            window.location.replace(getSafeCallbackUrl());
         } catch (error) {
             console.error("Login failed:", error);
             setAuthError("Unable to sign in right now.");
