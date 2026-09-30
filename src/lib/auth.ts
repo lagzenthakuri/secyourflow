@@ -19,6 +19,7 @@ import {
     isTrustedTwoFactorSessionUpdate,
 } from "@/lib/security/two-factor-session";
 import { hasRecentTwoFactorVerification, TWO_FACTOR_REVERIFY_INTERVAL_MS } from "@/lib/security/two-factor";
+import { canOAuthSignIn, isPublicRegistrationEnabled } from "@/lib/auth/registration-policy";
 
 type RefreshableToken = Record<string, unknown> & {
     provider?: string;
@@ -333,6 +334,26 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
     ],
     callbacks: {
         ...authConfig.callbacks,
+        async signIn({ user, account }) {
+            if (account?.type !== "oauth" || isPublicRegistrationEnabled()) {
+                return true;
+            }
+
+            // The public registration switch covers OAuth-created users too.
+            // Existing users may continue using their linked or verified-email
+            // provider account while new accounts remain closed by default.
+            const email = user.email?.trim();
+            if (!email) {
+                return false;
+            }
+
+            const existingUser = await prisma.user.findFirst({
+                where: { email: { equals: email, mode: "insensitive" } },
+                select: { id: true },
+            });
+
+            return canOAuthSignIn(false, Boolean(existingUser));
+        },
         async jwt({ token, user, account, trigger, session }) {
             // Initial sign in
             if (account && user) {

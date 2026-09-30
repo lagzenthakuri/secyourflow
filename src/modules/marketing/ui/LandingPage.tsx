@@ -5,6 +5,7 @@ import { Button } from "@repo/design-system/components/ui/button";
 import { marketingFeatures } from "../data/features";
 import { NebulaHeroBackground } from "./NebulaHeroBackground";
 import { MarketingSiteShell } from "./MarketingShell";
+import { getWorkspaceAccess } from "./workspace-access";
 
 const previewSections = [
   {
@@ -36,6 +37,7 @@ const previewSections = [
 const featureIcons = [Network, Bug, FileSearch, ClipboardCheck, Radio, ScanSearch];
 
 export function LandingPage() {
+  const workspaceAccess = getWorkspaceAccess();
   return (
     <MarketingSiteShell landing>
       <section id="landing-hero" className="landing-hero relative isolate flex min-h-[min(820px,calc(100svh-4rem))] items-center overflow-hidden border-b border-border bg-[#09090b] px-4 py-16 text-white sm:px-6 lg:px-8">
@@ -54,7 +56,7 @@ export function LandingPage() {
             Track assets, review vulnerability and CVE records, assign remediation work, and keep risk and compliance activity connected.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Button asChild size="lg"><Link href="/signup">Create a workspace<ArrowRight className="ml-2 size-4" /></Link></Button>
+            <Button asChild size="lg"><Link href={workspaceAccess.href}>{workspaceAccess.label}<ArrowRight className="ml-2 size-4" /></Link></Button>
             <Button asChild variant="outline" size="lg" className="landing-hero-secondary border-white/25 bg-white/5 text-white hover:bg-white/10 hover:text-white"><Link href="/features">Explore the features</Link></Button>
           </div>
         </div>
@@ -158,7 +160,7 @@ export function LandingPage() {
         <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">Use the product screens above to see how SecYourFlow organizes the work.</p>
           <div className="flex gap-2">
-            <Button asChild><Link href="/signup">Create workspace<ArrowRight className="ml-2 size-4" /></Link></Button>
+          <Button asChild><Link href={workspaceAccess.href}>{workspaceAccess.label}<ArrowRight className="ml-2 size-4" /></Link></Button>
             <Button asChild variant="outline"><Link href="/login">Sign in</Link></Button>
           </div>
         </div>

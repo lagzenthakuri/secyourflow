@@ -1,120 +1,79 @@
 "use client";
-import { Checkbox as BoilerplateCheckbox } from "@repo/design-system/components/ui/checkbox";
 import { Input as BoilerplateInput } from "@repo/design-system/components/ui/input";
 
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { Spinner } from "@repo/design-system/components/ui/spinner";
 import { openGoogleAuthPopup } from "@/lib/auth/google-popup";
-import {
-    GOOGLE_AUTH_POPUP_NAME_PREFIX,
-    publishGoogleAuthPopupResult,
-} from "@/lib/auth/google-popup-storage";
-import { getSafeCallbackUrl as resolveSafeCallbackUrl } from "@/lib/auth/callback-url";
 
-function getSafeCallbackUrl(): string {
-    const callbackUrl = new URLSearchParams(window.location.search).get("callbackUrl");
-    return resolveSafeCallbackUrl(callbackUrl, window.location.origin);
+interface SignUpPageClientProps {
+    registrationEnabled: boolean;
 }
 
-function getAuthErrorMessage(error: string | null, code: string | null): string | null {
-    if (!error) {
-        return null;
-    }
-
-    if (code === "service_unavailable") {
-        return "Sign-in is temporarily unavailable. Please try again in a few moments.";
-    }
-
-    if (error === "CredentialsSignin") {
-        if (code === "oauth_only") {
-            return "This account is configured for social login. Use your configured OAuth provider to continue.";
-        }
-
-        if (code === "no_password_set") {
-            return "This account has no password set. It was created through a sign-in method that is no longer available — ask an administrator to set a password for it.";
-        }
-
-        return "Invalid email or password.";
-    }
-
-    switch (error) {
-        case "Configuration":
-            return "Sign-in is temporarily unavailable. Please try again in a few moments.";
-        case "AccessDenied":
-            return "This sign-in could not create a new workspace account. If you need access, request an invitation from Shyena Technologies.";
-        case "Verification":
-            return "Verification failed. The link may have expired.";
-        case "OAuthAccountNotLinked":
-            return "That email is already linked to another sign-in method. Use your original provider.";
-        default:
-            return "An authentication error occurred. Please try again.";
-    }
-}
-
-export default function LoginPage() {
-    const [showPassword, setShowPassword] = useState(false);
+export default function SignUpPageClient({ registrationEnabled }: SignUpPageClientProps) {
+    const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-    const [authError, setAuthError] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const error = urlParams.get("error");
-        const code = urlParams.get("code");
-        const message = getAuthErrorMessage(error, code);
-        if (message) {
-            setAuthError(message);
-
-            const popupId = window.name.startsWith(GOOGLE_AUTH_POPUP_NAME_PREFIX)
-                ? window.name.slice(GOOGLE_AUTH_POPUP_NAME_PREFIX.length)
-                : "";
-            if (popupId) {
-                publishGoogleAuthPopupResult({ id: popupId, status: "error" });
-                window.setTimeout(() => window.close(), 100);
-            }
-        }
-
-        // Auth.js puts its internal error class in the query string. Display
-        // the safe message above, then remove the technical parameters so a
-        // refresh does not repeat the failure or leave `error=Configuration`
-        // visible in production URLs.
-        if (error || code) {
-            urlParams.delete("error");
-            urlParams.delete("code");
-            const query = urlParams.toString();
-            window.history.replaceState(
-                window.history.state,
-                "",
-                `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
-            );
-        }
-    }, []);
+    if (!registrationEnabled) {
+        return (
+            <main className="min-h-screen bg-[var(--bg-primary)] bg-grid flex items-center justify-center p-6">
+                <div className="w-full max-w-md text-center">
+                    <Link href="/" className="mb-8 inline-flex items-center gap-3 justify-center" aria-label="SecYourFlow home">
+                        <Image src="/logo1.png" alt="" width={64} height={64} />
+                        <span className="text-xl font-semibold tracking-[0.2em] text-[var(--text-primary)]">SECYOUR<span className="text-intent-accent">FLOW</span></span>
+                    </Link>
+                    <section className="card p-8 text-left">
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-intent-accent">Workspace access</p>
+                        <h1 className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">Access is by invitation</h1>
+                        <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">Public account creation is currently closed. Contact Shyena Technologies to request a workspace invitation.</p>
+                        <div className="mt-6 flex flex-col gap-3">
+                            <Link href="/contact" className="btn btn-primary w-full justify-center">Request an invitation<ArrowRight size={18} /></Link>
+                            <Link href="/login" className="btn w-full justify-center">Already have access? Sign in</Link>
+                        </div>
+                    </section>
+                </div>
+            </main>
+        );
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        setAuthError(null);
+        setError(null);
 
         try {
+            const res = await fetch("/api/auth/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, email, password }),
+            });
+
+            const data = (await res.json().catch(() => null)) as { error?: string } | null;
+
+            if (!res.ok) {
+                setError(data?.error || "Registration failed. Please try again.");
+                return;
+            }
+
+            // Login immediately after signup.
             await signIn("credentials", {
                 email,
                 password,
-                // Let Auth.js complete the full-page redirect after it has
-                // written the session cookie. A client-side session refresh
-                // can lag behind this response and leave the login form visible.
-                redirectTo: getSafeCallbackUrl(),
+                redirectTo: "/dashboard",
             });
-        } catch (error) {
-            console.error("Login failed:", error);
-            setAuthError("Unable to sign in right now.");
+        } catch (err) {
+            console.error("Signup error:", err);
+            setError("Something went wrong. Please try again.");
         } finally {
             setIsLoading(false);
         }
@@ -137,26 +96,50 @@ export default function LoginPage() {
                         </span>
                     </Link>
                     <p className="text-[var(--text-secondary)] mt-4">
-                        Sign in to your account
+                        Create your account
                     </p>
                 </div>
 
-                {/* Login Form */}
+                {/* Signup Form */}
                 <div className="card p-8">
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {authError && (
+                        {error && (
                             <div
                                 role="alert"
                                 aria-live="polite"
                                 className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-300 text-sm"
                             >
-                                {authError}
+                                {error}
                             </div>
                         )}
 
+                        {/* Name */}
+                        <div>
+                            <label htmlFor="signup-name" className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                                Full Name
+                            </label>
+                            <div className="relative">
+                                <User
+                                    size={18}
+                                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+                                />
+                                <BoilerplateInput
+                                    id="signup-name"
+                                    type="text"
+                                    name="name"
+                                    autoComplete="name"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="John Doe"
+                                    className="!pl-10"
+                                    required
+                                />
+                            </div>
+                        </div>
+
                         {/* Email */}
                         <div>
-                            <label htmlFor="login-email" className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                            <label htmlFor="signup-email" className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                                 Email Address
                             </label>
                             <div className="relative">
@@ -165,7 +148,7 @@ export default function LoginPage() {
                                     className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
                                 />
                                 <BoilerplateInput
-                                    id="login-email"
+                                    id="signup-email"
                                     type="email"
                                     name="email"
                                     autoComplete="email"
@@ -180,69 +163,58 @@ export default function LoginPage() {
 
                         {/* Password */}
                         <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <label htmlFor="login-password" className="block text-sm font-medium text-[var(--text-primary)]">
-                                    Password
-                                </label>
-                            </div>
+                            <label htmlFor="signup-password" className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                                Password
+                            </label>
                             <div className="relative">
                                 <Lock
                                     size={18}
                                     className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
                                 />
                                 <BoilerplateInput
-                                    id="login-password"
+                                    id="signup-password"
                                     type={showPassword ? "text" : "password"}
                                     name="password"
-                                    autoComplete="current-password"
+                                    autoComplete="new-password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="••••••••"
                                     className="!pl-10 !pr-10"
                                     required
+                                    minLength={8}
+                                    aria-describedby="signup-password-help"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
                                     aria-label={showPassword ? "Hide password" : "Show password"}
                                     aria-pressed={showPassword}
-                                    aria-controls="login-password"
+                                    aria-controls="signup-password"
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                                 >
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
                             </div>
-                        </div>
-
-                        {/* Remember Me */}
-                        <div className="flex items-center">
-                            <BoilerplateCheckbox
-                                id="remember"
-                                className="w-4 h-4 rounded border-[var(--border-color)] bg-[var(--bg-tertiary)] text-blue-500 focus:ring-blue-500"
-                            />
-                            <label
-                                htmlFor="remember"
-                                className="ml-2 text-sm text-[var(--text-secondary)]"
-                            >
-                                Remember me for 30 days
-                            </label>
+                            <p id="signup-password-help" className="mt-1.5 text-xs text-[var(--text-muted)]">
+                                Use at least 8 characters.
+                            </p>
                         </div>
 
                         {/* Submit Button */}
                         <button
                             type="submit"
                             disabled={isLoading || isGoogleLoading}
-                            aria-label={isLoading ? "Signing in…" : undefined}
+                            aria-label={isLoading ? "Creating account…" : undefined}
                             className="btn btn-primary w-full disabled:opacity-100 disabled:text-primary-foreground"
                         >
                             {isLoading ? (
                                 <>
-                                    <Spinner aria-label="Signing in" className="size-5 text-primary-foreground" />
-                                    <span className="text-primary-foreground">Signing in…</span>
+                                    <Spinner aria-label="Creating account" className="size-5 text-primary-foreground" />
+                                    <span className="text-primary-foreground">Creating account…</span>
                                 </>
                             ) : (
                                 <>
-                                    Sign In
+                                    Create Account
                                     <ArrowRight size={18} />
                                 </>
                             )}
@@ -258,15 +230,14 @@ export default function LoginPage() {
                     <GoogleAuthButton
                         disabled={isLoading}
                         loading={isGoogleLoading}
-                        label="Continue with Google"
+                        label="Sign up with Google"
                         onClick={() => {
-                            setAuthError(null);
+                            setError(null);
                             openGoogleAuthPopup({
-                                redirectTo: getSafeCallbackUrl(),
                                 onStart: () => setIsGoogleLoading(true),
                                 onError: (message) => {
                                     setIsGoogleLoading(false);
-                                    setAuthError(message);
+                                    setError(message);
                                 },
                             });
                         }}
@@ -275,9 +246,9 @@ export default function LoginPage() {
 
                 {/* Footer */}
                 <p className="text-center text-sm text-[var(--text-muted)] mt-6">
-                    Don&apos;t have an account?{" "}
-                    <Link href="/signup" className="text-intent-accent hover:text-intent-accent-strong">
-                        Sign up
+                    Already have an account?{" "}
+                    <Link href="/login" className="text-intent-accent hover:text-intent-accent-strong">
+                        Sign in
                     </Link>
                 </p>
             </div>

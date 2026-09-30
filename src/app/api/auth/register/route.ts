@@ -7,6 +7,7 @@ import { isDatabaseUnavailableError, markDatabaseUnavailable } from "@/lib/datab
 import { extractRequestContext } from "@/lib/request-utils";
 import { consumeAuthRateLimit } from "@/lib/security/auth-rate-limit";
 import { buildDefaultOrganizationName } from "@/lib/user-provisioning";
+import { isPublicRegistrationEnabled } from "@/lib/auth/registration-policy";
 
 const registerSchema = z
     .object({
@@ -15,10 +16,6 @@ const registerSchema = z
         password: z.string().min(8, "Password must be at least 8 characters").max(72),
     })
     .strict();
-
-function isPublicRegistrationAllowed(): boolean {
-    return process.env.ALLOW_PUBLIC_REGISTRATION === "true";
-}
 
 function getErrorCode(error: unknown): string | null {
     if (typeof error !== "object" || error === null || !("code" in error)) {
@@ -35,7 +32,7 @@ function jsonResponse(body: object, status: number): NextResponse {
 }
 
 export async function POST(request: NextRequest) {
-    if (!isPublicRegistrationAllowed()) {
+    if (!isPublicRegistrationEnabled()) {
         return jsonResponse(
             {
                 error: "Public registration is disabled.",

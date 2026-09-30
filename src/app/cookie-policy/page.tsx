@@ -1,7 +1,7 @@
-"use client";
-
 import Link from "next/link";
 import { MarketingSiteShell } from "@/modules/marketing/ui/MarketingShell";
+
+export const dynamic = "force-dynamic";
 
 export default function CookiePolicy() {
   return (

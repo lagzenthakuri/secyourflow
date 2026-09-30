@@ -4,14 +4,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@repo/design-system/components/ui/button";
-import { getMarketingFeature, marketingFeatures } from "@/modules/marketing/data/features";
+import { getMarketingFeature } from "@/modules/marketing/data/features";
 import { MarketingSiteShell } from "@/modules/marketing/ui/MarketingShell";
+import { getWorkspaceAccess } from "@/modules/marketing/ui/workspace-access";
 
 type FeaturePageProps = { params: Promise<{ slug: string }> };
 
-export function generateStaticParams() {
-  return marketingFeatures.map(({ slug }) => ({ slug }));
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: FeaturePageProps): Promise<Metadata> {
   const { slug } = await params;
@@ -31,6 +30,7 @@ export default async function FeatureDetailPage({ params }: FeaturePageProps) {
   const related = feature.related
     .map((relatedSlug) => getMarketingFeature(relatedSlug))
     .filter((item): item is NonNullable<typeof item> => Boolean(item));
+  const workspaceAccess = getWorkspaceAccess();
 
   return (
     <MarketingSiteShell>
@@ -45,7 +45,7 @@ export default async function FeatureDetailPage({ params }: FeaturePageProps) {
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">{feature.eyebrow}</p>
             <h1 className="mt-3 font-serif text-4xl font-medium leading-tight tracking-[-0.03em] text-balance sm:text-5xl">{feature.headline}</h1>
             <p className="mt-5 text-base leading-7 text-muted-foreground">{feature.description}</p>
-            <Button asChild className="mt-6"><Link href="/signup">Create a workspace<ArrowRight className="ml-2 size-4" /></Link></Button>
+            <Button asChild className="mt-6"><Link href={workspaceAccess.href}>{workspaceAccess.label}<ArrowRight className="ml-2 size-4" /></Link></Button>
           </div>
 
           <div className="space-y-4">
