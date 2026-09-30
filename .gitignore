@@ -280,3 +280,9 @@ packages/database/generated
 .contentlayer
 .content-collections
 .source
+
+# Browser test artifacts
+/test-results/
+/playwright-report/
+/.next-e2e/
+/.next-ci-build/

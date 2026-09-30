@@ -13,7 +13,7 @@ import { Mail, MoreVertical, Plus, Search, Shield } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/Cards";
 import { ShieldLoader } from "@/components/ui/ShieldLoader";
@@ -52,7 +52,7 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const router = useRouter();
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
       const [usersRes, logsRes] = await Promise.all([
@@ -74,7 +74,7 @@ export default function UsersPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
@@ -133,7 +133,7 @@ export default function UsersPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="btn btn-primary">
+            <button className="btn btn-primary" type="button">
               <Plus size={16} />
               Invite User
             </button>
@@ -203,11 +203,9 @@ export default function UsersPage() {
                         <div
                           className={cn(
                             "absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2 border-[var(--bg-card)]",
-                            user.status === "online"
-                              ? "bg-green-400"
-                              : user.status === "away"
-                                ? "bg-yellow-400"
-                                : "bg-gray-500"
+                            { online: "bg-green-400", away: "bg-yellow-400" }[
+                              user.status
+                            ] ?? "bg-gray-500"
                           )}
                         />
                       </div>
@@ -241,7 +239,7 @@ export default function UsersPage() {
                               </SelectContent>
                             </Select>
                           ) : (
-                            <span
+                            <button
                               className="cursor-pointer rounded px-2 py-0.5 font-medium text-[10px] hover:underline"
                               onClick={() => setEditingUser(user.id)}
                               style={{
@@ -252,9 +250,10 @@ export default function UsersPage() {
                                   ],
                               }}
                               title="Click to edit role"
+                              type="button"
                             >
                               {user.role}
-                            </span>
+                            </button>
                           )}
                         </div>
                         <div className="flex items-center gap-3 text-[var(--text-muted)] text-xs">
@@ -273,7 +272,10 @@ export default function UsersPage() {
                           {user.lastActive}
                         </p>
                       </div>
-                      <button className="rounded-lg p-1.5 text-[var(--text-muted)] hover:bg-[var(--bg-elevated)]">
+                      <button
+                        className="rounded-lg p-1.5 text-[var(--text-muted)] hover:bg-[var(--bg-elevated)]"
+                        type="button"
+                      >
                         <MoreVertical size={16} />
                       </button>
                     </div>

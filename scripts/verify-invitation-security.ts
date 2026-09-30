@@ -31,8 +31,9 @@ const checks: SecurityCheck[] = [
     },
   },
   {
-    name: "Production registration blocked",
-    description: "Verify that public registration is blocked in production",
+    name: "Public registration requires explicit opt-in",
+    description:
+      "Verify that public registration is disabled unless explicitly enabled",
     critical: true,
     check: () => {
       const registerRoute = readFileSync(
@@ -40,8 +41,11 @@ const checks: SecurityCheck[] = [
         "utf-8"
       );
       return (
-        registerRoute.includes('NODE_ENV === "production"') &&
-        registerRoute.includes("return false")
+        registerRoute.includes(
+          'return process.env.ALLOW_PUBLIC_REGISTRATION === "true"'
+        ) &&
+        registerRoute.includes("if (!isPublicRegistrationAllowed())") &&
+        registerRoute.includes('code: "REGISTRATION_DISABLED"')
       );
     },
   },
@@ -51,7 +55,7 @@ const checks: SecurityCheck[] = [
     critical: true,
     check: () => {
       const schema = readFileSync(
-        join(process.cwd(), "prisma/schema.prisma"),
+        join(process.cwd(), "packages/database/prisma/schema.prisma"),
         "utf-8"
       );
       return schema.includes("model Invitation");
@@ -63,10 +67,10 @@ const checks: SecurityCheck[] = [
     critical: true,
     check: () => {
       const schema = readFileSync(
-        join(process.cwd(), "prisma/schema.prisma"),
+        join(process.cwd(), "packages/database/prisma/schema.prisma"),
         "utf-8"
       );
-      const invitationModel = schema.match(/model Invitation \{[\s\S]*?\}/);
+      const invitationModel = schema.match(INVITATION_MODEL_PATTERN);
       if (!invitationModel) {
         return false;
       }
@@ -242,3 +246,5 @@ runSecurityChecks().catch((error) => {
   console.error("Fatal error running security checks:", error);
   process.exit(1);
 });
+
+const INVITATION_MODEL_PATTERN = /model Invitation \{[\s\S]*?\}/;

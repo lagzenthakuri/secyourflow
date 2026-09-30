@@ -160,6 +160,13 @@ export async function consumeRateLimit(
   maxAttempts: number,
   windowMs: number
 ): Promise<RateLimitResult> {
+  if (maxAttempts <= 0) {
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.max(Math.ceil(windowMs / 1000), 1),
+    };
+  }
+
   if (!isRedisConfigured()) {
     return consumeInMemory(key, maxAttempts, windowMs);
   }
