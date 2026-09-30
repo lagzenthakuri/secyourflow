@@ -23,7 +23,7 @@ index 4b150af2cb0362019cbf2f9c68f2786a98290de6..98c65f37e586d1a0db4bfc5102784943
        renderer.setSize(window.innerWidth, window.innerHeight);
  
        const scene = new THREE.Scene();
-@@ -261,13 +261,37 @@ const n = `<!DOCTYPE html>
+@@ -261,13 +261,38 @@ const n = `<!DOCTYPE html>
        });
  
        const clock = new THREE.Clock();
@@ -43,15 +43,16 @@ index 4b150af2cb0362019cbf2f9c68f2786a98290de6..98c65f37e586d1a0db4bfc5102784943
          renderer.render(scene, camera);
 -      })();
 +      };
-+      const visibilityObserver = new IntersectionObserver(function ([entry]) {
-+        canvasVisible = entry.isIntersecting;
++      window.addEventListener('message', function (event) {
++        const message = event.data;
++        if (!message || message.type !== 'secyourflow-nebula-visibility') return;
++        canvasVisible = Boolean(message.visible);
 +        if (canvasVisible && !document.hidden && animationFrame === 0) animate();
 +        if (!canvasVisible && animationFrame !== 0) {
 +          cancelAnimationFrame(animationFrame);
 +          animationFrame = 0;
 +        }
 +      });
-+      visibilityObserver.observe(canvas);
 +      document.addEventListener('visibilitychange', function () {
 +        if (document.hidden && animationFrame !== 0) {
 +          cancelAnimationFrame(animationFrame);
