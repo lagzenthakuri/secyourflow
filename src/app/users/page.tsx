@@ -104,7 +104,8 @@ export default function UsersPage() {
     } else if (status === "authenticated") {
       fetchData();
     }
-  }, [session, status, router, fetchData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, status]);
 
   if (
     status === "loading" ||

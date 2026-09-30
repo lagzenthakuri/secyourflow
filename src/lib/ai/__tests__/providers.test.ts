@@ -19,8 +19,22 @@ function mockFetch(responseBody: unknown, ok = true) {
         text: async () => JSON.stringify(responseBody),
       }) as unknown as Response
   );
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
+  const originalFetch = globalThis.fetch;
+  Object.defineProperty(globalThis, "fetch", {
+    value: fetchMock,
+    writable: true,
+    configurable: true,
+  });
+  return {
+    fetchMock,
+    restore: () => {
+      Object.defineProperty(globalThis, "fetch", {
+        value: originalFetch,
+        writable: true,
+        configurable: true,
+      });
+    },
+  };
 }
 
 type FetchCall = [string, RequestInit];
@@ -35,8 +49,13 @@ function bodyOf(fetchMock: {
   return JSON.parse(callsOf(fetchMock)[0][1].body as string);
 }
 
+let currentRestore: (() => void) | null = null;
+
 afterEach(() => {
-  vi.unstubAllGlobals();
+  if (currentRestore) {
+    currentRestore();
+    currentRestore = null;
+  }
   vi.restoreAllMocks();
 });
 
@@ -49,7 +68,8 @@ const anthropicConfig: AiProviderConfig = {
 describe("Anthropic adapter", () => {
   it("never sends sampling parameters", async () => {
     // Removed on the Claude 5 family; sending any of them returns HTTP 400.
-    const fetchMock = mockFetch({ content: [{ type: "text", text: "{}" }] });
+    const { fetchMock, restore } = mockFetch({ content: [{ type: "text", text: "{}" }] });
+    currentRestore = restore;
 
     await AI_ADAPTERS.ANTHROPIC.chat(anthropicConfig, {
       messages: [{ role: "user", content: "hello" }],
@@ -63,7 +83,8 @@ describe("Anthropic adapter", () => {
   });
 
   it("sends the required headers and hoists system messages", async () => {
-    const fetchMock = mockFetch({ content: [{ type: "text", text: "ok" }] });
+    const { fetchMock, restore } = mockFetch({ content: [{ type: "text", text: "ok" }] });
+    currentRestore = restore;
 
     await AI_ADAPTERS.ANTHROPIC.chat(anthropicConfig, {
       messages: [
@@ -86,11 +107,12 @@ describe("Anthropic adapter", () => {
 
   it("reports a policy refusal as a refusal, not a malformed response", async () => {
     // A decline is HTTP 200 with no text block.
-    mockFetch({
+    const { restore } = mockFetch({
       stop_reason: "refusal",
       stop_details: { category: "cyber" },
       content: [],
     });
+    currentRestore = restore;
 
     await expect(
       AI_ADAPTERS.ANTHROPIC.chat(anthropicConfig, {
@@ -104,7 +126,8 @@ describe("Anthropic adapter", () => {
   });
 
   it("refuses to call out without a key", async () => {
-    const fetchMock = mockFetch({});
+    const { fetchMock, restore } = mockFetch({});
+    currentRestore = restore;
     await expect(
       AI_ADAPTERS.ANTHROPIC.chat(
         { ...anthropicConfig, apiKey: null },
@@ -118,7 +141,8 @@ describe("Anthropic adapter", () => {
 describe("OpenAI-compatible adapters", () => {
   it("do send temperature and JSON mode", async () => {
     // The opposite of Anthropic: these providers accept both.
-    const fetchMock = mockFetch({ choices: [{ message: { content: "{}" } }] });
+    const { fetchMock, restore } = mockFetch({ choices: [{ message: { content: "{}" } }] });
+    currentRestore = restore;
 
     await AI_ADAPTERS.OPENAI.chat(
       { provider: "OPENAI", model: "gpt-4o-mini", apiKey: "k" },
@@ -133,7 +157,8 @@ describe("OpenAI-compatible adapters", () => {
 
 describe("Ollama adapter", () => {
   it("asks for JSON format and stays on the configured endpoint", async () => {
-    const fetchMock = mockFetch({ message: { content: "{}" } });
+    const { fetchMock, restore } = mockFetch({ message: { content: "{}" } });
+    currentRestore = restore;
 
     await AI_ADAPTERS.OLLAMA.chat(
       {

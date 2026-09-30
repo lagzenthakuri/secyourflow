@@ -1,6 +1,8 @@
 import { createMetadata } from "@repo/seo/metadata";
 import { JsonLd, type SoftwareApplication, type WithContext } from "@repo/seo/json-ld";
 import { LandingPage } from "@/modules/marketing/ui/LandingPage";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export const metadata = createMetadata({
   title: "Security findings to accountable response",
@@ -27,7 +29,13 @@ const softwareApplication: WithContext<SoftwareApplication> = {
     "A security operations workspace for asset inventory, vulnerability triage, remediation tracking, and governance workflows.",
 };
 
-export default function Home() {
+export default async function Home() {
+  const session = await auth();
+
+  if (session?.user) {
+    redirect("/dashboard");
+  }
+
   return (
     <>
       <JsonLd code={softwareApplication} />

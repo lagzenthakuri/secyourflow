@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ signIn: vi.fn() }));
+const signInMock = vi.fn();
 
-vi.mock("next-auth/react", () => ({ signIn: mocks.signIn }));
+vi.mock("next-auth/react", () => ({
+  signIn: signInMock,
+}));
 
 import { openGoogleAuthPopup } from "@/lib/auth/google-popup";
 import { googleAuthPopupStorageKey } from "@/lib/auth/google-popup-storage";
@@ -15,38 +17,56 @@ describe("openGoogleAuthPopup", () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    vi.unstubAllGlobals();
+    // Restore original window if it was stubbed
+    const originalWindow = (globalThis as Record<string, unknown>).__originalWindow;
+    if (originalWindow) {
+      Object.defineProperty(globalThis, "window", {
+        value: originalWindow,
+        writable: true,
+        configurable: true,
+      });
+    }
   });
 
   it("waits for the verified result when the browser reports the OAuth popup closed", async () => {
     const listeners = new Map<string, (event: StorageEvent) => void>();
     const stored = new Map<string, string>();
     const popup = {
-      closed: true,
+      closed: false,
       close: vi.fn(),
       location: { assign: vi.fn() },
     };
     const parentLocation = { assign: vi.fn() };
 
-    mocks.signIn.mockResolvedValue({
+    signInMock.mockResolvedValue({
       ok: true,
       url: "https://accounts.google.com/oauth/authorize",
     });
 
-    vi.stubGlobal("window", {
-      crypto: { randomUUID: () => "google-popup-test" },
-      open: vi.fn(() => popup),
-      addEventListener: vi.fn((type: string, listener: (event: StorageEvent) => void) => {
-        listeners.set(type, listener);
-      }),
-      removeEventListener: vi.fn((type: string) => listeners.delete(type)),
-      setTimeout,
-      clearTimeout,
-      localStorage: {
-        getItem: (key: string) => stored.get(key) ?? null,
-        removeItem: (key: string) => stored.delete(key),
+    // Save original window before stubbing
+    (globalThis as Record<string, unknown>).__originalWindow = globalThis.window;
+    Object.defineProperty(globalThis, "window", {
+      value: {
+        crypto: { randomUUID: () => "google-popup-test" },
+        open: vi.fn(() => popup),
+        addEventListener: vi.fn((type: string, listener: (event: StorageEvent) => void) => {
+          listeners.set(type, listener);
+        }),
+        removeEventListener: vi.fn((type: string) => listeners.delete(type)),
+        setTimeout,
+        clearTimeout,
+        setInterval: globalThis.setInterval ? globalThis.setInterval.bind(globalThis) : (() => 0),
+        clearInterval: globalThis.clearInterval ? globalThis.clearInterval.bind(globalThis) : (() => {}),
+        document: globalThis.document,
+        navigator: globalThis.navigator,
+        location: parentLocation,
+        localStorage: {
+          getItem: (key: string) => stored.get(key) ?? null,
+          removeItem: (key: string) => stored.delete(key),
+        },
       },
-      location: parentLocation,
+      writable: true,
+      configurable: true,
     });
 
     const onError = vi.fn();
@@ -56,7 +76,9 @@ describe("openGoogleAuthPopup", () => {
 
     expect(popup.location.assign).toHaveBeenCalledWith("https://accounts.google.com/oauth/authorize");
 
-    await vi.advanceTimersByTimeAsync(2_500);
+    await vi.advanceTimersByTime(2_500);
+    await Promise.resolve();
+    await Promise.resolve();
     expect(onError).not.toHaveBeenCalled();
 
     const resultKey = googleAuthPopupStorageKey("google-popup-test");

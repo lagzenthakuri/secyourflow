@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const consumeRateLimit = vi.hoisted(() => vi.fn());
+const consumeRateLimit = vi.fn();
 
 vi.mock("@/lib/security/rate-limit", () => ({
-  consumeRateLimit,
+  consumeRateLimit: consumeRateLimit,
 }));
 
 import { consumeAuthRateLimit } from "@/lib/security/auth-rate-limit";

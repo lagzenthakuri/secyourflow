@@ -474,21 +474,35 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
         // organization and role on the token from the same query —
         // `requireSessionWithOrg` used to repeat this lookup, doubling
         // the per-request database cost for no extra freshness.
-        const sessionState = await prisma.user.findUnique({
-          where: { id: token.id },
-          select: { activeSessionId: true, organizationId: true, role: true },
-        });
+        try {
+          const sessionState = await prisma.user.findUnique({
+            where: { id: token.id },
+            select: { activeSessionId: true, organizationId: true, role: true },
+          });
 
-        if (
-          !sessionState?.activeSessionId ||
-          typeof token.activeSessionId !== "string" ||
-          token.activeSessionId !== sessionState.activeSessionId
-        ) {
-          return null;
+          if (
+            !sessionState?.activeSessionId ||
+            typeof token.activeSessionId !== "string" ||
+            token.activeSessionId !== sessionState.activeSessionId
+          ) {
+            return null;
+          }
+
+          token.organizationId = sessionState.organizationId ?? null;
+          token.role = sessionState.role || "ANALYST";
+        } catch (error) {
+          if (isDatabaseUnavailableError(error)) {
+            if (markDatabaseUnavailable()) {
+              console.warn(
+                "[auth] Database unavailable during session validation."
+              );
+            }
+            // Return null to trigger a 401 rather than a 500 — the client
+            // will retry and the cooldown prevents hammering the database.
+            return null;
+          }
+          throw error;
         }
-
-        token.organizationId = sessionState.organizationId ?? null;
-        token.role = sessionState.role || "ANALYST";
       }
 
       if (typeof token.totpEnabled !== "boolean") {

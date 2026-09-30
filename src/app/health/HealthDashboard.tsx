@@ -63,6 +63,25 @@ const resourceTiming = [
   { name: "API", duration: 180, size: 65 },
 ];
 
+const errorData = [
+  { error: "Unauthorized", count: 12, users: 3, status: "401" },
+  { error: "Forbidden", count: 8, users: 2, status: "403" },
+  { error: "Not Found", count: 25, users: 5, status: "404" },
+  { error: "Server Error", count: 3, users: 1, status: "500" },
+  { error: "Database Timeout", count: 2, users: 1, status: "503" },
+  { error: "Rate Limited", count: 15, users: 4, status: "429" },
+];
+
+const errorsByDay = [
+  { day: "Mon", errors: 8, users: 3 },
+  { day: "Tue", errors: 12, users: 4 },
+  { day: "Wed", errors: 6, users: 2 },
+  { day: "Thu", errors: 15, users: 5 },
+  { day: "Fri", errors: 10, users: 3 },
+  { day: "Sat", errors: 4, users: 2 },
+  { day: "Sun", errors: 7, users: 3 },
+];
+
 const metrics = [
   {
     label: "Largest Contentful Paint",
@@ -402,6 +421,137 @@ export function HealthDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Error Tracking */}
+        <div className="mb-6 grid gap-6 lg:grid-cols-2">
+          {/* Errors by Type */}
+          <Card className="border-border bg-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">
+                Errors by Type
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={errorData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis
+                    dataKey="error"
+                    tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
+                    angle={-20}
+                    textAnchor="end"
+                    height={50}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                    }}
+                  />
+                  <Bar dataKey="count" fill="#ef4444" radius={[4, 4, 0, 0]} name="Error Count" />
+                  <Bar dataKey="users" fill="#f97316" radius={[4, 4, 0, 0]} name="Affected Users" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Errors Over Time */}
+          <Card className="border-border bg-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">
+                Errors (7 days)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={errorsByDay}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis
+                    dataKey="day"
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="errors"
+                    stroke="#ef4444"
+                    fill="#ef4444"
+                    fillOpacity={0.3}
+                    name="Errors"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="users"
+                    stroke="#f97316"
+                    fill="#f97316"
+                    fillOpacity={0.3}
+                    name="Affected Users"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Error Details Table */}
+        <Card className="border-border bg-card mb-6">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">
+              Recent Errors
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="pb-2 text-left font-medium text-muted-foreground">Error</th>
+                    <th className="pb-2 text-left font-medium text-muted-foreground">Status</th>
+                    <th className="pb-2 text-right font-medium text-muted-foreground">Count</th>
+                    <th className="pb-2 text-right font-medium text-muted-foreground">Users Affected</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {errorData.map((item) => (
+                    <tr key={item.error} className="border-b border-border/50">
+                      <td className="py-2.5 font-medium">{item.error}</td>
+                      <td className="py-2.5">
+                        <Badge variant="outline" className="font-mono text-xs">
+                          {item.status}
+                        </Badge>
+                      </td>
+                      <td className="py-2.5 text-right">{item.count}</td>
+                      <td className="py-2.5 text-right">{item.users}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Optimization Status */}
         <Card className="border-border bg-card">

@@ -177,6 +177,14 @@ Open your browser and navigate to `http://localhost:3000`
 | `AUTH_GOOGLE_SECRET` | Google OAuth client secret | - |
 | `ALLOW_PUBLIC_REGISTRATION` | Enable public email/password registration | `false` |
 | `REAL_API_TESTS` | Enable real API testing | `false` |
+| `SMTP_HOST` | SMTP server hostname (e.g., `smtp.gmail.com`, `smtp.sendgrid.net`) | - |
+| `SMTP_PORT` | SMTP server port (`587` for STARTTLS, `465` for implicit TLS) | `587` |
+| `SMTP_USER` | SMTP username (for SendGrid, use `apikey`) | - |
+| `SMTP_PASSWORD` | SMTP password or API key (for SendGrid, use the API key) | - |
+| `SMTP_FROM` | Sender "From" address shown to recipients | - |
+| `SENDGRID_API_KEY` | SendGrid API key (alternative to `SMTP_PASSWORD`) | - |
+| `RESEND_TOKEN` | Resend API key (alternative email provider) | - |
+| `RESEND_FROM` | Resend sender "From" address | - |
 
 ### Example Configuration
 
