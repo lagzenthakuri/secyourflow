@@ -60,6 +60,33 @@ export function LandingPage() {
         </div>
       </section>
 
+      <section className="border-b border-border bg-muted/15 px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+        <div className="mx-auto grid max-w-7xl items-center gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-12">
+          <div>
+            <p className="text-sm font-medium text-primary">Security overview</p>
+            <h2 className="mt-2 font-serif text-3xl font-medium tracking-tight sm:text-4xl">Start with one view of exposure.</h2>
+            <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground">
+              The dashboard brings asset totals, priority findings, known-exploited records, and risk breakdown into one place. Open a finding to continue into its asset and remediation context.
+            </p>
+            <p className="mt-3 text-xs text-muted-foreground">Illustrative sample workspace and records.</p>
+            <Link className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline" href="/features">
+              Explore the workspace<ArrowRight className="size-4" />
+            </Link>
+          </div>
+          <figure className="overflow-hidden rounded-2xl border border-border bg-[#0b0d10] p-2 shadow-xl shadow-black/10 sm:p-3">
+            <Image
+              src="/screenshots/dashboard-preview.png"
+              alt="Illustrative SecYourFlow dashboard showing asset, remediation, and CISA KEV summary cards, priority findings, and a risk breakdown."
+              width={705}
+              height={829}
+              sizes="(max-width: 1024px) 100vw, 60vw"
+              className="mx-auto h-auto max-h-[680px] w-full rounded-xl object-contain"
+            />
+            <figcaption className="px-2 pt-2 text-xs text-white/60">Dashboard · illustrative sample workspace</figcaption>
+          </figure>
+        </div>
+      </section>
+
       <section className="px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-col gap-3 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
