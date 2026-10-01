@@ -109,10 +109,10 @@ model Invitation {
   token          String    @unique
   expiresAt      DateTime
   usedAt         DateTime?
-  createdById    String
+  createdById    String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
-  createdBy      User      @relation("InvitationCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy      User?     @relation("InvitationCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([email])

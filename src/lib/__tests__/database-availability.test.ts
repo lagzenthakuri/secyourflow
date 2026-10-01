@@ -27,6 +27,14 @@ describe("isDatabaseUnavailableError", () => {
     expect(isDatabaseUnavailableError(error)).toBe(true);
   });
 
+  it("recognises pg pool checkout timeouts without an error code", () => {
+    expect(
+      isDatabaseUnavailableError(
+        new Error("timeout exceeded when trying to connect")
+      )
+    ).toBe(true);
+  });
+
   it("does not classify application errors as database outages", () => {
     expect(
       isDatabaseUnavailableError(new Error("invalid email or password"))

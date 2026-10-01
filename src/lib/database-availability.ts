@@ -25,6 +25,7 @@ const dbUnavailablePatterns = [
   "failed to identify your database",
   "connection terminated",
   "connection timeout",
+  "timeout exceeded when trying to connect",
   "connection terminated unexpectedly",
   "can't reach database server",
   "server closed the connection unexpectedly",
@@ -64,26 +65,6 @@ function extractErrorText(error: unknown): string {
       continue;
     }
     seen.add(value);
-
-    if (value instanceof Error) {
-      if (value.message) {
-        fragments.push(value.message.toLowerCase());
-      }
-
-      const errorWithCode = value as Error & {
-        code?: unknown;
-        cause?: unknown;
-      };
-      if (typeof errorWithCode.code === "string") {
-        fragments.push(errorWithCode.code.toLowerCase());
-      }
-
-      if (errorWithCode.cause !== undefined) {
-        queue.push(errorWithCode.cause);
-      }
-
-      continue;
-    }
 
     const candidate = value as Record<string, unknown>;
     for (const key of [

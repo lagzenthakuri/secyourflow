@@ -21,6 +21,17 @@ async function assertApplicationSchema(): Promise<void> {
     select: { id: true },
     take: 1,
   });
+  await prisma.invitation.findFirst({
+    select: {
+      id: true,
+      expiresAt: true,
+      usedAt: true,
+      createdById: true,
+      updatedAt: true,
+    },
+  });
+  // Validate the storage column without downloading an evidence attachment.
+  await prisma.$queryRaw`SELECT "data" FROM "ComplianceEvidenceVersion" LIMIT 0`;
   await prisma.nis2Vendor.findFirst({
     select: { id: true },
     take: 1,
