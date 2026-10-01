@@ -273,7 +273,7 @@ AUTH_GOOGLE_SECRET=<google-client-secret>
 # Optional: set to true only when public email/password registration is intended.
 ALLOW_PUBLIC_REGISTRATION=true
 DB_POOL_MAX=1
-DB_CONNECT_TIMEOUT_MS=5000
+DB_CONNECT_TIMEOUT_MS=15000
 ```
 
 `sslmode=verify-full` verifies both the database certificate and its hostname.

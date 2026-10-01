@@ -91,18 +91,10 @@ export async function GET(request: NextRequest) {
     const [
       totalAssets,
       criticalAssets,
-      totalVulnerabilities,
-      criticalVulnerabilities,
-      highVulnerabilities,
-      mediumVulnerabilities,
-      lowVulnerabilities,
-      exploitedVulnerabilities,
-      cisaKevCount,
-      openVulnerabilities,
+      vulnerabilityGroups,
       threatIndicatorCount,
       recentActivities,
       topRiskyAssets,
-      severityDistribution,
       assetTypeDistribution,
       riskSnapshots,
       complianceFrameworks,
@@ -111,24 +103,13 @@ export async function GET(request: NextRequest) {
       prisma.asset.count({
         where: { organizationId, criticality: "CRITICAL" },
       }),
-      prisma.vulnerability.count({ where: { organizationId } }),
-      prisma.vulnerability.count({
-        where: { organizationId, severity: "CRITICAL" },
+      // One grouped read replaces eight counts and a severity query. On a
+      // single-client pool Promise.all still queues those queries serially.
+      prisma.vulnerability.groupBy({
+        by: ["severity", "status", "isExploited", "cisaKev"],
+        where: { organizationId },
+        _count: { _all: true },
       }),
-      prisma.vulnerability.count({
-        where: { organizationId, severity: "HIGH" },
-      }),
-      prisma.vulnerability.count({
-        where: { organizationId, severity: "MEDIUM" },
-      }),
-      prisma.vulnerability.count({
-        where: { organizationId, severity: "LOW" },
-      }),
-      prisma.vulnerability.count({
-        where: { organizationId, isExploited: true },
-      }),
-      prisma.vulnerability.count({ where: { organizationId, cisaKev: true } }),
-      prisma.vulnerability.count({ where: { organizationId, status: "OPEN" } }),
       prisma.threatIndicator.count({ where: { organizationId } }),
       isMainOfficer
         ? prisma.auditLog.findMany({
@@ -156,11 +137,6 @@ export async function GET(request: NextRequest) {
           criticality: true,
           _count: { select: { vulnerabilities: true } },
         },
-      }),
-      prisma.vulnerability.groupBy({
-        by: ["severity"],
-        where: { organizationId },
-        _count: { _all: true },
       }),
       prisma.asset.groupBy({
         by: ["type"],
@@ -194,6 +170,38 @@ export async function GET(request: NextRequest) {
         },
       }),
     ]);
+
+    const countVulnerabilities = (
+      predicate: (group: (typeof vulnerabilityGroups)[number]) => boolean
+    ) =>
+      vulnerabilityGroups.reduce(
+        (sum, group) => sum + (predicate(group) ? group._count._all : 0),
+        0
+      );
+    const totalVulnerabilities = countVulnerabilities(() => true);
+    const criticalVulnerabilities = countVulnerabilities(
+      (g) => g.severity === "CRITICAL"
+    );
+    const highVulnerabilities = countVulnerabilities(
+      (g) => g.severity === "HIGH"
+    );
+    const mediumVulnerabilities = countVulnerabilities(
+      (g) => g.severity === "MEDIUM"
+    );
+    const lowVulnerabilities = countVulnerabilities(
+      (g) => g.severity === "LOW"
+    );
+    const exploitedVulnerabilities = countVulnerabilities((g) => g.isExploited);
+    const cisaKevCount = countVulnerabilities((g) => g.cisaKev);
+    const openVulnerabilities = countVulnerabilities(
+      (g) => g.status === "OPEN"
+    );
+    const severityDistribution = [
+      ...new Set(vulnerabilityGroups.map((g) => g.severity)),
+    ].map((severity) => ({
+      severity,
+      _count: { _all: countVulnerabilities((g) => g.severity === severity) },
+    }));
 
     const remediationTrends = [...riskSnapshots].reverse().map((snapshot) => ({
       month: new Date(snapshot.date).toLocaleDateString("en-US", {

@@ -37,7 +37,10 @@ const pool =
     ),
     connectionTimeoutMillis: positiveIntegerFromEnv(
       "DB_CONNECT_TIMEOUT_MS",
-      5000
+      // pg applies this to waiting for a pooled client as well as connecting.
+      // Page loads issue concurrent queries; a one-client serverless pool can
+      // legitimately spend more than five seconds draining that queue.
+      15_000
     ),
     allowExitOnIdle: runningInServerless,
     keepAlive: true,
