@@ -34,6 +34,7 @@ import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { handleSessionFailure } from "@/lib/auth/client-session";
 import { cn, getTimeAgo } from "@/lib/utils";
 
 const RiskTrendChart = dynamic(
@@ -290,197 +291,196 @@ function _getSeverityRailTone(severity: Severity) {
   return "bg-[var(--text-muted)]";
 }
 
-function getActivityTone(entityType: string, action: string) {
-  // Specific action-based icons
-  if (action === "User login" || action.toLowerCase().includes("login")) {
-    return {
+const severityBarColors: Record<string, string> = {
+  CRITICAL: "bg-red-500",
+  HIGH: "bg-orange-500",
+  MEDIUM: "bg-yellow-500",
+};
+
+const activityTones = [
+  {
+    matches: (action: string) =>
+      action === "User login" || action.toLowerCase().includes("login"),
+    tone: {
       icon: LogIn,
       iconColor: "text-emerald-600 dark:text-emerald-300",
       shell: "border-emerald-400/20 bg-emerald-500/10",
-    };
-  }
-
-  if (
-    action === "VULNERABILITY_CREATED" ||
-    action.toLowerCase().includes("vulnerability created")
-  ) {
-    return {
+    },
+  },
+  {
+    matches: (action: string) =>
+      action === "VULNERABILITY_CREATED" ||
+      action.toLowerCase().includes("vulnerability created"),
+    tone: {
       icon: ShieldAlert,
       iconColor: "text-red-600 dark:text-red-300",
       shell: "border-red-400/20 bg-red-500/10",
-    };
-  }
-
-  if (
-    action === "RISK_ASSESSMENT_COMPLETED" ||
-    action.toLowerCase().includes("risk")
-  ) {
-    return {
+    },
+  },
+  {
+    matches: (action: string) =>
+      action === "RISK_ASSESSMENT_COMPLETED" ||
+      action.toLowerCase().includes("risk"),
+    tone: {
       icon: Calculator,
       iconColor: "text-orange-600 dark:text-orange-300",
       shell: "border-orange-400/20 bg-orange-500/10",
-    };
-  }
-
-  if (
-    action.toLowerCase().includes("user created") ||
-    action.toLowerCase().includes("user added")
-  ) {
-    return {
+    },
+  },
+  {
+    matches: (action: string) =>
+      action.toLowerCase().includes("user created") ||
+      action.toLowerCase().includes("user added"),
+    tone: {
       icon: UserPlus,
       iconColor: "text-blue-600 dark:text-blue-300",
       shell: "border-blue-400/20 bg-blue-500/10",
-    };
-  }
-
-  if (
-    action.toLowerCase().includes("role updated") ||
-    action.toLowerCase().includes("permission")
-  ) {
-    return {
+    },
+  },
+  {
+    matches: (action: string) =>
+      action.toLowerCase().includes("role updated") ||
+      action.toLowerCase().includes("permission"),
+    tone: {
       icon: UserCheck,
       iconColor: "text-purple-600 dark:text-purple-300",
       shell: "border-purple-400/20 bg-purple-500/10",
-    };
-  }
-
-  if (
-    action.toLowerCase().includes("settings") ||
-    action.toLowerCase().includes("config")
-  ) {
-    return {
+    },
+  },
+  {
+    matches: (action: string) =>
+      action.toLowerCase().includes("settings") ||
+      action.toLowerCase().includes("config"),
+    tone: {
       icon: Settings,
       iconColor: "text-[var(--text-secondary)]",
       shell: "border-[var(--border-color)] bg-[var(--bg-tertiary)]",
-    };
-  }
-
-  if (action.toLowerCase().includes("notification")) {
-    return {
+    },
+  },
+  {
+    matches: (action: string) => action.toLowerCase().includes("notification"),
+    tone: {
       icon: Bell,
       iconColor: "text-cyan-600 dark:text-cyan-300",
       shell: "border-cyan-400/20 bg-cyan-500/10",
-    };
-  }
-
-  if (
-    action.toLowerCase().includes("scan") ||
-    action.toLowerCase().includes("scanner")
-  ) {
-    return {
+    },
+  },
+  {
+    matches: (action: string) =>
+      action.toLowerCase().includes("scan") ||
+      action.toLowerCase().includes("scanner"),
+    tone: {
       icon: Activity,
       iconColor: "text-indigo-600 dark:text-indigo-300",
       shell: "border-indigo-400/20 bg-indigo-500/10",
-    };
-  }
-
-  if (
-    action.toLowerCase().includes("report") ||
-    action.toLowerCase().includes("export")
-  ) {
-    return {
+    },
+  },
+  {
+    matches: (action: string) =>
+      action.toLowerCase().includes("report") ||
+      action.toLowerCase().includes("export"),
+    tone: {
       icon: FileText,
       iconColor: "text-amber-600 dark:text-amber-300",
       shell: "border-amber-400/20 bg-amber-500/10",
-    };
-  }
-
-  if (
-    action.toLowerCase().includes("deleted") ||
-    action.toLowerCase().includes("removed")
-  ) {
-    return {
+    },
+  },
+  {
+    matches: (action: string) =>
+      action.toLowerCase().includes("deleted") ||
+      action.toLowerCase().includes("removed"),
+    tone: {
       icon: Trash2,
       iconColor: "text-red-600 dark:text-red-300",
       shell: "border-red-400/20 bg-red-500/10",
-    };
-  }
-
-  if (
-    action.toLowerCase().includes("updated") ||
-    action.toLowerCase().includes("modified") ||
-    action.toLowerCase().includes("edited")
-  ) {
-    return {
+    },
+  },
+  {
+    matches: (action: string) =>
+      action.toLowerCase().includes("updated") ||
+      action.toLowerCase().includes("modified") ||
+      action.toLowerCase().includes("edited"),
+    tone: {
       icon: Edit,
       iconColor: "text-yellow-600 dark:text-yellow-300",
       shell: "border-yellow-400/20 bg-yellow-500/10",
-    };
-  }
-
-  if (
-    action.toLowerCase().includes("approved") ||
-    action.toLowerCase().includes("completed") ||
-    action.toLowerCase().includes("resolved")
-  ) {
-    return {
+    },
+  },
+  {
+    matches: (action: string) =>
+      action.toLowerCase().includes("approved") ||
+      action.toLowerCase().includes("completed") ||
+      action.toLowerCase().includes("resolved"),
+    tone: {
       icon: CheckCircle2,
       iconColor: "text-green-600 dark:text-green-300",
       shell: "border-green-400/20 bg-green-500/10",
-    };
-  }
-
-  if (
-    action.toLowerCase().includes("rejected") ||
-    action.toLowerCase().includes("failed")
-  ) {
-    return {
+    },
+  },
+  {
+    matches: (action: string) =>
+      action.toLowerCase().includes("rejected") ||
+      action.toLowerCase().includes("failed"),
+    tone: {
       icon: XCircle,
       iconColor: "text-red-600 dark:text-red-300",
       shell: "border-red-400/20 bg-red-500/10",
-    };
-  }
-
-  if (
-    action.toLowerCase().includes("upload") ||
-    action.toLowerCase().includes("import")
-  ) {
-    return {
+    },
+  },
+  {
+    matches: (action: string) =>
+      action.toLowerCase().includes("upload") ||
+      action.toLowerCase().includes("import"),
+    tone: {
       icon: Upload,
       iconColor: "text-teal-600 dark:text-teal-300",
       shell: "border-teal-400/20 bg-teal-500/10",
-    };
-  }
-
-  if (action.toLowerCase().includes("download")) {
-    return {
+    },
+  },
+  {
+    matches: (action: string) => action.toLowerCase().includes("download"),
+    tone: {
       icon: Download,
       iconColor: "text-blue-600 dark:text-blue-300",
       shell: "border-blue-400/20 bg-blue-500/10",
-    };
-  }
-
-  if (
-    action.toLowerCase().includes("locked") ||
-    action.toLowerCase().includes("disabled")
-  ) {
-    return {
+    },
+  },
+  {
+    matches: (action: string) =>
+      action.toLowerCase().includes("locked") ||
+      action.toLowerCase().includes("disabled"),
+    tone: {
       icon: Lock,
       iconColor: "text-gray-600 dark:text-gray-300",
       shell: "border-gray-400/20 bg-gray-500/10",
-    };
-  }
-
-  if (
-    action.toLowerCase().includes("unlocked") ||
-    action.toLowerCase().includes("enabled")
-  ) {
-    return {
+    },
+  },
+  {
+    matches: (action: string) =>
+      action.toLowerCase().includes("unlocked") ||
+      action.toLowerCase().includes("enabled"),
+    tone: {
       icon: Unlock,
       iconColor: "text-green-600 dark:text-green-300",
       shell: "border-green-400/20 bg-green-500/10",
-    };
-  }
-
-  if (
-    action.toLowerCase().includes("alert") ||
-    action.toLowerCase().includes("warning")
-  ) {
-    return {
+    },
+  },
+  {
+    matches: (action: string) =>
+      action.toLowerCase().includes("alert") ||
+      action.toLowerCase().includes("warning"),
+    tone: {
       icon: AlertCircle,
       iconColor: "text-orange-600 dark:text-orange-300",
       shell: "border-orange-400/20 bg-orange-500/10",
-    };
+    },
+  },
+];
+
+function getActivityTone(entityType: string, action: string) {
+  const actionTone = activityTones.find(({ matches }) => matches(action));
+  if (actionTone) {
+    return actionTone.tone;
   }
 
   // Entity type fallbacks
@@ -547,7 +547,8 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const isMainOfficer = session?.user?.role === "MAIN_OFFICER";
 
   const fetchDashboardData = useCallback(
@@ -570,6 +571,11 @@ export default function DashboardPage() {
           signal,
           cache: "no-store",
         });
+        if (await handleSessionFailure(response)) {
+          setIsRedirecting(true);
+          setData(null);
+          return;
+        }
         if (!response.ok) {
           throw new Error("Failed to fetch dashboard data");
         }
@@ -598,6 +604,11 @@ export default function DashboardPage() {
         signal,
         cache: "no-store",
       });
+      if (await handleSessionFailure(response)) {
+        setIsRedirecting(true);
+        setRecentActivityLogs(null);
+        return;
+      }
       if (!response.ok) {
         return;
       }
@@ -621,15 +632,18 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    if (status !== "authenticated" || isRedirecting) {
+      return;
+    }
     const controller = new AbortController();
-    void fetchDashboardData({ signal: controller.signal });
+    fetchDashboardData({ signal: controller.signal });
     if (isMainOfficer) {
-      void fetchRecentActivity(controller.signal);
+      fetchRecentActivity(controller.signal);
     }
 
     const interval = setInterval(() => {
       if (isMainOfficer) {
-        void fetchRecentActivity();
+        fetchRecentActivity();
       }
     }, 30_000);
 
@@ -637,7 +651,13 @@ export default function DashboardPage() {
       controller.abort();
       clearInterval(interval);
     };
-  }, [fetchDashboardData, fetchRecentActivity, isMainOfficer]);
+  }, [
+    fetchDashboardData,
+    fetchRecentActivity,
+    isMainOfficer,
+    status,
+    isRedirecting,
+  ]);
 
   const stats = data?.stats ?? defaultStats;
   const riskBand = useMemo(
@@ -695,10 +715,10 @@ export default function DashboardPage() {
   const remediationTrends = data?.remediationTrends ?? [];
   const riskTrends = data?.riskTrends ?? [];
 
-  if (isLoading && !data) {
+  if (status !== "authenticated" || isRedirecting || (isLoading && !data)) {
     return (
       <DashboardLayout>
-        <div
+        <section
           aria-label="Loading dashboard"
           className="mx-auto w-full max-w-[1600px] space-y-6"
         >
@@ -722,7 +742,7 @@ export default function DashboardPage() {
               />
             ))}
           </div>
-        </div>
+        </section>
       </DashboardLayout>
     );
   }
@@ -737,8 +757,8 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3">
               <Button
                 onClick={() => {
-                  void fetchDashboardData({ silent: true });
-                  void fetchRecentActivity();
+                  fetchDashboardData({ silent: true });
+                  fetchRecentActivity();
                 }}
                 type="button"
                 variant="outline"
@@ -804,7 +824,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <Button
-              onClick={() => void fetchDashboardData({ silent: true })}
+              onClick={() => fetchDashboardData({ silent: true })}
               size="sm"
               type="button"
               variant="outline"
@@ -817,8 +837,8 @@ export default function DashboardPage() {
 
         {data?.degraded && !error ? (
           <section
+            aria-live="polite"
             className="flex flex-col gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm sm:flex-row sm:items-center sm:justify-between"
-            role="status"
           >
             <div className="flex items-start gap-3">
               <AlertCircle
@@ -838,7 +858,7 @@ export default function DashboardPage() {
             </div>
             <Button
               disabled={isRefreshing}
-              onClick={() => void fetchDashboardData({ silent: true })}
+              onClick={() => fetchDashboardData({ silent: true })}
               size="sm"
               type="button"
               variant="outline"
@@ -1082,13 +1102,7 @@ export default function DashboardPage() {
                       <div
                         className={cn(
                           "h-full transition-all duration-1000",
-                          entry.severity === "CRITICAL"
-                            ? "bg-red-500"
-                            : entry.severity === "HIGH"
-                              ? "bg-orange-500"
-                              : entry.severity === "MEDIUM"
-                                ? "bg-yellow-500"
-                                : "bg-blue-500"
+                          severityBarColors[entry.severity] ?? "bg-blue-500"
                         )}
                         style={{ width: `${entry.percentage}%` }}
                       />
