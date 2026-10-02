@@ -64,7 +64,10 @@ import { signOut, useSession } from "next-auth/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { useLoginAudit } from "@/hooks/useLoginAudit";
-import { handleSessionFailure, redirectToLogin } from "@/lib/auth/client-session";
+import {
+  handleSessionFailure,
+  redirectToLogin,
+} from "@/lib/auth/client-session";
 import {
   markAllNotificationsRead,
   markNotificationRead,
@@ -261,6 +264,7 @@ export function Sidebar() {
               title={
                 state === "collapsed" ? `${userName} · Profile menu` : undefined
               }
+              type="button"
             >
               <Avatar className="size-9 border">
                 {session?.user?.image ? (
@@ -322,7 +326,7 @@ export function Sidebar() {
             ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onSelect={() => void signOut({ callbackUrl: "/" })}
+              onSelect={() => signOut({ callbackUrl: "/" })}
               variant="destructive"
             >
               <LogOut />
@@ -391,8 +395,6 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
 
   // ... (logic remains same, just redesigning the return)
 
-  const handleAuthFailure = handleSessionFailure;
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -403,7 +405,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
             setThreatsCount(threatsData.stats.activeThreatsCount || 0);
           }
         } else {
-          const shouldStop = await handleAuthFailure(threatsRes);
+          const shouldStop = await handleSessionFailure(threatsRes);
           if (shouldStop) {
             return;
           }
@@ -411,7 +413,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
 
         const notifRes = await fetch("/api/notifications");
         if (!notifRes.ok) {
-          const shouldStop = await handleAuthFailure(notifRes);
+          const shouldStop = await handleSessionFailure(notifRes);
           if (shouldStop) {
             return;
           }
@@ -433,7 +435,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
     fetchData();
     const interval = setInterval(fetchData, 60_000);
     return () => clearInterval(interval);
-  }, [handleAuthFailure]);
+  }, []);
 
   useEffect(() => {
     const handleDocumentClick = (event: MouseEvent) => {
@@ -459,7 +461,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
       });
 
       if (!response.ok) {
-        const shouldStop = await handleAuthFailure(response);
+        const shouldStop = await handleSessionFailure(response);
         if (shouldStop) {
           return;
         }
@@ -594,11 +596,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
               <ul className="max-h-72 overflow-y-auto p-1" id={searchListId}>
                 {filteredSearchResults.length > 0 ? (
                   filteredSearchResults.map((result, index) => (
-                    <li
-                      aria-selected={index === activeResultIndex}
-                      id={`topbar-search-option-${index}`}
-                      key={result.href}
-                    >
+                    <li id={`topbar-search-option-${index}`} key={result.href}>
                       <button
                         className={cn(
                           "w-full rounded-lg px-3 py-2 text-left text-sm transition",
@@ -660,15 +658,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
           type="button"
           variant="ghost"
         >
-          {mounted ? (
-            theme === "dark" ? (
-              <Sun size={20} />
-            ) : (
-              <Moon size={20} />
-            )
-          ) : (
-            <Sun size={20} />
-          )}
+          {mounted && theme !== "dark" ? <Moon size={20} /> : <Sun size={20} />}
         </Button>
 
         <div className="flex items-center gap-2">
@@ -697,6 +687,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                   <button
                     className="text-intent-accent text-xs transition-all duration-300 ease-in-out hover:text-intent-accent-strong"
                     onClick={markAsRead}
+                    type="button"
                   >
                     Mark all read
                   </button>
@@ -713,7 +704,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                       className={`w-full border-[var(--border-color)] border-b p-3 text-left transition-all duration-300 ease-in-out hover:bg-[var(--bg-tertiary)] ${notif.isRead ? "" : "bg-[var(--bg-tertiary)]/50"}`}
                       key={notif.id}
                       onClick={() => {
-                        void handleNotificationClick(notif);
+                        handleNotificationClick(notif);
                       }}
                       type="button"
                     >
@@ -778,9 +769,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   if (status !== "authenticated") {
     return (
-      <div className="p-6" role="status">
+      <output className="block p-6">
         {status === "loading" ? "Checking session…" : "Redirecting to login…"}
-      </div>
+      </output>
     );
   }
 
