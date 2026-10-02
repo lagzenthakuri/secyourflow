@@ -34,6 +34,7 @@ import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { handleSessionFailure } from "@/lib/auth/client-session";
 import { cn, getTimeAgo } from "@/lib/utils";
 
 const RiskTrendChart = dynamic(
@@ -547,7 +548,8 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const isMainOfficer = session?.user?.role === "MAIN_OFFICER";
 
   const fetchDashboardData = useCallback(
@@ -570,6 +572,11 @@ export default function DashboardPage() {
           signal,
           cache: "no-store",
         });
+        if (await handleSessionFailure(response)) {
+          setIsRedirecting(true);
+          setData(null);
+          return;
+        }
         if (!response.ok) {
           throw new Error("Failed to fetch dashboard data");
         }
@@ -598,6 +605,11 @@ export default function DashboardPage() {
         signal,
         cache: "no-store",
       });
+      if (await handleSessionFailure(response)) {
+        setIsRedirecting(true);
+        setRecentActivityLogs(null);
+        return;
+      }
       if (!response.ok) {
         return;
       }
@@ -621,6 +633,9 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    if (status !== "authenticated" || isRedirecting) {
+      return;
+    }
     const controller = new AbortController();
     void fetchDashboardData({ signal: controller.signal });
     if (isMainOfficer) {
@@ -637,7 +652,7 @@ export default function DashboardPage() {
       controller.abort();
       clearInterval(interval);
     };
-  }, [fetchDashboardData, fetchRecentActivity, isMainOfficer]);
+  }, [fetchDashboardData, fetchRecentActivity, isMainOfficer, status, isRedirecting]);
 
   const stats = data?.stats ?? defaultStats;
   const riskBand = useMemo(
@@ -695,7 +710,7 @@ export default function DashboardPage() {
   const remediationTrends = data?.remediationTrends ?? [];
   const riskTrends = data?.riskTrends ?? [];
 
-  if (isLoading && !data) {
+  if (status !== "authenticated" || isRedirecting || (isLoading && !data)) {
     return (
       <DashboardLayout>
         <div

@@ -61,9 +61,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { useLoginAudit } from "@/hooks/useLoginAudit";
+import { handleSessionFailure, redirectToLogin } from "@/lib/auth/client-session";
 import {
   markAllNotificationsRead,
   markNotificationRead,
@@ -344,15 +345,6 @@ interface ThreatsResponse {
   };
 }
 
-function getApiErrorMessage(payload: unknown): string | null {
-  if (!payload || typeof payload !== "object") {
-    return null;
-  }
-
-  const error = (payload as { error?: unknown }).error;
-  return typeof error === "string" ? error : null;
-}
-
 export function TopBar({ onToggleSidebar }: TopBarProps) {
   const { data: session } = useSession();
   const { theme, toggleTheme } = useTheme();
@@ -365,7 +357,6 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [activeResultIndex, setActiveResultIndex] = useState(0);
   const [mounted, setMounted] = useState(false);
-  const redirectedForTwoFactorRef = useRef(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const searchListId = "topbar-route-search-results";
 
@@ -400,39 +391,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
 
   // ... (logic remains same, just redesigning the return)
 
-  const handleAuthFailure = useCallback(
-    async (response: Response): Promise<boolean> => {
-      if (response.status === 401) {
-        router.replace("/login");
-        return true;
-      }
-
-      if (response.status === 403) {
-        let payload: unknown = null;
-        try {
-          payload = await response.json();
-        } catch {
-          payload = null;
-        }
-
-        const errorMessage = getApiErrorMessage(payload);
-        if (
-          errorMessage
-            ?.toLowerCase()
-            .includes("two-factor authentication required")
-        ) {
-          if (!redirectedForTwoFactorRef.current) {
-            redirectedForTwoFactorRef.current = true;
-            router.replace("/auth/2fa");
-          }
-          return true;
-        }
-      }
-
-      return false;
-    },
-    [router]
-  );
+  const handleAuthFailure = handleSessionFailure;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -809,6 +768,22 @@ function DashboardFrame({ children }: { children: React.ReactNode }) {
 }
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { status } = useSession();
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      redirectToLogin();
+    }
+  }, [status]);
+
+  if (status !== "authenticated") {
+    return (
+      <div className="p-6" role="status">
+        {status === "loading" ? "Checking session…" : "Redirecting to login…"}
+      </div>
+    );
+  }
+
   return (
     <SidebarProvider defaultOpen>
       <Sidebar />
