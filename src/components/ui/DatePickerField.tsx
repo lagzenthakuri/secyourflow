@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@repo/design-system/components/ui/select";
 import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TimePickerField } from "@/components/ui/TimePickerField";
 
 interface DatePickerFieldProps {
@@ -53,7 +53,7 @@ export function DatePickerField({
   className,
   includeTime = false,
 }: DatePickerFieldProps) {
-  const selected = parseDate(value);
+  const selected = useMemo(() => parseDate(value), [value]);
   const [visibleMonth, setVisibleMonth] = useState(
     () => selected ?? new Date(2000, 0, 1)
   );
@@ -105,14 +105,16 @@ export function DatePickerField({
       <PopoverTrigger asChild>
         <Button
           aria-label={label}
-          className={`h-10 w-full justify-start text-left font-normal ${selected ? "" : "text-muted-foreground"} ${className ?? ""}`}
+          className={`h-auto min-h-10 min-w-0 w-full justify-start whitespace-normal text-left font-normal ${selected ? "" : "text-muted-foreground"} ${className ?? ""}`}
           type="button"
           variant="outline"
         >
-          <CalendarIcon className="mr-2 size-4" />
-          {selected
-            ? `${formattedDate}${includeTime ? ` · ${time}` : ""}`
-            : label}
+          <CalendarIcon className="size-4 shrink-0" />
+          <span className="min-w-0 break-words">
+            {selected
+              ? `${formattedDate}${includeTime ? ` · ${time}` : ""}`
+              : label}
+          </span>
         </Button>
       </PopoverTrigger>
       <PopoverContent
