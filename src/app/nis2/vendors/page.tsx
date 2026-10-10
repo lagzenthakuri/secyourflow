@@ -438,7 +438,7 @@ export default function Nis2VendorsPage() {
           </div>
         }
         isOpen={isModalOpen}
-        maxWidth="lg"
+        maxWidth="2xl"
         onClose={() => setIsModalOpen(false)}
         title="Add a supplier"
       >
@@ -449,7 +449,7 @@ export default function Nis2VendorsPage() {
         ) : null}
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block">
+            <label className="block min-w-0">
               <span className="mb-1 block font-semibold text-[var(--text-secondary)] text-xs">
                 Name
               </span>
@@ -461,7 +461,7 @@ export default function Nis2VendorsPage() {
                 value={form.name}
               />
             </label>
-            <label className="block">
+            <label className="block min-w-0">
               <span className="mb-1 block font-semibold text-[var(--text-secondary)] text-xs">
                 Service provided
               </span>
@@ -477,7 +477,7 @@ export default function Nis2VendorsPage() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block">
+            <label className="block min-w-0">
               <span className="mb-1 block font-semibold text-[var(--text-secondary)] text-xs">
                 Criticality
               </span>
@@ -503,7 +503,7 @@ export default function Nis2VendorsPage() {
                 </SelectContent>
               </Select>
             </label>
-            <label className="block">
+            <label className="block min-w-0">
               <span className="mb-1 block font-semibold text-[var(--text-secondary)] text-xs">
                 Data access level
               </span>
@@ -535,8 +535,8 @@ export default function Nis2VendorsPage() {
             </label>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <label className="block">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block min-w-0">
               <span className="mb-1 block font-semibold text-[var(--text-secondary)] text-xs">
                 Country
               </span>
@@ -548,7 +548,7 @@ export default function Nis2VendorsPage() {
                 value={form.country}
               />
             </label>
-            <label className="block">
+            <label className="block min-w-0">
               <span className="mb-1 block font-semibold text-[var(--text-secondary)] text-xs">
                 Contract ends
               </span>
@@ -558,7 +558,7 @@ export default function Nis2VendorsPage() {
                 value={form.contractEnd}
               />
             </label>
-            <label className="block">
+            <label className="block min-w-0">
               <span className="mb-1 block font-semibold text-[var(--text-secondary)] text-xs">
                 Last assessed
               </span>
@@ -570,7 +570,7 @@ export default function Nis2VendorsPage() {
             </label>
           </div>
 
-          <fieldset>
+          <fieldset className="min-w-0">
             <legend className="mb-2 font-semibold text-[var(--text-secondary)] text-xs">
               Certifications
             </legend>
@@ -604,16 +604,17 @@ export default function Nis2VendorsPage() {
               ] as const
             ).map(([key, label]) => (
               <label
-                className="inline-flex items-center gap-2 text-[var(--text-secondary)] text-sm"
+                className="inline-flex min-w-0 items-start gap-2 text-[var(--text-secondary)] text-sm"
                 key={key}
               >
                 <BoilerplateCheckbox
+                  className="mt-0.5 shrink-0"
                   checked={form[key]}
                   onCheckedChange={(checked) =>
                     setForm({ ...form, [key]: Boolean(checked) })
                   }
                 />
-                {label}
+                <span className="min-w-0 break-words">{label}</span>
               </label>
             ))}
           </div>

@@ -1631,3 +1631,30 @@ body {
   background-color: #fff;
   color: #171923;
 }
+
+/* Let shared dashboard/form grid items shrink to the available width.
+   Wide data tables keep their own horizontal scroll container. */
+.dashboard-main :where(.grid) > *,
+.modal-body :where(.grid) > *,
+.modal-body :where(fieldset) {
+  min-width: 0;
+}
+
+.dashboard-main :where(.table-container, .overflow-x-auto) {
+  max-width: 100%;
+}
+
+.modal-body {
+  overflow-wrap: anywhere;
+}
+
+.modal-footer > .flex {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 639px) {
+  .modal-footer > .flex > button {
+    flex: 1 1 auto;
+    white-space: normal;
+  }
+}

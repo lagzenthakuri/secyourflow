@@ -680,7 +680,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
 
           {/* Dropdown */}
           {showNotifications && (
-            <div className="absolute top-full right-0 z-50 mt-2 w-80 animate-fade-in overflow-hidden rounded-xl border border-[var(--border-color)] bg-[var(--bg-elevated)] shadow-2xl">
+            <div className="absolute top-full right-0 z-50 mt-2 w-80 max-w-[calc(100vw-1.5rem)] animate-fade-in overflow-hidden rounded-xl border border-[var(--border-color)] bg-[var(--bg-elevated)] shadow-2xl">
               <div className="flex items-center justify-between border-[var(--border-color)] border-b bg-[var(--bg-tertiary)] p-3">
                 <h3 className="font-semibold text-sm">Notifications</h3>
                 {notificationsCount > 0 && (
@@ -751,7 +751,7 @@ function DashboardFrame({ children }: { children: React.ReactNode }) {
   return (
     <SidebarInset className="min-w-0 bg-background text-foreground">
       <TopBar onToggleSidebar={toggleSidebar} />
-      <main className="min-h-[calc(100vh-4rem)] bg-background p-4 sm:p-6">
+      <main className="dashboard-main min-w-0 min-h-[calc(100vh-4rem)] bg-background p-4 sm:p-6">
         {children}
       </main>
     </SidebarInset>

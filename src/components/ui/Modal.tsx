@@ -1,7 +1,8 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
 interface ModalProps {
@@ -27,10 +28,15 @@ export function Modal({
   initialFocusSelector,
   ariaDescribedBy,
 }: ModalProps) {
+  const [mounted, setMounted] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElementRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
   const titleId = useId();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -83,6 +89,11 @@ export function Modal({
       }
     };
 
+    if (!isOpen || !mounted) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
     if (isOpen) {
       previousActiveElementRef.current =
         document.activeElement as HTMLElement | null;
@@ -105,12 +116,12 @@ export function Modal({
           dialog.querySelector<HTMLElement>(FOCUSABLE_SELECTOR) ||
           dialog;
 
-        preferredTarget.focus();
+        preferredTarget.focus({ preventScroll: true });
       });
     }
 
     return () => {
-      document.body.style.overflow = "unset";
+      document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
 
       const previous = previousActiveElementRef.current;
@@ -118,9 +129,9 @@ export function Modal({
         previous.focus();
       }
     };
-  }, [initialFocusSelector, isOpen]);
+  }, [initialFocusSelector, isOpen, mounted]);
 
-  if (!isOpen) {
+  if (!isOpen || !mounted) {
     return null;
   }
 
@@ -132,8 +143,8 @@ export function Modal({
     "2xl": "max-w-2xl",
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6">
       <div
         className="absolute inset-0 bg-[var(--overlay-scrim)] backdrop-blur-md"
         onClick={onClose}
@@ -143,35 +154,38 @@ export function Modal({
         aria-labelledby={titleId}
         aria-modal="true"
         className={cn(
-          "fade-in zoom-in relative flex max-h-full w-full animate-in flex-col overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-secondary)] shadow-2xl duration-200",
+          "fade-in zoom-in relative flex max-h-[calc(100dvh-1.5rem)] min-w-0 w-full sm:max-h-[calc(100dvh-3rem)] animate-in flex-col overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-secondary)] shadow-2xl duration-200",
           maxWidthClasses[maxWidth]
         )}
         ref={modalRef}
         role="dialog"
         tabIndex={-1}
       >
-        <div className="flex items-center justify-between border-[var(--border-color)] border-b px-6 py-4">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-[var(--border-color)] border-b px-4 py-4 sm:px-6">
           <h2
-            className="font-semibold text-[var(--text-primary)] text-xl"
+            className="min-w-0 break-words font-semibold text-[var(--text-primary)] text-xl"
             id={titleId}
           >
             {title}
           </h2>
           <button
             aria-label={closeButtonLabel}
-            className="rounded-lg p-1 text-[var(--text-muted)] transition-all duration-300 ease-in-out hover:bg-[var(--bg-tertiary)]"
+            className="shrink-0 rounded-lg p-1 text-[var(--text-muted)] transition-all duration-300 ease-in-out hover:bg-[var(--bg-tertiary)]"
             onClick={() => onCloseRef.current()}
           >
             <X size={20} />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-6">{children}</div>
+        <div className="modal-body min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
+          {children}
+        </div>
         {footer && (
-          <div className="border-[var(--border-color)] border-t bg-[var(--bg-tertiary)]/50 px-6 py-4">
+          <div className="modal-footer shrink-0 border-[var(--border-color)] border-t bg-[var(--bg-tertiary)]/50 px-4 py-4 sm:px-6">
             {footer}
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

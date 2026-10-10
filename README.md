@@ -369,7 +369,11 @@ secyourflow/
 
 ## Contributing
 
-This is a private and proprietary project. Contributions are limited to authorized team members only.
+Contributions are welcome! Open an issue to report a bug, suggest an improvement, or discuss a change before submitting a pull request.
+
+## License
+
+SecYourFlow is licensed under the GNU General Public License v3.0 (GPL-3.0). See [LICENSE](LICENSE) for the full license text.
 
 ---
 
@@ -377,7 +381,7 @@ This is a private and proprietary project. Contributions are limited to authoriz
 
 **Maintained by SHYENA**
 
-*Private and proprietary. All rights reserved.*
+*Open source under the GNU General Public License v3.0.*
 
 ---
 
